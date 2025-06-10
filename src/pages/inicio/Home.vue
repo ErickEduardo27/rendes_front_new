@@ -7,7 +7,7 @@
 
 
 export default {
-    name: 'Patient',
+    name: 'Home',
     data() {
         
     },

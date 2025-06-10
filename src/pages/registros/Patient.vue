@@ -9,11 +9,11 @@
     <h1 class="text-2xl font-bold mb-1">Expediente Médico</h1>
     <p class="text-gray-600 mb-6">Información completa del paciente y formularios médicos</p>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <div class="col-span-1">
         <PatientInfo :paciente="pacienteRegistrado"/>
       </div>
-      <div class="col-span-2">
+      <div class="col-span-4">
         <MedicalTabs />
       </div>
     </div>
@@ -28,8 +28,8 @@
 
 <script>
 import { ArrowUturnLeftIcon } from '@heroicons/vue/24/outline'
-import PatientInfo from '@/pages/patient/PatientInfo.vue'
-import MedicalTabs from '@/pages/patient/MedicalTabs.vue'
+import PatientInfo from '@/pages/registros/PatientInfo.vue'
+import MedicalTabs from '@/pages/registros/MedicalTabs.vue'
 import PatientRegistrationModal from '@/components/modals/PatientRegistrationModal.vue'
 export default {
   name: 'Patient',

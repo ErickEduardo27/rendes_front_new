@@ -1,37 +1,44 @@
+import Principal from '@/layouts/principal.vue'
 import Dashboard from '@/pages/admin/Dashboard.vue'
 import NotFound from '@/pages/error/NotFound.vue'
-import Home from '@/pages/Home.vue'
+import Home from '@/pages/inicio/Home.vue'
 import Ipress from '@/pages/ipress/Ipress.vue'
-import Patient from '@/pages/patient/Patient.vue'
+import Patient from '@/pages/registros/Patient.vue'
 import { createRouter, createWebHistory } from 'vue-router'
-/* import publicRoutes from '@/routes/public'
-import authRoutes from '@/routes/auth'
-import dashboardRoutes from '@/routes/dashboard' */
 
 const routes = [
-  /* ...publicRoutes,
-  ...authRoutes,
-  ...dashboardRoutes, */
-    {
-      path: '/',
-      name: 'Home',
-      component: Home,
-    },
-    {
-      path: '/newpatient',
-      name: 'Patient',
-      component: Patient,
-    },
-    {
-      path: '/ipress',
-      name: 'Ipress',
-      component: Ipress,
-    },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'NotFound',
-      component: NotFound,
-    }
+  {
+    path: '/',
+    name: 'Principal',
+    component: Principal,
+    children: [
+      {
+        path: '', // Cuando accedas a "/"
+        name: 'Inicio',
+        component: () => import('@/pages/inicio/Home.vue')
+      },
+      {
+        path: 'newpatient',
+        name: 'Patient',
+        component: () => import('@/pages/registros/Patient.vue')
+      },
+      {
+        path: '/ipress',
+        name: 'Ipress',
+        component: () => import('@/pages/ipress/Ipress.vue'),
+      }
+    ]
+  },
+  {
+    path: '/home',
+    name: 'Home',
+    component: Home,
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: NotFound,
+  }
 ]
 
 const router = createRouter({

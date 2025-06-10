@@ -3,8 +3,6 @@
         <h2 class="text-xl font-semibold mb-1">Formularios Médicos</h2>
         <p class="text-sm text-gray-500 mb-4">Complete la información médica del paciente en las diferentes secciones
         </p>
-
-
         <TabGroup>
             <div class="w-full overflow-x-auto md:overflow-x-visible">
                 <TabList
