@@ -14,7 +14,7 @@
         <PatientInfo :paciente="pacienteRegistrado"/>
       </div>
       <div class="col-span-4">
-        <MedicalTabs />
+        <MedicalTabs :tipoDialisis="pacienteRegistrado?.tipoDialisis" />
       </div>
     </div>
 
@@ -58,6 +58,10 @@ export default {
   methods: {
     closeModal() {
       this.showModal = false;
+      
+      if (!this.pacienteRegistrado) {
+        this.$router.push('/');
+      }
     },
     handlePatientRegistered(data) {
       this.pacienteRegistrado = data;

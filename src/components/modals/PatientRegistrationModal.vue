@@ -62,10 +62,10 @@
         </div>
 
         <!-- Fila 5 -->
-        <div class="form-group full-width">
+        <!-- <div class="form-group full-width">
           <label for="direccion">Dirección *</label>
           <textarea id="direccion" v-model="formData.direccion" required></textarea>
-        </div>
+        </div> -->
 
         <!-- Fila 6 -->
         <div class="form-group">
@@ -75,6 +75,15 @@
         <div class="form-group">
           <label for="telefonoEmergencia">Teléfono de Emergencia</label>
           <input id="telefonoEmergencia" v-model="formData.telefonoEmergencia" />
+        </div>
+
+        <div class="form-group full-width">
+          <label for="tipoDialisis">Tipo de Diálisis *</label>
+          <select id="tipoDialisis" v-model="formData.tipoDialisis" required>
+            <option disabled value="">Seleccione tipo de diálisis</option>
+            <option value="hemodialisis">Hemodiálisis</option>
+            <option value="peritoneal">Diálisis Peritoneal</option>
+          </select>
         </div>
 
         <!-- Botones -->
@@ -107,9 +116,10 @@ export default {
         telefono: "",
         edad: "",
         email: "",
-        direccion: "",
+        /* direccion: "", */
         contactoEmergencia: "",
-        telefonoEmergencia: ""
+        telefonoEmergencia: "",
+        tipoDialisis: ""
       }
     };
   },
@@ -133,9 +143,10 @@ export default {
         telefono: "",
         edad: "",
         email: "",
-        direccion: "",
+        /* direccion: "", */
         contactoEmergencia: "",
-        telefonoEmergencia: ""
+        telefonoEmergencia: "",
+        tipoDialisis: ""
       };
     }
   }
