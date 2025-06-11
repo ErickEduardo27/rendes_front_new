@@ -24,4 +24,4 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
     1.2.-  Para qa => https://appsqa.essalud.gob.pe/hisar-service-qa
     1.3.-  Para producción  => https://appsqa.essalud.gob.pe/hisar-service
 	
-1
+2
