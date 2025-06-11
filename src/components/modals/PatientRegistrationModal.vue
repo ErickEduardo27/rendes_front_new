@@ -28,7 +28,6 @@
             <option disabled value="">Seleccionar género</option>
             <option>Masculino</option>
             <option>Femenino</option>
-            <option>Otro</option>
           </select>
         </div>
 
@@ -37,9 +36,10 @@
           <label for="tipoId">Tipo de Identificación *</label>
           <select id="tipoId" v-model="formData.tipoId" required>
             <option disabled value="">Tipo de ID</option>
-            <option>Cédula</option>
+            <option>DNI</option>
             <option>Pasaporte</option>
             <option>Licencia</option>
+            <option>Carnet de extranjeria</option>
           </select>
         </div>
         <div class="form-group">
@@ -67,7 +67,7 @@
           <textarea id="direccion" v-model="formData.direccion" required></textarea>
         </div> -->
 
-        <!-- Fila 6 -->
+        <!-- Fila 5 -->
         <div class="form-group">
           <label for="contactoEmergencia">Contacto de Emergencia</label>
           <input id="contactoEmergencia" v-model="formData.contactoEmergencia" />
@@ -77,6 +77,7 @@
           <input id="telefonoEmergencia" v-model="formData.telefonoEmergencia" />
         </div>
 
+        <!-- Fila 6 -->
         <div class="form-group full-width">
           <label for="tipoDialisis">Tipo de Diálisis *</label>
           <select id="tipoDialisis" v-model="formData.tipoDialisis" required>

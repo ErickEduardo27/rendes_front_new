@@ -14,7 +14,7 @@
                 <li><strong>Género:</strong> {{ paciente.genero }}</li>
                 <li><strong>Teléfono:</strong> {{ paciente.telefono }}</li>
                 <li><strong>Email:</strong> {{ paciente.email }}</li>
-                <li><strong>Dirección:</strong> {{ paciente.direccion }}</li>
+                <!-- <li><strong>Dirección:</strong> {{ paciente.direccion }}</li> -->
             </ul>
             <div class="mt-4">
                 <p class="font-semibold text-sm">Contacto de Emergencia</p>

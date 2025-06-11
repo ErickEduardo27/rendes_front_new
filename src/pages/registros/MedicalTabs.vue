@@ -25,7 +25,7 @@
                 </TabPanel>
                 <TabPanel>
                     <!-- Formulario 2 -->
-                     <component :is="tipoDialisis === 'hemodialisis' ? Form2Hemodialisis : Form2Peritoneal" />
+                    <component :is="tipoDialisis === 'hemodialisis' ? Form2Hemodialisis : Form2Peritoneal" />
                 </TabPanel>
                 <TabPanel>
                     <!-- Formulario 3 -->
@@ -60,8 +60,8 @@ import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.v
 import Form2Peritoneal from '@/components/forms/typesForm2/Form2Peritoneal.vue'
 
 const props = defineProps({
-  tipoDialisis: String
-})  
+    tipoDialisis: String
+})
 
 
 const tabs = ref(['REGISTRO DE PACIENTES EN DIALISIS', 'UNIDAD ACTUAL', 'EVENTOS DE INFECCIÓN', 'MORBILIDAD HOSPITALARIA', 'RESULTADOS CLÍNICOS', 'CALIDAD MICROBIOLOGICA DEL AGUA', 'VACUNACIÓN'])
