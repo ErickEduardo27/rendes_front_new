@@ -94,9 +94,7 @@
   </div>
 </template>
 <style scoped>
-::v-deep .background-theme{
-  background: linear-gradient(135deg, rgb(25 115 165), rgb(20 145 215), #0d67aa, #00304e) !important;
-}
+
 .theme--dark.v-tabs > .v-tabs-bar {
     background-color: #1E1E1E;
 }

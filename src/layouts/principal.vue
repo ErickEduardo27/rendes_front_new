@@ -9,7 +9,7 @@
     />
 
     <div class="container-general-sub flex flex-col flex-1">
-      <Navbar @toggle-sidebar="toggleSidebar" />
+     <!--  <Navbar @toggle-sidebar="toggleSidebar" /> -->
       
       <div class="main-responsive w-full max-w-[98%] flex-1">
         <router-view />
@@ -19,14 +19,14 @@
 </template>
 <script>
 import { ref } from 'vue'
-import Navbar from '@/components/navbar/Navbar.vue'
+/* import Navbar from '@/components/navbar/Navbar.vue' */
 import Dashboard from '@/pages/admin/Dashboard.vue'
 import Sidebar from '@/components/sidebar/Sidebar.vue';
 
 export default {
   name: 'App',
   components: {
-    Navbar,
+    /* Navbar, */
     Sidebar,
     Dashboard
   },

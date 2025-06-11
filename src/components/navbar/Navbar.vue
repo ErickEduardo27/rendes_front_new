@@ -189,9 +189,9 @@ export const RUTA_SERVIDOR = process.env.VUE_APP_RUTA_API;
 export const USUARIO = process.env.VUE_APP_USERNAME;
 export const PASSWORD = process.env.VUE_APP_PASSWORD;
 export const RUTA_API = process.env.VUE_APP_API;
-import { obtenerToken } from "@services/authService/authService";
-import consultaPeriodo from "@services/script/consultaPeriodo";
-import { mapActions, mapState } from "vuex";
+/* import { obtenerToken } from "@services/authService/authService"; */
+/* import consultaPeriodo from "@services/script/consultaPeriodo"; */
+/* import { mapActions, mapState } from "vuex"; */
 export default {
   props: ["statusVariablesGlobal"],
   data() {
@@ -295,7 +295,7 @@ export default {
         });
     },
     async loadPeriodo() {
-      const array = {
+      /* const array = {
         id_ipress: sessionStorage.getItem("itemIpress").split("/")[4],
       };
       const token = await obtenerToken();
@@ -308,7 +308,7 @@ export default {
           response === 404
             ? console.warn("Lo siento, no tenemos servicios")
             : console.warn("Error: ", response);
-        });
+        }); */
     },
     loadModalidades() {
       axios
@@ -337,19 +337,7 @@ export default {
       this.dialog = true;
     },
     actionOut() {
-      sessionStorage.removeItem("url");
-      sessionStorage.removeItem("urlCas");
-      sessionStorage.removeItem("usuario");
-      sessionStorage.removeItem("perfil");
-      sessionStorage.removeItem("nombre");
-      sessionStorage.removeItem("keyValue");
-      sessionStorage.removeItem("descripCas");
-      sessionStorage.removeItem("itemModalidad");
-      sessionStorage.removeItem("itemPeriodo");
-      sessionStorage.removeItem("idUsuarioIpress");
-      sessionStorage.removeItem("itemPaciente");
-      this.dialog = false;
-      this.$router.push("/");
+      
     },
     actionPrincipal() {
       this.$router.push("/go");
