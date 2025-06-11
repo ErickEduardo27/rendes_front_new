@@ -1,0 +1,56 @@
+{
+  "name": "RENDES",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve --port 100",
+    "build": "vue-cli-service build"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.4.2",
+    "@fortawesome/free-brands-svg-icons": "^6.4.2",
+    "@fortawesome/free-regular-svg-icons": "^6.4.2",
+    "@fortawesome/free-solid-svg-icons": "^6.4.2",
+    "@fortawesome/vue-fontawesome": "^2.0.10",
+    "@mdi/font": "5.9.55",
+    "axios": "^0.21.1",
+    "chart.js": "^4.4.3",
+    "core-js": "^3.8.3",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.5.23",
+    "path": "^0.12.7",
+    "roboto-fontface": "*",
+    "sweetalert": "^2.1.2",
+    "vue": "^2.6.11",
+    "vue-axios": "^3.2.5",
+    "vue-router": "^3.2.0",
+    "vue-session": "^1.0.0",
+    "vue-sweetalert2": "^5.0.5",
+    "vuetify": "^2.4.0",
+    "vuex": "^3.4.0",
+    "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@babel/plugin-proposal-private-methods": "^7.18.6",
+    "@eslint/js": "^9.4.0",
+    "@vue/cli-plugin-babel": "~5.0.0",
+    "@vue/cli-plugin-router": "~4.5.0",
+    "@vue/cli-plugin-vuex": "~4.5.0",
+    "@vue/cli-service": "~4.5.0",
+    "eslint": "^9.4.0",
+    "eslint-plugin-vue": "^9.26.0",
+    "globals": "^15.4.0",
+    "sass": "~1.32.0",
+    "sass-loader": "^10.0.0",
+    "vue-cli-plugin-vuetify": "~2.4.2",
+    "vue-template-compiler": "^2.6.11",
+    "vuetify-loader": "^1.7.0"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}
