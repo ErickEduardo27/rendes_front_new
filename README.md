@@ -23,3 +23,5 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
     1.1.-  Para local => http://10.0.54.88:8060
     1.2.-  Para qa => https://appsqa.essalud.gob.pe/hisar-service-qa
     1.3.-  Para producción  => https://appsqa.essalud.gob.pe/hisar-service
+	
+1
