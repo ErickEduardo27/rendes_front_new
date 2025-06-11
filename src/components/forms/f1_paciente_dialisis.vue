@@ -177,9 +177,7 @@
                 <label class="block font-semibold text-sm text-gray-700">Fecha de Primer ingreso a la Unidad</label>
                 <input v-model="fechaIngresoUnidad" type="date" class="w-full border rounded p-2 text-sm" />
             </div>
-
         </div>
-
         <button class="w-full bg-black text-white py-2 rounded hover:bg-gray-900">
             💾 Guardar Historia Clínica
         </button>

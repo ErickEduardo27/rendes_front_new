@@ -3,7 +3,7 @@ import Dashboard from '@/pages/admin/Dashboard.vue'
 import NotFound from '@/pages/error/NotFound.vue'
 import Home from '@/pages/inicio/Home.vue'
 import Ipress from '@/pages/ipress/Ipress.vue'
-import Patient from '@/pages/registros/Patient.vue'
+import Patient from '@/pages/registros/index.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
@@ -20,7 +20,7 @@ const routes = [
       {
         path: 'newpatient',
         name: 'Patient',
-        component: () => import('@/pages/registros/Patient.vue')
+        component: () => import('@/pages/registros/index.vue')
       },
       {
         path: '/ipress',

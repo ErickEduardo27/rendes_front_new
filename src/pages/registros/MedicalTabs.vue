@@ -20,7 +20,7 @@
 
             <TabPanels>
                 <TabPanel>
-                    <TabHistoria />
+                    <F1DialisisPaciente />
                 </TabPanel>
                 <TabPanel>
                     <Form2 />
@@ -49,7 +49,7 @@
 <script setup>
 import { ref } from 'vue'
 import { TabGroup, TabList, Tab, TabPanels, TabPanel } from '@headlessui/vue'
-import TabHistoria from '@/components/forms/TabHistoria.vue'
+import F1DialisisPaciente from '@/components/forms/f1_paciente_dialisis.vue'
 import Form2 from '@/components/forms/Form2.vue'
 
 
