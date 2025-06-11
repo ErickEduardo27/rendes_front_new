@@ -20,13 +20,16 @@
 
             <TabPanels>
                 <TabPanel>
+
                     <F1DialisisPaciente />
                 </TabPanel>
                 <TabPanel>
-                    <Form2 />
+                    <!-- Formulario 2 -->
+                     <component :is="tipoDialisis === 'hemodialisis' ? Form2Hemodialisis : Form2Peritoneal" />
                 </TabPanel>
                 <TabPanel>
-                    <p class="text-gray-500 text-sm">Sección "EVENTOS DE INFECCIÓN" en construcción.</p>
+                    <!-- Formulario 3 -->
+                    <component :is="tipoDialisis === 'hemodialisis' ? Form3Hemodialisis : Form3Peritoneal" />
                 </TabPanel>
                 <TabPanel>
                     <p class="text-gray-500 text-sm">Sección "MORBILIDAD HOSPITALARIA" en construcción.</p>
@@ -51,6 +54,14 @@ import { ref } from 'vue'
 import { TabGroup, TabList, Tab, TabPanels, TabPanel } from '@headlessui/vue'
 import F1DialisisPaciente from '@/components/forms/f1_paciente_dialisis.vue'
 import Form2 from '@/components/forms/Form2.vue'
+import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue'
+import Form3Peritoneal from '@/components/forms/typesForm3/Form3Peritoneal.vue'
+import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue'
+import Form2Peritoneal from '@/components/forms/typesForm2/Form2Peritoneal.vue'
+
+const props = defineProps({
+  tipoDialisis: String
+})  
 
 
 const tabs = ref(['REGISTRO DE PACIENTES EN DIALISIS', 'UNIDAD ACTUAL', 'EVENTOS DE INFECCIÓN', 'MORBILIDAD HOSPITALARIA', 'RESULTADOS CLÍNICOS', 'CALIDAD MICROBIOLOGICA DEL AGUA', 'VACUNACIÓN'])
