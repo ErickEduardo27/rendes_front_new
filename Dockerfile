@@ -1,6 +1,6 @@
 FROM node:21-alpine AS builder
 
-ARG BUILD
+ARG BUILD=dev
 ARG BASE_HREF=/
 
 WORKDIR /app
@@ -9,11 +9,7 @@ COPY package.json package-lock.json ./
 RUN npm install #--legacy-peer-deps
 COPY . .
 
-RUN if [ -z "$BUILD" ]; then \
-        npm run build -- --base-href=${BASE_HREF}; \
-    else \
-        npm run build -- --configuration ${BUILD} --base-href=${BASE_HREF}; \
-    fi
+RUN npm run build:${BUILD}
 
 FROM nginx:alpine AS deploy
 
