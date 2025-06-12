@@ -19,7 +19,7 @@
 </template>
 <script>
 import { ref } from 'vue'
-import Navbar from '@/components/navbar/Navbar.vue';
+import Navbar from '@/components/navbar/NavBar.vue';
 import Dashboard from '@/pages/admin/Dashboard.vue';
 import Sidebar from '@/components/sidebar/Sidebar.vue';
 
