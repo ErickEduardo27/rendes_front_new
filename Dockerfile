@@ -9,7 +9,11 @@ COPY package.json package-lock.json ./
 RUN npm install #--legacy-peer-deps
 COPY . .
 
-RUN npm run build -- --base=${BASE_HREF}
+RUN if [ -z "$BUILD" ]; then \
+        npm run build -- --base-href=${BASE_HREF}; \
+    else \
+        npm run build -- --configuration ${BUILD} --base-href=${BASE_HREF}; \
+    fi
 
 FROM nginx:alpine AS deploy
 
@@ -22,3 +26,4 @@ COPY --from=builder /app/${DIST_PATH} .
 COPY default.conf /etc/nginx/conf.d/
 
 CMD ["nginx", "-g", "daemon off;"]
+
