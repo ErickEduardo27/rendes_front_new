@@ -9,7 +9,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 defineProps(['title', 'value', 'icon', 'change'])
 </script>
