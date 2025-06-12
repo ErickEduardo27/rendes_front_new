@@ -106,10 +106,7 @@
   </div>
 </template>
 <style scoped>
-::v-deep .v-application .primary--text {
-  color: white !important;
-  caret-color: white !important;
-}
+
 
 #white-color {
   color: white !important;
@@ -120,22 +117,8 @@
   border-color: white;
 }
 
-::v-deep .theme--light.v-icon {
-  color: white !important;
-}
 
-::v-deep .theme--light.v-input input,
-.theme--light.v-input textarea {
-  color: white !important;
-}
 
-::v-deep.theme--light.v-select .v-select__selections {
-  color: white !important;
-}
-
-::v-deep .theme--light.v-text-field .v-input__control .v-input__slot:before {
-  border-color: rgb(255, 255, 255) !important;
-}
 
 .theme--light.v-input {
   color: rgb(255, 255, 255) !important;

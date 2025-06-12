@@ -216,13 +216,7 @@ a {
   background: transparent !important;
 }
 
-::v-deep .theme--light.v-icon {
-  color: rgba(255, 255, 255) !important;
-}
 
-::v-deep .theme--light.v-list-item:not(.v-list-item--active):not(.v-list-item--disabled) {
-  color: rgba(203, 203, 203, 0.478);
-}
 
 .router-link-exact-active.router-link-active .v-list-item--active {
   background-color: #ffffff3b;
