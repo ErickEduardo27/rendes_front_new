@@ -34,11 +34,7 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copiamos el build generado
 COPY --from=builder /app/${DIST_PATH} /usr/share/nginx/html
 
-# Copiamos configuración custom de Nginx (opcional)
-# COPY nginx.conf /etc/nginx/nginx.conf
-
-# Exponemos el puerto por defecto
-EXPOSE 80
+COPY default.conf /etc/nginx/conf.d/
 
 CMD ["nginx", "-g", "daemon off;"]
 
