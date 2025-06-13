@@ -6,7 +6,6 @@ import Home from '@/pages/inicio/Home.vue'
 import Ipress from '@/pages/ipress/Ipress.vue'
 import Patient from '@/pages/registros/index.vue'
 import { createRouter, createWebHistory } from 'vue-router'
-
 const routes = [
   {
     path: '/',
