@@ -11,23 +11,26 @@
     
     <div class="flex items-center space-x-4">
       <button class="relative">
-        <BellIcon class="w-6 h-6 text-cyan-600 cursor-pointer" />
+        <BellIcon class="w-6 h-6 text-cyan-600 dark:text-cyan-300 cursor-pointer" />
       </button>
-      <div class="w-8 h-8 bg-gray-300 rounded-full"></div>
+
+
+      <div class="w-8 h-8 bg-gray-300 dark:bg-slate-700 rounded-full"></div>
     </div>
   </header>
 </template>
 
 <script setup>
 import { BellIcon, Bars3Icon} from '@heroicons/vue/24/outline'
+
 defineEmits(['toggle-sidebar'])
+
 </script>
 
 <style>
 
 /* Ocultar ciertos elementos en móvil */
 @media (max-width: 768px) {
-
   .icons-arrow-left {
     display: block !important;
   }

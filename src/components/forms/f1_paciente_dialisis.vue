@@ -158,7 +158,7 @@
                 </select>
             </div>
             <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Tipo de Acceso de Inicio</label>
+                <label class="block font-semibold text-sm text-gray -700">Tipo de Acceso de Inicio</label>
                 <select v-model="tyacc" class="w-full border rounded p-2 text-sm">
                     <option value="">Seleccione una opción</option>
                     <option value="1">(FAV) Fistula Arteriovenosa</option>
@@ -195,12 +195,13 @@ const dropdownAbierto = ref(false)
 const etologiasGenerales = {
   1: 'DIABETES',
   2: 'GLOMERULONEFRITIS',
-  3: 'GLOMERULONEFRITIS SECUNDARIA VASCULITIS',
-  4: 'NEFRITIS INTERSTICIAL PIELONEFRITIS',
-  5: 'HIPERTENSION ENFERMEDAD DE VASOS GRANDES',
-  6: 'ENFERMEDAD QUISTICA HEREDITARIA CONGÉNITA',
-  7: 'NEOPLASIAS TUMORES',
-  8: 'OTRAS CONDICIONES'
+  3: 'GLOMERULONEFRITIS SECUNDARIA/VASCULITIS',
+  4: 'NEFRITIS INTERSTICIAL/PIELONEFRITIS',
+  5: 'HIPERTENSION/ENFERMEDAD DE VASOS GRANDES',
+  6: 'ENFERMEDAD QUISTICA/HEREDITARIA CONGÉNITA',
+  7: 'NEOPLASIAS/TUMORES',
+  8: 'COMPLICACIONES DE ÓRGANO TRASPLANTADO',
+  9: 'OTRAS CONDICIONES'
 }
 
 const etologiasEspecificas = {

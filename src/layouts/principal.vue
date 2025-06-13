@@ -17,6 +17,8 @@
     </div>
   </div>
 </template>
+
+
 <script>
 import { ref } from 'vue'
 import Navbar from '@/components/navbar/NavBar.vue';

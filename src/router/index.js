@@ -1,5 +1,6 @@
 import Principal from '@/layouts/principal.vue'
 import Dashboard from '@/pages/admin/Dashboard.vue'
+import Login from '@/pages/auth/loginForm/Login.vue'
 import NotFound from '@/pages/error/NotFound.vue'
 import Home from '@/pages/inicio/Home.vue'
 import Ipress from '@/pages/ipress/Ipress.vue'
@@ -38,6 +39,11 @@ const routes = [
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: NotFound,
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login,
   }
 ]
 
