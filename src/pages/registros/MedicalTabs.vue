@@ -20,7 +20,6 @@
 
             <TabPanels>
                 <TabPanel>
-
                     <F1DialisisPaciente />
                 </TabPanel>
                 <TabPanel>
@@ -32,16 +31,16 @@
                     <component :is="tipoDialisis === 'hemodialisis' ? Form3Hemodialisis : Form3Peritoneal" />
                 </TabPanel>
                 <TabPanel>
-                    <p class="text-gray-500 text-sm">Sección "MORBILIDAD HOSPITALARIA" en construcción.</p>
+                    <Form4 />
                 </TabPanel>
                 <TabPanel>
-                    <p class="text-gray-500 text-sm">Sección "RESULTADOS CLÍNICOS" en construcción.</p>
+                    <Form5 />
                 </TabPanel>
                 <TabPanel>
-                    <p class="text-gray-500 text-sm">Sección "CALIDAD MICROBIOLOGICA DEL AGUA" en construcción.</p>
+                    <Form6 />
                 </TabPanel>
                 <TabPanel>
-                    <p class="text-gray-500 text-sm">Sección "VACUNACIÓN" en construcción.</p>
+                    <Form7 />
                 </TabPanel>
             </TabPanels>
         </TabGroup>
@@ -53,7 +52,10 @@
 import { ref } from 'vue'
 import { TabGroup, TabList, Tab, TabPanels, TabPanel } from '@headlessui/vue'
 import F1DialisisPaciente from '@/components/forms/f1_paciente_dialisis.vue'
-import Form2 from '@/components/forms/Form2.vue'
+import Form4 from '@/components/forms/Form4.vue'
+import Form5 from '@/components/forms/Form5.vue'
+import Form6 from '@/components/forms/Form6.vue'
+import Form7 from '@/components/forms/Form7.vue'
 import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue'
 import Form3Peritoneal from '@/components/forms/typesForm3/Form3Peritoneal.vue'
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue'

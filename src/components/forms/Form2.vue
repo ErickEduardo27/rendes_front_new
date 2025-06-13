@@ -6,6 +6,8 @@
                 <label class="block font-semibold text-sm text-gray-700">Fecha de Ingreso / Reingreso a Unidad</label>
                 <input v-model="ingreso" type="date" class="w-full border rounded p-2 text-sm" />
             </div>
+
+            <!-- Lista filtrada F2 ambas  -->
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">¿Condición del Paciente en Unidad?</label>
                 <select v-model="condicion" class="w-full border rounded p-2 text-sm">
