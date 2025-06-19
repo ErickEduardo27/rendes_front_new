@@ -1,5 +1,5 @@
 <template>
-    <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+    <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
         <h2 class="text-xl font-semibold mb-1">Registro para Diálisis Peritoneal</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -15,6 +15,15 @@
                     <option value="1">Nuevo</option>
                     <option value="2">Reingreso</option>
                     <option value="3">Continuador</option>
+                </select>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block font-semibold text-sm text-gray-700">¿Modalidad de Diálisis Peritoneal ?</label>
+                <select v-model="modDialPeri" class="w-full border rounded p-2 text-sm">
+                    <option value="">Seleccione una opción</option>
+                    <option value="1">DPAC</option>
+                    <option value="2">DPA</option>
                 </select>
             </div>
 
@@ -38,42 +47,127 @@
         </div>
 
         <hr />
+        <div class="col-span-1 lg:col-span-2">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Serología Actual</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div v-for="serologia in serologiasLabels" :key="serologia"
+                    class="bg-white p-3 rounded shadow-sm border border-gray-200 hover:border-black transition-all duration-200">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-medium text-gray-800">{{ serologia }}</span>
+                        <div class="flex items-center gap-2">
+                            <span
+                                :class="!estadoSerologias[serologia].presente ? 'text-black font-semibold' : 'text-gray-400'">
+                                No
+                            </span>
+                            <button @click="toggleSerologia(serologia)"
+                                class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
+                                :class="estadoSerologias[serologia].presente ? 'bg-black' : 'bg-gray-300'">
+                                <span
+                                    class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
+                                    :class="estadoSerologias[serologia].presente ? 'translate-x-6' : 'translate-x-1'" />
+                            </button>
+                            <span
+                                :class="estadoSerologias[serologia].presente ? 'text-black font-semibold' : 'text-gray-400'">
+                                Sí
+                            </span>
+                        </div>
+                    </div>
 
-        <div class="space-y-4">
-            <h3 class="text-base font-semibold">Eventos de Egreso/Reingreso</h3>
-
-            <div v-for="(evento, index) in eventos" :key="index"
-                class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-end">
-                <div class="space-y-2">
-                    <label class="block font-semibold text-sm text-gray-700">Fecha Egreso de la Unidad</label>
-                    <input v-model="evento.feEgreUni" type="date" class="w-full border rounded p-2 text-sm" />
-                </div>
-
-                <div class="space-y-2">
-                    <label class="block font-semibold text-sm text-gray-700">Tipo de Egreso</label>
-                    <select v-model="evento.tyEgreso" class="w-full border rounded p-2 text-sm">
-                        <option value="">Seleccione una opción</option>
-                        <option value="1">Fallecimiento</option>
-                        <option value="2">hospitalización</option>
-                        <option value="3">Trasplante</option>
-                        <option value="4">Cambio de modalidad</option>
-                        <option value="5">Cambio de unidad</option>
-                        <option value="6">Otros</option>
-                    </select>
-                </div>
-
-                <div class="space-y-2">
-                    <label class="block font-semibold text-sm text-gray-700">Fecha Reingreso a la Unidad</label>
-                    <input v-model="evento.feReingresoUni" type="date" class="w-full border rounded p-2 text-sm" />
+                    <div v-if="estadoSerologias[serologia].presente" class="mt-2">
+                        <label class="block text-sm font-medium text-gray-700">Resultado:</label>
+                        <select v-model="estadoSerologias[serologia].resultado"
+                            class="w-full border rounded p-2 text-sm mt-1">
+                            <option value="Desconocido">Desconocido</option>
+                            <option value="Positivo">Positivo</option>
+                            <option value="Negativo">Negativo</option>
+                        </select>
+                    </div>
                 </div>
             </div>
+        </div>
+        <hr />
+        <div class="col-span-1 lg:col-span-2">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">¿Tipo de Acceso Actual?</label>
+                    <select v-model="accActual" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="">Seleccione una opción</option>
+                        <option value="1">FAV</option>
+                        <option value="2">Injerto autólogo</option>
+                        <option value="3">Injerto protésico</option>
+                        <option value="4">CVCLP</option>
+                        <option value="5">CVCT</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">Ubicación</label>
+                    <select v-model="ubicacion" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option v-for="ubi in ubicacionesFiltradas" :key="ubi.value" :value="ubi.value">
+                            {{ ubi.label }}
+                        </option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">¿Motivo Cambio de Acceso?</label>
+                    <select v-model="motivCambioAcc" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="1">Complicación mecánica</option>
+                        <option value="2">Complicación infecciosa</option>
+                        <option value="3">Prescripción Médica</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <h3 class="text-base font-semibold">Eventos de Egreso/Reingreso</h3>
+        <div v-for="(evento, index) in eventos" :key="index" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
 
-            <button @click="agregarEvento" type="button" class="text-blue-600 text-sm mt-2 hover:underline">
-                ➕ Agregar otro evento
-            </button>
+            <!-- Fecha de egreso -->
+            <div class="space-y-2 lg:col-span-4">
+                <label class="block font-semibold text-sm text-gray-700">Fecha Egreso de la Unidad</label>
+                <input v-model="evento.feEgreUni" type="date" class="w-full border rounded p-2 text-sm" />
+            </div>
+
+            <!-- Tipo de egreso -->
+            <div class="space-y-2 lg:col-span-4">
+                <label class="block font-semibold text-sm text-gray-700">Tipo de Egreso</label>
+                <select v-model="evento.tyEgreso" class="w-full border rounded p-2 text-sm">
+                    <option value="">Seleccione una opción</option>
+                    <option value="1">Fallecimiento</option>
+                    <option value="2">Hospitalización</option>
+                    <option value="3">Trasplante</option>
+                    <option value="4">Cambio de modalidad</option>
+                    <option value="5">Cambio de unidad</option>
+                    <option value="6">Otros</option>
+                </select>
+                <input v-if="evento.tyEgreso === '6'" v-model="evento.otroEgreso" type="text"
+                    placeholder="Especifique el tipo de egreso" class="w-full border rounded p-2 text-sm mt-2" />
+            </div>
+
+            <!-- Fecha reingreso -->
+            <div class="space-y-2 lg:col-span-3">
+                <label class="block font-semibold text-sm text-gray-700">Fecha Reingreso a la Unidad</label>
+                <input v-model="evento.feReingresoUni" type="date" class="w-full border rounded p-2 text-sm" />
+            </div>
+
+            <!-- Botón Eliminar (solo si hay más de 1 evento) -->
+            <div class="flex justify-end lg:col-span-1" v-if="eventos.length > 1">
+                <button @click="eliminarEvento(index)" type="button"
+                    class="text-red-600 border border-red-500 p-2 rounded-full hover:bg-red-100 transition"
+                    title="Eliminar evento">
+                    🗑️
+                </button>
+            </div>
         </div>
 
+        <button @click="agregarEvento" type="button" class="text-blue-600 text-sm mt-2 hover:underline">
+            ➕ Agregar otro evento
+        </button>
+
         <hr />
+
 
 
         <button class="w-full bg-black text-white py-2 rounded hover:bg-gray-900">
@@ -88,15 +182,72 @@ import { computed, ref } from 'vue';
 const condicion = ref('')
 const feIngresoReingresoUni = ref('')
 const busqueda = ref('')
+const modDialPeri = ref('')
+const accActual = ref('')
+const motivCambioAcc = ref('')
 
 const eventos = ref([
-    { feEgreUni: '', tyEgreso: '', feReingresoUni: '' }
+    { feEgreUni: '', tyEgreso: '', otroEgreso: '', feReingresoUni: '' }
 ])
 
 function agregarEvento() {
-    eventos.value.push({ feEgreUni: '', tyEgreso: '', feReingresoUni: '' })
+    eventos.value.push({ feEgreUni: '', tyEgreso: '', otroEgreso: '', feReingresoUni: '' })
 }
 
+const eliminarEvento = (index) => {
+    eventos.value.splice(index, 1);
+};
+
+const serologiasLabels = ['VHB', 'VHC', 'VHI'];
+
+
+const estadoSerologias = ref({
+    VHB: { presente: false, resultado: 'Desconocido' },
+    VHC: { presente: false, resultado: 'Desconocido' },
+    VHI: { presente: false, resultado: 'Desconocido' },
+});
+
+
+const toggleSerologia = (serologia) => {
+    estadoSerologias.value[serologia].presente = !estadoSerologias.value[serologia].presente;
+    if (!estadoSerologias.value[serologia].presente) {
+        estadoSerologias.value[serologia].resultado = 'Desconocido';
+    }
+};
+
+const datosUbicaciones = {
+    '1': [ // FAV
+        { value: 'izq_radial', label: 'Izquierda Radial' },
+        { value: 'der_radial', label: 'Derecha Radial' },
+        { value: 'der_braquial_cubi', label: 'Braquial o cubital derecha' },
+        { value: 'izq_braquial_cubi', label: 'Braquial o cubital izquierdo' },
+    ],
+    '2': [ // Injerto autólogo
+        { value: 'injer_autologo', label: 'Injerto autólogo' },
+    ],
+    '3': [ // Injerto protésico
+        { value: 'injer_protesico', label: 'Injerto protésico' },
+
+    ],
+    '4': [ // CVCLP (Catéter Venoso Central Permanente)
+        { value: 'yugular_izq', label: 'Yugular Izquierda' },
+        { value: 'yugular_der', label: 'Yugular Derecha' },
+        { value: 'subclavia_izq', label: 'Subclavia Izquierda' },
+        { value: 'subclavia_der', label: 'Subclavia Derecha' },
+        { value: 'femoral_izq', label: 'Femoral Izquierda' },
+        { value: 'femoral_der', label: 'Femoral Derecha' },
+        { value: 'otra_cvcp', label: 'Otra CVCP' },
+    ],
+    '5': [ // CVCT  (Catéter Venoso Central Temporal)
+        { value: 'yugular_izq_temp', label: 'Yugular Izquierda' },
+        { value: 'yugular_der_temp', label: 'Yugular Derecha' },
+        { value: 'subclavia_izq_temp', label: 'Subclavia Izquierda' },
+        { value: 'subclavia_der_temp', label: 'Subclavia Derecha' },
+        { value: 'femoral_izq_temp', label: 'Femoral Izquierda' },
+        { value: 'femoral_der_temp', label: 'Femoral Derecha' },
+        { value: 'otra_cvct', label: 'Otra CVCT' },
+    ]
+};
 
 const hospitales = ref([
     { id: 1, nombre: 'Centro Nefrológico Integral Renal Care SAC' },
@@ -109,19 +260,25 @@ const hospitales = ref([
     { id: 8, nombre: 'Hospital II "Jorge Reátegui delgado"' },
 ])
 
+const ubicacionesFiltradas = computed(() => {
+    ubicacion.value = '';
+    return datosUbicaciones[accActual.value] || [];
+});
+
+
 const mostrarResultados = ref(true)
 const hospitalSeleccionado = ref(null)
 
 const resultadosFiltrados = computed(() => {
-  return hospitales.value.filter(h =>
-    h.nombre.toLowerCase().includes(busqueda.value.toLowerCase())
-  )
+    return hospitales.value.filter(h =>
+        h.nombre.toLowerCase().includes(busqueda.value.toLowerCase())
+    )
 })
 
 const seleccionarHospital = (hospital) => {
-  hospitalSeleccionado.value = hospital
-  busqueda.value = hospital.nombre
-  mostrarResultados.value = false 
+    hospitalSeleccionado.value = hospital
+    busqueda.value = hospital.nombre
+    mostrarResultados.value = false
 }
 
 

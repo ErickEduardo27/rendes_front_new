@@ -4,13 +4,13 @@
         <p class="text-sm text-gray-500 mb-4">Complete la información médica del paciente en las diferentes secciones
         </p>
         <TabGroup>
-            <div class="w-full overflow-x-auto md:overflow-x-visible">
-                <TabList
-                    class="flex flex-nowrap md:flex-wrap space-x-2 md:space-x-0 md:gap-2 border-b mb-4 min-w-max md:min-w-0">
+            <div class="w-full overflow-x-auto custom-scrollbar">
+                <TabList class="flex space-x-2 mb-2 min-w-max md:min-w-0 border-b border-gray-200">
                     <Tab v-for="tab in tabs" :key="tab" v-slot="{ selected }">
                         <button :class="[
-                            'pb-2 px-4 text-sm font-medium rounded-t-md transition-colors',
-                            selected ? 'border-b-2 border-black text-black bg-gray-100' : 'text-gray-500 hover:text-black'
+                            'flex-shrink-0 px-4 py-2 text-sm font-medium rounded-t-md transition-colors',
+                            'whitespace-nowrap',
+                            selected ? 'border-b-2 w-fit border-black text-black bg-gray-100' : 'text-gray-500 hover:text-black' // Esto es clave para que el texto no se rompa
                         ]">
                             {{ tab }}
                         </button>
@@ -69,3 +69,29 @@ const props = defineProps({
 const tabs = ref(['REGISTRO DE PACIENTES EN DIALISIS', 'UNIDAD ACTUAL', 'EVENTOS DE INFECCIÓN', 'MORBILIDAD HOSPITALARIA', 'RESULTADOS CLÍNICOS', 'CALIDAD MICROBIOLOGICA DEL AGUA', 'VACUNACIÓN'])
 
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    background-color: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 3px;
+    border: 1px solid transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #9ca3af;
+}
+
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
+}
+</style>

@@ -36,7 +36,7 @@
                 </ul>
             </div>
         </div>
-
+        <hr />
         <hr />
         <h2 class="text-xl font-semibold mb-1">Condición Serológico Actual</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
