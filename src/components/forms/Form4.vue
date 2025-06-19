@@ -1,8 +1,6 @@
 <template>
     <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2">
         <h2 class="text-xl font-semibold mb-1">Diagnóstico de Alta de Hospitalización (CIE10)</h2>
-        <!-- Inputs lado a lado -->
-        <!-- Filtros lado a lado -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Por Código:</label>

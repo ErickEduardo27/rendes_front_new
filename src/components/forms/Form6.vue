@@ -17,10 +17,10 @@
                     <option value="">Seleccione una opción</option>
                     <option value="1">2025_10</option>
                     <option value="2">2025_9</option>
-                    <option value="1">2025_8</option>
-                    <option value="2">2025_7</option>
-                    <option value="1">2024_6</option>
-                    <option value="2">2024_5</option>
+                    <option value="3">2025_8</option>
+                    <option value="4">2025_7</option>
+                    <option value="5">2024_6</option>
+                    <option value="6">2024_5</option>
                 </select>
             </div>
         </div>
@@ -47,13 +47,23 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Salida de la Ósmosis *</label>
-                <input v-model="endSaOsmosis" type="number" placeholder="Sólo se aceptan valores numéricos..."
-                    class="w-full border rounded p-2 text-sm" />
+                <select v-model="endoAguaTrata" class="w-full border rounded p-2 text-sm">
+                    <option value="">Seleccione una opción</option>
+                    <option value="1"> <= 0.25  </option>
+                    <option value="2"> > 0.25 </option>
+                    <option value="3"> <= 0.03 </option>
+                    <option value="4"> > 0.03 </option>
+                </select>
             </div>
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Retorno del Anillo de Circulación *</label>
-                <input v-model="endAniCirculacion" type="number" placeholder="Sólo se aceptan valores numéricos..."
-                    class="w-full border rounded p-2 text-sm" />
+                <select v-model="rtnAnilloCir" class="w-full border rounded p-2 text-sm">
+                    <option value="">Seleccione una opción</option>
+                    <option value="1"> <= 0.25  </option>
+                    <option value="2"> > 0.25 </option>
+                    <option value="3"> <= 0.03 </option>
+                    <option value="4"> > 0.03 </option>
+                </select>
             </div>
         </div>
 
@@ -118,6 +128,9 @@ const bacMaquiHemodi = ref('');
 const bacMaquiHemodi2 = ref('');
 const endMaquiHemodi = ref('');
 const endMaquiHemodi2 = ref('');
+
+const endoAguaTrata = ref('')
+const rtnAnilloCir = ref('')
 
 export default {
     setup() {

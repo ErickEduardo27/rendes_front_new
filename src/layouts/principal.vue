@@ -11,7 +11,7 @@
     <div class="container-general-sub flex flex-col flex-1">
       <Navbar @toggle-sidebar="toggleSidebar" />
       
-      <div class="main-responsive w-full max-w-[98%] flex-1">
+      <div class="main-responsive w-full max-w-[100%] max-h-[100%] flex-1">
         <router-view />
       </div>
     </div>
