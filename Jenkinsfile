@@ -7,7 +7,7 @@ pipeline {
 
     agent { label 'master' }
 
-    environment { APP_NAME = 'hisar-web' }
+    environment { APP_NAME = 'rendes-web' }
 
     options {
         skipStagesAfterUnstable()

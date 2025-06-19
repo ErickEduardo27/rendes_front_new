@@ -5,7 +5,6 @@
             <p class="modal-subtitle">
                 Complete la información básica del paciente para crear su expediente médico.
             </p>
-
             <form @submit.prevent="handleSubmit" class="form-grid">
                 <div class="form-group">
                     <label for="tipoId">Tipo de Documento *</label>
@@ -15,7 +14,6 @@
                         <option>CE</option>
                     </select>
                 </div>
-
                 <div class="form-group input-with-suggestions">
                     <label for="numeroId">Número de Documento *</label>
                     <input id="numeroId" v-model="formData.numeroId" @input="handleDocumentInput" pattern="[0-9]*"
@@ -30,7 +28,6 @@
                         </li>
                     </ul>
                 </div>
-
                 <div class="form-group">
                     <label for="apellidos">Apellidos *</label>
                     <input id="apellidos" v-model="formData.apellidos" readonly />
