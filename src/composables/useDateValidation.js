@@ -4,7 +4,7 @@ export function useDateValidation(fechaCreacionInicioRef, fechaDiagnosticoRef, f
 
   const today = computed(() => {
     const now = new Date();
-    const offset = now.getTimezoneOffset() * 60000; 
+    const offset = now.getTimezoneOffset() * 60000;
     const localNow = new Date(now.getTime() - offset);
     return localNow.toISOString().split('T')[0];
   });
@@ -15,7 +15,7 @@ export function useDateValidation(fechaCreacionInicioRef, fechaDiagnosticoRef, f
     }
     return fechaCreacionInicioRef.value;
   });
-  
+
   const isFechaDiagnosticoValid = computed(() => {
     if (!fechaCreacionInicioRef.value || !fechaDiagnosticoRef.value) {
       return true;

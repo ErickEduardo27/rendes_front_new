@@ -83,29 +83,8 @@
 </template>
 
 <script>
-import { apiGetAutenticado } from '@/services/apiService/apiMethodService';
 import { apiGetPaginado } from '@/services/ipress/Ipress.service';
-
-    async function fetchIpress() {
-      try {
-        const respuesta = await apiGetAutenticado('/ipress/');
-        pacientes.value = respuesta;
-      } catch (error) {
-        console.error('Error al obtener datos:', error);
-      }
-    }
-
-    onMounted(() => {
-      fetchIpress();
-    });
-
-    return {
-      pacientes
-    };
-  }
-};
-</script>
-<!-- import { apiGetAutenticado } from '@/services/apiService/apiMethodService';
+import { apiGetAutenticado } from '@/services/apiService/apiMethodService';
 import UserTable from "../ipress/table.vue";
 export default {
     name: 'PatientTable',
@@ -206,7 +185,7 @@ export default {
         }
     },
 };
-</script> -->
+</script>
 
 <style scoped>
 /* Puedes personalizar estilos aquí si quieres */
