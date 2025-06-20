@@ -178,6 +178,15 @@
             </button>
         </div>
 
+        <div class="mt-4 space-y-2">
+            <label class="block font-semibold text-sm text-gray-700">¿Presenta infecciones?</label>
+            <select v-model="localInfeccion" class="w-full border rounded p-2 text-sm">
+                <option value="">Seleccione una opción</option>
+                <option value="si">Sí</option>
+                <option value="no">No</option>
+            </select>
+        </div>
+
         <hr />
 
 
@@ -188,10 +197,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
-const serologiaActual = ref('')
-const condicionSero = ref('')
 const condicion = ref('')
 const accActual = ref('')
 const ubicacion = ref('');
@@ -308,5 +315,18 @@ const seleccionarHospital = (hospital) => {
     busqueda.value = hospital.nombre
     mostrarResultados.value = false
 }
+
+const props = defineProps({
+  presentaInfeccion: String
+})
+
+const emit = defineEmits(['update:presentaInfeccion'])
+
+const localInfeccion = ref(props.presentaInfeccion ?? '')
+
+watch(localInfeccion, (val) => {
+  emit('update:presentaInfeccion', val)
+})
+
 
 </script>

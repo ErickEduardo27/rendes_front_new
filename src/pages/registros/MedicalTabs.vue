@@ -24,11 +24,13 @@
                 </TabPanel>
                 <TabPanel>
                     <!-- Formulario 2 -->
-                    <component :is="tipoDialisis === 'hemodialisis' ? Form2Hemodialisis : Form2Peritoneal" />
+                    <component :is="tipoDialisis === 'hemodialisis' ? Form2Hemodialisis : Form2Peritoneal"
+                        v-model:presentaInfeccion="presentaInfeccion" />
                 </TabPanel>
                 <TabPanel>
                     <!-- Formulario 3 -->
-                    <component :is="tipoDialisis === 'hemodialisis' ? Form3Hemodialisis : Form3Peritoneal" />
+                    <component :is="tipoDialisis === 'hemodialisis' ? Form3Hemodialisis : Form3Peritoneal"
+                        :habilitado="presentaInfeccion === 'si'" />
                 </TabPanel>
                 <TabPanel>
                     <Form4 />
@@ -49,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { TabGroup, TabList, Tab, TabPanels, TabPanel } from '@headlessui/vue'
 import F1DialisisPaciente from '@/components/forms/f1_paciente_dialisis.vue'
 import Form4 from '@/components/forms/Form4.vue'
@@ -68,6 +70,11 @@ const props = defineProps({
 
 const tabs = ref(['REGISTRO DE PACIENTES EN DIALISIS', 'UNIDAD ACTUAL', 'EVENTOS DE INFECCIÓN', 'MORBILIDAD HOSPITALARIA', 'RESULTADOS CLÍNICOS', 'CALIDAD MICROBIOLOGICA DEL AGUA', 'VACUNACIÓN'])
 
+const presentaInfeccion = ref('');
+
+watch(presentaInfeccion, (val) => {
+  console.log('¿Tiene infecciones?', val)
+})
 </script>
 
 <style scoped>

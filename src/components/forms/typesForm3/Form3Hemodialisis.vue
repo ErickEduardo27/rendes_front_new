@@ -1,5 +1,5 @@
 <template>
-    <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
+    <div v-if="habilitado" class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
         <h2 class="text-xl font-semibold mb-1">ACCESO PARA DIÁLISIS</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-2">
@@ -74,15 +74,15 @@
                         Tratamiento antimicrobial IV
                     </label>
                     <div class="flex items-center gap-2">
-                        <span :class="!tratamientoIV ? 'text-blue-500 font-semibold' : 'text-gray-400'">No</span>
+                        <span :class="!tratamientoIV ? 'text-black font-semibold' : 'text-gray-400'">No</span>
                         <button @click="tratamientoIV = !tratamientoIV"
                             class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
-                            :class="tratamientoIV ? 'bg-blue-600' : 'bg-gray-300'">
+                            :class="tratamientoIV ? 'bg-black' : 'bg-gray-300'">
                             <span
                                 class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
                                 :class="tratamientoIV ? 'translate-x-6' : 'translate-x-1'" />
                         </button>
-                        <span :class="tratamientoIV ? 'text-blue-500 font-semibold' : 'text-gray-400'">Sí</span>
+                        <span :class="tratamientoIV ? 'text-black font-semibold' : 'text-gray-400'">Sí</span>
                     </div>
                 </div>
 
@@ -91,15 +91,15 @@
                         Vancomicina IV
                     </label>
                     <div class="flex items-center gap-2">
-                        <span :class="!vancomicinaIV ? 'text-blue-500 font-semibold' : 'text-gray-400'">No</span>
+                        <span :class="!vancomicinaIV ? 'text-black font-semibold' : 'text-gray-400'">No</span>
                         <button @click="vancomicinaIV = !vancomicinaIV"
                             class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
-                            :class="vancomicinaIV ? 'bg-blue-600' : 'bg-gray-300'">
+                            :class="vancomicinaIV ? 'bg-black' : 'bg-gray-300'">
                             <span
                                 class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
                                 :class="vancomicinaIV ? 'translate-x-6' : 'translate-x-1'" />
                         </button>
-                        <span :class="vancomicinaIV ? 'text-blue-500 font-semibold' : 'text-gray-400'">Sí</span>
+                        <span :class="vancomicinaIV ? 'text-black font-semibold' : 'text-gray-400'">Sí</span>
                     </div>
                 </div>
 
@@ -108,15 +108,15 @@
                         Hemocultivo positivo
                     </label>
                     <div class="flex items-center gap-2">
-                        <span :class="!hemocultivoPositivo ? 'text-blue-500 font-semibold' : 'text-gray-400'">No</span>
+                        <span :class="!hemocultivoPositivo ? 'text-black font-semibold' : 'text-gray-400'">No</span>
                         <button @click="hemocultivoPositivo = !hemocultivoPositivo"
                             class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
-                            :class="hemocultivoPositivo ? 'bg-blue-600' : 'bg-gray-300'">
+                            :class="hemocultivoPositivo ? 'bg-black' : 'bg-gray-300'">
                             <span
                                 class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
                                 :class="hemocultivoPositivo ? 'translate-x-6' : 'translate-x-1'" />
                         </button>
-                        <span :class="hemocultivoPositivo ? 'text-blue-500 font-semibold' : 'text-gray-400'">Sí</span>
+                        <span :class="hemocultivoPositivo ? 'text-black font-semibold' : 'text-gray-400'">Sí</span>
                     </div>
                 </div>
             </div>
@@ -164,10 +164,17 @@
             💾 Guardar Unidad Actual
         </button>
     </div>
+    <div v-else class="text-gray-500 italic text-sm">
+        Este formulario está deshabilitado porque el paciente no presenta infecciones.
+    </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
+
+const props = defineProps({
+  habilitado: Boolean,
+});
 
 const datosUbicaciones = {
     '1': [ // FAV

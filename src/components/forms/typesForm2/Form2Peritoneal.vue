@@ -121,50 +121,58 @@
             </div>
         </div>
         <hr>
-        <h3 class="text-base font-semibold">Eventos de Egreso/Reingreso</h3>
-        <div v-for="(evento, index) in eventos" :key="index" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+        <div class="space-y-4">
+            <h3 class="text-base font-semibold">Eventos de Egreso/Reingreso</h3>
 
-            <!-- Fecha de egreso -->
-            <div class="space-y-2 lg:col-span-4">
-                <label class="block font-semibold text-sm text-gray-700">Fecha Egreso de la Unidad</label>
-                <input v-model="evento.feEgreUni" type="date" class="w-full border rounded p-2 text-sm" />
+            <div v-for="(evento, index) in eventos" :key="index"
+                class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                <div class="space-y-2 lg:col-span-4">
+                    <label class="block font-semibold text-sm text-gray-700">Fecha Egreso de la Unidad</label>
+                    <input v-model="evento.feEgreUni" type="date" class="w-full border rounded p-2 text-sm" />
+                </div>
+
+                <div class="space-y-2 lg:col-span-4">
+                    <label class="block font-semibold text-sm text-gray-700">Tipo de Egreso</label>
+                    <select v-model="evento.tyEgreso" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="1">Fallecimiento</option>
+                        <option value="2">Hospitalización</option>
+                        <option value="3">Trasplante</option>
+                        <option value="4">Cambio de modalidad</option>
+                        <option value="5">Cambio de unidad</option>
+                        <option value="6">Otros</option>
+                    </select>
+                    <input v-if="evento.tyEgreso === '6'" v-model="evento.otroEgreso" type="text"
+                        placeholder="Especifique el tipo de egreso" class="w-full border rounded p-2 text-sm mt-2" />
+                </div>
+
+                <div class="space-y-2 lg:col-span-3">
+                    <label class="block font-semibold text-sm text-gray-700">Fecha Reingreso a la Unidad</label>
+                    <input v-model="evento.feReingresoUni" type="date" class="w-full border rounded p-2 text-sm" />
+                </div>
+
+                <div class="flex justify-end lg:col-span-1" v-if="eventos.length > 1">
+                    <button @click="eliminarEvento(index)" type="button"
+                        class="text-red-600 border border-red-500 p-2 rounded-full hover:bg-red-100 transition"
+                        title="Eliminar evento">
+                        🗑️
+                    </button>
+                </div>
             </div>
 
-            <!-- Tipo de egreso -->
-            <div class="space-y-2 lg:col-span-4">
-                <label class="block font-semibold text-sm text-gray-700">Tipo de Egreso</label>
-                <select v-model="evento.tyEgreso" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">Fallecimiento</option>
-                    <option value="2">Hospitalización</option>
-                    <option value="3">Trasplante</option>
-                    <option value="4">Cambio de modalidad</option>
-                    <option value="5">Cambio de unidad</option>
-                    <option value="6">Otros</option>
-                </select>
-                <input v-if="evento.tyEgreso === '6'" v-model="evento.otroEgreso" type="text"
-                    placeholder="Especifique el tipo de egreso" class="w-full border rounded p-2 text-sm mt-2" />
-            </div>
-
-            <!-- Fecha reingreso -->
-            <div class="space-y-2 lg:col-span-3">
-                <label class="block font-semibold text-sm text-gray-700">Fecha Reingreso a la Unidad</label>
-                <input v-model="evento.feReingresoUni" type="date" class="w-full border rounded p-2 text-sm" />
-            </div>
-
-            <!-- Botón Eliminar (solo si hay más de 1 evento) -->
-            <div class="flex justify-end lg:col-span-1" v-if="eventos.length > 1">
-                <button @click="eliminarEvento(index)" type="button"
-                    class="text-red-600 border border-red-500 p-2 rounded-full hover:bg-red-100 transition"
-                    title="Eliminar evento">
-                    🗑️
-                </button>
-            </div>
+            <button @click="agregarEvento" type="button" class="text-blue-600 text-sm mt-2 hover:underline">
+                ➕ Agregar otro evento
+            </button>
         </div>
 
-        <button @click="agregarEvento" type="button" class="text-blue-600 text-sm mt-2 hover:underline">
-            ➕ Agregar otro evento
-        </button>
+        <div class="mt-4 space-y-2">
+            <label class="block font-semibold text-sm text-gray-700">¿Presenta infecciones?</label>
+            <select v-model="localInfeccion" class="w-full border rounded p-2 text-sm">
+                <option value="">Seleccione una opción</option>
+                <option value="si">Sí</option>
+                <option value="no">No</option>
+            </select>
+        </div>
 
         <hr />
 
@@ -177,7 +185,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const condicion = ref('')
 const feIngresoReingresoUni = ref('')
@@ -185,6 +193,7 @@ const busqueda = ref('')
 const modDialPeri = ref('')
 const accActual = ref('')
 const motivCambioAcc = ref('')
+const ubicacion = ref('');
 
 const eventos = ref([
     { feEgreUni: '', tyEgreso: '', otroEgreso: '', feReingresoUni: '' }
@@ -280,6 +289,18 @@ const seleccionarHospital = (hospital) => {
     busqueda.value = hospital.nombre
     mostrarResultados.value = false
 }
+
+const props = defineProps({
+  presentaInfeccion: String
+})
+
+const emit = defineEmits(['update:presentaInfeccion'])
+
+const localInfeccion = ref(props.presentaInfeccion ?? '')
+
+watch(localInfeccion, (val) => {
+  emit('update:presentaInfeccion', val)
+})
 
 
 </script>

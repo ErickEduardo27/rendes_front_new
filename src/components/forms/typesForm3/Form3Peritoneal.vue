@@ -1,5 +1,5 @@
 <template>
-    <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
+    <div v-if="habilitado" class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
         <h2 class="text-xl font-semibold mb-1">ACCESO PARA DIÁLISIS</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-2">
@@ -68,11 +68,17 @@
             💾 Guardar Unidad Actual
         </button>
     </div>
+    <div v-else class="text-gray-500 italic text-sm">
+        Este formulario está deshabilitado porque el paciente no presenta infecciones.
+    </div>
 </template>
 
 <script setup>
 import { ref } from 'vue';
 
+const props = defineProps({
+  habilitado: Boolean,
+});
 
 const feColocación = ref('')
 const accActual = ref('')
