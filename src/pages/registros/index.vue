@@ -17,7 +17,6 @@
         <MedicalTabs :tipoDialisis="pacienteRegistrado?.tipoDialisis" />
       </div>
     </div>
-
     <PatientRegistrationModal
       :isOpen="showModal"
       @close="closeModal"
