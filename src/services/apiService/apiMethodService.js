@@ -1,10 +1,10 @@
 // services/apiService.js
-import { obtenerToken } from '@/services/authService/authTokenService';
+/* import { obtenerToken } from '@/services/authService/authTokenService'; */
 import axios from "axios";
 export const RUTA_API = import.meta.env.VITE_API;
 
 // GET con autenticación
-export async function apiGetAutenticado(endpoint) {
+/* export async function apiGetAutenticado(endpoint) {
     const token = await obtenerToken();
     const response = await axios.get(RUTA_API + endpoint, {
         headers: { Authorization: token },
@@ -69,4 +69,4 @@ export async function apiPostArchivoAutenticado(endpoint, formData) {
         },
     });
     return response.data;
-}
+} */

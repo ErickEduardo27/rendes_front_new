@@ -14,9 +14,9 @@
         <div class="flex items-center justify-between mb-4">
             <span class="px-1 text-xs font-semibold text-cyan-800 border-cyan-100">Menú Principal</span>
         </div>
-      <SidebarItem :icon=HomeIcon label="Inicio" to="/" />
-      <SidebarItem :icon=UserIcon label="Registros" to="/newpatient"/>
-      <SidebarItem :icon=DocumentMagnifyingGlassIcon label="Administracion" :submenu="[
+      <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
+      <SidebarItem :icon="UserIcon" label="Registros" to="/newpatient"/>
+      <SidebarItem :icon="DocumentMagnifyingGlassIcon" label="Administracion" :submenu="[
           { label: 'Ipress', to: '/ipress', icon: UserIcon },
           { label: 'Pacientes', to: '', icon: UserIcon },
           { label: 'Perfiles', to: '', icon: UserIcon },
@@ -24,7 +24,7 @@
           { label: 'Asignación', to: '', icon: UserIcon },
           { label: 'Carga masiva', to: '', icon: UserIcon },
         ]"/>
-      <SidebarItem :icon=ComputerDesktopIcon label="Gestion" :submenu="[
+      <SidebarItem :icon="ComputerDesktopIcon" label="Gestion" :submenu="[
           { label: 'Pre carga', to: '', icon: UserIcon },
           { label: 'Cerrar mes', to: '', icon: UserIcon },
           { label: 'Abrir mes', to: '', icon: UserIcon },
@@ -34,36 +34,32 @@
 
     <div class="p-4 border-t border-cyan-100 flex items-center gap-2 text-sm text-gray-700 bg-gradient-to-r from-cyan-100 via-cyan-50 to-white border-b">
       <div class="w-10 h-10 rounded-full bg-gray-200 " />
-      <div >
-        <p class="font-medium">Dr. Test</p>
-        <p class="text-xs text-cyan-600">Administrador</p>
+      <div v-if="user">
+        <p class="font-medium">{{ user.nombre }}</p>
+        <p class="text-xs text-cyan-600">{{ user.datosPerfil?.perfil }}</p>
       </div>
     </div>
   </aside>
 </template>
 
-<script>
-import SidebarItem from './SidebarItem.vue'
-import { HomeIcon, UserIcon, DocumentMagnifyingGlassIcon, ComputerDesktopIcon, ChartBarIcon } from '@heroicons/vue/24/outline'
+<script setup>
 import { ref, provide } from 'vue';
+import SidebarItem from './SidebarItem.vue';
+import { useAuthStore } from "@/store/auth";
 
-export default { 
-  name: 'Sidebar',
-  components: {
-    SidebarItem
-  },
-  setup() {
-    const openItem = ref(null)
-    provide('openItem', openItem)
+import { 
+  HomeIcon, 
+  UserIcon, 
+  DocumentMagnifyingGlassIcon, 
+  ComputerDesktopIcon, 
+  ChartBarIcon 
+} from '@heroicons/vue/24/outline';
 
-    return {
-      HomeIcon,
-      UserIcon,
-      DocumentMagnifyingGlassIcon,
-      ComputerDesktopIcon,
-      ChartBarIcon
-    }
-  },
-}
+const openItem = ref(null);
+provide('openItem', openItem);
+
+
+const authStore = useAuthStore();
+const user = authStore.user; 
 </script>
 

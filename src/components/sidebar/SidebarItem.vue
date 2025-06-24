@@ -6,7 +6,7 @@
             isActive ? 'bg-cyan-200 font-semibold' : 'hover:bg-cyan-100'
         ]">
             <div class="flex items-center gap-3">
-                <component :is="icon" class="size-6 text-black" />
+                <component :is="icon" class="size-6 text-black" v-if="icon" />
                 <span class="text-sm font-medium">{{ label }}</span>
             </div>
             <!-- Flecha si hay subitems -->
@@ -21,80 +21,52 @@
     </div>
 </template>
 
-<script>
-import { useRouter, useRoute } from 'vue-router'
-import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/vue/24/outline'
-import { ref, computed, watch, inject } from 'vue'
-import SidebarSubmenu from "./SidebarSubmenu.vue";
+<script setup>
+import { ref, computed, watch, inject } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/vue/24/outline';
+import SidebarSubmenu from './SidebarSubmenu.vue';
 
-export default {
-  name: 'SidebarItem',
-  components: {
-    SidebarSubmenu
-  },
-  props: {
-    icon: {
-      type: Function,
-      required: false
-    },
-    label: {
-      type: String,
-      required: true
-    },
-    to: {
-      type: String,
-      required: false
-    },
-    submenu: {
-      type: Array,
-      required: false
-    }
-  },
-  setup(props) {
-    const isOpen = ref(false)
-    const router = useRouter()
-    const route = useRoute()
+// Props
+const props = defineProps({
+  icon: Function,
+  label: String,
+  to: String,
+  submenu: Array,
+});
 
-    const hasSubmenu = computed(() => props.submenu && props.submenu.length > 0)
-    const openItem = inject('openItem')
+// Router y estado
+const router = useRouter();
+const route = useRoute();
+const isOpen = ref(false);
+const openItem = inject('openItem');
 
-    watch(openItem, (newLabel) => {
-      if (newLabel !== props.label) {
-        isOpen.value = false
-      }
-    })
 
-    const isActive = computed(() => {
-      if (props.to && route.path === props.to) return true
-      if (hasSubmenu.value) {
-        return props.submenu.some(item => item.to === route.path)
-      }
-      return false
-    })
 
-    const toggleOrNavigate = () => {
-      if (hasSubmenu.value) {
-        isOpen.value = !isOpen.value
-        if (isOpen.value) {
-          openItem.value = props.label
-        } else {
-          openItem.value = null
-        }
-      } else if (props.to && route.path !== props.to) {
-        openItem.value = null // Cierra todos los submenús al navegar
-        router.push(props.to)
-      }
-    }
+// Lógica
+const hasSubmenu = computed(() => props.submenu && props.submenu.length > 0);
 
-    return {
-      isOpen,
-      hasSubmenu,
-      isActive,
-      toggleOrNavigate,
-      ChevronDownIcon, 
-      ChevronUpIcon
-    }
+const isActive = computed(() => {
+  if (props.to && route.path === props.to) return true;
+  if (hasSubmenu.value) {
+    return props.submenu.some(item => item.to === route.path);
   }
-}
+  return false;
+});
 
+watch(openItem, (newLabel) => {
+  if (newLabel !== props.label) {
+    isOpen.value = false;
+  }
+});
+
+const toggleOrNavigate = () => {
+  if (hasSubmenu.value) {
+    isOpen.value = !isOpen.value;
+    openItem.value = isOpen.value ? props.label : null;
+  } else if (props.to && route.path !== props.to) {
+    openItem.value = null;
+    router.push(props.to);
+  }
+};
 </script>

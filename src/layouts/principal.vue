@@ -19,57 +19,36 @@
 </template>
 
 
-<script>
-import { ref } from 'vue'
-import Navbar from '@/components/navbar/NavBar.vue';
-import Dashboard from '@/pages/admin/Dashboard.vue';
-import Sidebar from '@/components/sidebar/Sidebar.vue';
+<script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import Navbar from '@/components/navbar/NavBar.vue'
+import Sidebar from '@/components/sidebar/Sidebar.vue'
 
-export default {
-  name: 'App',
-  components: {
-    Navbar,
-    Sidebar,
-    Dashboard
-  },
-  data() {
-    return {
-      isSidebarOpen: window.innerWidth > 767,
-      isMobile: window.innerWidth <= 767
-    }
-  },
-  setup() {
-    const isSidebarOpen = ref(true);
+const isSidebarOpen = ref(window.innerWidth > 767)
+const isMobile = ref(window.innerWidth <= 767)
 
-    const toggleSidebar = () => {
-      isSidebarOpen.value = !isSidebarOpen.value;
-    };
-
-    return {
-      isSidebarOpen,
-      toggleSidebar
-    };
-  },
-  methods: {
-    toggleSidebar() {
-      this.isSidebarOpen = !this.isSidebarOpen;
-    },
-    checkIfMobile() {
-      this.isMobile = window.innerWidth <= 767;
-
-      if (this.isMobile) {
-        this.isSidebarOpen = false;
-      }
-    },
-  },
-  mounted() {
-    this.checkIfMobile();
-    window.addEventListener("resize", this.checkIfMobile);
-  },
-  beforeUnmount() {
-    window.removeEventListener("resize", this.checkIfMobile);
-  },
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value
 }
+
+const checkIfMobile = () => {
+  isMobile.value = window.innerWidth <= 767
+
+  if (isMobile.value) {
+    isSidebarOpen.value = false
+  } else {
+    isSidebarOpen.value = true
+  }
+}
+
+onMounted(() => {
+  checkIfMobile()
+  window.addEventListener('resize', checkIfMobile)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', checkIfMobile)
+})
 </script>
 <style>
 

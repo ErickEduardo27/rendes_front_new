@@ -10,7 +10,7 @@ export const RUTA_API = import.meta.env.VITE_API;
     });
     return "Bearer " + response.data.access;
 } */
-export async function obtenerToken() {
+/* export async function obtenerToken() {
     try {
         const response = await axios.post(RUTA_API + "/api/token/", {
             username: USUARIO,
@@ -21,4 +21,4 @@ export async function obtenerToken() {
         console.error("Error obteniendo token:", error);
         throw error;
     }
-}
+} */

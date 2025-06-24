@@ -26,15 +26,15 @@
                     Ingresa tus credenciales para acceder al sistema
                 </p>
 
-                
-                <form class="space-y-4">
-  
+
+                <form class="space-y-4" @submit.prevent="handleLogin">
+
                     <div>
                         <label class="text-sm font-medium block mb-1">Nombre de Usuario</label>
                         <div
                             class="flex items-center border border-[#d6f0f8] dark:border-gray-600 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-300 bg-white dark:bg-gray-800">
                             <UserIcon class="w-5 h-5 text-gray-400 mr-2" />
-                            <input type="text"
+                            <input type="text" v-model="username"
                                 class="w-full text-sm outline-none bg-transparent text-gray-800 dark:text-gray-100"
                                 placeholder="ej. doctor01" />
                         </div>
@@ -45,7 +45,7 @@
                         <div
                             class="flex items-center border border-[#d6f0f8] dark:border-gray-600 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-300 bg-white dark:bg-gray-800">
                             <LockClosedIcon class="w-5 h-5 text-gray-400 mr-2" />
-                            <input type="password"
+                            <input type="password" v-model="password"
                                 class="w-full text-sm outline-none bg-transparent text-gray-800 dark:text-gray-100"
                                 placeholder="••••••" />
                             <EyeIcon class="w-5 h-5 text-gray-400 ml-2 cursor-pointer" />
@@ -78,7 +78,7 @@
                 </div>
 
                 <div class="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">
-                    © 2024 EsSalud. Todos los derechos reservados.
+                    © 2025 EsSalud. Todos los derechos reservados.
                 </div>
             </div>
         </div>
@@ -86,17 +86,57 @@
 </template>
 
 <script setup>
+import { AuthService } from '@/services/authService/authService'
+import { useAuthStore } from '@/store/auth'
 import { UserIcon, LockClosedIcon, EyeIcon, MoonIcon, SunIcon } from '@heroicons/vue/24/outline'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
+
+const router = useRouter()
+const authStore = useAuthStore()
+const username = ref('')
+const password = ref('')
+const isDark = ref(localStorage.getItem('theme') === 'dark')
+const loading = ref(false)
+
 
 const toggleDarkMode = () => {
-  const isDark = document.documentElement.classList.contains('dark')
-  if (isDark) {
-    document.documentElement.classList.remove('dark')
-    localStorage.setItem('theme', 'light')
-  } else {
-    document.documentElement.classList.add('dark')
-    localStorage.setItem('theme', 'dark')
-  }
+    isDark.value = !isDark.value
+    if (isDark.value) {
+        document.documentElement.classList.add('dark')
+        localStorage.setItem('theme', 'dark')
+    } else {
+        document.documentElement.classList.remove('dark')
+        localStorage.setItem('theme', 'light')
+    }
 }
-</script>
 
+const handleLogin = async (e) => {
+    e.preventDefault()
+    loading.value = true
+
+    const credentials = {
+        usuario: username.value,
+        password: password.value,
+    }
+
+    try {
+        await AuthService.login(credentials)
+
+        const userData = await AuthService.me();
+
+        authStore.login(userData)
+
+        await router.push('/')
+
+        toast.success('¡Inicio de sesión exitoso!')
+    } catch (err) {
+        console.error('Error durante el login:', err)
+        alert('Correo o contraseña incorrectos ❌')
+    } finally {
+        loading.value = false
+    }
+}
+
+</script>

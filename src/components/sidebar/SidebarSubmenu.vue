@@ -10,7 +10,7 @@
         route.path === item.to ? 'bg-cyan-200 font-semibold' : 'hover:bg-cyan-100'
         ]"
     >
-      <component :is="item.icon" class="size-5 text-black" />
+      <component v-if="item.icon" :is="item.icon" class="size-5 text-black" />
       <span class="text-sm">{{ item.label }}</span>
     </div>
   </div>
@@ -33,7 +33,7 @@ const route = useRoute()
 
 function navigate(to) {
   if (to && route.path !== to) {
-    router.push(to)
+    router.push(to);
   }
 }
 

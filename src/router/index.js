@@ -5,12 +5,16 @@ import NotFound from '@/pages/error/NotFound.vue'
 import Home from '@/pages/inicio/Home.vue'
 import Ipress from '@/pages/ipress/Ipress.vue'
 import Patient from '@/pages/registros/index.vue'
+import { TokenService } from '@/services/api/token.service'
+import { useAuthStore } from '@/store/auth'
+import { storeToRefs } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
     name: 'Principal',
     component: Principal,
+    meta: { requiresAuth: true },
     children: [
       {
         path: '', // Cuando accedas a "/"
@@ -23,16 +27,11 @@ const routes = [
         component: () => import('@/pages/registros/index.vue')
       },
       {
-        path: '/ipress',
+        path: 'ipress',
         name: 'Ipress',
         component: () => import('@/pages/ipress/Ipress.vue'),
       }
     ]
-  },
-  {
-    path: '/home',
-    name: 'Home',
-    component: Home,
   },
   {
     path: '/:pathMatch(.*)*',
@@ -53,10 +52,17 @@ const router = createRouter({
 
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = !!localStorage.getItem('token')
-  if (to.meta.requiresAuth && !isAuthenticated) {
+  const authStore = useAuthStore()
+  const { isAuthenticated } = storeToRefs(authStore) // 👈 REACTIVO
+
+  if (to.meta.requiresAuth && !isAuthenticated.value) {
     return next({ name: 'Login' })
   }
+
+  if (to.name === 'Login' && isAuthenticated.value) {
+    return next({ name: 'Inicio' })
+  }
+
   next()
 })
 

@@ -10,7 +10,7 @@
                 <button class="border border-[#007BFF] text-[#007BFF] px-4 py-2 rounded hover:bg-blue-50">
                     Exportar
                 </button>
-                <button class="bg-[#007BFF] text-white px-4 py-2 rounded hover:bg-[#0066cc]">
+                <button @click="showCreateModal()" class="bg-[#007BFF] text-white px-4 py-2 rounded hover:bg-[#0066cc]">
                     Nuevo IPRESS
                 </button>
             </div>
@@ -32,7 +32,7 @@
                 <option>Activo</option>
                 <option>Inactivo</option>
             </select>
-        </div>
+        </div>  
 
         <!-- Tabla -->
         <div class="overflow-x-auto rounded border border-cyan-100 bg-white">
@@ -82,109 +82,123 @@
 
 </template>
 
-<script>
-import { apiGetPaginado } from '@/services/ipress/Ipress.service';
-import { apiGetAutenticado } from '@/services/apiService/apiMethodService';
+<script setup>
+import { ref, reactive, onMounted } from 'vue';
+import axios from 'axios';
+import { getAllIpress } from "@/services/ipress/Ipress.service";
 import UserTable from "../ipress/table.vue";
-export default {
-    name: 'PatientTable',
-    components: {
-        UserTable,
-    },
-    data() {
-        return {
-            pacientes: {
-                results: [],
-                count: 0,
-                next: null,
-                previous: null,
-            },
-            currentPage: 1,
-            showModal: false,
-            editingPaciente: null,
-            form: {
-                ipress: '',
-                red: '',
-            },
-            filters: {
-                ipress: '',
-                red: '',
-            },
-            search: ''
-        };
-    },
-    mounted() {
-        this.fetchIpress();
-    },
-    methods: {
-        /* TODO 
-            Arreglar el axios
-        */
-        async fetchIpress(url = '/ipress/?page=1') {
-            try {
-                const respuesta = url.startsWith('http')  
-                    ? await apiGetPaginado(url)
-                    : await apiGetAutenticado(url);
-                this.pacientes = respuesta;
-                const urlParams = new URLSearchParams(url.split('?')[1]);
-                this.currentPage = Number(urlParams.get('page')) || 1;
-            } catch (error) {
-                console.error('Error al obtener IPRESS:', error);
-            }
-        },
-        clearFilters() {
-            this.filters.ipress = '';
-            this.filters.red = '';
-            this.fetchPacientes();
-        },
-        showCreateModal() {
-            this.editingPaciente = null;
-            this.form = { ipress: '', red: '' };
-            this.showModal = true;
-        },
-        showEditModal(paciente) {
-            this.editingPaciente = paciente;
-            this.form = { ...paciente };
-            this.showModal = true;
-        },
-        closeModal() {
-            this.showModal = false;
-        },
-        async savePaciente() {
-            try {
-                if (this.editingPaciente) {
-                    await axios.put(`http://10.0.54.88:8010/api/ipress/${this.editingPaciente.id}/`, this.form);
-                } else {
-                    await axios.post('http://10.0.54.88:8010/api/ipress/', this.form);
-                }
-                this.showModal = false;
-                this.fetchPacientes();
-            } catch (error) {
-                console.error('Error al guardar IPRESS:', error);
-            }
-        },
-        async deletePaciente(id) {
-            if (confirm('¿Estás seguro de que quieres eliminar esta IPRESS?')) {
-                try {
-                    await axios.delete(`http://10.0.54.88:8010/api/ipress/${id}/`);
-                    this.fetchPacientes();
-                } catch (error) {
-                    console.error('Error al eliminar IPRESS:', error);
-                }
-            }
-        },
-        goToNextPage() {
-            if (this.pacientes.next) {
-                this.fetchIpress(this.pacientes.next);
-            }
-        },
-        goToPreviousPage() {
-            if (this.pacientes.previous) {
-                this.fetchIpress(this.pacientes.previous);
-            }
-        }
-    },
+
+// Estado
+const pacientes = reactive({
+  results: [],
+  count: 0,
+  next: null,
+  previous: null,
+});
+
+const currentPage = ref(1);
+const showModal = ref(false);
+const editingPaciente = ref(null);
+
+const form = reactive({
+  ipress: '',
+  red: '',
+});
+
+const filters = reactive({
+  ipress: '',
+  red: '',
+});
+
+const search = ref('');
+
+
+const fetchIpress = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/ipress/"); 
+
+    pacientes.results = respuesta.results;
+    pacientes.count = respuesta.count;
+    pacientes.next = respuesta.next;
+    pacientes.previous = respuesta.previous;
+
+    if (respuesta.next || respuesta.previous) {
+      const nextUrl = new URL(respuesta.next ?? respuesta.previous);
+      const pageParam = nextUrl.searchParams.get("page");
+      currentPage.value = pageParam ? parseInt(pageParam) - (respuesta.next ? 1 : -1) : 1;
+    } else {
+      currentPage.value = 1;
+    }
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
 };
+
+const clearFilters = () => {
+  filters.ipress = '';
+  filters.red = '';
+  fetchIpress();
+};
+
+const showCreateModal = () => {
+  editingPaciente.value = null;
+  form.ipress = '';
+  form.red = '';
+  showModal.value = true;
+};
+
+const showEditModal = (paciente) => {
+  editingPaciente.value = paciente;
+  form.ipress = paciente.ipress;
+  form.red = paciente.red;
+  showModal.value = true;
+};
+
+const closeModal = () => {
+  showModal.value = false;
+};
+
+const savePaciente = async () => {
+  try {
+    if (editingPaciente.value) {
+      await axios.put(`http://10.0.54.88:8010/api/ipress/${editingPaciente.value.id}/`, form);
+    } else {
+      await axios.post('http://10.0.54.88:8010/api/ipress/', form);
+    }
+    showModal.value = false;
+    fetchIpress();
+  } catch (error) {
+    console.error('Error al guardar IPRESS:', error);
+  }
+};
+
+const deletePaciente = async (id) => {
+  if (confirm('¿Estás seguro de que quieres eliminar esta IPRESS?')) {
+    try {
+      await axios.delete(`http://10.0.54.88:8010/api/ipress/${id}/`);
+      fetchIpress();
+    } catch (error) {
+      console.error('Error al eliminar IPRESS:', error);
+    }
+  }
+};
+
+const goToNextPage = () => {
+  if (pacientes.next) {
+    fetchIpress(pacientes.next);
+  }
+};
+
+const goToPreviousPage = () => {
+  if (pacientes.previous) {
+    fetchIpress(pacientes.previous);
+  }
+};
+
+onMounted(() => {
+  fetchIpress();
+});
 </script>
 
 <style scoped>

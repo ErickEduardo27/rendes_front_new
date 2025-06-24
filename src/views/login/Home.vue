@@ -1,5 +1,4 @@
 <template>
-  <!------ Animated Login Form ------>
   <section id="Animated-Login-Form">
     <img class="wave" src="../../assets/wave1.png" />
     <div class="containerW">
