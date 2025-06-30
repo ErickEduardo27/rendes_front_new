@@ -61,5 +61,6 @@ provide('openItem', openItem);
 
 const authStore = useAuthStore();
 const user = authStore.user; 
+user.nombre = localStorage.getItem('userNombre');
 </script>
 
