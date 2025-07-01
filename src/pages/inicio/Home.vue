@@ -1,5 +1,5 @@
 <template>
-    <div>Hola soy el principal</div>
+    <div></div>
     
 </template>
 
