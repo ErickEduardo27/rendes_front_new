@@ -116,23 +116,23 @@ const handleLogin = async (e) => {
     e.preventDefault()
     loading.value = true
 
-    /* const credentials = {
+    const credentials = {
         usuario: username.value,
         password: password.value,
-    } */
+    }
 
-    const credentials = {
+    /* const credentials = {
         usuario: "Erick",
         password: "73131653",
-    }
+    } */
     /* router.push('/')
     return; */
     try {
         await AuthService.login(credentials)
 
         const userData = await AuthService.me();
-9
-        authStore.login(userData,username.value)
+
+        authStore.login(userData)
 
         await router.push('/')
 

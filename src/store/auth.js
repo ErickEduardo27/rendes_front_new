@@ -14,11 +14,9 @@ export const useAuthStore = defineStore('auth', () => {
         isAuthenticated.value = true
     }
 
-    const login = (userData, nombre) => {
+    const login = (userData) => {
         localStorage.setItem('user', JSON.stringify(userData))
-        localStorage.setItem('userNombre', nombre)
         user.value = userData
-        user.nombre = nombre
         isAuthenticated.value = true
     }
 
