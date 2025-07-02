@@ -1,38 +1,5 @@
 <template>
     <div class="space-y-4 max-h-[490px] overflow-y-auto pr-2 mt-2">
-        <h2 class="text-xl font-semibold mb-1">Comorbilidad</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div v-for="(label, index) in comorbilidadesLabels" :key="index"
-                class="flex justify-between items-center bg-white p-3 rounded shadow-sm border border-gray-200 hover:border-black transition-all duration-200">
-                <span class="font-medium text-gray-800">{{ label }}</span>
-                <div class="flex items-center gap-2">
-                    <span :class="!estadoComorbilidades[index] ? 'text-black font-semibold' : 'text-gray-400'">
-                        No
-                    </span>
-
-                    <button @click="toggleComorbilidad(index)"
-                        class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
-                        :class="estadoComorbilidades[index] ? 'bg-black' : 'bg-gray-300'">
-                        <span
-                            class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
-                            :class="estadoComorbilidades[index] ? 'translate-x-6' : 'translate-x-1'" />
-                    </button>
-
-                    <span :class="estadoComorbilidades[index] ? 'text-black font-semibold' : 'text-gray-400'">
-                        Sí
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="estadoComorbilidades[comorbilidadesLabels.length - 1]" class="space-y-2 mt-4">
-            <span class="block font-semibold text-sm text-gray-700">Describa Otra Comorbilidad</span>
-            <textarea v-model="otraComorbilidadTexto"
-                class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Describa la otra comorbilidad aquí..."></textarea>
-        </div>
-
-        <hr />
         <h2 class="text-xl font-semibold mb-1">Etiologia</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Etiología general -->
@@ -71,9 +38,60 @@
                 </div>
             </div>
         </div>
-        <hr />
-        <h2 class="text-xl font-semibold mb-1">Datos Adicionales</h2>
+        <hr/>
+        <h2 class="text-xl font-semibold mb-1">Comorbilidad</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div v-for="(item, index) in visibleComorbilidades" :key="item.originalIndex"
+                class="flex justify-between items-center bg-white p-3 rounded shadow-sm border border-gray-200 hover:border-black transition-all duration-200">
+                <span class="font-medium text-gray-800">{{ item.label }}</span>
+                <div class="flex items-center gap-2">
+                    <span :class="!estadoComorbilidades[item.originalIndex] ? 'text-black font-semibold' : 'text-gray-400'">
+                        No
+                    </span>
+
+                    <button @click="toggleComorbilidad(item.originalIndex)"
+                        class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
+                        :class="estadoComorbilidades[item.originalIndex] ? 'bg-black' : 'bg-gray-300'">
+                        <span
+                            class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
+                            :class="estadoComorbilidades[item.originalIndex] ? 'translate-x-6' : 'translate-x-1'" />
+                    </button>
+
+                    <span :class="estadoComorbilidades[item.originalIndex] ? 'text-black font-semibold' : 'text-gray-400'">
+                        Sí
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="estadoComorbilidades[comorbilidadesLabels.indexOf('Otra')]" class="space-y-2 mt-4">
+            <span class="block font-semibold text-sm text-gray-700">Describa Otra Comorbilidad</span>
+            <textarea v-model="otraComorbilidadTexto"
+                class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Describa la otra comorbilidad aquí..."></textarea>
+        </div>
+
+        
+        <hr />
+        <h2 class="text-xl font-semibold mb-1">Inicio de Terapia de Reemplazo Renal</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-2">
+                <label class="block font-semibold text-sm text-gray -700">Tipo de Acceso de Inicio</label>
+                <select v-model="tyacc" class="w-full border rounded p-2 text-sm">
+                    <option value="">Seleccione una opción</option>
+                    <option value="1">(FAV) Fistula Arteriovenosa</option>
+                    <option value="2">Autoinjerto </option>
+                    <option value="3">Injerto</option>
+                    <option value="5">(CVCP) Cateter Venoso Central Permanente</option>
+                    <option value="6">(CVCT) Cateter Venosos Central Temporal</option>
+                    <option value="7">(Cperitoneal) Cateter Peritoneal</option>
+                </select>
+            </div>
+            <div class="space-y-2">
+                <label class="block font-semibold text-sm text-gray-700">Fecha de Creacion Acceso de Inicio</label>
+                <input v-model="fechaCreacionInicio" type="date" class="w-full border rounded p-2 text-sm"
+                    :min="today" />
+            </div>
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Modalidad de Inicio de TRR</label>
                 <select v-model="trr" class="w-full border rounded p-2 text-sm">
@@ -102,30 +120,6 @@
                     <option value="6">Extranjero</option>
                 </select>
             </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray -700">Tipo de Acceso de Inicio</label>
-                <select v-model="tyacc" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">(FAV) Fistula Arteriovenosa</option>
-                    <option value="2">Autoinjerto </option>
-                    <option value="3">Injerto</option>
-                    <option value="5">(CVCP) Cateter Venoso Central Permanente</option>
-                    <option value="6">(CVCT) Cateter Venosos Central Temporal</option>
-                    <option value="7">(Cperitoneal) Cateter Peritoneal</option>
-                </select>
-            </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Fecha de Creacion Acceso de Inicio</label>
-                <input v-model="fechaCreacionInicio" type="date" class="w-full border rounded p-2 text-sm"
-                    :min="today" />
-            </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Fecha de Primer ingreso a la Unidad</label>
-                <input v-model="fechaIngresoUnidad" type="date" class="w-full border rounded p-2 text-sm"
-                    :min="minFechaDependiente" />
-                <p v-if="!isFechaIngresoUnidadValid" class="text-red-500 text-xs mt-1">La fecha debe ser igual o
-                    posterior a la Fecha de Creacion Acceso de Inicio.</p>
-            </div>
         </div>
         <button @click="verFormData" class="w-full bg-black text-white py-2 rounded hover:bg-gray-900">
             💾 Guardar Historia Clínica
@@ -136,6 +130,7 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue';
 import { useDateValidation } from '@/composables/useDateValidation'
+import { toast } from 'vue-sonner';
 
 const etologiasGenerales = {
     1: 'DIABETES',
@@ -178,14 +173,13 @@ const estadoComorbilidades = ref(
 
 const otraComorbilidadTexto = ref('');
 
-const otraComorbilidadIndex = comorbilidadesLabels.length - 1;
+
+const diabetesComorbilidadIndex = comorbilidadesLabels.indexOf("Diabetes");
+const hipertensionComorbilidadIndex = comorbilidadesLabels.indexOf("Hipertensión");
+const otraComorbilidadIndex = comorbilidadesLabels.indexOf("Otra"); 
 
 const isOtraComorbilidadSelected = computed(() => {
     return estadoComorbilidades.value[otraComorbilidadIndex];
-});
-
-const diabetesComorbilidadIndex = computed(() => {
-    return comorbilidadesLabels.indexOf("Diabetes");
 });
 
 const toggleComorbilidad = (index) => {
@@ -194,12 +188,6 @@ const toggleComorbilidad = (index) => {
         otraComorbilidadTexto.value = '';
     }
 
-    if (index === diabetesComorbilidadIndex.value && !estadoComorbilidades.value[index]) {
-        if (etologiaGeneral.value === '1') {
-            etologiaGeneral.value = '';
-            seleccionadas.value = [];
-        }
-    }
 };
 
 const etologiaGeneral = ref('')
@@ -215,22 +203,29 @@ const fechaDiagnostico = ref('')
 const tyacc = ref('')
 const subsist = ref('')
 const fechaCreacionInicio = ref('')
-const fechaIngresoUnidad = ref('')
 
-// --- Lógica de validación de fechas ---
 const {
   today,
   minFechaDependiente,
   isFechaDiagnosticoValid,
-  isFechaIngresoUnidadValid,
-  validateDates // La función de validación general
-} = useDateValidation(fechaCreacionInicio, fechaDiagnostico, fechaIngresoUnidad);
+  validateDates 
+} = useDateValidation(fechaCreacionInicio, fechaDiagnostico);
 
 
-watch(etologiaGeneral, () => {
+watch(etologiaGeneral, (newValue) => {
     seleccionadas.value = []
     dropdownAbierto.value = false
-})
+
+    if (newValue === '1') { 
+        if (estadoComorbilidades.value[diabetesComorbilidadIndex]) {
+            estadoComorbilidades.value[diabetesComorbilidadIndex] = false;
+        }
+    } else if (newValue === '5') {
+        if (estadoComorbilidades.value[hipertensionComorbilidadIndex]) {
+            estadoComorbilidades.value[hipertensionComorbilidadIndex] = false;
+        }
+    }
+});
 
 const onClickOutside = (e) => {
     if (!e.target.closest('.relative')) {
@@ -255,19 +250,49 @@ const filteredEtologiasGenerales = computed(() => {
     return etologiasGenerales;
 });
 
+const visibleComorbilidades = computed(() => {
+    const hiddenComorbilidades = [];
+
+    if (etologiaGeneral.value === '1') {
+        hiddenComorbilidades.push("Diabetes");
+    }
+
+    if (etologiaGeneral.value === '5') {
+        hiddenComorbilidades.push("Hipertensión");
+    }
+
+    return comorbilidadesLabels
+        .map((label, originalIndex) => ({ label, originalIndex })) 
+        .filter(item => !hiddenComorbilidades.includes(item.label)); 
+});
+
 
 const generarFormData = () => {
     
     if (!validateDates()) {
-        console.error("Formulario inválido. No se generó el FormData.");
+        toast.error("Formulario inválido. No se generó el FormData.");
         return null;
     }
 
-    const formData = {
-        comorbilidades: comorbilidadesLabels.map((label, index) => ({
+     const finalComorbilidades = comorbilidadesLabels.map((label, index) => {
+        let presente = estadoComorbilidades.value[index];
+
+        // Si Etiología General es DIABETES y esta comorbilidad es Diabetes, forzar a false
+        if (etologiaGeneral.value === '1' && label === 'Diabetes') {
+            presente = false;
+        }
+        // Si Etiología General es HIPERTENSION y esta comorbilidad es Hipertensión, forzar a false
+        if (etologiaGeneral.value === '5' && label === 'Hipertensión') {
+            presente = false;
+        }
+        return {
             nombre: label,
-            presente: estadoComorbilidades.value[index]
-        })),
+            presente: presente
+        };
+    })
+
+    const formData = {
+        comorbilidades: finalComorbilidades,
         otraComorbilidadTexto: isOtraComorbilidadSelected.value && otraComorbilidadTexto.value.trim() !== ''
             ? otraComorbilidadTexto.value.trim()
             : null,
@@ -279,8 +304,7 @@ const generarFormData = () => {
         fechaInicioTRR: fechaDiagnostico.value || null,
         subsistemaSaludInicioTRR: subsist.value || null,
         tipoAccesoInicio: tyacc.value || null,
-        fechaCreacionAccesoInicio: fechaCreacionInicio.value || null,
-        fechaPrimerIngresoUnidad: fechaIngresoUnidad.value || null,
+        fechaCreacionAccesoInicio: fechaCreacionInicio.value || null
     };
 
     return formData;

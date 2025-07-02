@@ -8,16 +8,23 @@
             <form @submit.prevent="handleSubmit" class="form-grid">
                 <div class="form-group">
                     <label for="tipoId">Tipo de Documento *</label>
-                    <select id="tipoId" v-model="formData.tipoId" required>
+                    <select id="tipoId" v-model="formData.tipoId">
                         <option disabled value="">Tipo de ID</option>
                         <option>DNI</option>
                         <option>CE</option>
+                        <option>PASAPORTE</option>
                     </select>
                 </div>
                 <div class="form-group input-with-suggestions">
                     <label for="numeroId">Número de Documento *</label>
-                    <input id="numeroId" v-model="formData.numeroId" @input="handleDocumentInput" pattern="[0-9]*"
-                        inputmode="numeric" required />
+                    <input 
+                    id="numeroId" 
+                    v-model="formData.numeroId" 
+                    @input="handleDocumentInput" 
+                    :maxlength="maxDocumentLength"
+                    :pattern="documentPattern"
+                    inputmode="numeric" 
+                     />
                     <ul v-if="showSuggestions" class="suggestions-list">
                         <li v-for="paciente in pacientesEncontrados" :key="paciente.numeroId"
                             @click="seleccionarPaciente(paciente)">
@@ -56,9 +63,9 @@
                 </div>
 
                 <div class="form-group full-width">
-                    <label for="tipoDialisis">Tipo de Diálisis *</label>
-                    <select id="tipoDialisis" v-model="formData.tipoDialisis" required>
-                        <option disabled value="">Seleccione tipo de diálisis</option>
+                    <label for="tipoDialisis">Modalidad de Diálisis *</label>
+                    <select id="tipoDialisis" v-model="formData.tipoDialisis">
+                        <option disabled value="">Seleccione la modalidad de diálisis</option>
                         <option value="hemodialisis">Hemodiálisis</option>
                         <option value="peritoneal">Diálisis Peritoneal</option>
                     </select>
@@ -74,6 +81,8 @@
 </template>
 
 <script>
+import { toast } from 'vue-sonner';
+
 export default {
     name: 'PatientRegistrationModal',
     props: {
@@ -98,9 +107,49 @@ export default {
             showSuggestions: false
         };
     },
+    computed: {
+        maxDocumentLength() {
+            switch (this.formData.tipoId) {
+                case "DNI":
+                    return 8;
+                case "CE":
+                    return 12;
+                case "PASAPORTE":
+                    return 20;
+                default:
+                    return null; 
+            }
+        },
+        documentPattern() {
+            switch (this.formData.tipoId) {
+                case "DNI":
+                    return "[0-9]{8}"; 
+                case "CE":
+                    return "[a-zA-Z0-9]{12}";
+                case "PASAPORTE":
+                    return "[a-zA-Z0-9]{1,20}"; 
+                default:
+                    return "[a-zA-Z0-9]*";
+            }
+        }
+    },
     methods: {
+        handleDocumentTypeChange() {
+            this.formData.numeroId = "";
+            this.pacientesEncontrados = [];
+            this.showSuggestions = false;
+            this.clearPatientFields();
+        },
         async handleDocumentInput() {
             const { tipoId, numeroId } = this.formData;
+
+            if (numeroId.length === 0 || tipoId === "") {
+                this.pacientesEncontrados = [];
+                this.showSuggestions = false;
+                this.clearPatientFields();
+                return;
+            }
+
             if (numeroId.length >= 3) {
                 this.pacientesEncontrados = await this.buscarPacientes(tipoId, numeroId);
                 this.showSuggestions = true;
@@ -130,6 +179,26 @@ export default {
                     genero: "Femenino",
                     edad: "34",
                     gradoInstruccion: "Secundaria"
+                },
+                {
+                    tipoId: "CE",
+                    numeroId: "123456789012",
+                    apellidos: "Fernández Quispe",
+                    nombres: "Luis Miguel",
+                    fechaNacimiento: "1975-11-05",
+                    genero: "Masculino",
+                    edad: "48",
+                    gradoInstruccion: "Técnico"
+                },
+                {
+                    tipoId: "PASAPORTE",
+                    numeroId: "ABC123456789DEF",
+                    apellidos: "Smith Johnson",
+                    nombres: "Emily Rose",
+                    fechaNacimiento: "1995-02-28",
+                    genero: "Femenino",
+                    edad: "29",
+                    gradoInstruccion: "Universitario"
                 }
             ];
 
@@ -144,12 +213,61 @@ export default {
         },
         seleccionarPaciente(paciente) {
             this.formData = {
-            ...this.formData,
-            ...paciente
+                ...this.formData,
+                ...paciente
             };
             this.showSuggestions = false;
         },
+        clearPatientFields() {
+            this.formData.apellidos = "";
+            this.formData.nombres = "";
+            this.formData.fechaNacimiento = "";
+            this.formData.genero = "";
+            this.formData.edad = "";
+            this.formData.gradoInstruccion = "";
+        },
+        validateDocument() {
+            const { tipoId, numeroId } = this.formData;
+            let errorMessage = "";
+
+            if (!tipoId) {
+                errorMessage = "Por favor, seleccione un Tipo de Documento.";
+            } else if (!numeroId) {
+                errorMessage = "Por favor, ingrese el Número de Documento.";
+            } else {
+                switch (tipoId) {
+                    case "DNI":
+                        if (numeroId.length !== 8 || !/^\d+$/.test(numeroId)) {
+                            errorMessage = "El DNI debe tener 8 dígitos numéricos.";
+                        }
+                        break;
+                    case "CE":
+                        if (numeroId.length !== 12 || !/^[a-zA-Z0-9]+$/.test(numeroId)) {
+                            errorMessage = "El CE debe tener 12 caracteres alfanuméricos.";
+                        }
+                        break;
+                    case "PASAPORTE":
+                        if (numeroId.length === 0 || numeroId.length > 20 || !/^[a-zA-Z0-9]+$/.test(numeroId)) {
+                            errorMessage = "El PASAPORTE debe tener entre 1 y 20 caracteres alfanuméricos.";
+                        }
+                        break;
+                    default:
+                        errorMessage = "Tipo de documento no válido.";
+                        break;
+                }
+            }
+
+            if (errorMessage) {
+                toast.error(errorMessage);
+                return false; 
+            }
+            return true;
+        },
         handleSubmit() {
+            if (!this.validateDocument()) {
+                return;
+            }
+
             const patientData = {
                 ...this.formData,
                 id: Date.now().toString(),

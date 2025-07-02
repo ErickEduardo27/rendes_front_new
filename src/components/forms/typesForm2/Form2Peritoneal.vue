@@ -9,16 +9,6 @@
             </div>
 
             <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">¿Condición del Paciente en Unidad?</label>
-                <select v-model="condicion" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">Nuevo</option>
-                    <option value="2">Reingreso</option>
-                    <option value="3">Continuador</option>
-                </select>
-            </div>
-
-            <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">¿Modalidad de Diálisis Peritoneal ?</label>
                 <select v-model="modDialPeri" class="w-full border rounded p-2 text-sm">
                     <option value="">Seleccione una opción</option>
@@ -48,43 +38,24 @@
 
         <hr />
         <div class="col-span-1 lg:col-span-2">
-            <h2 class="text-lg font-semibold text-gray-800 mb-4">Serología Actual</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div v-for="serologia in serologiasLabels" :key="serologia"
-                    class="bg-white p-3 rounded shadow-sm border border-gray-200 hover:border-black transition-all duration-200">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="font-medium text-gray-800">{{ serologia }}</span>
-                        <div class="flex items-center gap-2">
-                            <span
-                                :class="!estadoSerologias[serologia].presente ? 'text-black font-semibold' : 'text-gray-400'">
-                                No
-                            </span>
-                            <button @click="toggleSerologia(serologia)"
-                                class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
-                                :class="estadoSerologias[serologia].presente ? 'bg-black' : 'bg-gray-300'">
-                                <span
-                                    class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
-                                    :class="estadoSerologias[serologia].presente ? 'translate-x-6' : 'translate-x-1'" />
-                            </button>
-                            <span
-                                :class="estadoSerologias[serologia].presente ? 'text-black font-semibold' : 'text-gray-400'">
-                                Sí
-                            </span>
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Serología Actual</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div v-for="serologia in serologiasLabels" :key="serologia"
+                        class="bg-white p-3 rounded shadow-sm border border-gray-200 hover:border-black transition-all duration-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-gray-800">{{ serologia }}</span>
+                            <div class="flex items-center gap-2">
+                                <select v-model="estadoSerologias[serologia].resultado"
+                                    class="w-full border rounded p-2 text-sm">
+                                    <option value="Desconocido">Desconocido</option>
+                                    <option value="Positivo">Positivo</option>
+                                    <option value="Negativo">Negativo</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-
-                    <div v-if="estadoSerologias[serologia].presente" class="mt-2">
-                        <label class="block text-sm font-medium text-gray-700">Resultado:</label>
-                        <select v-model="estadoSerologias[serologia].resultado"
-                            class="w-full border rounded p-2 text-sm mt-1">
-                            <option value="Desconocido">Desconocido</option>
-                            <option value="Positivo">Positivo</option>
-                            <option value="Negativo">Negativo</option>
-                        </select>
-                    </div>
+                        </div>
                 </div>
             </div>
-        </div>
         <hr />
         <div class="col-span-1 lg:col-span-2">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -178,7 +149,7 @@
 
 
 
-        <button class="w-full bg-black text-white py-2 rounded hover:bg-gray-900">
+        <button @click="verFormData" class="w-full bg-black text-white py-2 rounded hover:bg-gray-900">
             💾 Guardar Unidad Actual
         </button>
     </div>
@@ -187,7 +158,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 
-const condicion = ref('')
 const feIngresoReingresoUni = ref('')
 const busqueda = ref('')
 const modDialPeri = ref('')
@@ -211,9 +181,9 @@ const serologiasLabels = ['VHB', 'VHC', 'VHI'];
 
 
 const estadoSerologias = ref({
-    VHB: { presente: false, resultado: 'Desconocido' },
-    VHC: { presente: false, resultado: 'Desconocido' },
-    VHI: { presente: false, resultado: 'Desconocido' },
+    VHB: { resultado: 'Desconocido' },
+    VHC: { resultado: 'Desconocido' },
+    VHI: { resultado: 'Desconocido' },
 });
 
 
@@ -302,5 +272,24 @@ watch(localInfeccion, (val) => {
   emit('update:presentaInfeccion', val)
 })
 
+
+const generarFormData = () => {
+
+    const formData = {
+        serologiaActual: Object.keys(estadoSerologias.value).map(key => ({
+            nombre: key,
+            resultado: estadoSerologias.value[key].resultado
+        })),
+    };
+
+    return formData;
+};
+
+const verFormData = () => {
+    const datosListos = generarFormData();
+    console.log('--- FormData Generado ---');
+    console.log(datosListos);
+    console.log('-------------------------');
+};
 
 </script>
