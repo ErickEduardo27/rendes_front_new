@@ -13,6 +13,9 @@
                 <li><strong>Edad:</strong> {{paciente.edad}}</li>
                 <li><strong>Género:</strong> {{ paciente.genero }}</li>
                 <li><strong>Tipo de Registro:</strong> {{paciente.tipoDialisis}}</li>
+                <li><strong>Autogenerado:</strong> EN PROCESO </li>
+                <li><strong>Condición:</strong> EN PROCESO </li>
+                <li><strong>Fecha de Ultima Diálisis:</strong> EN PROCESO </li>
             </ul>
             
         </div>
