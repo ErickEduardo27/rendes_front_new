@@ -45,9 +45,17 @@
                 <label class="block font-semibold text-sm text-gray-700">Tiempo de Dialisis (horas) *</label>
                 <select v-model="tmpDialisis" class="w-full border rounded p-2 text-sm">
                     <option value="">Seleccione una opción</option>
-                    <option value="1">Epicrisis</option>
-                    <option value="2">Informe de Alta</option>
-                    <option value="3">Otro</option>
+                    <option value="1">2.00</option>
+                    <option value="2">2.25</option>
+                    <option value="3">2.5</option>
+                    <option value="4">2.75</option>
+                    <option value="5">3.00</option>
+                    <option value="6">3.25</option>
+                    <option value="7">3.50</option>
+                    <option value="8">3.75</option>
+                    <option value="9">4.00</option>
+                    <option value="10">4.25</option>
+                    <option value="11">4.50</option>
                 </select>
             </div>
         <hr />

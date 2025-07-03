@@ -1,166 +1,200 @@
 <template>
     <div v-if="habilitado" class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
+
         <h2 class="text-xl font-semibold mb-1">ACCESO PARA DIÁLISIS</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Fecha de Colocación</label>
-                <input v-model="feColocación" type="date" class="w-full border rounded p-2 text-sm" />
+        <div v-for="(acceso, index) in accesosDialisis" :key="acceso.id" class="border p-4 mb-4 rounded-lg shadow-sm">
+            <h3 class="font-semibold text-lg mb-4">Acceso #{{ index + 1 }}</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">Fecha de Colocación</label>
+                    <input v-model="acceso.feColocacion" type="date" class="w-full border rounded p-2 text-sm" />
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">Motivo de Cambio</label>
+                    <select v-model="acceso.mvtCambio" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="1">Positivo</option>
+                        <option value="2">Negativo</option>
+                        <option value="3">Desconocido</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">¿Tipo de Acceso Actual?</label>
+                    <select v-model="acceso.accActual" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="1">FAV</option>
+                        <option value="2">CVCT</option>
+                        <option value="3">CVCLP</option>
+                        <option value="4">Injerto autólogo</option>
+                        <option value="5">Injerto protésico</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">Ubicación</label>
+                    <select v-model="acceso.ubicacion" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option v-for="ubi in getUbicacionesFiltradas(acceso.accActual)" :key="ubi.value"
+                            :value="ubi.value">
+                            {{ ubi.label }}
+                        </option>
+                    </select>
+                </div>
             </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Motivo de Cambio</label>
-                <select v-model="mvtCambio" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">Positivo</option>
-                    <option value="2">Negativo</option>
-                    <option value="3">Desconocido</option>
-                </select>
-            </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">¿Tipo de Acceso Actual?</label>
-                <select v-model="accActual" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">FAV</option>
-                    <option value="2">CVCT</option>
-                    <option value="3">CVCLP</option>
-                    <option value="4">Injerto autólogo</option>
-                    <option value="5">Injerto protésico</option>
-                </select>
-            </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Ubicación</label>
-                <select v-model="ubicacion" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option v-for="ubi in ubicacionesFiltradas" :key="ubi.value" :value="ubi.value">
-                        {{ ubi.label }}
-                    </option>
-                </select>
+            <div class="flex justify-end mt-4" v-if="accesosDialisis.length > 1">
+                <button @click="removeAcceso(index)" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                    Eliminar Acceso
+                </button>
             </div>
         </div>
+        <button @click="addAcceso" class="bg-white border border-black hover:text-white px-4 py-2 rounded hover:bg-black mt-4 ml-4 transform transition duration-300 hover:scale-105">
+            + Agregar Otro Acceso
+        </button>
 
-        <hr />
+        <hr class="my-8 border-gray-300" />
 
         <h2 class="text-xl font-semibold mb-1">EVENTOS INFECCIOSOS ASOCIADOS AL ACCESO DE DIÁLISIS</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Fecha de Evento</label>
-                <input v-model="feEvento" type="date" class="w-full border rounded p-2 text-sm" />
-            </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">¿Tipo de Acceso Actual?</label>
-                <select v-model="accDialisis" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">FAV</option>
-                    <option value="2">CVCT</option>
-                    <option value="3">CVCLP</option>
-                    <option value="4">Injerto autólogo</option>
-                    <option value="5">Injerto protésico</option>
-                </select>
-            </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">¿Tipo de Infección?</label>
-                <select v-model="tpInfeccion" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">Bacteriana asociada a CVC</option>
-                    <option value="2">Infección de orificio de salida</option>
-                    <option value="3">Infección del túnel</option>
-                    <option value="4">Peritonitis</option>
+        <div v-for="(evento, index) in eventosInfecciosos" :key="evento.id"
+            class="border p-4 mb-4 rounded-lg shadow-sm">
+            <h3 class="font-semibold text-lg mb-4">Evento Infeccioso #{{ index + 1 }}</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">Fecha de Evento</label>
+                    <input v-model="evento.feEvento" type="date" class="w-full border rounded p-2 text-sm" />
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">¿Tipo de Acceso Actual?</label>
+                    <select v-model="evento.accDialisis" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="1">FAV</option>
+                        <option value="2">CVCT</option>
+                        <option value="3">CVCLP</option>
+                        <option value="4">Injerto autólogo</option>
+                        <option value="5">Injerto protésico</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">¿Tipo de Infección?</label>
+                    <select v-model="evento.tpInfeccion" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="1">Bacteriana asociada a CVC</option>
+                        <option value="2">Infección de orificio de salida</option>
+                        <option value="3">Infección del túnel</option>
+                        <option value="4">Peritonitis</option>
+                    </select>
+                </div>
 
-                </select>
-            </div>
-            
-            <div class="flex flex-col lg:flex-row gap-4 w-full col-span-1 lg:col-span-2">
-                <div class="flex-1 space-y-2">
-                    <label class="block font-semibold text-sm text-gray-700">
-                        Tratamiento antimicrobial IV
-                    </label>
-                    <div class="flex items-center gap-2">
-                        <span :class="!tratamientoIV ? 'text-black font-semibold' : 'text-gray-400'">No</span>
-                        <button @click="tratamientoIV = !tratamientoIV"
-                            class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
-                            :class="tratamientoIV ? 'bg-black' : 'bg-gray-300'">
+                <div class="flex flex-col lg:flex-row gap-4 w-full col-span-1 lg:col-span-2">
+                    <div class="flex-1 space-y-2">
+                        <label class="block font-semibold text-sm text-gray-700">
+                            Tratamiento antimicrobial IV
+                        </label>
+                        <div class="flex items-center gap-2">
                             <span
-                                class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
-                                :class="tratamientoIV ? 'translate-x-6' : 'translate-x-1'" />
-                        </button>
-                        <span :class="tratamientoIV ? 'text-black font-semibold' : 'text-gray-400'">Sí</span>
+                                :class="!evento.tratamientoIV ? 'text-black font-semibold' : 'text-gray-400'">No</span>
+                            <button @click="evento.tratamientoIV = !evento.tratamientoIV"
+                                class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
+                                :class="evento.tratamientoIV ? 'bg-black' : 'bg-gray-300'">
+                                <span
+                                    class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
+                                    :class="evento.tratamientoIV ? 'translate-x-6' : 'translate-x-1'" />
+                            </button>
+                            <span :class="evento.tratamientoIV ? 'text-black font-semibold' : 'text-gray-400'">Sí</span>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 space-y-2">
+                        <label class="block font-semibold text-sm text-gray-700">
+                            Vancomicina IV
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span
+                                :class="!evento.vancomicinaIV ? 'text-black font-semibold' : 'text-gray-400'">No</span>
+                            <button @click="evento.vancomicinaIV = !evento.vancomicinaIV"
+                                class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
+                                :class="evento.vancomicinaIV ? 'bg-black' : 'bg-gray-300'">
+                                <span
+                                    class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
+                                    :class="evento.vancomicinaIV ? 'translate-x-6' : 'translate-x-1'" />
+                            </button>
+                            <span :class="evento.vancomicinaIV ? 'text-black font-semibold' : 'text-gray-400'">Sí</span>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 space-y-2">
+                        <label class="block font-semibold text-sm text-gray-700">
+                            Hemocultivo positivo
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span
+                                :class="!evento.hemocultivoPositivo ? 'text-black font-semibold' : 'text-gray-400'">No</span>
+                            <button @click="evento.hemocultivoPositivo = !evento.hemocultivoPositivo"
+                                class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
+                                :class="evento.hemocultivoPositivo ? 'bg-black' : 'bg-gray-300'">
+                                <span
+                                    class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
+                                    :class="evento.hemocultivoPositivo ? 'translate-x-6' : 'translate-x-1'" />
+                            </button>
+                            <span
+                                :class="evento.hemocultivoPositivo ? 'text-black font-semibold' : 'text-gray-400'">Sí</span>
+                        </div>
+                        <div class="space-y-2 mt-4" v-if="evento.hemocultivoPositivo">
+                            <label class="block font-semibold text-sm text-gray-700">Tipo</label>
+                            <select v-model="evento.tipoGram" class="w-full border rounded p-2 text-sm">
+                                <option value="">Seleccione una opción</option>
+                                <option value="gramPositivo">GramPositivo (+)</option>
+                                <option value="gramNegativo">GramNegativo (-)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex-1 space-y-2">
-                    <label class="block font-semibold text-sm text-gray-700">
-                        Vancomicina IV
-                    </label>
-                    <div class="flex items-center gap-2">
-                        <span :class="!vancomicinaIV ? 'text-black font-semibold' : 'text-gray-400'">No</span>
-                        <button @click="vancomicinaIV = !vancomicinaIV"
-                            class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
-                            :class="vancomicinaIV ? 'bg-black' : 'bg-gray-300'">
-                            <span
-                                class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
-                                :class="vancomicinaIV ? 'translate-x-6' : 'translate-x-1'" />
-                        </button>
-                        <span :class="vancomicinaIV ? 'text-black font-semibold' : 'text-gray-400'">Sí</span>
-                    </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">¿Bacteria?</label>
+                    <select v-model="evento.bacteria" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="1"></option>
+                    </select>
                 </div>
-
-                <div class="flex-1 space-y-2">
-                    <label class="block font-semibold text-sm text-gray-700">
-                        Hemocultivo positivo
-                    </label>
-                    <div class="flex items-center gap-2">
-                        <span :class="!hemocultivoPositivo ? 'text-black font-semibold' : 'text-gray-400'">No</span>
-                        <button @click="hemocultivoPositivo = !hemocultivoPositivo"
-                            class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200"
-                            :class="hemocultivoPositivo ? 'bg-black' : 'bg-gray-300'">
-                            <span
-                                class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200"
-                                :class="hemocultivoPositivo ? 'translate-x-6' : 'translate-x-1'" />
-                        </button>
-                        <span :class="hemocultivoPositivo ? 'text-black font-semibold' : 'text-gray-400'">Sí</span>
-                    </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">¿Tipo de Infección?</label>
+                    <select v-model="evento.tpInfeccion2" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="1">Pus</option>
+                        <option value="2">Enrojecimiento</option>
+                        <option value="3">Aumento de volumen en el lugar de AV</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="block font-semibold text-sm text-gray-700">¿Tipo de Germen?</label>
+                    <select v-model="evento.tpGermen" class="w-full border rounded p-2 text-sm">
+                        <option value="">Seleccione una opción</option>
+                        <option value="1">Staphylococcus aureus</option>
+                        <option value="2">Staphylococcus epidermidis</option>
+                        <option value="3">Escherichia coli</option>
+                        <option value="4">Enterobacter cloacae</option>
+                        <option value="5">Pseudomonas aeruginosa</option>
+                        <option value="6">Klebsiella oxytoca</option>
+                        <option value="7">Enterobacter aerogenes</option>
+                        <option value="8">Proteus mirabilis</option>
+                        <option value="9">Enterobacter hormaechei</option>
+                        <option value="10">Staphylococcus haemolyticus</option>
+                        <option value="11">Staphylococcus especies</option>
+                        <option value="12">Stenotrophomona maltophilia</option>
+                        <option value="13">Acinetobacter baumannii</option>
+                    </select>
                 </div>
             </div>
-
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">¿Bacteria?</label>
-                <select v-model="bacteria" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1"></option>
-                </select>
+            <div class="flex justify-end mt-4" v-if="eventosInfecciosos.length > 1">
+                <button @click="removeEvento(index)" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                    Eliminar Evento
+                </button>
             </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">¿Tipo de Infección?</label>
-                <select v-model="tpInfeccion2" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">Pus</option>
-                    <option value="2">Enrojecimiento</option>
-                    <option value="3">Aumento de volumen en el lugar de AV</option>
-                </select>
-            </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">¿Tipo de Germen?</label>
-                <select v-model="tpGermen" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">Staphylococcus aureus</option>
-                    <option value="2">Staphylococcus epidermidis</option>
-                    <option value="3">Escherichia coli</option>
-                    <option value="4">Enterobacter cloacae</option>
-                    <option value="5">Pseudomonas aeruginosa</option>
-                    <option value="6">Klebsiella oxytoca</option>
-                    <option value="7">Enterobacter aerogenes</option>
-                    <option value="8">Proteus mirabilis</option>
-                    <option value="9">Enterobacter hormaechei</option>
-                    <option value="10">Staphylococcus haemolyticus	</option>
-                    <option value="11">Staphylococcus especies</option>
-                    <option value="12">Stenotrophomona maltophilia	</option>
-                    <option value="13">Acinetobacter baumannii	</option>
-                </select>
-            </div>
-            
-            
-
         </div>
-        <button class="w-full bg-black text-white py-2 rounded hover:bg-gray-900">
+        <button @click="addEvento" class="bg-white border border-black hover:text-white px-4 py-2 rounded hover:bg-black mt-4 ml-4 transform transition duration-300 hover:scale-105">
+            + Agregar Otro Evento Infeccioso
+        </button>
+
+        <button class="w-full bg-black text-white py-2 rounded hover:bg-gray-900 mt-8">
             💾 Guardar Unidad Actual
         </button>
     </div>
@@ -173,7 +207,7 @@
 import { ref, computed } from 'vue';
 
 const props = defineProps({
-  habilitado: Boolean,
+    habilitado: Boolean,
 });
 
 const datosUbicaciones = {
@@ -183,14 +217,16 @@ const datosUbicaciones = {
         { value: 'der_braquial_cubi', label: 'Braquial o cubital derecha' },
         { value: 'izq_braquial_cubi', label: 'Braquial o cubital izquierdo' },
     ],
-    '2': [ // Injerto autólogo
-        { value: 'injer_autologo', label: 'Injerto autólogo' },
+    '2': [ // CVCT 
+        { value: 'yugular_izq_temp', label: 'Yugular Izquierda' },
+        { value: 'yugular_der_temp', label: 'Yugular Derecha' },
+        { value: 'subclavia_izq_temp', label: 'Subclavia Izquierda' },
+        { value: 'subclavia_der_temp', label: 'Subclavia Derecha' },
+        { value: 'femoral_izq_temp', label: 'Femoral Izquierda' },
+        { value: 'femoral_der_temp', label: 'Femoral Derecha' },
+        { value: 'otra_cvct', label: 'Otra CVCT' },
     ],
-    '3': [ // Injerto protésico
-        { value: 'injer_protesico', label: 'Injerto protésico' },
-
-    ],
-    '4': [ // CVCLP (Catéter Venoso Central Permanente)
+    '3': [ // CVCLP
         { value: 'yugular_izq', label: 'Yugular Izquierda' },
         { value: 'yugular_der', label: 'Yugular Derecha' },
         { value: 'subclavia_izq', label: 'Subclavia Izquierda' },
@@ -199,38 +235,79 @@ const datosUbicaciones = {
         { value: 'femoral_der', label: 'Femoral Derecha' },
         { value: 'otra_cvcp', label: 'Otra CVCP' },
     ],
-    '5': [ // CVCT  (Catéter Venoso Central Temporal)
-        { value: 'yugular_izq_temp', label: 'Yugular Izquierda' },
-        { value: 'yugular_der_temp', label: 'Yugular Derecha' },
-        { value: 'subclavia_izq_temp', label: 'Subclavia Izquierda' },
-        { value: 'subclavia_der_temp', label: 'Subclavia Derecha' },
-        { value: 'femoral_izq_temp', label: 'Femoral Izquierda' },
-        { value: 'femoral_der_temp', label: 'Femoral Derecha' },
-        { value: 'otra_cvct', label: 'Otra CVCT' },
+    '4': [ // Injerto autólogo
+        { value: 'injer_autologo', label: 'Injerto autólogo' },
+    ],
+    '5': [ // Injerto protésico
+        { value: 'injer_protesico', label: 'Injerto protésico' },
     ]
 };
 
-const data = ['Inicio de vancomicina IV', 'Hemocultivo positivo', 'Bacteri'];
 
-const tratamientoIV = ref(false)
-const vancomicinaIV = ref(false)
-const hemocultivoPositivo = ref(false)
-const feEvento = ref('')
-const feColocación = ref('')
-const accActual = ref('')
-const mvtCambio = ref('')
-const ubicacion = ref('')
-const accDialisis = ref('')
-const tpInfeccion = ref('')
-const tpInfeccion2 = ref('')
-const bacteria = ref('')
-const tpGermen = ref('')
+const accesosDialisis = ref([
+    {
+        id: Date.now(), 
+        feColocacion: '',
+        mvtCambio: '',
+        accActual: '',
+        ubicacion: '',
+    }
+]);
 
 
+const eventosInfecciosos = ref([
+    {
+        id: Date.now() + 1, 
+        feEvento: '',
+        accDialisis: '',
+        tpInfeccion: '',
+        tratamientoIV: false,
+        vancomicinaIV: false,
+        hemocultivoPositivo: false,
+        tipoGram: '',
+        bacteria: '',
+        tpInfeccion2: '',
+        tpGermen: '',
+    }
+]);
 
-const ubicacionesFiltradas = computed(() => {
-    ubicacion.value = '';
-    return datosUbicaciones[accActual.value] || [];
-});
+
+const addAcceso = () => {
+    accesosDialisis.value.push({
+        id: Date.now(),
+        feColocacion: '',
+        mvtCambio: '',
+        accActual: '',
+        ubicacion: '',
+    });
+};
+
+const removeAcceso = (index) => {
+    accesosDialisis.value.splice(index, 1);
+};
+
+const addEvento = () => {
+    eventosInfecciosos.value.push({
+        id: Date.now(), 
+        feEvento: '',
+        accDialisis: '',
+        tpInfeccion: '',
+        tratamientoIV: false,
+        vancomicinaIV: false,
+        hemocultivoPositivo: false,
+        tipoGram: '',
+        bacteria: '',
+        tpInfeccion2: '',
+        tpGermen: '',
+    });
+};
+
+const removeEvento = (index) => {
+    eventosInfecciosos.value.splice(index, 1);
+};
+
+const getUbicacionesFiltradas = (accActualValue) => {
+    return datosUbicaciones[accActualValue] || [];
+};
 
 </script>
