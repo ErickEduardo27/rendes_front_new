@@ -38,14 +38,15 @@
                 </div>
             </div>
         </div>
-        <hr/>
+        <hr />
         <h2 class="text-xl font-semibold mb-1">Comorbilidad</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div v-for="(item, index) in visibleComorbilidades" :key="item.originalIndex"
                 class="flex justify-between items-center bg-white p-3 rounded shadow-sm border border-gray-200 hover:border-black transition-all duration-200">
                 <span class="font-medium text-gray-800">{{ item.label }}</span>
                 <div class="flex items-center gap-2">
-                    <span :class="!estadoComorbilidades[item.originalIndex] ? 'text-black font-semibold' : 'text-gray-400'">
+                    <span
+                        :class="!estadoComorbilidades[item.originalIndex] ? 'text-black font-semibold' : 'text-gray-400'">
                         No
                     </span>
 
@@ -57,7 +58,8 @@
                             :class="estadoComorbilidades[item.originalIndex] ? 'translate-x-6' : 'translate-x-1'" />
                     </button>
 
-                    <span :class="estadoComorbilidades[item.originalIndex] ? 'text-black font-semibold' : 'text-gray-400'">
+                    <span
+                        :class="estadoComorbilidades[item.originalIndex] ? 'text-black font-semibold' : 'text-gray-400'">
                         Sí
                     </span>
                 </div>
@@ -71,7 +73,7 @@
                 placeholder="Describa la otra comorbilidad aquí..."></textarea>
         </div>
 
-        
+
         <hr />
         <h2 class="text-xl font-semibold mb-1">Inicio de Terapia de Reemplazo Renal</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -146,13 +148,55 @@ const etologiasGenerales = {
 
 const etologiasEspecificas = {
     1: ['Diabetes con manifestaciones renales tipo 1', 'Diabetes con manifestaciones renales tipo 2'],
-    2: ['Glomerulonefritis aguda', 'Glomerulonefritis crónica'],
-    3: ['Vasculitis asociada a ANCA', 'Lupus eritematoso sistémico'],
-    4: ['Pielonefritis aguda', 'Pielonefritis crónica'],
-    5: ['Hipertensión maligna', 'Estenosis de arteria renal'],
-    6: ['Riñón poliquístico autosómico dominante', 'Síndrome de Alport'],
-    7: ['Carcinoma de células renales', 'Linfoma renal'],
-    8: ['Nefropatía por analgésicos', 'Amiloidosis renal']
+    2: ['Glomerulonefritis GN (Histológicamente no examinada)', 'Glomeruloesclerosis focal, Esclerosante focal', 'Nefropatía membranosa', 'GN Membranoproliferativa tipo I, GN Membranoproliferativa Difusa', 'Enfermedad por depósitos densos, GN membranoproliferativa tipo II', 'Nefropatía IgA, Enfermedad de Berger (demostrado por inmunofluorescencia)', 'Nefropatía IgM, (demostrado por inmunofluorescencia)', 'GN rápidamente progresiva', 'Gn post infecciosa', 'Otras GN proliferativas'],
+    3: ['Lupus eritematoso', 'Síndrome de Henoch-Schonlein', 'Esclerodermia', 'Síndrome urémico hemolítico', 'Poliarteritis', 'Granulomatosis de Wegener', 'Nefropatía por abuso de heroína y relacionado a drogas', 'Otras vasculitis y sus derivadas', 'Síndrome de Goodpasture', 'Otras GN secundarias'],
+    4: ['Abuso de analgésicos', 'Nefritis por radiación', 'Nefropatía por plomo', 'Nefropatía causada por otros agentes', 'Nefropatía por gota', 'Nefrolitiasis', 'Uropatía obstructiva adquirida', 'Pielonefritis crónica, nefropatía por reflujo', 'Nefritis intersticial crónica', 'Nefritis intersticial aguda', 'Urolitiasis', 'Otros desórdenes del metabolismo de calcio'],
+    5: ['Hipertensión no especificada con falla renal', 'Estenosis de la arteria renal', 'Oclusión de la arteria renal', 'Embolia causada por coleterol, embolia renal'],
+    6: ['Riñón poliquístico del adulto tipo dominante',
+        'Riñón poliquistico infantil recesivo',
+        'Enfermedad quística medular, incluye nefronoptisis',
+        'Esclerosis tubular',
+        'Nefritis hereditaria, síndrome de Alport',
+        'Cistinosis',
+        'Oxalosis primaria',
+        'Enfermedad de Fabry',
+        'Síndrome nefrótico congénito',
+        'Síndrome Drash, esclerosis mesangial',
+        'Obstrucción congénita de la unión ureteropélvica',
+        'Obstrucción congénita de la unión ureterovesical',
+        'Otras uropatías obstructivas congénitas',
+        'Hipoplasia renal, displasia, oligonefronía',
+        'Síndrome del abdomen en ciruela pasa',
+        'Otros (Síndromes de malformaciones congénitas)'],
+    7: ['Tumor renal maligno',
+        'Tumor maligno del tracto urinario',
+        'Tumor renal benigno',
+        'Tumor benigno del tracto urinario',
+        'Tumor renal no especificado',
+        'Tumor de tracto urinario no especificado',
+        'Linfoma de riñón',
+        'Mieloma múltiple',
+        'Otras neoplasias inmunoproliferativas (Incluye nefropatía de cadena ligera)',
+        'Amiloidosis'],
+    8: ['Complicaciones de órgano trasplantado no especificado',
+        'Complicaciones por trasplante de riñón',
+        'Complicaciones por trasplante de hígado',
+        'Complicaciones por trasplante de corazón',
+        'Complicaciones por trasplante de pulmón',
+        'Complicaciones por trasplante de médula ósea',
+        'Complicaciones por trasplante de páncreas',
+        'Complicaciones por trasplante de intestino',
+        'Complicaciones de otro órgano trasplantado especificado'],
+    9: ['Enfermedad de células falciformes/anemia',
+        'Rasgo de células falciformes y otras células falciformes (Hbs/Hb otras)',
+        'Falla renal post parto',
+        'Nefropatía por SIDA',
+        'Pérdida traumática o quirúrgica de riñón',
+        'Síndrome hepatorenal',
+        'Necrosis tubular (sin recuperación)',
+        'Otros desórdenes renales',
+        'Etiología incierta',
+        'Otras no especificadas (mencionar)']
 }
 
 const comorbilidadesLabels = [
@@ -176,7 +220,7 @@ const otraComorbilidadTexto = ref('');
 
 const diabetesComorbilidadIndex = comorbilidadesLabels.indexOf("Diabetes");
 const hipertensionComorbilidadIndex = comorbilidadesLabels.indexOf("Hipertensión");
-const otraComorbilidadIndex = comorbilidadesLabels.indexOf("Otra"); 
+const otraComorbilidadIndex = comorbilidadesLabels.indexOf("Otra");
 
 const isOtraComorbilidadSelected = computed(() => {
     return estadoComorbilidades.value[otraComorbilidadIndex];
@@ -205,10 +249,10 @@ const subsist = ref('')
 const fechaCreacionInicio = ref('')
 
 const {
-  today,
-  minFechaDependiente,
-  isFechaDiagnosticoValid,
-  validateDates 
+    today,
+    minFechaDependiente,
+    isFechaDiagnosticoValid,
+    validateDates
 } = useDateValidation(fechaCreacionInicio, fechaDiagnostico);
 
 
@@ -216,7 +260,7 @@ watch(etologiaGeneral, (newValue) => {
     seleccionadas.value = []
     dropdownAbierto.value = false
 
-    if (newValue === '1') { 
+    if (newValue === '1') {
         if (estadoComorbilidades.value[diabetesComorbilidadIndex]) {
             estadoComorbilidades.value[diabetesComorbilidadIndex] = false;
         }
@@ -262,19 +306,19 @@ const visibleComorbilidades = computed(() => {
     }
 
     return comorbilidadesLabels
-        .map((label, originalIndex) => ({ label, originalIndex })) 
-        .filter(item => !hiddenComorbilidades.includes(item.label)); 
+        .map((label, originalIndex) => ({ label, originalIndex }))
+        .filter(item => !hiddenComorbilidades.includes(item.label));
 });
 
 
 const generarFormData = () => {
-    
+
     if (!validateDates()) {
         toast.error("Formulario inválido. No se generó el FormData.");
         return null;
     }
 
-     const finalComorbilidades = comorbilidadesLabels.map((label, index) => {
+    const finalComorbilidades = comorbilidadesLabels.map((label, index) => {
         let presente = estadoComorbilidades.value[index];
 
         // Si Etiología General es DIABETES y esta comorbilidad es Diabetes, forzar a false
