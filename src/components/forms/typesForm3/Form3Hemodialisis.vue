@@ -370,7 +370,7 @@ const getUbicacionesFiltradas = (accActualValue) => {
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
+          <!-- <div>
             <label class="block text-sm font-semibold text-gray-700">Tipo</label>
             <select v-model="evento.tipoInfeccionLocal" class="w-full border rounded p-2 text-sm">
               <option value="">Seleccione una opción</option>
@@ -378,7 +378,7 @@ const getUbicacionesFiltradas = (accActualValue) => {
               <option value="2">Enrojecimiento</option>
               <option value="3">Aumento de volumen</option>
             </select>
-          </div>
+          </div> -->
 
           <div>
             <label class="block text-sm font-semibold text-gray-700">Tipo de Germen</label>

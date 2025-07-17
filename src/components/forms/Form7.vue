@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
     <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
 
         <h2 class="text-xl font-semibold mb-1">Datos Iniciales </h2>
@@ -100,9 +100,159 @@
             💾 Guardar Unidad Actual
         </button>
     </div>
-</template>
+</template> -->
+<template>
+  <div class="space-y-6 max-h-[600px] overflow-y-auto pr-2 mt-2">
 
-<script setup>
+    <!-- DATOS DE TURNO -->
+    <h2 class="text-xl font-semibold">Datos de Turno</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-semibold">Turno</label>
+        <select v-model="turno" class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">No corresponde</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Frecuencia</label>
+        <select v-model="frecuencia" class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+          <option value="1">LMV</option>
+          <option value="2">MJS</option>
+          <option value="3">2 veces por semana</option>
+          <option value="4">Otros</option>
+          <option value="5">No corresponde</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- CONDICIÓN SEROLÓGICA -->
+    <h2 class="text-xl font-semibold">Condición Serológica Actual</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div>
+        <label class="block text-sm font-semibold">VHB</label>
+        <select class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+        </select>
+        <input type="date" class="w-full mt-2 border rounded p-2 text-sm" placeholder="Fecha de Vacunación" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">VHC</label>
+        <select class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+        </select>
+        <input type="date" class="w-full mt-2 border rounded p-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">VHI</label>
+        <select class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+        </select>
+        <input type="date" class="w-full mt-2 border rounded p-2 text-sm" />
+      </div>
+    </div>
+
+    <!-- VACUNACIÓN CONTRA HEPATITIS -->
+    <h2 class="text-xl font-semibold">Vacunación Contra Hepatitis</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-semibold">Tipo de AcHBs</label>
+        <select class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Estado según AcHBs</label>
+        <input type="text" readonly class="w-full border rounded p-2 text-sm bg-gray-100" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Fecha de Vacunación</label>
+        <input type="date" class="w-full border rounded p-2 text-sm" />
+      </div>
+    </div>
+
+    <!-- VACUNACIÓN CONTRA HEPATITIS B -->
+    <h2 class="text-xl font-semibold">Vacunación Contra Hepatitis B</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-semibold">Última Dosis Administrada</label>
+        <input type="text" class="w-full border rounded p-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Fecha de Última Dosis</label>
+        <input type="date" class="w-full border rounded p-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Motivo de No Vacunación</label>
+        <select class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- VACUNACIÓN CONTRA COVID-19 -->
+    <h2 class="text-xl font-semibold">Vacunación Contra COVID-19</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-semibold">Última Dosis Administrada</label>
+        <input type="text" class="w-full border rounded p-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Fecha de Última Dosis</label>
+        <input type="date" class="w-full border rounded p-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Motivo de No Vacunación</label>
+        <select class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- VACUNACIÓN CONTRA INFLUENZA -->
+    <h2 class="text-xl font-semibold">Vacunación Contra Influenza</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-semibold">Fecha de Vacunación</label>
+        <input type="date" class="w-full border rounded p-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Motivo de No Vacunación</label>
+        <select class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- VACUNACIÓN CONTRA NEUMOCOCO -->
+    <h2 class="text-xl font-semibold">Vacunación Contra Neumococo</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-semibold">Fecha de Vacunación</label>
+        <input type="date" class="w-full border rounded p-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm font-semibold">Motivo de No Vacunación</label>
+        <select class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- BOTONES -->
+    <div class="flex justify-end gap-4 mt-6">
+      <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+      <button class="bg-blue-500 text-white px-4 py-2 rounded">Registrar</button>
+      <button class="bg-cyan-500 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button>
+    </div>
+  </div>
+</template>
+<!-- <script setup>
 import { ref } from 'vue';
 
 const red = ref('');
@@ -115,4 +265,90 @@ const fechaUltimaDosis = ref('');
 const fcVacunacion = ref('')
 
 
+</script> -->
+
+<script setup>
+import { ref } from 'vue'
+
+// Datos de Turno
+const turno = ref('')
+const frecuencia = ref('')
+
+// Condición Serológica
+const vhb = ref('')
+const vhbFechaVacunacion = ref('')
+const vhc = ref('')
+const vhcFechaVacunacion = ref('')
+const vhi = ref('')
+const vhiFechaVacunacion = ref('')
+
+// AcHBs
+const tipoAcHBs = ref('')
+const estadoAcHBs = ref('')
+const fechaVacAcHBs = ref('')
+
+// Vacunación Hepatitis B
+const ultimaDosisHepB = ref('')
+const fechaUltimaDosisHepB = ref('')
+const motivoNoVacHepB = ref('')
+
+// Vacunación COVID-19
+const ultimaDosisCovid = ref('')
+const fechaUltimaDosisCovid = ref('')
+const motivoNoVacCovid = ref('')
+
+// Vacunación Influenza
+const fechaVacInfluenza = ref('')
+const motivoNoVacInfluenza = ref('')
+
+// Vacunación Neumococo
+const fechaVacNeumococo = ref('')
+const motivoNoVacNeumococo = ref('')
+
+// Opciones sugeridas
+const opcionesTurno = [
+  { value: '1', label: '1' },
+  { value: '2', label: '2' },
+  { value: '3', label: '3' },
+  { value: '4', label: '4' },
+  { value: '5', label: 'No corresponde' }
+]
+
+const opcionesFrecuencia = [
+  { value: 'LMV', label: 'Lunes-Miércoles-Viernes' },
+  { value: 'MJS', label: 'Martes-Jueves-Sábado' },
+  { value: '2x', label: '2 veces por semana' },
+  { value: 'otros', label: 'Otros' },
+  { value: 'nc', label: 'No corresponde' }
+]
+
+const opcionesCondicion = [
+  { value: 'negativo', label: 'Negativo' },
+  { value: 'positivo', label: 'Positivo' },
+  { value: 'no se realizó', label: 'No se realizó' }
+]
+
+const opcionesTipoAcHBs = [
+  { value: 'positivo', label: 'Positivo (>10 mUI/mL)' },
+  { value: 'negativo', label: 'Negativo (<10 mUI/mL)' },
+  { value: 'no evaluado', label: 'No evaluado' }
+]
+
+const opcionesDosis = [
+  { value: '1ra', label: '1ra. Dosis' },
+  { value: '2da', label: '2da. Dosis' },
+  { value: '3ra', label: '3ra. Dosis' },
+  { value: 'refuerzo', label: 'Refuerzo' }
+]
+
+const motivosNoVacunacion = [
+  { value: 'rechazo', label: 'No aceptó la vacunación' },
+  { value: 'fallecido', label: 'Falleció' },
+  { value: 'hospitalizado', label: 'Está hospitalizado' },
+  { value: 'proceso infeccioso', label: 'Cursa con proceso infeccioso' },
+  { value: 'diagnóstico covid', label: 'Tiene diagnóstico COVID-19' },
+  { value: 'vacuna reciente', label: 'Tiene antecedente de vacunación reciente' },
+  { value: 'cambio unidad', label: 'Cambio de unidad' },
+  { value: 'no corresponde', label: 'No corresponde' }
+]
 </script>
