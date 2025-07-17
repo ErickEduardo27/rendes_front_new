@@ -6,5 +6,8 @@ export const ENDPOINTS = {
     },
     IPRESS: {
         ALL: '/ipress/?page=1'
+    },
+    PACIENTE: {
+        ALL: '/paciente/'
     }
 };

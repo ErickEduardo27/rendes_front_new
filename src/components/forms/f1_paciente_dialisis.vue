@@ -16,7 +16,6 @@
             <!-- Etiología específica -->
             <div class="space-y-2 relative">
                 <span class="block font-semibold text-sm text-gray-700">Etiología específica</span>
-
                 <div class="w-full">
                     <button class="w-full border rounded p-2 text-sm text-left bg-white" @click="toggleDropdown"
                         :disabled="!etologiaGeneral">
@@ -25,7 +24,6 @@
                         </span>
                         <span v-else class="text-gray-400">Selecciona una o varias</span>
                     </button>
-
                     <!-- Dropdown -->
                     <div v-if="dropdownAbierto && etologiaGeneral"
                         class="absolute z-10 mt-1 w-full bg-white border rounded shadow max-h-40 overflow-y-auto">

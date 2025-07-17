@@ -29,8 +29,9 @@
                 </TabPanel>
                 <TabPanel>
                     <!-- Formulario 3 -->
-                    <component :is="tipoDialisis === 'hemodialisis' ? Form3Hemodialisis : Form3Peritoneal"
-                        :habilitado="presentaInfeccion === 'si'" />
+                    <!-- <component :is="tipoDialisis === 'hemodialisis' ? Form3Hemodialisis : Form3Peritoneal"
+                        :habilitado="presentaInfeccion === 'si'" /> -->
+                        <Form3Hemodialisis />
                 </TabPanel>
                 <TabPanel>
                     <Form4 />

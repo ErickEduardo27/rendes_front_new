@@ -1,9 +1,16 @@
 <template>
     <div v-if="isOpen" class="modal-overlay">
+        <label for="tipoId">Periodo *</label>
+                    <select id="periodoId" v-model="formData.tipoId">
+                        <option>Tipo de ID</option>
+                        <option>DNI</option>
+                        <option>CE</option>
+                        <option>PASAPORTE</option>
+                    </select>
         <div class="modal-content">
             <h2 class="modal-title">Buscar Paciente</h2>
             <p class="modal-subtitle">
-                Complete la información básica del paciente para crear su expediente médico.
+                Complete la información básica del paciente para crear su expediente médicosss.
             </p>
             <form @submit.prevent="handleSubmit" class="form-grid">
                 <div class="form-group">
@@ -17,18 +24,12 @@
                 </div>
                 <div class="form-group input-with-suggestions">
                     <label for="numeroId">Número de Documento *</label>
-                    <input 
-                    id="numeroId" 
-                    v-model="formData.numeroId" 
-                    @input="handleDocumentInput" 
-                    :maxlength="maxDocumentLength"
-                    :pattern="documentPattern"
-                    inputmode="numeric" 
-                     />
+                    <input id="numeroId" v-model="formData.numeroId" @input="handleDocumentInput"
+                        :maxlength="maxDocumentLength" :pattern="documentPattern" inputmode="numeric" />
                     <ul v-if="showSuggestions" class="suggestions-list">
-                        <li v-for="paciente in pacientesEncontrados" :key="paciente.numeroId"
+                        <li v-for="paciente in pacientesEncontrados" :key="paciente.documento"
                             @click="seleccionarPaciente(paciente)">
-                            {{ paciente.nombres }} {{ paciente.apellidos }} ({{ paciente.numeroId }})
+                            {{ paciente.paciente }} ({{ paciente.documento }})
                         </li>
                         <li v-if="pacientesEncontrados.length === 0" class="no-results">
                             No se encontraron pacientes
@@ -66,8 +67,8 @@
                     <label for="tipoDialisis">Modalidad de Diálisis *</label>
                     <select id="tipoDialisis" v-model="formData.tipoDialisis">
                         <option disabled value="">Seleccione la modalidad de diálisis</option>
-                        <option value="hemodialisis">Hemodiálisis</option>
-                        <option value="peritoneal">Diálisis Peritoneal</option>
+                        <option value="1">Hemodiálisis</option>
+                        <option value="2">Diálisis Peritoneal</option>
                     </select>
                 </div>
 
@@ -81,6 +82,7 @@
 </template>
 
 <script>
+import { AuthService } from '@/services/authService/authService';
 import { toast } from 'vue-sonner';
 
 export default {
@@ -95,6 +97,7 @@ export default {
             formData: {
                 tipoId: "",
                 numeroId: "",
+                documento: "",
                 apellidos: "",
                 nombres: "",
                 fechaNacimiento: "",
@@ -104,7 +107,8 @@ export default {
                 tipoDialisis: ""
             },
             pacientesEncontrados: [],
-            showSuggestions: false
+            showSuggestions: false,
+            dataPacientes: []
         };
     },
     computed: {
@@ -117,32 +121,46 @@ export default {
                 case "PASAPORTE":
                     return 20;
                 default:
-                    return null; 
+                    return null;
             }
         },
         documentPattern() {
             switch (this.formData.tipoId) {
                 case "DNI":
-                    return "[0-9]{8}"; 
+                    return "[0-9]{8}";
                 case "CE":
                     return "[a-zA-Z0-9]{12}";
                 case "PASAPORTE":
-                    return "[a-zA-Z0-9]{1,20}"; 
+                    return "[a-zA-Z0-9]{1,20}";
                 default:
                     return "[a-zA-Z0-9]*";
             }
         }
     },
     methods: {
+        async dataInit() {
+            try {
+                const userData = await AuthService.paciente();
+                this.dataPacientes = userData;
+                /* 
+                    const userData = await AuthService.paciente(); // 👈 espera el resultado real
+                    this.dataPacientes = userData;   
+                */
+                console.log(userData);
+            } catch (err) {
+                console.error('Error durante el login:', err);
+            } finally {
+                this.loading = false;
+            }
+        },
         handleDocumentTypeChange() {
-            this.formData.numeroId = "";
+            this.formData.documento = "";
             this.pacientesEncontrados = [];
             this.showSuggestions = false;
             this.clearPatientFields();
         },
         async handleDocumentInput() {
             const { tipoId, numeroId } = this.formData;
-
             if (numeroId.length === 0 || tipoId === "") {
                 this.pacientesEncontrados = [];
                 this.showSuggestions = false;
@@ -151,6 +169,7 @@ export default {
             }
 
             if (numeroId.length >= 3) {
+                console.log("se realiza la busquedad");
                 this.pacientesEncontrados = await this.buscarPacientes(tipoId, numeroId);
                 this.showSuggestions = true;
             } else {
@@ -159,63 +178,24 @@ export default {
             }
         },
         async buscarPacientes(tipo, numero) {
-            const base = [
-                {
-                    tipoId: "DNI",
-                    numeroId: "12345678",
-                    apellidos: "Ramírez López",
-                    nombres: "Carlos Alberto",
-                    fechaNacimiento: "1985-07-12",
-                    genero: "Masculino",
-                    edad: "38",
-                    gradoInstruccion: "Superior"
-                },
-                {
-                    tipoId: "DNI",
-                    numeroId: "12345679",
-                    apellidos: "Gonzales Pérez",
-                    nombres: "Ana María",
-                    fechaNacimiento: "1990-04-21",
-                    genero: "Femenino",
-                    edad: "34",
-                    gradoInstruccion: "Secundaria"
-                },
-                {
-                    tipoId: "CE",
-                    numeroId: "123456789012",
-                    apellidos: "Fernández Quispe",
-                    nombres: "Luis Miguel",
-                    fechaNacimiento: "1975-11-05",
-                    genero: "Masculino",
-                    edad: "48",
-                    gradoInstruccion: "Técnico"
-                },
-                {
-                    tipoId: "PASAPORTE",
-                    numeroId: "ABC123456789DEF",
-                    apellidos: "Smith Johnson",
-                    nombres: "Emily Rose",
-                    fechaNacimiento: "1995-02-28",
-                    genero: "Femenino",
-                    edad: "29",
-                    gradoInstruccion: "Universitario"
-                }
-            ];
+            const pacientes = this.dataPacientes;
 
             return new Promise(resolve => {
                 setTimeout(() => {
-                    const filtrados = base.filter(p =>
-                        p.tipoId === tipo && p.numeroId.includes(numero)
+                    const filtrados = this.dataPacientes.filter(p =>
+                        p.documento.includes(numero)
                     );
                     resolve(filtrados);
                 }, 500);
             });
         },
         seleccionarPaciente(paciente) {
-            this.formData = {
-                ...this.formData,
-                ...paciente
-            };
+            this.formData.numeroId = paciente.documento;
+            this.formData.nombres = paciente.paciente;
+            this.formData.fechaNacimiento = paciente.fecha_nacimiento;
+            this.formData.genero = paciente.genero;
+            this.formData.gradoInstruccion = paciente.grado_instruccion;
+            this.formData.tipoDialisis = paciente.id_modalidad;
             this.showSuggestions = false;
         },
         clearPatientFields() {
@@ -259,7 +239,7 @@ export default {
 
             if (errorMessage) {
                 toast.error(errorMessage);
-                return false; 
+                return false;
             }
             return true;
         },
@@ -289,6 +269,9 @@ export default {
             };
             this.pacientesEncontrados = [];
         }
+    },
+    created() {
+        this.dataInit();
     }
 };
 </script>

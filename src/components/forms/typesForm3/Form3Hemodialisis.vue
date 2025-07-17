@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
     <div v-if="habilitado" class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
 
         <h2 class="text-xl font-semibold mb-1">ACCESO PARA DIÁLISIS</h2>
@@ -310,4 +310,127 @@ const getUbicacionesFiltradas = (accActualValue) => {
     return datosUbicaciones[accActualValue] || [];
 };
 
+</script> -->
+
+
+<template>
+  <div class="space-y-4 max-h-[700px] overflow-y-auto pr-2 mt-2">
+    <!-- PREGUNTA INICIAL -->
+    <div class="flex items-center gap-2">
+      <input id="presentoInfeccion" type="checkbox" v-model="habilitado" />
+      <label for="presentoInfeccion" class="text-sm font-semibold text-gray-700">
+        ¿Se presentó algún evento de infección?
+      </label>
+    </div>
+
+    <div v-if="habilitado">
+      <h2 class="text-xl font-semibold mt-4">Eventos Infecciosos Asociados al Acceso de Diálisis</h2>
+
+      <div v-for="(evento, index) in eventosInfecciosos" :key="evento.id" class="border p-4 mb-4 rounded-lg shadow-sm">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700">Fecha de Evento</label>
+            <input v-model="evento.feEvento" type="date" class="w-full border rounded p-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700">Tipo de Infección</label>
+            <select v-model="evento.tpInfeccion" class="w-full border rounded p-2 text-sm">
+              <option value="">Seleccione una opción</option>
+              <option value="1">Bacteriana asociada a CVC</option>
+              <option value="2">Infección de orificio de salida</option>
+              <option value="3">Infección del túnel</option>
+              <option value="4">Peritonitis</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- SWITCHES -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-4">
+          <div class="flex items-center gap-4">
+            <label class="text-sm font-medium text-gray-700">Inicio de Tratamiento Antimicrobiano IV</label>
+            <input type="checkbox" v-model="evento.tratamientoIV" />
+          </div>
+          <div class="flex items-center gap-4">
+            <label class="text-sm font-medium text-gray-700">Inicio de Vancomicina IV</label>
+            <input type="checkbox" v-model="evento.vancomicinaIV" />
+          </div>
+          <div class="flex items-center gap-4">
+            <label class="text-sm font-medium text-gray-700">Hemocultivo Positivo</label>
+            <input type="checkbox" v-model="evento.hemocultivoPositivo" />
+          </div>
+        </div>
+
+        <div v-if="evento.hemocultivoPositivo" class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700">Tipo</label>
+          <select v-model="evento.tipoGram" class="w-full border rounded p-2 text-sm">
+            <option value="">Seleccione una opción</option>
+            <option value="gramPositivo">GramPositivo (+)</option>
+            <option value="gramNegativo">GramNegativo (-)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700">Tipo</label>
+            <select v-model="evento.tipoInfeccionLocal" class="w-full border rounded p-2 text-sm">
+              <option value="">Seleccione una opción</option>
+              <option value="1">Pus</option>
+              <option value="2">Enrojecimiento</option>
+              <option value="3">Aumento de volumen</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700">Tipo de Germen</label>
+            <select v-model="evento.tpGermen" class="w-full border rounded p-2 text-sm">
+              <option value="">Seleccione una opción</option>
+              <option value="1">Staphylococcus aureus</option>
+              <option value="2">Staphylococcus epidermidis</option>
+              <!-- Agrega más si lo deseas -->
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700">Bacteria</label>
+            <select v-model="evento.bacteria" class="w-full border rounded p-2 text-sm">
+              <option value="">Seleccione una opción</option>
+              <option value="1">Gram +</option>
+              <option value="2">Gram -</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-gray-700">Tipo</label>
+            <select v-model="evento.tipoBacteria" :disabled="!evento.bacteria" class="w-full border rounded p-2 text-sm">
+              <option value="">Seleccione una opción</option>
+              <option value="1" v-if="evento.bacteria === '1'">Estreptococo</option>
+              <option value="2" v-if="evento.bacteria === '2'">E. coli</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+
+const habilitado = ref(false)
+
+const eventosInfecciosos = ref([
+  {
+    id: Date.now(),
+    feEvento: '',
+    tpInfeccion: '',
+    tratamientoIV: false,
+    vancomicinaIV: false,
+    hemocultivoPositivo: false,
+    tipoGram: '',
+    tipoInfeccionLocal: '',
+    tpGermen: '',
+    bacteria: '',
+    tipoBacteria: ''
+  }
+])
 </script>

@@ -1,5 +1,5 @@
 <template>
-    <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
+   <!--  <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
         <h2 class="text-xl font-semibold mb-1">Registro para Hemodiálisis</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -13,7 +13,7 @@
                 <input v-model="busqueda" type="text" placeholder="Escribe al menos 3 letras..."
                     class="w-full border rounded p-2 text-sm" />
 
-                <!-- Lista filtrada -->
+                
                 <ul v-if="busqueda.length >= 3 && mostrarResultados" class="mt-2 space-y-1">
                     <li v-for="item in resultadosFiltrados" :key="item.id"
                         class="border p-2 rounded text-sm cursor-pointer hover:bg-gray-100"
@@ -26,7 +26,7 @@
                 </ul>
             </div>
 
-            <!-- SECCIÓN SEROLÓGICA ACTUAL -->
+            
             <div class="col-span-1 lg:col-span-2">
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">Serología Actual</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -163,11 +163,96 @@
         <button @click="verFormData" class="w-full bg-black text-white py-2 rounded hover:bg-gray-900">
             💾 Guardar Unidad Actual
         </button>
+    </div> -->
+    <!-- ACCESO ACTUAL -->
+<h3 class="text-lg font-semibold mt-4">Acceso Actual</h3>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Fecha de Creación de Acceso Actual</label>
+    <input v-model="faCreaAcc" type="date" class="w-full border rounded p-2 text-sm" />
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Tipo de Acceso Actual</label>
+    <select v-model="accActual" class="w-full border rounded p-2 text-sm">
+      <option value="">Seleccione una opción</option>
+      <option value="1">FAV</option>
+      <option value="2">Injerto autólogo</option>
+      <option value="3">Injerto protésico</option>
+      <option value="4">CVCLP</option>
+      <option value="5">CVCT</option>
+    </select>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">Localización de Acceso Actual</label>
+    <select v-model="ubicacion" class="w-full border rounded p-2 text-sm">
+      <option value="">Seleccione una opción</option>
+      <option v-for="ubi in ubicacionesFiltradas" :key="ubi.value" :value="ubi.value">
+        {{ ubi.label }}
+      </option>
+    </select>
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-gray-700">¿Se necesita un cambio de acceso?</label>
+    <input type="checkbox" v-model="necesitaCambioAcceso" class="mr-2" />
+  </div>
+  <div v-if="necesitaCambioAcceso">
+    <label class="block text-sm font-medium text-gray-700">Especificar el Motivo de Cambio de Acceso</label>
+    <select v-model="motivCambioAcc" class="w-full border rounded p-2 text-sm">
+      <option value="">Seleccione una opción</option>
+      <option value="1">Complicación mecánica</option>
+      <option value="2">Complicación infecciosa</option>
+      <option value="3">Prescripción Médica</option>
+    </select>
+  </div>
+</div>
+
+<!-- NUEVO ACCESO (Solo si necesitaCambioAcceso es true) -->
+<div v-if="necesitaCambioAcceso" class="mt-6">
+  <h3 class="text-lg font-semibold">Nuevo Acceso</h3>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Fecha de Creación de Acceso Actual</label>
+      <input v-model="nuevoAcceso.fecha" type="date" class="w-full border rounded p-2 text-sm" />
     </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Tipo de Acceso Actual</label>
+      <select v-model="nuevoAcceso.tipo" class="w-full border rounded p-2 text-sm">
+        <option value="">Seleccione una opción</option>
+        <option value="1">FAV</option>
+        <option value="2">Injerto autólogo</option>
+        <option value="3">Injerto protésico</option>
+        <option value="4">CVCLP</option>
+        <option value="5">CVCT</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Localización de Acceso Actual</label>
+      <select v-model="nuevoAcceso.ubicacion" class="w-full border rounded p-2 text-sm">
+        <option value="">Seleccione una opción</option>
+        <option v-for="ubi in ubicacionesFiltradasNuevo" :key="ubi.value" :value="ubi.value">
+          {{ ubi.label }}
+        </option>
+      </select>
+    </div>
+  </div>
+</div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+
+const necesitaCambioAcceso = ref(false)
+
+const nuevoAcceso = ref({
+  fecha: '',
+  tipo: '',
+  ubicacion: ''
+})
+
+const ubicacionesFiltradasNuevo = computed(() => {
+  nuevoAcceso.value.ubicacion = ''
+  return datosUbicaciones[nuevoAcceso.value.tipo] || []
+})
 
 const accActual = ref('')
 const ubicacion = ref('');

@@ -35,5 +35,8 @@ export const AuthService = {
     me: async () => {
         return apiClient.get(ENDPOINTS.AUTH.ME);
     },
+    paciente: async () => {
+        return apiClient.get(ENDPOINTS.PACIENTE.ALL);
+    },
 
 };

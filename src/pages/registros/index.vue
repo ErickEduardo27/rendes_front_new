@@ -6,8 +6,8 @@
       Volver al Inicio
     </router-link> -->
 
-    <h1 class="text-2xl font-bold mb-1">Expediente Médico</h1>
-    <p class="text-gray-600 mb-6">Información completa del paciente y formularios médicos</p>
+   <!--  <h1 class="text-2xl font-bold mb-1">Expediente Médico</h1>
+    <p class="text-gray-600 mb-6">Información completa del paciente y formularios médicos</p> -->
 
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <div class="col-span-1">
