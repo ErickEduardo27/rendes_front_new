@@ -15,7 +15,8 @@
             <span class="px-1 text-xs font-semibold text-cyan-800 border-cyan-100">Menú Principal</span>
         </div>
       <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
-      <SidebarItem :icon="UserIcon" label="Registros" to="/newpatient"/>
+      <!-- <SidebarItem :icon="UserIcon" label="Registros" to="/newpatient"/> -->
+      <SidebarItem :icon="UserIcon" label="Calidad Micro" to="/calidad-agua"/>
       <SidebarItem :icon="DocumentMagnifyingGlassIcon" label="Administracion" :submenu="[
           { label: 'Ipress', to: '/ipress', icon: UserIcon },
           { label: 'Pacientes', to: '', icon: UserIcon },

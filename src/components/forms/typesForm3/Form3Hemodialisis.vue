@@ -319,7 +319,7 @@ const getUbicacionesFiltradas = (accActualValue) => {
     <div class="flex items-center gap-2">
       <input id="presentoInfeccion" type="checkbox" v-model="habilitado" />
       <label for="presentoInfeccion" class="text-sm font-semibold text-gray-700">
-        ¿Se presentó algún evento de infección?
+        Si
       </label>
     </div>
 

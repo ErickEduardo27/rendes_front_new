@@ -30,6 +30,11 @@ const routes = [
         path: 'ipress',
         name: 'Ipress',
         component: () => import('@/pages/ipress/Ipress.vue'),
+      },
+      {
+        path: 'calidad-agua',
+        name: 'CalidadMicrobiologica',
+        component: () => import('@/pages/calidad-agua/CalidadMicrobiologica.vue'),
       }
     ]
   },

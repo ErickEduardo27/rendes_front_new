@@ -269,6 +269,7 @@ export default {
       itemsNavBar: [
         { text: "Inicio", icon: "mdi-folder", route: "/go/inicio" },
         { text: "Registros", icon: "mdi-folder", route: "/go/registros" },
+        { text: "Calidad Microbiologica", icon: "mdi-folder", route: "/go/calidad-agua" },
         {
           text: "Administración",
           icon: "mdi-folder",
