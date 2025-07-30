@@ -32,6 +32,21 @@ const routes = [
         component: () => import('@/pages/ipress/Ipress.vue'),
       },
       {
+        path: 'pacientes',
+        name: 'pacientes',
+        component: () => import('@/pages/pacientes/Pacientes.vue'),
+      },
+      {
+        path: 'perfiles',
+        name: 'perfiles',
+        component: () => import('@/pages/perfiles/Perfiles.vue'),
+      },
+      {
+        path: 'usuarios',
+        name: 'usuarios',
+        component: () => import('@/pages/usuarios/Usuarios.vue'),
+      },
+      {
         path: 'calidad-agua',
         name: 'CalidadMicrobiologica',
         component: () => import('@/pages/calidad-agua/CalidadMicrobiologica.vue'),

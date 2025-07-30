@@ -1,4 +1,4 @@
-<template>
+
    <!--  <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
         <h2 class="text-xl font-semibold mb-1">Registro para Hemodiálisis</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -165,234 +165,353 @@
         </button>
     </div> -->
     <!-- ACCESO ACTUAL -->
-<h3 class="text-lg font-semibold mt-4">Acceso Actual</h3>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-  <div>
-    <label class="block text-sm font-medium text-gray-700">Fecha de Creación de Acceso Actual</label>
-    <input v-model="faCreaAcc" type="date" class="w-full border rounded p-2 text-sm" />
-  </div>
-  <div>
-    <label class="block text-sm font-medium text-gray-700">Tipo de Acceso Actual</label>
-    <select v-model="accActual" class="w-full border rounded p-2 text-sm">
-      <option value="">Seleccione una opción</option>
-      <option value="1">FAV</option>
-      <option value="2">Injerto autólogo</option>
-      <option value="3">Injerto protésico</option>
-      <option value="4">CVCLP</option>
-      <option value="5">CVCT</option>
-    </select>
-  </div>
-  <div>
-    <label class="block text-sm font-medium text-gray-700">Localización de Acceso Actual</label>
-    <select v-model="ubicacion" class="w-full border rounded p-2 text-sm">
-      <option value="">Seleccione una opción</option>
-      <option v-for="ubi in ubicacionesFiltradas" :key="ubi.value" :value="ubi.value">
-        {{ ubi.label }}
-      </option>
-    </select>
-  </div>
-  <div>
-    <label class="block text-sm font-medium text-gray-700">¿Se necesita un cambio de acceso?</label>
-    <input type="checkbox" v-model="necesitaCambioAcceso" class="mr-2" />
-  </div>
-  <div v-if="necesitaCambioAcceso">
-    <label class="block text-sm font-medium text-gray-700">Especificar el Motivo de Cambio de Acceso</label>
-    <select v-model="motivCambioAcc" class="w-full border rounded p-2 text-sm">
-      <option value="">Seleccione una opción</option>
-      <option value="1">Complicación mecánica</option>
-      <option value="2">Complicación infecciosa</option>
-      <option value="3">Prescripción Médica</option>
-    </select>
-  </div>
+<!-- <script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+const mes = 'JULIO'
+const anio = '2025'
+const clinicas = ['DA VIDA SAC.', 'NEFROLOGÍA S.A.C.', 'CLÍNICA DE RENALIS']
+const clinicaSeleccionada = clinicas[0]
+const modalidad = 'Hemodiálisis'
+</script>
+
+<template>
+  <div class="p-6 space-y-6">
+
+    <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
+  ← Volver al inicio
 </div>
 
-<!-- NUEVO ACCESO (Solo si necesitaCambioAcceso es true) -->
-<div v-if="necesitaCambioAcceso" class="mt-6">
-  <h3 class="text-lg font-semibold">Nuevo Acceso</h3>
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Fecha de Creación de Acceso Actual</label>
-      <input v-model="nuevoAcceso.fecha" type="date" class="w-full border rounded p-2 text-sm" />
-    </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Tipo de Acceso Actual</label>
-      <select v-model="nuevoAcceso.tipo" class="w-full border rounded p-2 text-sm">
-        <option value="">Seleccione una opción</option>
-        <option value="1">FAV</option>
-        <option value="2">Injerto autólogo</option>
-        <option value="3">Injerto protésico</option>
-        <option value="4">CVCLP</option>
-        <option value="5">CVCT</option>
+    <div class="flex items-center gap-2 flex-wrap">
+      <label>Mes de Reporte:</label>
+      <select v-model="mes" class="border px-2 py-1 rounded">
+        <option value="JULIO">JULIO</option>
+        <option value="AGOSTO">AGOSTO</option>
+      </select>
+
+      <select v-model="anio" class="border px-2 py-1 rounded">
+        <option value="2025">2025</option>
+      </select>
+
+      <label>Clínica:</label>
+      <select v-model="clinicaSeleccionada" class="border px-2 py-1 rounded">
+        <option v-for="c in clinicas" :key="c">{{ c }}</option>
+      </select>
+
+      <label>Modalidad de Diálisis:</label>
+      <select v-model="modalidad" class="border px-2 py-1 rounded">
+        <option disabled value="">Seleccione</option>
+        <option>Hemodiálisis</option>
+        <option>Peritoneal</option>
       </select>
     </div>
-    <div>
-      <label class="block text-sm font-medium text-gray-700">Localización de Acceso Actual</label>
-      <select v-model="nuevoAcceso.ubicacion" class="w-full border rounded p-2 text-sm">
-        <option value="">Seleccione una opción</option>
-        <option v-for="ubi in ubicacionesFiltradasNuevo" :key="ubi.value" :value="ubi.value">
-          {{ ubi.label }}
-        </option>
-      </select>
+
+
+    <h2 class="text-xl font-semibold mt-6">UNIDAD ACTUAL</h2>
+    <p class="text-sm text-gray-600">A continuación se presenta el Acceso Actual del paciente</p>
+
+    <div class="grid grid-cols-3 gap-4 mt-4">
+
+      <div>
+        <label class="text-sm">Fecha de Creación de Acceso Actual</label>
+        <input type="date" class="w-full border px-2 py-1 rounded" />
+      </div>
+
+      <div>
+        <label class="text-sm">Tipo de Acceso Actual</label>
+        <select class="w-full border px-2 py-1 rounded">
+          <option>Seleccione una opción</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm">Localización de Acceso Actual</label>
+        <select class="w-full border px-2 py-1 rounded">
+          <option>Seleccione una opción</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm">¿Se va a cambiar el acceso del paciente?</label>
+        <select class="w-full border px-2 py-1 rounded">
+          <option>SÍ</option>
+          <option>NO</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm">Especificar el Motivo de Cambio de Acceso</label>
+        <select class="w-full border px-2 py-1 rounded">
+          <option>Seleccione una opción</option>
+        </select>
+      </div>
+    </div>
+
+
+    <div class="grid grid-cols-3 gap-4 mt-6">
+      <div>
+        <label class="text-sm">Fecha de Creación de Nuevo Acceso</label>
+        <input type="date" class="w-full border px-2 py-1 rounded" />
+      </div>
+      <div>
+        <label class="text-sm">Tipo de Nuevo Acceso</label>
+        <select class="w-full border px-2 py-1 rounded">
+          <option>Seleccione una opción</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm">Localización de Nuevo Acceso</label>
+        <select class="w-full border px-2 py-1 rounded">
+          <option>Seleccione una opción</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 mt-6">
+      <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+      <button class="bg-sky-500 text-white px-4 py-2 rounded">Registrar</button>
+      <button class="bg-sky-500 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button>
+    </div>
+
+
+    <div class="mt-6 p-4 border rounded shadow w-80 ml-auto">
+      <div class="flex items-center justify-center mb-2">
+        <div class="bg-gray-300 rounded-full h-16 w-16"></div>
+      </div>
+      <p class="text-center font-bold">Alejandro Antony Cerpa de la Cruz</p>
+      <p class="text-center text-sm text-gray-600">DNI: 74456747</p>
+      <ul class="text-sm text-gray-700 mt-4 space-y-1">
+        <li><strong>Edad:</strong> 38</li>
+        <li><strong>Sexo:</strong> Masculino</li>
+        <li><strong>Tipo de Registro:</strong> Hemodiálisis</li>
+        <li><strong>Estado:</strong> Nuevo</li>
+        <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
+      </ul>
+      <div class="mt-4">
+        <label class="text-sm font-medium">Historial de Registros</label>
+        <select class="w-full border px-2 py-1 rounded">
+          <option>Registro 1</option>
+        </select>
+      </div>
     </div>
   </div>
-</div>
+</template>
+
+
+<style scoped>
+select, input[type="text"], input[type="date"] {
+  font-size: 14px;
+}
+</style> -->
+
+
+<template>
+  <div class="p-6 space-y-6">
+    <!-- Botón de regreso -->
+    <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
+      ← Volver al inicio
+    </div>
+
+    <!-- Filtros Superiores -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
+      <select v-model="periodoSeleccionado" class="border p-1 rounded" :disabled="true">
+        <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
+      </select>
+
+      <label>Clínica:</label>
+      <label>{{ paciente.ipress }}</label>
+
+      <label>Modalidad de Diálisis:</label>
+      <label>{{ pacienteSeleccionado.id_modalidad ==1?"Hemodialisis":"Peritonial" }}</label>
+    </div>
+
+    <!-- Contenedor principal en columnas -->
+    <div class="flex gap-6 mt-6">
+      <!-- Contenido principal -->
+      <div class="flex-1 space-y-6">
+        <!-- Sección Unidad Actual -->
+        <div>
+          <h2 class="text-xl font-semibold">UNIDAD ACTUAL</h2>
+          <p class="text-sm text-gray-600">A continuación se presenta el Acceso Actual del paciente</p>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4">
+          <!-- Acceso Actual -->
+          <div>
+            <label class="text-sm">Fecha de Creación de Acceso Actual</label>
+            <input v-model="form.fecha_ingreso" type="date" class="w-full border px-2 py-1 rounded" />
+          </div>
+
+          <div>
+            <label class="text-sm">Tipo de Acceso Actual</label>
+            <select v-model="form.tipo_acceso" class="w-full border px-2 py-1 rounded">
+              <option>Seleccione una opción</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm">Localización de Acceso Actual</label>
+            <select v-model="form.localizacion_acceso" class="w-full border px-2 py-1 rounded">
+              <option>Seleccione una opción</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm">¿Se va a cambiar el acceso del paciente?</label>
+            <select v-model="form.cambio_acceso" class="w-full border px-2 py-1 rounded">
+              <option>SÍ</option>
+              <option>NO</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm">Especificar el Motivo de Cambio de Acceso</label>
+            <select v-model="form.motivo_cambio" class="w-full border px-2 py-1 rounded">
+              <option>Seleccione una opción</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Nuevo Acceso -->
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label class="text-sm">Fecha de Creación de Nuevo Acceso</label>
+            <input  v-model="form.fecha_creacion_acceso"  type="date" class="w-full border px-2 py-1 rounded" />
+          </div>
+          <div>
+            <label class="text-sm">Tipo de Nuevo Acceso</label>
+            <select v-model="form.tipo_nuevo_acceso" class="w-full border px-2 py-1 rounded">
+              <option>Seleccione una opción</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm">Localización de Nuevo Acceso</label>
+            <select v-model="form.localizacion_nuevo_acceso" class="w-full border px-2 py-1 rounded">
+              <option>Seleccione una opción</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex justify-end gap-2">
+          <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+          <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="postForm()">Registrar</button>
+          <!-- <button class="bg-sky-500 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button> -->
+        </div>
+      </div>
+
+      <!-- Perfil del paciente al costado -->
+      <div class="w-80 p-4 border rounded shadow">
+        <div class="flex items-center justify-center mb-2">
+          <div class="bg-gray-300 rounded-full h-16 w-16"></div>
+        </div>
+        <p class="text-center font-bold">{{ pacienteSeleccionado.paciente }}</p>
+        <p class="text-center text-sm text-gray-600">DNI: {{ pacienteSeleccionado.documento }}</p>
+        <ul class="text-sm text-gray-700 mt-4 space-y-1">
+          <li><strong>Edad:</strong> {{ pacienteSeleccionado.fecha_nacimiento }}</li>
+          <li><strong>Sexo:</strong>  {{ pacienteSeleccionado.genero =="M"?"Masculino":"Femenino" }}</li>
+          <li><strong>Tipo de Registro:</strong>  {{ pacienteSeleccionado.id_modalidad ==1?"Hemodialisis":"Peritonial" }}</li>
+          <li><strong>Estado:</strong> Nuevo</li>
+          <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
+        </ul>
+        <div class="mt-4">
+          <label class="text-sm font-medium">Historial de Registros</label>
+          <select class="w-full border px-2 py-1 rounded">
+            <option>Registro 1</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { useRouter } from 'vue-router'
+import { ref,onMounted } from 'vue';
+import { getAllIpress,postAllIpress } from "@/services/ipress/Ipress.service";
 
-const necesitaCambioAcceso = ref(false)
-
-const nuevoAcceso = ref({
-  fecha: '',
-  tipo: '',
-  ubicacion: ''
+// 👇 defineProps debe estar fuera de cualquier función
+const { paciente, periodo } = defineProps({
+  paciente: {
+    type: Object,
+    required: true
+  },
+  periodo: {
+    type: Number,
+    required: true
+  }
 })
+const form={
+    fecha_ingreso:null,
+    tipo_acceso: null,
+    localizacion_acceso:null,
+    cambio_acceso:null,
+    motivo_cambio:null,
+    fecha_creacion_acceso:null,
+    tipo_nuevo_acceso:null,
+    localizacion_nuevo_acceso:null,
+    id_periodo_ipress:17,
+    id_red:1,
+    id_paciente:paciente.id_paciente
 
-const ubicacionesFiltradasNuevo = computed(() => {
-  nuevoAcceso.value.ubicacion = ''
-  return datosUbicaciones[nuevoAcceso.value.tipo] || []
-})
-
-const accActual = ref('')
-const ubicacion = ref('');
-const motivCambioAcc = ref('')
-const feIngresoReingresoUni = ref('')
-const AcHBs = ref('');
-const busqueda = ref('')
-const faCreaAcc = ref('')
-
-const datosUbicaciones = {
-    '1': [ // FAV
-        { value: 'izq_radial', label: 'Izquierda Radial' },
-        { value: 'der_radial', label: 'Derecha Radial' },
-        { value: 'der_braquial_cubi', label: 'Braquial o cubital derecha' },
-        { value: 'izq_braquial_cubi', label: 'Braquial o cubital izquierdo' },
-    ],
-    '2': [ // Injerto autólogo
-        { value: 'injer_autologo', label: 'Injerto autólogo' },
-    ],
-    '3': [ // Injerto protésico
-        { value: 'injer_protesico', label: 'Injerto protésico' },
-
-    ],
-    '4': [ // CVCLP (Catéter Venoso Central Permanente)
-        { value: 'yugular_izq', label: 'Yugular Izquierda' },
-        { value: 'yugular_der', label: 'Yugular Derecha' },
-        { value: 'subclavia_izq', label: 'Subclavia Izquierda' },
-        { value: 'subclavia_der', label: 'Subclavia Derecha' },
-        { value: 'femoral_izq', label: 'Femoral Izquierda' },
-        { value: 'femoral_der', label: 'Femoral Derecha' },
-        { value: 'otra_cvcp', label: 'Otra CVCP' },
-    ],
-    '5': [ // CVCT  (Catéter Venoso Central Temporal)
-        { value: 'yugular_izq_temp', label: 'Yugular Izquierda' },
-        { value: 'yugular_der_temp', label: 'Yugular Derecha' },
-        { value: 'subclavia_izq_temp', label: 'Subclavia Izquierda' },
-        { value: 'subclavia_der_temp', label: 'Subclavia Derecha' },
-        { value: 'femoral_izq_temp', label: 'Femoral Izquierda' },
-        { value: 'femoral_der_temp', label: 'Femoral Derecha' },
-        { value: 'otra_cvct', label: 'Otra CVCT' },
-    ]
-};
-
-const hospitales = ref([
-    { id: 1, nombre: 'Centro Nefrológico Integral Renal Care SAC' },
-    { id: 2, nombre: 'Hospital IV "Augusto Hernández Mendoza"' },
-    { id: 3, nombre: 'Centro Médico Especializado Chincha' },
-    { id: 4, nombre: 'Centro Nefrourológico del Sur SAC' },
-    { id: 5, nombre: 'Hospital Nacional "Ramiro Prialé Prialé"' },
-    { id: 6, nombre: 'Centro Renal San Martin de Porres S.A.C. - Centro Renal Alto Mayo' },
-    { id: 7, nombre: 'Centro Renal Habich SAC' },
-    { id: 8, nombre: 'Hospital II "Jorge Reátegui delgado"' },
-])
-
-const ubicacionesFiltradas = computed(() => {
-    ubicacion.value = '';
-    return datosUbicaciones[accActual.value] || [];
-});
-
-const serologiasLabels = ['VHB', 'VHC', 'VHI'];
-
-
-const estadoSerologias = ref({
-    VHB: { resultado: 'Desconocido' },
-    VHC: { resultado: 'Desconocido' },
-    VHI: { resultado: 'Desconocido' },
-});
-
-const estadoAcHBs = computed(() => {
-    switch (AcHBs.value) {
-        case '1':
-            return 'No Responde';
-        case '2':
-            return 'Respuesta pobre';
-        case '3':
-            return 'Óptimo';
-        case '4':
-            return 'Excelente';
-        default:
-            return 'Seleccione una opción de Título de AcHBs';
-    }
-});
-
-const eventos = ref([
-    { feEgreUni: '', tyEgreso: '', otroEgreso: '', feReingresoUni: '' }
-])
-
-function agregarEvento() {
-    eventos.value.push({ feEgreUni: '', tyEgreso: '', otroEgreso: '', feReingresoUni: '' })
 }
+const router = useRouter()
+const pacienteSeleccionado = paciente
+const periodoSeleccionado = periodo
+// Puedes usar props.paciente o hacer destructuring:
 
-const eliminarEvento = (index) => {
-    eventos.value.splice(index, 1);
+console.log("Paciente recibido:", periodo)  // ✅ No lanzará error
+const postForm = async (url = null) => {
+  try {
+    const respuesta = await postAllIpress(url ?? "/unidadesActuales/",form); 
+    pacienteSeleccionado.value = respuesta;
+    alert("Se registro con exito")
+    window.location.reload()
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+const fetchPaciente = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/pacientes/"+paciente.id_paciente); 
+    pacienteSeleccionado.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+const periodos = ref([])
+// Otros datos
+const mes = 'JULIO'
+const anio = '2025'
+const clinicas = ['DA VIDA SAC.', 'NEFROLOGÍA S.A.C.', 'CLÍNICA DE RENALIS']
+const clinicaSeleccionada = clinicas[0]
+
+const modalidad = 'Hemodiálisis'
+
+const fetchPeriodo = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/periodos/"); 
+    periodos.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
 };
 
-const mostrarResultados = ref(true)
-const hospitalSeleccionado = ref(null)
-
-const resultadosFiltrados = computed(() => {
-    return hospitales.value.filter(h =>
-        h.nombre.toLowerCase().includes(busqueda.value.toLowerCase())
-    )
-})
-
-const seleccionarHospital = (hospital) => {
-    hospitalSeleccionado.value = hospital
-    busqueda.value = hospital.nombre
-    mostrarResultados.value = false
-}
-
-const props = defineProps({
-  presentaInfeccion: String
-})
-
-const emit = defineEmits(['update:presentaInfeccion'])
-
-const localInfeccion = ref(props.presentaInfeccion ?? '')
-
-watch(localInfeccion, (val) => {
-  emit('update:presentaInfeccion', val)
-})
-
-
-const generarFormData = () => {
-
-    const formData = {
-        serologiaActual: Object.keys(estadoSerologias.value).map(key => ({
-            nombre: key,
-            resultado: estadoSerologias.value[key].resultado
-        })),
-    };
-
-    return formData;
-};
-
-const verFormData = () => {
-    const datosListos = generarFormData();
-    console.log('--- FormData Generado ---');
-    console.log(datosListos);
-    console.log('-------------------------');
-};
+onMounted(() => {
+  fetchPaciente();
+  fetchPeriodo();
+});
 
 </script>
+
+<style scoped>
+select, input[type="text"], input[type="date"] {
+  font-size: 14px;
+}
+</style>

@@ -1,38 +1,25 @@
-
 <template>
   <div>
     <div class="flex items-center gap-4 mb-4 flex-wrap">
-      <h2 class="text-lg font-semibold">Mes de Reporte:</h2>
-      <select v-model="mes" class="border px-2 py-1 rounded">
-        <option v-for="(nombre, index) in meses" :key="index" :value="nombre">
-          {{ nombre }}
-        </option>
-      </select>
-      <select v-model="ano" class="border px-2 py-1 rounded">
-        <option v-for="a in anios" :key="a" :value="a">{{ a }}</option>
+      <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
+      <select v-model="periodoSeleccionado" class="border p-1 rounded" @change="searchPeriodoIpress">
+        <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">{{ periodo.periodo }}</option>
       </select>
 
       <label>Clínica</label>
-      <select v-model="clinicaSeleccionada" class="border p-1 rounded">
-        <option value="todas">Todas</option>
-        <option value="clinica san pablo">Clínica San Pablo</option>
-        <option value="clinica internacional">Clínica Internacional</option>
-        <option value="clinica delgado">Clínica Delgado</option>
+      <select v-model="clinicaSeleccionada" class="border p-1 rounded" @change="searchPeriodoIpress">
+        <option v-for="clinica in ipress" :key="clinica.id_ipress" :value="clinica.id_ipress">{{ clinica.ipress }}</option>
       </select>
 
-      <label>Modalidad de Diálisis</label>
+      <!-- <label>Modalidad de Diálisis</label>
       <select v-model="modalidadSeleccionada" class="border p-1 rounded">
         <option value="todos">Todos</option>
         <option value="hemodialisis">Hemodiálisis</option>
         <option value="dialisis peritoneal">Diálisis Peritoneal</option>
-      </select>
+      </select> -->
     </div>
 
     <div class="flex items-center gap-4 my-4">
-      <label class="flex items-center gap-2">
-        <input type="checkbox" v-model="aplicaTodos" />
-        Aplica a todos los pacientes
-      </label>
       <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('nuevo-registro')">
         Nuevo Registro
       </button>
@@ -47,32 +34,34 @@
     <h3 class="text-md font-bold my-2">Pacientes Ingresados:</h3>
     <div class="grid grid-cols-9 font-semibold border-b pb-1 mb-1">
       <span class="col-span-2">Nombre</span>
-      <span v-for="n in 7" :key="n">Formato {{ n }}</span>
+      <span>UNIDAD</span>
+      <span>INFECCION</span>
+      <span>MORBILIDAD HOSPITALARIA</span>
+      <span>RESULTADOS CLINICOS</span>
+      <span>VACUNACION</span>
     </div>
 
-    <div
-      v-for="paciente in pacientesFiltrados"
-      :key="paciente.nombre"
-      class="border rounded mb-3 p-3"
-    >
+    <div v-for="paciente in pacientes" :key="paciente.nombre" class="border rounded mb-3 p-3">
       <div class="grid grid-cols-9 items-center">
         <div class="col-span-2 font-medium">
-          {{ paciente.nombre }}
+          {{ paciente.paciente }}
           <div class="text-sm text-gray-500 uppercase">
-            {{ paciente.condicionLabel }}: {{ paciente.condicion }}<br />
-            Modalidad: {{ paciente.modalidad }}<br />
-            Clínica: {{ paciente.clinica }}
+            ESTADO: NUEVO<br />
+            Modalidad: {{ paciente.modalidad==1?"Hemodialisis":"Peritoneal" }}<br />
+            Clínica: {{ paciente.ipress }}
           </div>
         </div>
-        <div v-for="n in 7" :key="n" class="text-center">
-          <button
-            @click="abrirFormulario(paciente, n)"
-            class="text-lg hover:scale-110"
-            title="Abrir Formulario"
-          >
-            <span :class="colorClase(n)">📝</span>
-          </button>
-        </div>
+        <div v-for="n in 5" :key="n" class="text-center relative inline-block">
+  <button @click="abrirFormulario(paciente, n)" class="text-lg hover:scale-110 relative" title="Abrir Formulario">
+    <span :class="colorClase(n)">📝</span>
+    <!-- Badge -->
+    <span
+      class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5"
+    >
+      {{ numeroBadge(paciente,n) }}
+    </span>
+  </button>
+</div>
       </div>
     </div>
 
@@ -81,39 +70,29 @@
         Terminar Registro General
       </button>
     </div>
-
-    <!-- Modal para formularios -->
-    <teleport to="body">
-      <div v-if="mostrarFormulario" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white w-full max-w-4xl p-6 rounded shadow relative overflow-y-auto max-h-[90vh]">
-          <button class="absolute top-2 right-3 text-xl text-gray-500 hover:text-black" @click="cerrarFormulario">✖</button>
-          <component :is="componenteFormulario" />
-        </div>
-      </div>
-    </teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import Form1 from '@/components/forms/typesForm2/Form2Hemodialisis.vue'
-import Form2 from '@/components/forms/typesForm3/Form3Hemodialisis.vue'
-import Form3 from '@/components/forms/Form4.vue'
+import { ref, computed,onMounted } from 'vue';
+import { getAllIpress } from "@/services/ipress/Ipress.service";
 
 const aplicaTodos = ref(true)
 const modalidadSeleccionada = ref('todos')
-const clinicaSeleccionada = ref('todas')
+const clinicaSeleccionada = ref(null)
+const periodoSeleccionado =ref(55)
 const mostrarFormulario = ref(false)
 const componenteFormulario = ref(null)
+const emit = defineEmits(['form2'])
 
 const abrirFormulario = (paciente, numeroFormulario) => {
   switch (numeroFormulario) {
-    case 1: componenteFormulario.value = Form1; break
-    case 2: componenteFormulario.value = Form2; break
-    case 3: componenteFormulario.value = Form3; break
-    default: componenteFormulario.value = Form1
+    case 1: emit('form2', { paciente, numeroFormulario, periodo: periodoSeleccionado.value  }); break
+    case 2: emit('form3', { paciente, numeroFormulario, periodo: periodoSeleccionado.value }); break
+    case 3: emit('form4', { paciente, numeroFormulario, periodo: periodoSeleccionado.value }); break
+    case 4: emit('form5', { paciente, numeroFormulario, periodo: periodoSeleccionado.value }); break
+    case 5: emit('form7', { paciente, numeroFormulario, periodo: periodoSeleccionado.value }); break
   }
-  mostrarFormulario.value = true
 }
 
 const cerrarFormulario = () => {
@@ -128,26 +107,20 @@ const colorClase = (n) => {
   return 'text-gray-500'
 }
 
-const pacientes = ref([
-  { nombre: 'Alejandro Antony Cerpa de la Cruz', condicion: 'CONTINUADOR', condicionLabel: 'CONDICIÓN', modalidad: 'hemodialisis', clinica: 'clinica san pablo' },
-  { nombre: 'Maria Magdalena de la Cruz Ugarte', condicion: 'REINGRESO', condicionLabel: 'ESTADO', modalidad: 'dialisis peritoneal', clinica: 'clinica internacional' },
-  { nombre: 'Jorge Luis Chavez Gomez', condicion: 'CONTINUADOR', condicionLabel: 'ESTADO', modalidad: 'hemodialisis', clinica: 'clinica delgado' },
-  { nombre: 'Carmen Ramos', condicion: 'NUEVO', condicionLabel: 'ESTADO', modalidad: 'dialisis peritoneal', clinica: 'clinica san pablo' },
-  { nombre: 'Luis Rojas', condicion: 'REINGRESO', condicionLabel: 'ESTADO', modalidad: 'hemodialisis', clinica: 'clinica internacional' },
-  { nombre: 'Marina Castro', condicion: 'CONTINUADOR', condicionLabel: 'CONDICIÓN', modalidad: 'dialisis peritoneal', clinica: 'clinica san pablo' },
-  { nombre: 'Pedro García', condicion: 'NUEVO', condicionLabel: 'ESTADO', modalidad: 'hemodialisis', clinica: 'clinica delgado' },
-  { nombre: 'Julio Mendoza', condicion: 'REINGRESO', condicionLabel: 'ESTADO', modalidad: 'dialisis peritoneal', clinica: 'clinica internacional' },
-  { nombre: 'Natalia Quispe', condicion: 'CONTINUADOR', condicionLabel: 'CONDICIÓN', modalidad: 'hemodialisis', clinica: 'clinica delgado' },
-  { nombre: 'Sandra Torres', condicion: 'NUEVO', condicionLabel: 'ESTADO', modalidad: 'dialisis peritoneal', clinica: 'clinica san pablo' }
-])
+const numeroBadge = (paciente,n) => {
+  if (n === 1) return paciente.cantidad_de_registros_unidades_actuales
+  if (n === 2) return paciente.cantidad_de_eventos_accesos_vasculares
+  if (n === 3) return paciente.cantidad_de_morbilidades
+  if (n === 4) return paciente.cantidad_de_resultados_clinicos
+  if (n === 5) return paciente.cantidad_de_vacunaciones
+};
 
-const pacientesFiltrados = computed(() => {
-  return pacientes.value.filter(p => {
-    const modalidadMatch = modalidadSeleccionada.value === 'todos' || p.modalidad === modalidadSeleccionada.value
-    const clinicaMatch = clinicaSeleccionada.value === 'todas' || p.clinica === clinicaSeleccionada.value
-    return modalidadMatch && clinicaMatch
-  })
-})
+const pacientes = ref([])
+const ipress = ref([])
+const periodoIpress = ref([])
+const periodos = ref([])
+const idPerido = ref(55)
+const idIpress = ref(null)
 
 const fechaActual = new Date()
 const meses = [
@@ -157,18 +130,75 @@ const meses = [
 const anios = Array.from({ length: 10 }, (_, i) => fechaActual.getFullYear() - i)
 const mes = ref(meses[fechaActual.getMonth()])
 const ano = ref(fechaActual.getFullYear())
+
+
+function searchPeriodoIpress(){
+  console.log(periodoSeleccionado.value)
+  idIpress.value=clinicaSeleccionada.value
+  idPerido.value=periodoSeleccionado.value
+  fetchPacientes()
+  
+}
+const fetchPacientes = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/resumen_registros/"+idIpress.value+"/"+idPerido.value); 
+    pacientes.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+
+const fetchPeriodoIpress = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/periodoIpress/"); 
+    periodoIpress.value=respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+const fetchIpress = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/ipress/"); 
+    ipress.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+const fetchPeriodo = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/periodos/"); 
+    periodos.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+
+onMounted(() => {
+  fetchPeriodoIpress();
+  fetchPacientes();
+  fetchIpress();
+  fetchPeriodo();
+});
+
 </script>
 
 <style scoped>
 .text-red-600 {
   color: #dc2626;
 }
+
 .text-orange-500 {
   color: #f97316;
 }
+
 .text-yellow-500 {
   color: #eab308;
 }
+
 .text-green-600 {
   color: #16a34a;
 }

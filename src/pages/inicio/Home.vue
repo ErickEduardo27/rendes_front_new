@@ -1,9 +1,19 @@
 <template>
   <div class="p-6">
-    <FormularioPaciente v-if="mostrarFormulario==1" @cancelar="mostrarFormulario = 4" />
-    <CaptarPaciente v-if="mostrarFormulario==2" @cancelar="mostrarFormulario = 4" />
-    <EgresoPacientes v-if="mostrarFormulario==3" @cancelar="mostrarFormulario = 4" />
-    <ListaPacientes v-if="mostrarFormulario==4" @nuevo-registro="mostrarFormulario = 1" @captar-paciente="mostrarFormulario = 2" @egresar-paciente="mostrarFormulario = 3"/>
+    <FormularioPaciente v-if="mostrarFormulario == 1" @cancelar="mostrarFormulario = 4" />
+    <CaptarPaciente v-if="mostrarFormulario == 2" @cancelar="mostrarFormulario = 4" />
+    <EgresoPacientes v-if="mostrarFormulario == 3" @cancelar="mostrarFormulario = 4" />
+    <ListaPacientes v-if="mostrarFormulario == 4" @form2="abrirFormulario" @form3="abrirFormulario"
+      @form4="abrirFormulario" @form5="abrirFormulario" @form7="abrirFormulario" @nuevo-registro="mostrarFormulario = 1"
+      @captar-paciente="mostrarFormulario = 2" @egresar-paciente="mostrarFormulario = 3" />
+
+    <Form2Hemodialisis v-if="mostrarFormulario == 5" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado"
+      @cancelar="mostrarFormulario = 4" />
+    <Form3Hemodialisis v-if="mostrarFormulario == 6"  :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" @cancelar="mostrarFormulario = 4" />
+    <Form4 v-if="mostrarFormulario == 7" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" @cancelar="mostrarFormulario = 4" />
+    <Form5 v-if="mostrarFormulario == 8" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" @cancelar="mostrarFormulario = 4" />
+    <Form7 v-if="mostrarFormulario == 9" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" @cancelar="mostrarFormulario = 4" />
+
   </div>
 </template>
 
@@ -11,8 +21,22 @@
 import { ref } from 'vue'
 import ListaPacientes from './ListaPacientes.vue'
 import FormularioPaciente from './FormularioPaciente.vue'
-import CaptarPaciente from './CaptarPaciente.vue'
+import CaptarPaciente from './IndexCaptarPaciente.vue'
 import EgresoPacientes from './EgresoPacientes.vue'
+import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue'
+import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue'
+import Form4 from '@/components/forms/Form4.vue'
+import Form5 from '@/components/forms/Form5.vue'
+import Form7 from '@/components/forms/Form7.vue'
 
 const mostrarFormulario = ref(4)
+const pacienteSeleccionado = ref(null)
+const periodoSeleccionado =ref(null)
+
+const abrirFormulario = ({ paciente, numeroFormulario,periodo }) => {
+  console.log(periodo)
+  pacienteSeleccionado.value = paciente
+  mostrarFormulario.value = numeroFormulario + 4 // adapta según tu lógica
+  periodoSeleccionado.value = periodo
+}
 </script>

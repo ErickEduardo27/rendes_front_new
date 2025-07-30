@@ -101,10 +101,47 @@
         </button>
     </div>
 </template> -->
-<template>
-  <div class="space-y-6 max-h-[600px] overflow-y-auto pr-2 mt-2">
+<!-- <template>
 
-    <!-- DATOS DE TURNO -->
+
+<div class="p-6 space-y-6">
+
+    <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
+      ← Volver al inicio
+    </div>
+
+    
+    <div class="flex items-center gap-2 flex-wrap">
+      <label>Mes de Reporte:</label>
+      <select v-model="mes" class="border px-2 py-1 rounded">
+        <option value="JULIO">JULIO</option>
+        <option value="AGOSTO">AGOSTO</option>
+      </select>
+
+      <select v-model="anio" class="border px-2 py-1 rounded">
+        <option value="2025">2025</option>
+      </select>
+
+      <label>Clínica:</label>
+      <select v-model="clinicaSeleccionada" class="border px-2 py-1 rounded">
+        <option v-for="c in clinicas" :key="c">{{ c }}</option>
+      </select>
+
+      <label>Modalidad de Diálisis:</label>
+      <select v-model="modalidad" class="border px-2 py-1 rounded">
+        <option disabled value="">Seleccione</option>
+        <option>Hemodiálisis</option>
+        <option>Peritoneal</option>
+      </select>
+    </div>
+
+
+    <div class="flex gap-6 mt-6">
+     
+      <div class="flex-1 space-y-6">
+        <div class="space-y-6 max-h-[600px] overflow-y-auto pr-2 mt-2">
+
+    
     <h2 class="text-xl font-semibold">Datos de Turno</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
@@ -131,7 +168,7 @@
       </div>
     </div>
 
-    <!-- CONDICIÓN SEROLÓGICA -->
+  
     <h2 class="text-xl font-semibold">Condición Serológica Actual</h2>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div>
@@ -157,7 +194,7 @@
       </div>
     </div>
 
-    <!-- VACUNACIÓN CONTRA HEPATITIS -->
+
     <h2 class="text-xl font-semibold">Vacunación Contra Hepatitis</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
@@ -176,7 +213,7 @@
       </div>
     </div>
 
-    <!-- VACUNACIÓN CONTRA HEPATITIS B -->
+
     <h2 class="text-xl font-semibold">Vacunación Contra Hepatitis B</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
@@ -195,7 +232,6 @@
       </div>
     </div>
 
-    <!-- VACUNACIÓN CONTRA COVID-19 -->
     <h2 class="text-xl font-semibold">Vacunación Contra COVID-19</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
@@ -214,7 +250,7 @@
       </div>
     </div>
 
-    <!-- VACUNACIÓN CONTRA INFLUENZA -->
+    
     <h2 class="text-xl font-semibold">Vacunación Contra Influenza</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
@@ -229,7 +265,7 @@
       </div>
     </div>
 
-    <!-- VACUNACIÓN CONTRA NEUMOCOCO -->
+    
     <h2 class="text-xl font-semibold">Vacunación Contra Neumococo</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
@@ -244,30 +280,321 @@
       </div>
     </div>
 
-    <!-- BOTONES -->
+   
     <div class="flex justify-end gap-4 mt-6">
       <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
       <button class="bg-blue-500 text-white px-4 py-2 rounded">Registrar</button>
       <button class="bg-cyan-500 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button>
     </div>
   </div>
+      </div>
+
+   
+      <div class="w-80 p-4 border rounded shadow">
+        <div class="flex items-center justify-center mb-2">
+          <div class="bg-gray-300 rounded-full h-16 w-16"></div>
+        </div>
+        <p class="text-center font-bold">Alejandro Antony Cerpa de la Cruz</p>
+        <p class="text-center text-sm text-gray-600">DNI: 74456747</p>
+        <ul class="text-sm text-gray-700 mt-4 space-y-1">
+          <li><strong>Edad:</strong> 38</li>
+          <li><strong>Sexo:</strong> Masculino</li>
+          <li><strong>Tipo de Registro:</strong> Hemodiálisis</li>
+          <li><strong>Estado:</strong> Nuevo</li>
+          <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
+        </ul>
+        <div class="mt-4">
+          <label class="text-sm font-medium">Historial de Registros</label>
+          <select class="w-full border px-2 py-1 rounded">
+            <option>Registro 1</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</template> -->
+
+<template>
+  <div class="p-6 space-y-6">
+    <!-- Botón de regreso -->
+    <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
+      ← Volver al inicio
+    </div>
+
+    <!-- Filtros Superiores -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
+      <select v-model="periodoSeleccionado" class="border p-1 rounded" :disabled="true">
+        <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
+      </select>
+
+      <label>Clínica:</label>
+      <label>{{ paciente.ipress }}</label>
+
+      <label>Modalidad de Diálisis:</label>
+      <label>{{ pacienteSeleccionado.id_modalidad == 1 ? "Hemodialisis" : "Peritonial" }}</label>
+    </div>
+
+    <div class="flex gap-6 mt-6">
+      <!-- Sección Izquierda (Formulario) -->
+      <!-- Datos de Turno -->
+      <div class="flex-1 space-y-6">
+        <h2 class="text-xl font-semibold">Vacunación</h2>
+        <p class="text-sm text-gray-500">Complete la información médica del paciente en las diferentes secciones</p>
+
+        <!-- Datos de Turno -->
+        <div>
+          <h3 class="font-medium">Datos de Turno</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <select class="border rounded px-2 py-1" v-model="form.turno">
+              <option disabled selected>Seleccione una opción</option>
+              <option>Mañana</option>
+              <option>Tarde</option>
+            </select>
+            <select class="border rounded px-2 py-1" v-model="form.frecuencia">
+              <option disabled selected>Seleccione una opción</option>
+              <option>3 veces por semana</option>
+              <option>2 veces por semana</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Condición Serológica -->
+        <div>
+          <h3 class="font-medium">Condición Serológica Actual</h3>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="text-sm">VHB</label>
+              <select class="w-full border rounded px-2 py-1" v-model="form.vhbEstado">
+                <option>Seleccione una opción</option>
+              </select>
+              <input type="date" class="w-full border rounded px-2 py-1 mt-1" v-model="form.vhbFecha" />
+            </div>
+            <div>
+              <label class="text-sm">VHC</label>
+              <select class="w-full border rounded px-2 py-1" v-model="form.vhcEstado">
+                <option>Seleccione una opción</option>
+              </select>
+              <input type="date" class="w-full border rounded px-2 py-1 mt-1" v-model="form.vhcFecha" />
+            </div>
+            <div>
+              <label class="text-sm">VIH</label>
+              <select class="w-full border rounded px-2 py-1" v-model="form.vihEstado">
+                <option>Seleccione una opción</option>
+              </select>
+              <input type="date" class="w-full border rounded px-2 py-1 mt-1" v-model="form.vihFecha" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Vacunación Contra Hepatitis -->
+        <div>
+          <h3 class="font-medium">Vacunación Contra Hepatitis</h3>
+          <div class="grid grid-cols-3 gap-4">
+            <select class="border rounded px-2 py-1" v-model="form.vacunaHepatitis">
+              <option>Seleccione una opción</option>
+            </select>
+            <input type="text" class="border rounded px-2 py-1" placeholder="Estado según AcHBs"
+              v-model="form.estadoAcHBs" disabled />
+            <input type="date" class="border rounded px-2 py-1" v-model="form.fechaVacHepatitis" />
+          </div>
+        </div>
+
+        <!-- Vacunación Contra Hepatitis B -->
+        <div>
+          <h3 class="font-medium">Vacunación Contra Hepatitis B</h3>
+          <div class="grid grid-cols-3 gap-4">
+            <input type="text" class="border rounded px-2 py-1" placeholder="Última Dosis Administrada"
+              v-model="form.dosisHepatitisB" />
+            <input type="date" class="border rounded px-2 py-1" placeholder="Fecha de Última Dosis"
+              v-model="form.fechaHepatitisB" />
+            <select class="border rounded px-2 py-1" v-model="form.motivoNoHepatitisB">
+              <option>Motivo de No Vacunación</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Vacunación Contra Covid-19 -->
+        <div>
+          <h3 class="font-medium">Vacunación Contra Covid-19</h3>
+          <div class="grid grid-cols-3 gap-4">
+            <input type="text" class="border rounded px-2 py-1" placeholder="Última Dosis Administrada"
+              v-model="form.dosisCovid" />
+            <input type="date" class="border rounded px-2 py-1" placeholder="Fecha de Última Dosis"
+              v-model="form.fechaCovid" />
+            <select class="border rounded px-2 py-1" v-model="form.motivoNoCovid">
+              <option>Motivo de No Vacunación</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Vacunación Contra Influenza -->
+        <div>
+          <h3 class="font-medium">Vacunación Contra Influenza</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <input type="date" class="border rounded px-2 py-1" placeholder="Fecha de Vacunación"
+              v-model="form.fechaInfluenza" />
+            <select class="border rounded px-2 py-1" v-model="form.motivoNoInfluenza">
+              <option>Motivo de No Vacunación</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Vacunación Contra Neumococo -->
+        <div>
+          <h3 class="font-medium">Vacunación Contra Neumococo</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <input type="date" class="border rounded px-2 py-1" placeholder="Fecha de Vacunación"
+              v-model="form.fechaNeumococo" />
+            <select class="border rounded px-2 py-1" v-model="form.motivoNoNeumococo">
+              <option>Motivo de No Vacunación</option>
+            </select>
+          </div>
+        </div>
+
+
+        <!-- Botones -->
+        <div class="flex gap-2 mt-4">
+          <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+          <button class="bg-sky-500 text-white px-4 py-2 rounded">Registrar</button>
+          <button class="bg-blue-700 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button>
+        </div>
+      </div>
+
+      <!-- Perfil paciente -->
+      <div class="w-80 p-4 border rounded shadow">
+        <div class="flex items-center justify-center mb-2">
+          <div class="bg-gray-300 rounded-full h-16 w-16"></div>
+        </div>
+        <p class="text-center font-bold">{{ pacienteSeleccionado.paciente }}</p>
+        <p class="text-center text-sm text-gray-600">DNI: {{ pacienteSeleccionado.documento }}</p>
+        <ul class="text-sm text-gray-700 mt-4 space-y-1">
+          <li><strong>Edad:</strong> {{ pacienteSeleccionado.fecha_nacimiento }}</li>
+          <li><strong>Sexo:</strong> {{ pacienteSeleccionado.genero == "M" ? "Masculino" : "Femenino" }}</li>
+          <li><strong>Tipo de Registro:</strong> {{ pacienteSeleccionado.id_modalidad == 1 ? "Hemodialisis" :
+            "Peritonial" }}
+          </li>
+          <li><strong>Estado:</strong> Nuevo</li>
+          <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
+        </ul>
+        <div class="mt-4">
+          <label class="text-sm font-medium">Historial de Registros</label>
+          <select class="w-full border px-2 py-1 rounded">
+            <option>Registro 1</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
-<!-- <script setup>
-import { ref } from 'vue';
-
-const red = ref('');
-const turno = ref('');
-const frecuencia = ref('');
-const ultimaDosisAdm = ref('')
-const movNoVacunación = ref('');
-const mtvNoVacunacion = ref('')
-const fechaUltimaDosis = ref(''); 
-const fcVacunacion = ref('')
-
-
-</script> -->
 
 <script setup>
+import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue';
+import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
+
+// 👇 defineProps debe estar fuera de cualquier función
+const { paciente, periodo } = defineProps({
+  paciente: {
+    type: Object,
+    required: true
+  },
+  periodo: {
+    type: Number,
+    required: true
+  }
+})
+
+const clinicaSeleccionada = ref('');
+const clinicas = ref(['DA VIDA SAC.']);
+const modalidad = ref('');
+
+const form = {
+  turno: null,
+  frecuencia: null,
+  // Condición Serológica
+  vhbEstado: null,
+  vhbFecha: null,
+  vhcEstado: null,
+  vhcFecha: null,
+  vihEstado: null,
+  vihFecha: null,
+  // Vacunación Hepatitis
+  vacunaHepatitis: null,
+  estadoAcHBs: null,
+  fechaVacHepatitis: null,
+  // Vacunación Hepatitis B
+  dosisHepatitisB: null,
+  fechaHepatitisB: null,
+  motivoNoHepatitisB: null,
+  // Vacunación Covid-19
+  dosisCovid: null,
+  fechaCovid: null,
+  motivoNoCovid: null,
+  // Vacunación Influenza
+  fechaInfluenza: null,
+  motivoNoInfluenza: null,
+  // Vacunación Neumococo
+  fechaNeumococo: null,
+  motivoNoNeumococo: null
+}
+
+
+const router = useRouter()
+const pacienteSeleccionado = paciente
+const periodoSeleccionado = periodo
+// Puedes usar props.paciente o hacer destructuring:
+
+console.log("Paciente recibido:", periodo)  // ✅ No lanzará error
+const postForm = async (url = null) => {
+  try {
+    const respuesta = await postAllIpress(url ?? "/resultadosClinicos/", form);
+    pacienteSeleccionado.value = respuesta;
+    alert("Se registro con exito")
+    window.location.reload()
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+const fetchPaciente = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/pacientes/" + paciente.id_paciente);
+    pacienteSeleccionado.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+const periodos = ref([])
+// Otros datos
+const fetchPeriodo = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/periodos/");
+    periodos.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+
+onMounted(() => {
+  fetchPaciente();
+  fetchPeriodo();
+});
+
+
+const mes = ref('JULIO')
+const anio = ref('2025')
+const clinica = ref('DA VIDA S.A.C.')
+const turno = ref('')
+const frecuencia = ref('')
+
+
+</script>
+
+<!-- <script setup>
 import { ref } from 'vue'
 
 // Datos de Turno
@@ -351,4 +678,4 @@ const motivosNoVacunacion = [
   { value: 'cambio unidad', label: 'Cambio de unidad' },
   { value: 'no corresponde', label: 'No corresponde' }
 ]
-</script>
+</script> -->

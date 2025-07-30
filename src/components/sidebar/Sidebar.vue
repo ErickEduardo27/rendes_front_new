@@ -16,12 +16,12 @@
         </div>
       <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
       <!-- <SidebarItem :icon="UserIcon" label="Registros" to="/newpatient"/> -->
-      <SidebarItem :icon="UserIcon" label="Calidad Micro" to="/calidad-agua"/>
+      <SidebarItem :icon="UserIcon" label="Prueba de Agua" to="/calidad-agua"/>
       <SidebarItem :icon="DocumentMagnifyingGlassIcon" label="Administracion" :submenu="[
           { label: 'Ipress', to: '/ipress', icon: UserIcon },
-          { label: 'Pacientes', to: '', icon: UserIcon },
-          { label: 'Perfiles', to: '', icon: UserIcon },
-          { label: 'Usuarios', to: '', icon: UserIcon },
+          { label: 'Pacientes', to: '/pacientes', icon: UserIcon },
+          { label: 'Perfiles', to: '/perfiles', icon: UserIcon },
+          { label: 'Usuarios', to: '/usuarios', icon: UserIcon },
           { label: 'Asignación', to: '', icon: UserIcon },
           { label: 'Carga masiva', to: '', icon: UserIcon },
         ]"/>
