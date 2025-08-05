@@ -145,7 +145,7 @@ function searchPeriodoIpress() {
 
 const fetchPacientes = async (url = null) => {
   try {
-    const respuesta = await getAllIpress(url ?? "/resumen_registros/" + idIpress.value + "/" + idPerido.value);
+    const respuesta = await getAllIpress(url ?? "/resumen_registros/" + idIpress.value + "/" + idPerido.value+"/");
     pacientes.value = respuesta;
 
   } catch (error) {
