@@ -1,5 +1,4 @@
-
-   <!--  <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
+<!--  <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
         <h2 class="text-xl font-semibold mb-1">Registro para Hemodiálisis</h2>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -164,7 +163,7 @@
             💾 Guardar Unidad Actual
         </button>
     </div> -->
-    <!-- ACCESO ACTUAL -->
+<!-- ACCESO ACTUAL -->
 <!-- <script setup>
 import { useRouter } from 'vue-router'
 
@@ -308,181 +307,301 @@ select, input[type="text"], input[type="date"] {
 
 
 <template>
-  <div class="p-6 space-y-6">
-    <!-- Botón de regreso -->
-    <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
-      ← Volver al inicio
+    <div class="p-6 space-y-6">
+        <!-- Botón de regreso -->
+        <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
+            ← Volver al inicio
+        </div>
+
+        <!-- Filtros Superiores -->
+        <div class="flex items-center gap-2 flex-wrap">
+            <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
+            <select v-model="periodoSeleccionado" class="border p-1 rounded" :disabled="true">
+                <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
+            </select>
+
+            <label>Clínica:</label>
+            <label>{{ paciente.ipress }}</label>
+
+            <label>Modalidad de Diálisis:</label>
+            <label v-if="pacienteSeleccionado.value">{{ pacienteSeleccionado.value.id_modalidad == 1 ? "Hemodialisis" : "Peritonial" }}</label>
+        </div>
+
+        <!-- Contenedor principal en columnas -->
+        <div class="flex gap-6 mt-6">
+            <!-- Contenido principal -->
+            <div class="flex-1 space-y-6">
+                <!-- Sección Unidad Actual -->
+                <div>
+                    <h2 class="text-xl font-semibold">UNIDAD ACTUAL</h2>
+                    <p class="text-sm text-gray-600">A continuación se presenta el Acceso Actual del paciente</p>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <!-- Acceso Actual -->
+                    <div>
+                        <label class="text-sm">Fecha de Creación de Acceso Actual</label>
+                        <input disabled v-model="form.fecha_creacion_acceso_actual" type="date" class="w-full border px-2 py-1 rounded" />
+                    </div>
+
+                    <div>
+                        <label class="text-sm">Tipo de Acceso Actual</label>
+                        <select disabled v-model="form.tipo_acceso_actual" class="w-full border px-2 py-1 rounded">
+                            <option disabled value="">Seleccione una opción</option>
+                            <option value="FAV">FAV</option>
+                            <option value="CVCT">CVCT</option>
+                            <option value="CVCLP">CVCLP</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-sm">Localización de Acceso Actual</label>
+                        <select disabled v-model="form.localizacion_acceso_actual" class="w-full border px-2 py-1 rounded">
+                            <option disabled value="">Seleccione una opción</option>
+                            <option value="Radial derecha">Radial derecha</option>
+                            <option value="Radial izquierda">Radial izquierda</option>
+                            <option value="Braquial o cubital derecha">Braquial o cubital derecha</option>
+                            <option value="Braquial o cubital izquierdo">Braquial o cubital izquierdo</option>
+                            <option value="Yugular derecha">Yugular derecha</option>
+                            <option value="Yugular izquierda">Yugular izquierda</option>
+                            <option value="Subclavio derecho">Subclavio derecho</option>
+                            <option value="Subclavio izquierdo">Subclavio izquierdo</option>
+                            <option value="Femoral derecho">Femoral derecho</option>
+                            <option value="Femoral izquierdo">Femoral izquierdo</option>
+                            <option value="Translumbar">Translumbar</option>
+                            <option value="Transhepático">Transhepático</option>
+                            <option value="Injerto autólogo">Injerto autólogo</option>
+                            <option value="Injerto autólogo">Injerto protésico</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-sm">¿Se va a cambiar el acceso del paciente?</label>
+                        <select v-model="form.cambio_acceso" class="w-full border px-2 py-1 rounded">
+                            <option value="true">SÍ</option>
+                            <option value="false">NO</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <!-- Nuevo Acceso -->
+                <div class="grid grid-cols-3 gap-4" v-if="form.cambio_acceso == 'true'">
+                    <div>
+                        <label class="text-sm">Especificar el Motivo de Cambio de Acceso</label>
+                        <select v-model="form.motivo_cambio" class="w-full border px-2 py-1 rounded">
+                            <option value="">Seleccione una opción</option>
+                            <option value="1">Complicación mecánica</option>
+                            <option value="2">Complicación infecciosa</option>
+                            <option value="3">Prescripción Médica</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-sm">Fecha de Creación de Nuevo Acceso</label>
+                        <input v-model="form.fecha_creacion_acceso_nuevo" type="date" :min="minFechaNuevoAcceso"
+                            class="w-full border px-2 py-1 rounded" />
+                    </div>
+                    <div>
+                        <label class="text-sm">Tipo de Nuevo Acceso</label>
+                        <select v-model="form.tipo_acceso_nuevo" class="w-full border px-2 py-1 rounded">
+                            <option disabled value="">Seleccione una opción</option>
+                            <option value="FAV">FAV</option>
+                            <option value="CVCT">CVCT</option>
+                            <option value="CVCLP">CVCLP</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-sm">Localización de Nuevo Acceso</label>
+                        <select v-model="form.localizacion_acceso_nuevo" class="w-full border px-2 py-1 rounded">
+                            <option disabled value="">Seleccione una opción</option>
+                            <option v-for="op in localizacionesFiltradas" :key="op" :value="op">
+                                {{ op }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex justify-end gap-2">
+                    <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+                    <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="postForm()">Registrar</button>
+                    <!-- <button class="bg-sky-500 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button> -->
+                </div>
+            </div>
+
+            <!-- Perfil del paciente al costado -->
+            <div class="w-80 p-4 border rounded shadow" v-if="pacienteSeleccionado.value">
+                <div class="flex items-center justify-center mb-2">
+                    <div class="bg-gray-300 rounded-full h-16 w-16"></div>
+                </div>
+                <p class="text-center font-bold">{{ pacienteSeleccionado.value.paciente }}</p>
+                <p class="text-center text-sm text-gray-600">DNI: {{ pacienteSeleccionado.value.documento }}</p>
+                <ul class="text-sm text-gray-700 mt-4 space-y-1">
+                    <li><strong>Edad:</strong> {{ edadPaciente }}</li>
+                    <li><strong>Sexo:</strong> {{ pacienteSeleccionado.value.genero == "M" ? "Masculino" : "Femenino" }}
+                    </li>
+                    <li><strong>Tipo de Registro:</strong> {{ pacienteSeleccionado.value.id_modalidad
+                        == 1 ? "Hemodialisis" : "Peritonial" }}</li>
+                    <li><strong>Estado:</strong> Nuevo</li>
+                    <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
+                </ul>
+                <div class="mt-4">
+                    <label class="text-sm font-medium">Historial de Registros</label>
+                    <select class="w-full border px-2 py-1 rounded">
+                        <option>Registro 1</option>
+                    </select>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <!-- Filtros Superiores -->
-    <div class="flex items-center gap-2 flex-wrap">
-      <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
-      <select v-model="periodoSeleccionado" class="border p-1 rounded" :disabled="true">
-        <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
-      </select>
-
-      <label>Clínica:</label>
-      <label>{{ paciente.ipress }}</label>
-
-      <label>Modalidad de Diálisis:</label>
-      <label>{{ pacienteSeleccionado.id_modalidad ==1?"Hemodialisis":"Peritonial" }}</label>
-    </div>
-
-    <!-- Contenedor principal en columnas -->
-    <div class="flex gap-6 mt-6">
-      <!-- Contenido principal -->
-      <div class="flex-1 space-y-6">
-        <!-- Sección Unidad Actual -->
-        <div>
-          <h2 class="text-xl font-semibold">UNIDAD ACTUAL</h2>
-          <p class="text-sm text-gray-600">A continuación se presenta el Acceso Actual del paciente</p>
-        </div>
-
-        <div class="grid grid-cols-3 gap-4">
-          <!-- Acceso Actual -->
-          <div>
-            <label class="text-sm">Fecha de Creación de Acceso Actual</label>
-            <input v-model="form.fecha_ingreso" type="date" class="w-full border px-2 py-1 rounded" />
-          </div>
-
-          <div>
-            <label class="text-sm">Tipo de Acceso Actual</label>
-            <select v-model="form.tipo_acceso" class="w-full border px-2 py-1 rounded">
-              <option>Seleccione una opción</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-sm">Localización de Acceso Actual</label>
-            <select v-model="form.localizacion_acceso" class="w-full border px-2 py-1 rounded">
-              <option>Seleccione una opción</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-sm">¿Se va a cambiar el acceso del paciente?</label>
-            <select v-model="form.cambio_acceso" class="w-full border px-2 py-1 rounded">
-              <option>SÍ</option>
-              <option>NO</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-sm">Especificar el Motivo de Cambio de Acceso</label>
-            <select v-model="form.motivo_cambio" class="w-full border px-2 py-1 rounded">
-              <option>Seleccione una opción</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Nuevo Acceso -->
-        <div class="grid grid-cols-3 gap-4">
-          <div>
-            <label class="text-sm">Fecha de Creación de Nuevo Acceso</label>
-            <input  v-model="form.fecha_creacion_acceso"  type="date" class="w-full border px-2 py-1 rounded" />
-          </div>
-          <div>
-            <label class="text-sm">Tipo de Nuevo Acceso</label>
-            <select v-model="form.tipo_nuevo_acceso" class="w-full border px-2 py-1 rounded">
-              <option>Seleccione una opción</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-sm">Localización de Nuevo Acceso</label>
-            <select v-model="form.localizacion_nuevo_acceso" class="w-full border px-2 py-1 rounded">
-              <option>Seleccione una opción</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Botones -->
-        <div class="flex justify-end gap-2">
-          <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
-          <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="postForm()">Registrar</button>
-          <!-- <button class="bg-sky-500 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button> -->
-        </div>
-      </div>
-
-      <!-- Perfil del paciente al costado -->
-      <div class="w-80 p-4 border rounded shadow">
-        <div class="flex items-center justify-center mb-2">
-          <div class="bg-gray-300 rounded-full h-16 w-16"></div>
-        </div>
-        <p class="text-center font-bold">{{ pacienteSeleccionado.paciente }}</p>
-        <p class="text-center text-sm text-gray-600">DNI: {{ pacienteSeleccionado.documento }}</p>
-        <ul class="text-sm text-gray-700 mt-4 space-y-1">
-          <li><strong>Edad:</strong> {{ pacienteSeleccionado.fecha_nacimiento }}</li>
-          <li><strong>Sexo:</strong>  {{ pacienteSeleccionado.genero =="M"?"Masculino":"Femenino" }}</li>
-          <li><strong>Tipo de Registro:</strong>  {{ pacienteSeleccionado.id_modalidad ==1?"Hemodialisis":"Peritonial" }}</li>
-          <li><strong>Estado:</strong> Nuevo</li>
-          <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
-        </ul>
-        <div class="mt-4">
-          <label class="text-sm font-medium">Historial de Registros</label>
-          <select class="w-full border px-2 py-1 rounded">
-            <option>Registro 1</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { ref,onMounted } from 'vue';
-import { getAllIpress,postAllIpress } from "@/services/ipress/Ipress.service";
+import { ref, onMounted, reactive, computed } from 'vue';
+import { getAllIpress, postAllIpress, putAllIpress } from "@/services/ipress/Ipress.service";
 
 // 👇 defineProps debe estar fuera de cualquier función
-const { paciente, periodo } = defineProps({
-  paciente: {
-    type: Object,
-    required: true
-  },
-  periodo: {
-    type: Number,
-    required: true
-  }
+const { paciente, periodo,periodoIpress } = defineProps({
+    paciente: {
+        type: Object,
+        required: true
+    },
+    periodo: {
+        type: Number,
+        required: true
+    },
+    periodoIpress: {
+        type: Number,
+        required: true
+    }
 })
-const form={
-    fecha_ingreso:null,
-    tipo_acceso: null,
-    localizacion_acceso:null,
-    cambio_acceso:null,
-    motivo_cambio:null,
-    fecha_creacion_acceso:null,
-    tipo_nuevo_acceso:null,
-    localizacion_nuevo_acceso:null,
-    id_periodo_ipress:17,
-    id_red:1,
-    id_paciente:paciente.id_paciente
 
-}
 const router = useRouter()
 const pacienteSeleccionado = paciente
 const periodoSeleccionado = periodo
+const idPeriodoIpress=periodoIpress
+const periodoActual = ref([])
+console.log("ajlkdjflkasjdflkasdf",periodoIpress)
+
+const form = reactive({
+    fecha_creacion_acceso_actual: null,
+    tipo_acceso_actual:null,
+    localizacion_acceso_actual:null,
+    cambio_acceso: 'false',
+    motivo_cambio: null,
+    fecha_creacion_acceso_nuevo:null,
+    tipo_acceso_nuevo:null,
+    localizacion_acceso_nuevo:null,
+    id_periodo_ipress: periodoIpress,
+    id_red: 1,
+    id_paciente: paciente.id_paciente
+
+})
 // Puedes usar props.paciente o hacer destructuring:
 
-console.log("Paciente recibido:", periodo)  // ✅ No lanzará error
-const postForm = async (url = null) => {
-  try {
-    const respuesta = await postAllIpress(url ?? "/unidadesActuales/",form); 
-    pacienteSeleccionado.value = respuesta;
-    alert("Se registro con exito")
-    window.location.reload()
+const opcionesLocalizacion = {
+  'FAV': [ // FAV
+    'Radial derecha',
+    'Radial izquierda',
+    'Braquial o cubital derecha',
+    'Braquial o cubital izquierdo',
+  ],
+  'CVCT': [ // CVCT
+    'Yugular derecha',
+    'Yugular izquierda',
+    'Subclavio derecho',
+    'Subclavio izquierdo',
+    'Femoral derecho',
+    'Femoral izquierdo',
+  ],
+  'CVCLP': [ // CVCLP
+    'Yugular derecha',
+    'Yugular izquierda',
+    'Subclavio derecho',
+    'Subclavio izquierdo',
+    'Femoral derecho',
+    'Femoral izquierdo',
+    'Translumbar',
+    'Transhepático',
+  ],
+  'otros': [
+    'Injerto autólogo',
+    'Injerto protésico',
+  ]
+}
+const localizacionesFiltradas = computed(() => {
+  const tipo = form.tipo_acceso_nuevo;
+  const base = opcionesLocalizacion[tipo] || [];
+  return [...base, ...opcionesLocalizacion.otros];
+});
 
-  } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
-  }
+const minFechaNuevoAcceso = computed(() => {
+  if (!form.fecha_creacion_acceso_actual) return null;
+  const fecha = new Date(form.fecha_creacion_acceso_actual);
+  fecha.setDate(fecha.getDate() + 1);
+  return fecha.toISOString().split('T')[0]; // formato YYYY-MM-DD
+});
+
+const postForm = async (url = null) => {
+    const formEnvio={
+        fecha_creacion_acceso_actual:form.fecha_creacion_acceso_nuevo,
+        tipo_acceso_actual:form.tipo_acceso_nuevo,
+        localizacion_acceso_actual:form.localizacion_acceso_nuevo,
+        cambio_acceso: null,
+        motivo_cambio: null,
+        fecha_creacion_acceso_nuevo:null,
+        tipo_acceso_nuevo:null,
+        localizacion_acceso_nuevo:null,
+        id_periodo_ipress: periodoIpress,
+        id_red: 1,
+        id_paciente: paciente.id_paciente
+    }
+    try {
+        await postAllIpress(url ?? "/unidadesActuales/", formEnvio);
+        if(periodoActual.value[0]){
+            await editForm();
+        }else{
+            alert("Se registro con exito")
+            window.location.reload()
+        }
+
+    } catch (error) {
+        console.error('Error al obtener IPRESS:', error);
+    }
+};
+
+const editForm = async (url = null) => {
+    try {
+        await putAllIpress(url ?? "/unidadesActuales/"+periodoActual.value[0].id_unidad_actual+"/", form);
+            alert("Se registro con exito")
+            window.location.reload()
+    } catch (error) {
+        console.error('Error al obtener IPRESS:', error);
+    }
+};
+
+const fetchPeriodoActual = async (url = null) => {
+    try {
+        const respuesta = await getAllIpress(url ?? "/unidadesActuales/?id_periodo_ipress=" +periodoIpress);
+        periodoActual.value = respuesta;
+        form.fecha_creacion_acceso_actual = periodoActual.value[0].fecha_creacion_acceso_actual;
+        form.tipo_acceso_actual = periodoActual.value[0].tipo_acceso_actual;
+        form.localizacion_acceso_actual = periodoActual.value[0].localizacion_acceso_actual;
+    } catch (error) {
+        console.error('Error al obtener IPRESS:', error);
+    }
 };
 const fetchPaciente = async (url = null) => {
-  try {
-    const respuesta = await getAllIpress(url ?? "/pacientes/"+paciente.id_paciente); 
-    pacienteSeleccionado.value = respuesta;
+    try {
+        const respuesta = await getAllIpress(url ?? "/pacientes/" + paciente.id_paciente);
+        pacienteSeleccionado.value = respuesta;
+        console.log("paientes seleccionado", pacienteSeleccionado)
 
-  } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
-  }
+    } catch (error) {
+        console.error('Error al obtener IPRESS:', error);
+    }
 };
 const periodos = ref([])
 // Otros datos
@@ -494,24 +613,42 @@ const clinicaSeleccionada = clinicas[0]
 const modalidad = 'Hemodiálisis'
 
 const fetchPeriodo = async (url = null) => {
-  try {
-    const respuesta = await getAllIpress(url ?? "/periodos/"); 
-    periodos.value = respuesta;
+    try {
+        const respuesta = await getAllIpress(url ?? "/periodos/");
+        periodos.value = respuesta;
 
-  } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
-  }
+    } catch (error) {
+        console.error('Error al obtener IPRESS:', error);
+    }
 };
 
+const edadPaciente = computed(() => {
+    if (!pacienteSeleccionado.value?.fecha_nacimiento) return ''
+
+    const hoy = new Date()
+    const nacimiento = new Date(pacienteSeleccionado.value.fecha_nacimiento)
+    let edad = hoy.getFullYear() - nacimiento.getFullYear()
+    const mes = hoy.getMonth() - nacimiento.getMonth()
+
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+        edad--
+    }
+
+    return `${edad} años`
+})
+
 onMounted(() => {
-  fetchPaciente();
-  fetchPeriodo();
+    fetchPaciente();
+    fetchPeriodo();
+    fetchPeriodoActual();
 });
 
 </script>
 
 <style scoped>
-select, input[type="text"], input[type="date"] {
-  font-size: 14px;
+select,
+input[type="text"],
+input[type="date"] {
+    font-size: 14px;
 }
 </style>

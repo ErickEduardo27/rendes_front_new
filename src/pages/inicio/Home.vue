@@ -7,12 +7,14 @@
       @form4="abrirFormulario" @form5="abrirFormulario" @form7="abrirFormulario" @nuevo-registro="mostrarFormulario = 1"
       @captar-paciente="mostrarFormulario = 2" @egresar-paciente="mostrarFormulario = 3" />
 
-    <Form2Hemodialisis v-if="mostrarFormulario == 5" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado"
+    <Form2Hemodialisis v-if="mostrarFormulario == 5 && modalidad==1" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress"
       @cancelar="mostrarFormulario = 4" />
-    <Form3Hemodialisis v-if="mostrarFormulario == 6"  :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" @cancelar="mostrarFormulario = 4" />
-    <Form4 v-if="mostrarFormulario == 7" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" @cancelar="mostrarFormulario = 4" />
-    <Form5 v-if="mostrarFormulario == 8" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" @cancelar="mostrarFormulario = 4" />
-    <Form7 v-if="mostrarFormulario == 9" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" @cancelar="mostrarFormulario = 4" />
+    <Form2Peritoneal v-if="mostrarFormulario == 5 && modalidad==2" :paciente="pacienteSeleccionado"  :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress"
+      @cancelar="mostrarFormulario = 4" />
+    <Form3Hemodialisis v-if="mostrarFormulario == 6"  :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress" @cancelar="mostrarFormulario = 4" />
+    <Form4 v-if="mostrarFormulario == 7" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado"  :periodoIpress="idPeriodoIpress" @cancelar="mostrarFormulario = 4" />
+    <Form5 v-if="mostrarFormulario == 8" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress" @cancelar="mostrarFormulario = 4" />
+    <Form7 v-if="mostrarFormulario == 9" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress" @cancelar="mostrarFormulario = 4" />
 
   </div>
 </template>
@@ -28,15 +30,20 @@ import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.v
 import Form4 from '@/components/forms/Form4.vue'
 import Form5 from '@/components/forms/Form5.vue'
 import Form7 from '@/components/forms/Form7.vue'
+import Form2Peritoneal from '@/components/forms/typesForm2/Form2Peritoneal.vue'
 
 const mostrarFormulario = ref(4)
 const pacienteSeleccionado = ref(null)
 const periodoSeleccionado =ref(null)
+const idPeriodoIpress =ref(null)
+const modalidad= ref(null)
 
-const abrirFormulario = ({ paciente, numeroFormulario,periodo }) => {
-  console.log(periodo)
+const abrirFormulario = ({ paciente, numeroFormulario,periodo,periodoIpress }) => {
+  console.log("se enviasdhkajshdasd",periodoIpress)
   pacienteSeleccionado.value = paciente
+  modalidad.value=paciente.modalidad
   mostrarFormulario.value = numeroFormulario + 4 // adapta según tu lógica
   periodoSeleccionado.value = periodo
+  idPeriodoIpress.value=periodoIpress
 }
 </script>

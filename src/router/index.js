@@ -27,6 +27,16 @@ const routes = [
         component: () => import('@/pages/registros/index.vue')
       },
       {
+        path: 'tablas',
+        name: 'Tablas',
+        component: () => import('@/pages/tablas/Home.vue')
+      },
+      {
+        path: 'estadistica',
+        name: 'Estadistica',
+        component: () => import('@/pages/estadistica/Home.vue')
+      },
+      {
         path: 'ipress',
         name: 'Ipress',
         component: () => import('@/pages/ipress/Ipress.vue'),

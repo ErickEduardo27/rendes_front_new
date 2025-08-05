@@ -160,10 +160,9 @@ const removeEvento = (index) => {
         <label class="block text-sm font-semibold text-gray-700">Tipo de Infección</label>
         <select v-model="evento.tpInfeccion" class="w-full border rounded p-2 text-sm">
           <option value="">Seleccione una opción</option>
-          <option value="1">Bacteriana asociada a CVC</option>
-          <option value="2">Infección de orificio de salida</option>
-          <option value="3">Infección del túnel</option>
-          <option value="4">Peritonitis</option>
+          <option value="1">Infección de orificio de salida</option>
+          <option value="2">Infección del túnel</option>
+          <option value="3">Peritonitis</option>
         </select>
       </div>
     </div>

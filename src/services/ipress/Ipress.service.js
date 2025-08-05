@@ -27,3 +27,13 @@ export async function postAllIpress(url = "/ipress/", data) {
     const response = await apiClient.post(url, data);
     return response;
 }
+
+export async function putAllIpress(url = "/ipress/", data) {
+    const response = await apiClient.put(url, data);
+    return response;
+}
+
+export async function patchAllIpress(url = "/ipress/", data) {
+    const response = await apiClient.patch(url, data);
+    return response;
+}

@@ -205,7 +205,7 @@ export default {
       <label>{{ paciente.ipress }}</label>
 
       <label>Modalidad de Diálisis:</label>
-      <label>{{ pacienteSeleccionado.id_modalidad ==1?"Hemodialisis":"Peritonial" }}</label>
+      <label>{{ pacienteSeleccionado.id_modalidad == 1 ? "Hemodialisis" : "Peritonial" }}</label>
     </div>
 
     <!-- Contenedor principal -->
@@ -213,14 +213,15 @@ export default {
       <!-- Formulario principal -->
       <div class="flex-1 bg-white border rounded shadow p-6">
         <h2 class="text-xl font-semibold mb-1">Resultados Clínicos</h2>
-        <p class="text-sm text-gray-600 mb-4">Complete la información médica del paciente en las diferentes secciones</p>
+        <p class="text-sm text-gray-600 mb-4">Complete la información médica del paciente en las diferentes secciones
+        </p>
 
         <!-- Resultados -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div v-for="(campo, index) in camposResultados" :key="index" class="space-y-1">
             <label class="block font-semibold text-sm text-gray-700">{{ campo.label }}</label>
-            <input v-model="campo.model" type="text" placeholder="Ingrese el valor numérico"
-              class="w-full border rounded p-2 text-sm" />
+            <input v-model.number="campo.model" type="number" min="0" step="1" placeholder="Ingrese un número entero"
+              class="w-full border rounded p-2 text-sm" @keydown="bloquearDecimal" @input="validarEntero(campo)" />
           </div>
         </div>
 
@@ -275,22 +276,24 @@ export default {
         <!-- Botones -->
         <div class="mt-6 flex gap-4 justify-end">
           <button class="bg-gray-300 text-gray-800 px-4 py-2 rounded">Cancelar</button>
-          <button class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded" @click="postForm()">Registrar</button>
+          <button class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded"
+            @click="postForm()">Registrar</button>
           <button class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button>
         </div>
       </div>
 
       <!-- Perfil del paciente -->
-      <div class="w-80 p-4 border rounded shadow">
+      <div class="w-80 p-4 border rounded shadow" v-if="pacienteSeleccionado.value">
         <div class="flex items-center justify-center mb-2">
           <div class="bg-gray-300 rounded-full h-16 w-16"></div>
         </div>
-        <p class="text-center font-bold">{{ pacienteSeleccionado.paciente }}</p>
-        <p class="text-center text-sm text-gray-600">DNI: {{ pacienteSeleccionado.documento }}</p>
+        <p class="text-center font-bold">{{ pacienteSeleccionado.value.paciente }}</p>
+        <p class="text-center text-sm text-gray-600">DNI: {{ pacienteSeleccionado.value.documento }}</p>
         <ul class="text-sm text-gray-700 mt-4 space-y-1">
-          <li><strong>Edad:</strong> {{ pacienteSeleccionado.fecha_nacimiento }}</li>
-          <li><strong>Sexo:</strong>  {{ pacienteSeleccionado.genero =="M"?"Masculino":"Femenino" }}</li>
-          <li><strong>Tipo de Registro:</strong>  {{ pacienteSeleccionado.id_modalidad ==1?"Hemodialisis":"Peritonial" }}</li>
+          <li><strong>Edad:</strong> {{ edadPaciente }}</li>
+          <li><strong>Sexo:</strong> {{ pacienteSeleccionado.value.genero == "M" ? "Masculino" : "Femenino" }}</li>
+          <li><strong>Tipo de Registro:</strong> {{ pacienteSeleccionado.value.id_modalidad
+            == 1 ? "Hemodialisis" : "Peritonial" }}</li>
           <li><strong>Estado:</strong> Nuevo</li>
           <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
         </ul>
@@ -307,8 +310,8 @@ export default {
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { ref,onMounted } from 'vue';
-import { getAllIpress,postAllIpress } from "@/services/ipress/Ipress.service";
+import { ref, onMounted, computed } from 'vue';
+import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 
 // 👇 defineProps debe estar fuera de cualquier función
 const { paciente, periodo } = defineProps({
@@ -328,21 +331,21 @@ const clinicaSeleccionada = ref('');
 const clinicas = ref(['DA VIDA SAC.']);
 const modalidad = ref('');
 
-const form={
-    tmpDialisis:null,
-    eritropoyetina: null,
-    hierro:null,
-    hiperparatiroidismo:null,
-    hb:null,
-    calcio:null,
-    fosforo:null,
-    pthi:null,
-    alb:null,
-    calcioCorregido:null,
-    kt:null,
-    id_periodo_ipress:17,
-    id_red:1,
-    id_paciente:paciente.id_paciente
+const form = {
+  tmpDialisis: null,
+  eritropoyetina: null,
+  hierro: null,
+  hiperparatiroidismo: null,
+  hb: null,
+  calcio: null,
+  fosforo: null,
+  pthi: null,
+  alb: null,
+  calcioCorregido: null,
+  kt: null,
+  id_periodo_ipress: 17,
+  id_red: 1,
+  id_paciente: paciente.id_paciente
 
 }
 const router = useRouter()
@@ -353,7 +356,7 @@ const periodoSeleccionado = periodo
 console.log("Paciente recibido:", periodo)  // ✅ No lanzará error
 const postForm = async (url = null) => {
   try {
-    const respuesta = await postAllIpress(url ?? "/resultadosClinicos/",form); 
+    const respuesta = await postAllIpress(url ?? "/resultadosClinicos/", form);
     pacienteSeleccionado.value = respuesta;
     alert("Se registro con exito")
     window.location.reload()
@@ -364,25 +367,55 @@ const postForm = async (url = null) => {
 };
 const fetchPaciente = async (url = null) => {
   try {
-    const respuesta = await getAllIpress(url ?? "/pacientes/"+paciente.id_paciente); 
+    const respuesta = await getAllIpress(url ?? "/pacientes/" + paciente.id_paciente);
     pacienteSeleccionado.value = respuesta;
 
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }
 };
+
+function bloquearDecimal(event) {
+  // Bloquea punto y coma decimal
+  if (event.key === '.' || event.key === ',' || event.key === 'e' || event.key === '-') {
+    event.preventDefault();
+  }
+}
+
+function validarEntero(campo) {
+  const valor = campo.model;
+  if (!Number.isInteger(valor)) {
+    campo.model = Math.floor(valor) || 0;
+  } else if (valor < 0) {
+    campo.model = 0;
+  }
+}
+
 const periodos = ref([])
 // Otros datos
 const fetchPeriodo = async (url = null) => {
   try {
-    const respuesta = await getAllIpress(url ?? "/periodos/"); 
+    const respuesta = await getAllIpress(url ?? "/periodos/");
     periodos.value = respuesta;
 
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }
 };
+const edadPaciente = computed(() => {
+  if (!pacienteSeleccionado.value?.fecha_nacimiento) return ''
 
+  const hoy = new Date()
+  const nacimiento = new Date(pacienteSeleccionado.value.fecha_nacimiento)
+  let edad = hoy.getFullYear() - nacimiento.getFullYear()
+  const mes = hoy.getMonth() - nacimiento.getMonth()
+
+  if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+    edad--
+  }
+
+  return `${edad} años`
+})
 onMounted(() => {
   fetchPaciente();
   fetchPeriodo();

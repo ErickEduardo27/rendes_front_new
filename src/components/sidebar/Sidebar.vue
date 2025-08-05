@@ -15,7 +15,7 @@
             <span class="px-1 text-xs font-semibold text-cyan-800 border-cyan-100">Menú Principal</span>
         </div>
       <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
-      <!-- <SidebarItem :icon="UserIcon" label="Registros" to="/newpatient"/> -->
+      <SidebarItem :icon="UserIcon" label="Registros" to="/tablas"/>
       <SidebarItem :icon="UserIcon" label="Prueba de Agua" to="/calidad-agua"/>
       <SidebarItem :icon="DocumentMagnifyingGlassIcon" label="Administracion" :submenu="[
           { label: 'Ipress', to: '/ipress', icon: UserIcon },
@@ -25,12 +25,14 @@
           { label: 'Asignación', to: '', icon: UserIcon },
           { label: 'Carga masiva', to: '', icon: UserIcon },
         ]"/>
-      <SidebarItem :icon="ComputerDesktopIcon" label="Gestion" :submenu="[
+      <!-- 
+       <SidebarItem :icon="ComputerDesktopIcon" label="Gestion" :submenu="[
           { label: 'Pre carga', to: '', icon: UserIcon },
           { label: 'Cerrar mes', to: '', icon: UserIcon },
           { label: 'Abrir mes', to: '', icon: UserIcon },
-        ]"/>
-      <SidebarItem :icon=ChartBarIcon label="Estadistica" to=""/>
+        ]"/> 
+        -->
+      <SidebarItem :icon=ChartBarIcon label="Estadistica" to="/estadistica"/>
     </nav>
 
     <div class="p-4 border-t border-cyan-100 flex items-center gap-2 text-sm text-gray-700 bg-gradient-to-r from-cyan-100 via-cyan-50 to-white border-b">

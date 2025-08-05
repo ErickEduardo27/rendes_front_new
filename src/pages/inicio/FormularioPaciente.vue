@@ -1,22 +1,25 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-5 mx-12">
     <h2 class="text-xl font-bold">Registro de Nuevo Paciente en Diálisis:</h2>
-    <p class="text-sm text-gray-600">Complete los respectivos datos del paciente para la creación del expediente médico.</p>
+    <p class="text-sm text-gray-600">Complete los respectivos datos del paciente para la creación del expediente médico.
+    </p>
 
     <!-- Datos personales -->
-    <div class="grid grid-cols-4 gap-4">
+    <div class="grid grid-cols-4 gap-5">
       <div>
         <label class="text-sm font-medium">Tipo de Documento*</label>
         <select v-model="form.tipoDocumento" class="w-full border px-2 py-1 rounded">
           <option disabled value="">Seleccione</option>
-          <option>DNI</option>
-          <option>CE</option>
-          <option>PASAPORTE</option>
+          <option value="DNI">DNI</option>
+          <option value="CE">CE</option>
+          <option value="PASAPORTE">PASAPORTE</option>
         </select>
       </div>
+
       <div>
         <label class="text-sm font-medium">Número de Documento*</label>
-        <input v-model="form.numeroDocumento" class="w-full border px-2 py-1 rounded" />
+        <input v-model="form.numeroDocumento" class="w-full border px-2 py-1 rounded" :maxlength="maxLengthDocumento"
+          :pattern="soloNumeros ? '\\d*' : null" @input="onDocumentoInput" />
       </div>
       <div>
         <label class="text-sm font-medium">Apellidos y Nombres*</label>
@@ -34,8 +37,8 @@
         <label class="text-sm font-medium">Sexo*</label>
         <select v-model="form.sexo" class="w-full border px-2 py-1 rounded">
           <option disabled value="">Seleccione</option>
-          <option>Masculino</option>
-          <option>Femenino</option>
+          <option value="M">Masculino</option>
+          <option value="F">Femenino</option>
         </select>
       </div>
       <div>
@@ -52,34 +55,42 @@
 
     <!-- Etiología -->
     <div class="grid grid-cols-2 gap-4 mt-6">
-      <div>
-        <label class="text-sm font-medium">Etiología General*</label>
-        <select v-model="form.etiologiaGeneral" class="w-full border px-2 py-1 rounded">
-          <option disabled value="">Seleccione</option>
-          <option>Genética</option>
-          <option>Autoinmune</option>
-          <option>Infecciosa</option>
+      <div class="space-y-2">
+        <span class="block font-semibold text-sm text-gray-700">Etiología general</span>
+        <select v-model="form.etiologiaGeneral" class="w-full border rounded p-2 text-sm">
+          <option value="">Seleccione una opción</option>
+          <option v-for="(item, key) in etologiasGenerales" :key="key" :value="key">
+            {{ item }}
+          </option>
         </select>
       </div>
-      <div>
-        <label class="text-sm font-medium">Etiología Específica*</label>
-        <select v-model="form.etiologiaEspecifica" class="w-full border px-2 py-1 rounded">
-          <option disabled value="">Seleccione</option>
-          <option>Glomerulonefritis</option>
-          <option>Nefropatía diabética</option>
-        </select>
+
+      <!-- Etiología específica -->
+      <div class="space-y-2 relative">
+        <span class="block font-semibold text-sm text-gray-700">Etiología específica</span>
+        <div class="w-full">
+          <select v-model="form.etiologiaEspecifica" class="w-full border rounded p-2 text-sm">
+            <option value="">Seleccione una opción</option>
+            <option v-for="(item, key) in localizacionesFiltradas" :key="key" :value="item.value">
+              {{ item.label }}
+            </option>
+          </select>
+        </div>
       </div>
     </div>
 
     <!-- Comorbilidad -->
-    <div class="mt-6">
-      <label class="text-sm font-medium block mb-2">Comorbilidad</label>
+    <div class="mt-6" :key="form.etiologiaGeneral">
+      <label class="text-xl font-medium block mb-2">Comorbilidad</label>
       <div class="grid grid-cols-3 gap-4">
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Insuficiencia cardiaca" /> Insuficiencia cardiaca congestiva</label>
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Diabetes" /> Diabetes</label>
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Aterosclerosis" /> Aterosclerosis cardíaca</label>
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Hipertensión" /> Hipertensión</label>
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Vascular periférica" /> Enfermedad vascular periférica</label>
+        <label><input type="checkbox" v-model="form.comorbilidades" value="Insuficiencia cardiaca" /> Insuficiencia
+          cardiaca congestiva</label>
+        <label v-if="form.etiologiaGeneral!=1"><input type="checkbox" v-model="form.comorbilidades" value="Diabetes" /> Diabetes</label>
+        <label><input type="checkbox" v-model="form.comorbilidades" value="Aterosclerosis" /> Aterosclerosis
+          cardíaca</label>
+        <label v-if="form.etiologiaGeneral!=1"><input type="checkbox"   v-model="form.comorbilidades" value="Hipertensión" /> Hipertensión</label>
+        <label><input type="checkbox" v-model="form.comorbilidades" value="Vascular periférica" /> Enfermedad vascular
+          periférica</label>
         <label><input type="checkbox" v-model="form.comorbilidades" value="Tuberculosis" /> Tuberculosis</label>
         <label><input type="checkbox" v-model="form.comorbilidades" value="ACV" /> Accidente cerebrovascular</label>
         <label><input type="checkbox" v-model="form.comorbilidades" value="Cáncer" /> Cáncer</label>
@@ -98,8 +109,15 @@
         </select>
       </div>
       <div>
+        <label class="text-sm font-medium">Fecha de Creación del Acceso de Inicio</label>
+        <input type="date" v-model="form.fechaCreacionAcceso" 
+           class="w-full border px-2 py-1 rounded" />
+      </div>
+      <div>
         <label class="text-sm font-medium">Fecha de Inicio de TRR</label>
-        <input type="date" v-model="form.fechaInicioTRR" class="w-full border px-2 py-1 rounded" />
+        <!-- Fecha de Inicio de TRR -->
+        <input type="date" v-model="form.fechaInicioTRR" :min="form.fechaCreacionAcceso || undefined"
+          class="w-full border px-2 py-1 rounded" />
       </div>
       <div>
         <label class="text-sm font-medium">Subsistema de Salud</label>
@@ -112,7 +130,7 @@
       </div>
       <div>
         <label class="text-sm font-medium">Edad de Inicio de TRR</label>
-        <input v-model="form.edadInicioTRR" class="w-full border px-2 py-1 rounded" />
+        <input v-model="form.edadInicioTRR" disabled class="w-full border px-2 py-1 rounded" />
       </div>
       <div>
         <label class="text-sm font-medium">Tipo de Acceso de Inicio</label>
@@ -123,17 +141,16 @@
           <option>Injerto</option>
         </select>
       </div>
-      <div>
-        <label class="text-sm font-medium">Fecha de Creación del Acceso</label>
-        <input type="date" v-model="form.fechaCreacionAcceso" class="w-full border px-2 py-1 rounded" />
-      </div>
+      
       <div>
         <label class="text-sm font-medium">Fecha de Ingreso a Hospital EsSalud</label>
         <input type="date" v-model="form.fechaIngresoEsSalud" class="w-full border px-2 py-1 rounded" />
       </div>
       <div>
         <label class="text-sm font-medium">Fecha de Primer Ingreso a Unidad</label>
-        <input type="date" v-model="form.fechaPrimerIngreso" class="w-full border px-2 py-1 rounded" />
+        <!-- <input type="date" v-model="form.fechaPrimerIngreso" class="w-full border px-2 py-1 rounded" /> -->
+        <input type="date" v-model="form.fechaPrimerIngreso" 
+          class="w-full border px-2 py-1 rounded" />
       </div>
       <div>
         <label class="text-sm font-medium">Localización Acceso de Inicio</label>
@@ -147,7 +164,10 @@
       </div>
       <div>
         <label class="text-sm font-medium">Hospital Procedencia TRR en EsSalud</label>
-        <input type="date" v-model="form.hospitalProcedencia" class="w-full border px-2 py-1 rounded" />
+        <div class="d-flex align-items-center">
+          <el-autocomplete v-model="form.hospitalProcedencia" :fetch-suggestions="querySearch" clearable
+            placeholder="Ingrese algo" @select="handleSelect" style="width: 400px;" />
+        </div>
       </div>
     </div>
 
@@ -155,15 +175,17 @@
     <div class="flex justify-end gap-4 mt-6">
       <button class="bg-gray-400 text-white px-4 py-2 rounded" @click="$emit('cancelar')">Cancelar</button>
       <button class="bg-sky-600 text-white px-6 py-2 rounded font-semibold" @click="registrarPaciente">
-        Registrar Nuevo Paciente
+        Registrar
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue'
-
+import { reactive, computed, watch, ref } from 'vue'
+import { postAllIpress } from "@/services/ipress/Ipress.service";
+import { ElMessage } from 'element-plus';
+const seleccionadas = ref([])
 const form = reactive({
   tipoDocumento: '',
   numeroDocumento: '',
@@ -184,10 +206,376 @@ const form = reactive({
   fechaIngresoEsSalud: '',
   fechaPrimerIngreso: '',
   localizacionAcceso: '',
-  hospitalProcedencia: ''
+  hospitalProcedencia: '',
+  estado: 'REGISTRADO'
 })
+const validarFormulario = () => {
+  const camposObligatorios = [
+    'tipoDocumento',
+    'numeroDocumento',
+    'nombreCompleto',
+    'fechaNacimiento',
+    'sexo',
+    'gradoInstruccion',
+    'etiologiaGeneral',
+    'modalidadTRR',
+    'fechaInicioTRR',
+    'subsistemaSalud',
+    'tipoAccesoInicio',
+    'fechaCreacionAcceso',
+    'fechaIngresoEsSalud',
+    'fechaPrimerIngreso',
+    'localizacionAcceso',
+    'hospitalProcedencia'
+  ];
 
-const registrarPaciente = () => {
-  console.log('Datos del formulario:', form)
+  for (const campo of camposObligatorios) {
+    if (!form[campo]) {
+      alert(`Por favor complete el campo: ${campo}`);
+      return false;
+    }
+  }
+
+  return true;
+};
+
+
+watch(() => form.fechaInicioTRR, (nuevaFecha) => {
+  if (!nuevaFecha) {
+    form.edadInicioTRR = '';
+    return;
+  }
+
+  const hoy = new Date();
+  const nacimiento = new Date(nuevaFecha);
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  const m = hoy.getMonth() - nacimiento.getMonth();
+
+  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
+    edad--;
+  }
+
+  form.edadInicioTRR = edad;
+});
+
+const dropdownAbierto = ref(false)
+
+const toggleDropdown = () => {
+  dropdownAbierto.value = !dropdownAbierto.value
+}
+
+const etologiaGeneral = ref('')
+
+const etologiasGenerales = {
+  1: 'DIABETES',
+  2: 'GLOMERULONEFRITIS',
+  3: 'GLOMERULONEFRITIS SECUNDARIA/VASCULITIS',
+  4: 'NEFRITIS INTERSTICIAL/PIELONEFRITIS',
+  5: 'HIPERTENSION/ENFERMEDAD DE VASOS GRANDES',
+  6: 'ENFERMEDAD QUISTICA/HEREDITARIA CONGÉNITA',
+  7: 'NEOPLASIAS/TUMORES',
+  8: 'COMPLICACIONES DE ÓRGANO TRASPLANTADO',
+  9: 'OTRAS CONDICIONES'
+}
+
+
+const etiologiasEspecificas = {
+  1: [
+    { label: 'Diabetes con manifestaciones renales tipo II', value: 'A.1' },
+    { label: 'Diabetes con manifestaciones renales tipo I', value: 'A.2' }
+  ],
+  2: [
+    { label: 'Glomerulonefritis GN (Histológicamente no examinada)', value: 'B.1' },
+    { label: 'Glomeruloesclerosis focal, Esclerosante focal', value: 'B.2' },
+    { label: 'Nefropatía membranosa', value: 'B.3' },
+    { label: 'GN Membranoproliferativa tipo I, GN Membranoproliferativa Difusa', value: 'B.4' },
+    { label: 'Enfermedad por depósitos densos, GN membranoproliferativa tipo II', value: 'B.5' },
+    { label: 'Nefropatía IgA, Enfermedad de Berger', value: 'B.6' },
+    { label: 'Nefropatía IgM', value: 'B.7' },
+    { label: 'GN rápidamente progresiva', value: 'B.8' },
+    { label: 'Gn post infecciosa', value: 'B.9' },
+    { label: 'Otras GN proliferativas', value: 'B.10' }
+  ],
+  3: [
+    { label: 'Lupus eritematoso', value: 'C.1' },
+    { label: 'Síndrome de Henoch-Schonlein', value: 'C.2' },
+    { label: 'Esclerodermia', value: 'C.3' },
+    { label: 'Síndrome urémico hemolítico', value: 'C.4' },
+    { label: 'Poliarteritis', value: 'C.5' },
+    { label: 'Granulomatosis de Wegener', value: 'C.6' },
+    { label: 'Nefropatía por abuso de heroína', value: 'C.7' },
+    { label: 'Otras vasculitis y sus derivadas', value: 'C.8' },
+    { label: 'Síndrome de Goodpasture', value: 'C.9' },
+    { label: 'Otras GN secundarias', value: 'C.10' }
+  ],
+  4: [
+    { label: 'Abuso de analgésicos', value: 'D.1' },
+    { label: 'Nefritis por radiación', value: 'D.2' },
+    { label: 'Nefropatía por plomo', value: 'D.3' },
+    { label: 'Nefropatía causada por otros agentes', value: 'D.4' },
+    { label: 'Nefropatía por gota', value: 'D.5' },
+    { label: 'Nefrolitiasis', value: 'D.6' },
+    { label: 'Uropatía obstructiva adquirida', value: 'D.7' },
+    { label: 'Pielonefritis crónica, nefropatía por reflujo', value: 'D.8' },
+    { label: 'Nefritis intersticial crónica', value: 'D.9' },
+    { label: 'Nefritis intersticial aguda', value: 'D.10' },
+    { label: 'Urolitiasis', value: 'D.11' },
+    { label: 'Otros desórdenes del metabolismo de calcio', value: 'D.12' }
+  ],
+  5: [
+    { label: 'Hipertensión no especificada con falla renal', value: 'E.1' },
+    { label: 'Estenosis de la arteria renal', value: 'E.2' },
+    { label: 'Oclusión de la arteria renal', value: 'E.3' },
+    { label: 'Embolia causada por colesterol, embolia renal', value: 'E.4' }
+  ],
+  6: [
+    { label: 'Riñón poliquístico del adulto tipo dominante', value: 'F.1' },
+    { label: 'Riñón poliquístico infantil recesivo', value: 'F.2' },
+    { label: 'Enfermedad quística medular, incluye nefronoptisis', value: 'F.3' },
+    { label: 'Esclerosis tubular', value: 'F.4' },
+    { label: 'Nefritis hereditaria, síndrome de Alport', value: 'F.5' },
+    { label: 'Cistinosis', value: 'F.6' },
+    { label: 'Oxalosis primaria', value: 'F.7' },
+    { label: 'Enfermedad de Fabry', value: 'F.8' },
+    { label: 'Síndrome nefrótico congénito', value: 'F.9' },
+    { label: 'Síndrome Drash, esclerosis mesangial', value: 'F.10' },
+    { label: 'Obstrucción congénita de la unión ureteropélvica', value: 'F.11' },
+    { label: 'Obstrucción congénita de la unión ureterovesical', value: 'F.12' },
+    { label: 'Otras uropatías obstructivas congénitas', value: 'F.13' },
+    { label: 'Hipoplasia renal, displasia, oligonefronía', value: 'F.14' },
+    { label: 'Síndrome del abdomen en ciruela pasa', value: 'F.15' },
+    { label: 'Otros (Síndromes de malformaciones congénitas)', value: 'F.16' }
+  ],
+  7: [
+    { label: 'Tumor renal maligno', value: 'G.1' },
+    { label: 'Tumor maligno del tracto urinario', value: 'G.2' },
+    { label: 'Tumor renal benigno', value: 'G.3' },
+    { label: 'Tumor benigno del tracto urinario', value: 'G.4' },
+    { label: 'Tumor renal no especificado', value: 'G.5' },
+    { label: 'Tumor de tracto urinario no especificado', value: 'G.6' },
+    { label: 'Linfoma de riñón', value: 'G.7' },
+    { label: 'Mieloma múltiple', value: 'G.8' },
+    { label: 'Otras neoplasias inmunoproliferativas', value: 'G.9' },
+    { label: 'Amiloidosis', value: 'G.10' }
+  ],
+  8: [
+    { label: 'Complicaciones de órgano trasplantado no especificado', value: 'G.11' },
+    { label: 'Complicaciones por trasplante de riñón', value: 'G.12' },
+    { label: 'Complicaciones por trasplante de hígado', value: 'G.13' },
+    { label: 'Complicaciones por trasplante de corazón', value: 'G.14' },
+    { label: 'Complicaciones por trasplante de pulmón', value: 'G.15' },
+    { label: 'Complicaciones por trasplante de médula ósea', value: 'G.16' },
+    { label: 'Complicaciones por trasplante de páncreas', value: 'G.17' },
+    { label: 'Complicaciones por trasplante de intestino', value: 'G.18' },
+    { label: 'Complicaciones de otro órgano trasplantado especificado', value: 'G.19' }
+  ],
+  9: [
+    { label: 'Enfermedad de células falciformes/anemia', value: 'H.1' },
+    { label: 'Rasgo de células falciformes y otras células falciformes', value: 'H.2' },
+    { label: 'Falla renal post parto', value: 'H.3' },
+    { label: 'Nefropatía por SIDA', value: 'H.4' },
+    { label: 'Pérdida traumática o quirúrgica de riñón', value: 'H.5' },
+    { label: 'Síndrome hepatorenal', value: 'H.6' },
+    { label: 'Necrosis tubular (sin recuperación)', value: 'H.7' },
+    { label: 'Otros desórdenes renales', value: 'H.8' },
+    { label: 'Etiología incierta', value: 'H.9' }
+  ]
+};
+const localizacionesFiltradas = computed(() => {
+  console.log("etiiiii", form.etiologiaGeneral)
+  const tipo = form.etiologiaGeneral;
+  const base = etiologiasEspecificas[tipo] || [];
+  return [...base];
+});
+const comorbilidadesLabels = [
+  "Enfermedades Ateroescleróticas Cardiacas",
+  "Insuficiencia Cardíaca Congestiva",
+  "Enfermedad Vascular Periférica",
+  "Accidente Cerebrovascular",
+  "Cáncer",
+  "Diabetes",
+  "Hipertensión",
+  "Tuberculosis",
+  "Otra"
+]
+const estadoComorbilidades = ref(
+  comorbilidadesLabels.map(() => false)
+);
+
+const diabetesComorbilidadIndex = comorbilidadesLabels.indexOf("Diabetes");
+const hipertensionComorbilidadIndex = comorbilidadesLabels.indexOf("Hipertensión");
+const otraComorbilidadIndex = comorbilidadesLabels.indexOf("Otra");
+
+watch(etologiaGeneral, (newValue) => {
+  seleccionadas.value = []
+  dropdownAbierto.value = false
+
+  if (newValue === '1') {
+    if (estadoComorbilidades.value[diabetesComorbilidadIndex]) {
+      estadoComorbilidades.value[diabetesComorbilidadIndex] = false;
+    }
+  } else if (newValue === '5') {
+    if (estadoComorbilidades.value[hipertensionComorbilidadIndex]) {
+      estadoComorbilidades.value[hipertensionComorbilidadIndex] = false;
+    }
+  }
+});
+const hospitalesProcedencia = [
+  { value: 'Hospital Base II Moquegua' },
+  { value: 'Hospital Base III Chimbote' },
+  { value: 'Hospital Base III Juliaca' },
+  { value: 'Hospital Base III Puno' },
+  { value: 'Hospital de Alta Complejidad de La Libertad "Virgen de la Puerta"' },
+  { value: 'Hospital I "El Buen Samaritano"' },
+  { value: 'Hospital I "Higos Urco" Chachapoyas' },
+  { value: 'Hospital I "Víctor Alfredo Lazo Peralta"' },
+  { value: 'Hospital I Alto Mayo' },
+  { value: 'Hospital I Tumbes "Carlos Alberto Cortez Jimenez"' },
+  { value: 'Hospital II "Jorge Reátegui delgado"' },
+  { value: 'Hospital II Abancay' },
+  { value: 'Hospital II Cajamarca' },
+  { value: 'Hospital II Gustavo Lanatta Luján - Huacho' },
+  { value: 'Hospital II Huamanga "Carlos Tuppia García Godos"' },
+  { value: 'Hospital II Huancavelica' },
+  { value: 'Hospital II Huánuco' },
+  { value: 'Hospital II Huaraz' },
+  { value: 'Hospital II Integrado Ilo' },
+  { value: 'Hospital II Pucallpa' },
+  { value: 'Hospital II Tarapoto' },
+  { value: 'Hospital III "Daniel Alcides Carrión"' },
+  { value: 'Hospital III Alberto L. Barton Thompson' },
+  { value: 'Hospital III Guillermo Kaelin de la Fuente' },
+  { value: 'Hospital III Iquitos' },
+  { value: 'Hospital IV "Augusto Hernández Mendoza"' },
+  { value: 'Hospital IV "Víctor Lazarte Echegaray"' },
+  { value: 'Hospital Nacional "Adolfo Guevara Velasco"' },
+  { value: 'Hospital Nacional "Almanzor Aguinaga Asenjo"' },
+  { value: 'Hospital Nacional "Carlos Alberto Seguin Escobedo"' },
+  { value: 'Hospital Nacional "Ramiro Prialé Prialé"' },
+  { value: 'Hospital Nacional Alberto Sabogal Sologuren' },
+  { value: 'Hospital Nacional Edgardo Rebagliati Martins' },
+  { value: 'Hospital Nacional Guillermo Almenara Irigoyen' }
+];
+
+
+const filteredEtologiasGenerales = [
+  { label: 'DIABETES' },
+  { label: 'GLOMERULONEFRITIS' },
+  { label: 'GLOMERULONEFRITIS SECUNDARIA/VASCULITIS' },
+  { label: 'NEFRITIS INTERSTICIAL/PIELONEFRITIS' },
+  { label: 'HIPERTENSION/ENFERMEDAD DE VASOS GRANDES' },
+  { label: 'ENFERMEDAD QUISTICA/HEREDITARIA CONGÉNITA' },
+  { label: 'NEOPLASIAS/TUMORES' },
+  { label: 'COMPLICACIONES DE ÓRGANO TRASPLANTADO' },
+  { label: 'OTRAS CONDICIONES' }
+]
+const querySearch = (queryString, cb) => {
+  const results = queryString
+    ? hospitalesProcedencia.filter(r =>
+      r.value.toLowerCase().includes(queryString.toLowerCase())
+    )
+    : hospitalesProcedencia;
+  cb(results);
+};
+const handleSelect = (val) => {
+  console.log('Hospital seleccionado:', val);
+};
+const maxLengthDocumento = computed(() => {
+  if (form.tipoDocumento === 'DNI') return 8;
+  if (form.tipoDocumento === 'CE') return 10;
+  if (form.tipoDocumento === 'PASAPORTE') return 15;
+  return 15; // valor general para PASAPORTE u otros
+});
+
+watch(() => form.fechaNacimiento, (nuevaFecha) => {
+  if (!nuevaFecha) {
+    form.edad = '';
+    return;
+  }
+
+  const hoy = new Date();
+  const nacimiento = new Date(nuevaFecha);
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  const m = hoy.getMonth() - nacimiento.getMonth();
+
+  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
+    edad--;
+  }
+
+  form.edad = edad;
+});
+const soloNumeros = computed(() => {
+  return form.tipoDocumento === 'DNI' || form.tipoDocumento === 'CE';
+});
+
+const onDocumentoInput = (event) => {
+  if (soloNumeros) {
+    // Eliminar todo lo que no sea número
+    form.numeroDocumento = event.target.value.replace(/\D/g, '');
+  }
+};
+const registrarPaciente = async (url = null) => {
+  if (!validarFormulario()) return;
+  const payload = {
+    documento: form.numeroDocumento,
+    tipo_documento: form.tipoDocumento,
+    autogenerado: "ASD",
+    paciente: form.nombreCompleto,
+    fecha_nacimiento: form.fechaNacimiento,
+    genero: form.sexo,
+    grado_instruccion: form.gradoInstruccion,
+    id_modalidad: form.modalidadTRR == 'Hemodiálisis' ? 1 : 2,
+    estado: 'REGISTRADO'
+  };
+
+  try {
+    const respuesta = await postAllIpress("/pacientes/", payload);
+    registrarPacienteDialisis(respuesta);
+  } catch (error) {
+    console.log('¿Error tiene response?', error);
+    /* alert(error.error); */
+    ElMessage({
+      message: error.error,
+      type: 'error',
+      plain: true,
+    })
+  }
+}
+const registrarPacienteDialisis = async (respuesta) => {
+  const payload = {
+    etiologia: form.etiologiaEspecifica || form.etiologiaGeneral,
+    modalidad_inicio_trr: form.modalidadTRR,
+    fecha_inicio_trr: form.fechaInicioTRR,
+    subsistema_salud: form.subsistemaSalud,
+    tipo_acceso: form.tipoAccesoInicio,
+    fecha_creacion_acceso: form.fechaCreacionAcceso,
+    fecha_primer_ingreso: form.fechaPrimerIngreso,
+
+    fecha_ingreso_hospital: form.fechaIngresoEsSalud,
+    localizacion_acceso_inicio: form.localizacionAcceso,
+    hospital_procedencia_trr: form.hospitalProcedencia,
+
+    enf_ateroesclerotica_cardiaca: form.comorbilidades.includes("Aterosclerosis") ? 'Sí' : 'NO',
+    enf_insuficiencia_cardiaca_congestiva: form.comorbilidades.includes("Insuficiencia cardiaca") ? 'Sí' : 'NO',
+    enf_vascular_periferica: form.comorbilidades.includes("Vascular periférica") ? 'Sí' : 'NO',
+    enf_cerebro_vascular: form.comorbilidades.includes("ACV") ? 'Sí' : 'NO',
+    enf_cancer: form.comorbilidades.includes("Cáncer") ? 'Sí' : 'NO',
+    enf_diabetes: form.comorbilidades.includes("Diabetes") ? 'Sí' : 'NO',
+    enf_hipertension: form.comorbilidades.includes("Hipertensión") ? 'Sí' : 'NO',
+    enf_tuberculosis: form.comorbilidades.includes("Tuberculosis") ? 'Sí' : 'NO',
+    enf_otra: form.comorbilidades.includes("Otra") ? 'Sí' : 'NO',
+    id_paciente: respuesta.id_paciente,
+    paciente: respuesta.id_paciente,
+    id_periodo_ipress: null,
+  };
+  try {
+    await postAllIpress("/pacientesDialisis/", payload);
+    alert("Se registro con exito")
+    window.location.reload()
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+
 }
 </script>

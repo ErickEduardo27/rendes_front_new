@@ -35,15 +35,18 @@ class ApiClient {
       async (error) => {
 
         const authStore = useAuthStore();
-        
-        
-        if (error.response && error.response.status === 401) {
-          // 🔒 Token expirado o inválido
-          authStore.logout()
-          // ⚠️ Mostrar alerta (puedes usar tu lib de notificaciones aquí)
-          alert('Tu sesión ha expirado. Por favor vuelve a iniciar sesión.')
-          // ⏩ Redirigir al login
-          router.push('/login')
+        if (error.response) {
+
+          if (error.response && error.response.status === 401) {
+            // 🔒 Token expirado o inválido
+            authStore.logout()
+            // ⚠️ Mostrar alerta (puedes usar tu lib de notificaciones aquí)
+            alert('Tu sesión ha expirado. Por favor vuelve a iniciar sesión.')
+            // ⏩ Redirigir al login
+            router.push('/login')
+          }
+          // 🔁 Aquí transforma el error con datos reales
+          return Promise.reject(this.transformErrorData(error.response));
         }
         return Promise.reject(this.transformNetworkError(error));
       }
@@ -109,6 +112,11 @@ class ApiClient {
 
   async put(url, data = {}, config = {}) {
     const response = await this.instance.put(url, data, config);
+    return response.data;
+  }
+
+  async patch(url, data = {}, config = {}) {
+    const response = await this.instance.patch(url, data, config);
     return response.data;
   }
 

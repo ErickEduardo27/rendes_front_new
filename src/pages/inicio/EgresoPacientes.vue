@@ -1,6 +1,9 @@
 <template>
   <div class="p-6 max-w-2xl mx-auto">
-    <h2 class="text-lg font-bold">Mes de Reporte: JUNIO</h2>
+     <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
+            ← Volver al inicio
+        </div>
+   <!--  <h2 class="text-lg font-bold">Mes de Reporte: JUNIO</h2> -->
     <h3 class="text-md font-semibold mt-4">Egresar Pacientes:</h3>
 
     <!-- Búsqueda -->
@@ -19,9 +22,9 @@
     </div>
 
     <!-- Lista de pacientes filtrada -->
-    <div v-for="paciente in pacientesFiltrados" :key="paciente.id" class="border p-4 rounded mb-2 cursor-pointer hover:border-sky-400"
+    <div v-for="paciente in pacientesFiltrados" :key="paciente.id_paciente_dialisis" class="border p-4 rounded mb-2 cursor-pointer hover:border-sky-400"
          @click="seleccionarPaciente(paciente)">
-      <p class="font-medium">{{ paciente.nombre }}</p>
+      <p class="font-medium">{{ paciente.paciente }}</p>
       <p class="text-sm text-gray-500">ESTADO: {{ paciente.estado }}</p>
     </div>
 
@@ -48,7 +51,8 @@
         </div>
 
         <div class="text-right pt-2">
-          <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="egresarPaciente">
+          <button class="bg-gray-300 text-gray-800 px-4 py-2 rounded text-sm" @click="close">Cancelar</button>
+          <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="egresarPaciente(pacienteSeleccionado)">
             Egresar Paciente
           </button>
           
@@ -70,7 +74,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { getAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service'
+import { ref, computed, onMounted } from 'vue'
 
 const tipoDocumento = ref('DNI')
 const filtroDocumento = ref('')
@@ -81,35 +86,12 @@ const formEgreso = ref({
   tipo: ''
 })
 
-const pacientes = ref([
-  {
-    id: 1,
-    documento: '74456747',
-    tipo: 'DNI',
-    nombre: 'Alejandro Antony Cerpa de la Cruz',
-    estado: 'NUEVO'
-  },
-  {
-    id: 2,
-    documento: '12345678',
-    tipo: 'DNI',
-    nombre: 'Maria Magdalena de la Cruz Ugarte',
-    estado: 'REINGRESO'
-  },
-  {
-    id: 3,
-    documento: '87654321',
-    tipo: 'DNI',
-    nombre: 'Jorge Luis Chavez Gomez',
-    estado: 'CONTINUADOR'
-  }
-])
+const pacientes = ref([])
 
 // Búsqueda por número y tipo de documento
 const pacientesFiltrados = computed(() => {
   return pacientes.value.filter(
     p =>
-      p.tipo === tipoDocumento.value &&
       p.documento.includes(filtroDocumento.value.trim())
   )
 })
@@ -118,10 +100,33 @@ const seleccionarPaciente = paciente => {
   pacienteSeleccionado.value = paciente
   formEgreso.value = { fecha: '', tipo: '' }
 }
+function close (){
+   pacienteSeleccionado.value = null
+}
+const egresarPaciente = async (paciente) => {
+  try {
+    const respuesta = await patchAllIpress("/pacientes/"+paciente.id_paciente+"/",{estado:'EGRESADO'});
+    /* periodoIpress.value = respuesta; */
 
-const egresarPaciente = () => {
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
   // Aquí podrías emitir un evento, guardar en backend, o marcar como egresado
   console.log('Egresado:', pacienteSeleccionado.value, formEgreso.value)
   pacienteSeleccionado.value = null
 }
+
+const fetchPacientes = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress("/pacientes/?estado=NUEVO");
+    pacientes.value = respuesta;
+    console.log("paientes seleccionado", respuesta)
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+onMounted(() => {
+  fetchPacientes();
+});
 </script>

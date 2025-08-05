@@ -8,7 +8,9 @@ import naive from "naive-ui"; // importar todo naive-ui
 import { VueQueryPlugin } from "@tanstack/vue-query";
 import { createPinia } from "pinia";
 import { Toaster } from "vue-sonner";
+import 'element-plus/dist/index.css'
 import 'vue-sonner/style.css'
+import ElementPlus from 'element-plus'
 
 const pinia = createPinia();
 const app = createApp(App)
@@ -16,8 +18,8 @@ const app = createApp(App)
 app.use(pinia)
 app.use(VueQueryPlugin)
 app.use(router);
-app.use(naive); 
-
+app.use(naive);
+app.use(ElementPlus)
 app.component('Toaster', Toaster)
 
 app.mount('#app') // 👈 Usa la misma instancia

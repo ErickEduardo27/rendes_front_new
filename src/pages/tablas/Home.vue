@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="p-6">
     <div class="flex items-center gap-4 mb-4 flex-wrap">
       <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
       <select v-model="periodoSeleccionado" class="border p-1 rounded" @change="searchPeriodoIpress">
@@ -14,19 +14,58 @@
     </div>
 
     <div class="flex items-center gap-4 my-4">
-      <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('nuevo-registro')">
-        Nuevo Registro
-      </button>
-      <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('captar-paciente')">
-        Captar Paciente
-      </button>
-      <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('egresar-paciente')">
-        Egresar Paciente
-      </button>
+        <select v-model="formularioSeleccionado" class="border p-1 rounded" @change="updateTabla">
+        <option value="2">Unidad Actual </option>
+        <option value="3">Infeccion </option>
+        <option value="4">Morbilidad Hospitalaria </option>
+        <option value="5">Resultados Clinicos</option>
+        <option value="6">Vacunacion </option>
+      </select>
     </div>
 
-    <h3 class="text-md font-bold my-2">Pacientes Ingresados:</h3>
-    <div class="grid grid-cols-9 font-semibold border-b pb-1 mb-1">
+    <h3 class="text-md font-bold my-2">Registros Ingresados:</h3>
+    <!-- <table class="table-auto w-full border mt-4">
+  <thead>
+    <tr>
+      <th v-for="col in columnasTabla" :key="col" class="px-2 py-1 border bg-gray-100">
+        {{ col }}
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr v-for="(fila, i) in datosTabla" :key="i">
+      <td v-for="col in columnasTabla" :key="col" class="px-2 py-1 border">
+        {{ fila[col] }}
+      </td>
+    </tr>
+  </tbody>
+</table> -->
+
+<table class="table-auto w-full border mt-4">
+  <thead>
+    <tr>
+      <th v-for="col in columnasTabla" :key="col" class="border px-2 py-1 bg-gray-100 capitalize">
+        {{ col.replaceAll("_", " ") }}
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr v-for="(fila, i) in datosTabla" :key="i">
+      <td v-for="col in columnasTabla" :key="col" class="border px-2 py-1">
+        {{ fila[col] }}
+      </td>
+    </tr>
+  </tbody>
+</table>
+<div class="my-4 flex gap-2">
+  <button @click="cargarPagina(anteriorPagina)" :disabled="!anteriorPagina" class="bg-gray-300 px-4 py-1 rounded">
+    ← Anterior
+  </button>
+  <button @click="cargarPagina(siguientePagina)" :disabled="!siguientePagina" class="bg-gray-300 px-4 py-1 rounded">
+    Siguiente →
+  </button>
+</div>
+    <!-- <div class="grid grid-cols-9 font-semibold border-b pb-1 mb-1">
       <span class="col-span-2" style="display:flex ;text-align: left;align-items: center;">Nombre</span>
       <span  style="display:flex;justify-content: center;align-items: center;">UNIDAD</span>
       <span  style="display:flex;justify-content: center;align-items: center;">INFECCION</span>
@@ -49,7 +88,7 @@
           <button @click="abrirFormulario(paciente, n)" class="text-lg hover:scale-110 relative"
             title="Abrir Formulario">
             <span :class="colorClase(n)">📝</span>
-            <!-- Badge -->
+
             <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">
               {{ numeroBadge(paciente, n) }}
             </span>
@@ -57,18 +96,18 @@
         </div>
       </div>
     </div>
-
-    <div class="text-right mt-6">
+ -->
+    <!-- <div class="text-right mt-6">
       <button class="bg-sky-600 text-white px-6 py-2 rounded">
         Terminar Registro General
       </button>
-    </div>
+    </div> -->
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { getAllIpress } from "@/services/ipress/Ipress.service";
+import { ref, computed, onMounted, watch } from 'vue';
+import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 const state1 = ref('')
 
 const aplicaTodos = ref(true)
@@ -81,6 +120,9 @@ const mostrarFormulario = ref(false)
 const componenteFormulario = ref(null)
 const emit = defineEmits(['form2'])
 
+const siguientePagina = ref(null);
+const anteriorPagina = ref(null);
+const formularioSeleccionado=ref(2)
 const abrirFormulario = (paciente, numeroFormulario) => {
   console.log("paientessss",idPeriodoIpress.value)
   switch (numeroFormulario) {
@@ -95,6 +137,51 @@ const abrirFormulario = (paciente, numeroFormulario) => {
 const cerrarFormulario = () => {
   mostrarFormulario.value = false
 }
+const formulariosConfig = {
+  2: {
+    endpoint: "unidadesActualesPaginacion",
+    columnas: [
+      "paciente", "documento", "red", "fecha_ingreso", "VHB", "VHC", "VHI", "tipo_acceso"
+    ],
+    parse: (item) => ({
+      paciente: item.datosPaciente?.paciente ?? '-',
+      documento: item.datosPaciente?.documento ?? '-',
+      red: item.datosRed?.red ?? '-',
+      fecha_ingreso: item.fecha_ingreso ?? '-',
+      VHB: item.VHB ?? '-',
+      VHC: item.VHC ?? '-',
+      VHI: item.VHI ?? '-',
+      tipo_acceso: item.tipo_acceso_actual ?? '-'
+    })
+  },
+  3: {
+    endpoint: "eventosAccesosVasculares",
+    columnas: [
+      "paciente", "documento", "fecha_evento", "tipo_evento", "descripcion"
+    ],
+    parse: (item) => ({
+      paciente: item.datosPaciente?.paciente ?? '-',
+      documento: item.datosPaciente?.documento ?? '-',
+      fecha_evento: item.fecha_evento ?? '-',
+      tipo_evento: item.tipo_evento ?? '-',
+      descripcion: item.descripcion ?? '-'
+    })
+  },
+  4: {
+    endpoint: "morbilidadesHospitalarias",
+    columnas: ["paciente", "documento", "diagnostico", "fecha_ingreso"],
+    parse: (item) => ({
+      paciente: item.datosPaciente?.paciente ?? '-',
+      documento: item.datosPaciente?.documento ?? '-',
+      diagnostico: item.diagnostico ?? '-',
+      fecha_ingreso: item.fecha_ingreso ?? '-'
+    })
+  },
+  // Agrega aquí otros formularios
+};
+
+const datosTabla = ref([]);
+const columnasTabla = ref([]);
 
 const colorClase = (n) => {
   if (n === 1) return 'text-red-600'
@@ -111,7 +198,18 @@ const numeroBadge = (paciente, n) => {
   if (n === 4) return paciente.cantidad_de_resultados_clinicos
   if (n === 5) return paciente.cantidad_de_vacunaciones
 };
-
+const cargarPagina = async (url) => {
+  if (!url) return;
+  const config = formulariosConfig[formularioSeleccionado.value];
+  try {
+    const { data } = await axios.get(url);
+    datosTabla.value = data.results.map(config.parse);
+    siguientePagina.value = data.next;
+    anteriorPagina.value = data.previous;
+  } catch (error) {
+    console.error("Error en paginación:", error);
+  }
+};
 const pacientes = ref([])
 const ipress = ref([])
 const periodoIpress = ref([])
@@ -127,8 +225,83 @@ const meses = [
 const anios = Array.from({ length: 10 }, (_, i) => fechaActual.getFullYear() - i)
 const mes = ref(meses[fechaActual.getMonth()])
 const ano = ref(fechaActual.getFullYear())
+const updateTabla = async () => {
+  const config = formulariosConfig[formularioSeleccionado.value];
+  if (!config) return;
 
+  try {
+    const  data  = await getAllIpress(`/${config.endpoint}/`);
+    const registros = data.results || [];
 
+    datosTabla.value = registros.map(config.parse);
+    columnasTabla.value = config.columnas;
+
+    siguientePagina.value = data.next;
+    anteriorPagina.value = data.previous;
+  } catch (error) {
+    console.error("Error al cargar datos:", error);
+    datosTabla.value = [];
+    columnasTabla.value = [];
+  }
+};
+/* const updateTabla = async () => {
+  const endpoint = endpoints[formularioSeleccionado.value];
+  if (!endpoint) return;
+
+  try {
+    const data = await getAllIpress(`/${endpoint}/`);
+    datosTabla.value = data;
+    const registros = data.results || []; // extracción segura de la página
+    console.log("Registros recibidos:", registros);
+
+    // Aplanar cada registro
+    datosTabla.value = registros.map(item => ({
+      paciente: item.datosPaciente?.paciente ?? '-',
+      documento: item.datosPaciente?.documento ?? '-',
+      tipo_documento: item.datosPaciente?.tipo_documento ?? '-',
+      genero: item.datosPaciente?.genero ?? '-',
+      fecha_nacimiento: item.datosPaciente?.fecha_nacimiento ?? '-',
+      red: item.datosRed?.red ?? '-',
+      fecha_ingreso: item.fecha_ingreso ?? '-',
+      VHB: item.VHB ?? '-',
+      VHC: item.VHC ?? '-',
+      VHI: item.VHI ?? '-',
+      tipo_acceso: item.tipo_acceso_actual ?? '-',
+      localizacion_acceso: item.localizacion_acceso_actual ?? '-',
+      estado: item.datosPaciente?.estado ?? '-'
+    }));
+
+    columnasTabla.value = [
+      "paciente",
+      "documento",
+      "tipo_documento",
+      "genero",
+      "fecha_nacimiento",
+      "red",
+      "fecha_ingreso",
+      "VHB",
+      "VHC",
+      "VHI",
+      "tipo_acceso",
+      "localizacion_acceso",
+      "estado"
+    ];
+
+    // Opcional: guarda info de paginación si quieres botones
+    siguientePagina.value = data.next;
+    anteriorPagina.value = data.previous;
+
+    // Establece columnas dinámicas (puedes ajustar con base en tus modelos reales)
+    columnasTabla.value = Object.keys(datosTabla.value[0] || {});
+  } catch (error) {
+    console.error("Error al cargar datos:", error);
+    datosTabla.value = [];
+    columnasTabla.value = [];
+  }
+}; */
+
+onMounted(updateTabla);
+watch(formularioSeleccionado, updateTabla);
 function searchPeriodoIpress() {
   const resultado = periodoIpress.value.find(
     item => item.id_ipress === idClinicaSeleccionada.value && item.periodo ===  periodoSeleccionado.value
