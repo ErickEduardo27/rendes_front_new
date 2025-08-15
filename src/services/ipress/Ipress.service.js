@@ -37,3 +37,8 @@ export async function patchAllIpress(url = "/ipress/", data) {
     const response = await apiClient.patch(url, data);
     return response;
 }
+
+export async function deleteAllIpress(url = "/ipress/") {
+    const response = await apiClient.delete(url);
+    return response;
+}

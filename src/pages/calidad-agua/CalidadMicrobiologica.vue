@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4 max-h-[700px] overflow-y-auto pr-2 mt-2">
+  <div class="space-y-2 max-h-[500px] overflow-y-auto pr-2 mt-2 m-10">
     <h2 class="text-xl font-semibold">Datos Iniciales</h2>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="space-y-2">

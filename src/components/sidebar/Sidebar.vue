@@ -15,15 +15,15 @@
             <span class="px-1 text-xs font-semibold text-cyan-800 border-cyan-100">Menú Principal</span>
         </div>
       <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
-      <SidebarItem :icon="UserIcon" label="Registros" to="/tablas"/>
+      <SidebarItem v-if="perfil=='Supervisor'||perfil=='Admin'" :icon="UserIcon" label="Registros" to="/tablas"/>
       <SidebarItem :icon="UserIcon" label="Prueba de Agua" to="/calidad-agua"/>
-      <SidebarItem :icon="DocumentMagnifyingGlassIcon" label="Administracion" :submenu="[
+      <SidebarItem v-if="perfil=='Supervisor'||perfil=='Admin'"  :icon="DocumentMagnifyingGlassIcon" label="Administracion" :submenu="[
           { label: 'Ipress', to: '/ipress', icon: UserIcon },
           { label: 'Pacientes', to: '/pacientes', icon: UserIcon },
           { label: 'Perfiles', to: '/perfiles', icon: UserIcon },
           { label: 'Usuarios', to: '/usuarios', icon: UserIcon },
-          { label: 'Asignación', to: '', icon: UserIcon },
-          { label: 'Carga masiva', to: '', icon: UserIcon },
+          /* { label: 'Asignación', to: '', icon: UserIcon },
+          { label: 'Carga masiva', to: '', icon: UserIcon }, */
         ]"/>
       <!-- 
        <SidebarItem :icon="ComputerDesktopIcon" label="Gestion" :submenu="[
@@ -57,7 +57,7 @@ import {
   ComputerDesktopIcon, 
   ChartBarIcon 
 } from '@heroicons/vue/24/outline';
-
+const perfil = localStorage.getItem('perfil')
 const openItem = ref(null);
 provide('openItem', openItem);
 

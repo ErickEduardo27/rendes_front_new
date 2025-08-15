@@ -1,6 +1,7 @@
 <template>
   <div class="p-6">
-    <div class="flex items-center gap-4 mb-4 flex-wrap">
+    <div class="flex justify-between items-center mb-6">
+      <div class="flex justify-between items-center mb-6">
       <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
       <select v-model="periodoSeleccionado" class="border p-1 rounded" @change="searchPeriodoIpress">
         <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">{{ periodo.periodo }}
@@ -9,11 +10,19 @@
       <div class="d-flex align-items-center">
         <label>Clínica</label>
         <el-autocomplete v-model="clinicaSeleccionada" :fetch-suggestions="querySearch" clearable
-          placeholder="Ingrese algo" @select="handleSelect" :value-key="'ipress'" style="margin: 0 1rem;width: 400px;"/>
+          placeholder="Ingrese algo" @select="handleSelect" :value-key="'ipress'" style="margin: 0 1rem;width: 400px;" @change="searchPeriodoIpress"/>
+      </div>
+      </div>
+      <div class="flex gap-3">
+        <button @click="exportToExcel"
+          class="border border-[#007BFF] text-[#007BFF] px-4 py-2 rounded hover:bg-blue-50">
+          Exportar
+        </button>
       </div>
     </div>
 
     <div class="flex items-center gap-4 my-4">
+      <label>Registros de </label>
         <select v-model="formularioSeleccionado" class="border p-1 rounded" @change="updateTabla">
         <option value="2">Unidad Actual </option>
         <option value="3">Infeccion </option>
@@ -21,9 +30,15 @@
         <option value="5">Resultados Clinicos</option>
         <option value="6">Vacunacion </option>
       </select>
+      
     </div>
 
-    <h3 class="text-md font-bold my-2">Registros Ingresados:</h3>
+    <!-- <h3 class="text-md font-bold my-2">Registros Ingresados:</h3> -->
+    <div class="flex gap-4 mb-4">
+      <input v-model="filtroNombre" placeholder="Filtrar por nombre" class="border px-2 py-1 rounded" />
+      <input v-model="filtroDocumento" placeholder="Filtrar por documento" class="border px-2 py-1 rounded" />
+      <button @click="updateTabla" class="bg-blue-500 text-white px-3 py-1 rounded">Buscar</button>
+    </div>
     <!-- <table class="table-auto w-full border mt-4">
   <thead>
     <tr>
@@ -58,12 +73,23 @@
   </tbody>
 </table>
 <div class="my-4 flex gap-2">
-  <button @click="cargarPagina(anteriorPagina)" :disabled="!anteriorPagina" class="bg-gray-300 px-4 py-1 rounded">
-    ← Anterior
-  </button>
-  <button @click="cargarPagina(siguientePagina)" :disabled="!siguientePagina" class="bg-gray-300 px-4 py-1 rounded">
-    Siguiente →
-  </button>
+<div class="flex justify-between items-center mt-4 text-sm text-[#6C7A91]">
+  <div>
+    Mostrando {{ datosTabla.length }} de {{ totalRegistros }} registros
+  </div>
+  <div class="flex items-center gap-2">
+    <button @click="goToPreviousPage" :disabled="!anteriorPagina" class="px-3 py-1 border rounded"
+      :class="anteriorPagina ? 'text-[#007BFF]' : 'text-gray-400 cursor-not-allowed'">
+      Anterior
+    </button>
+    <span class="px-3 py-1 border rounded bg-[#007BFF] text-white">
+      {{ paginaActual }}
+    </span>
+    <button @click="goToNextPage" :disabled="!siguientePagina" class="px-3 py-1 border rounded"
+      :class="siguientePagina ? 'text-[#007BFF]' : 'text-gray-400 cursor-not-allowed'">
+      Siguiente
+    </button>
+  </div>
 </div>
     <!-- <div class="grid grid-cols-9 font-semibold border-b pb-1 mb-1">
       <span class="col-span-2" style="display:flex ;text-align: left;align-items: center;">Nombre</span>
@@ -103,9 +129,13 @@
       </button>
     </div> -->
   </div>
+  </div>
 </template>
 
 <script setup>
+import * as XLSX from 'xlsx';
+const totalRegistros = ref(0);
+const paginaActual = ref(1);
 import { ref, computed, onMounted, watch } from 'vue';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 const state1 = ref('')
@@ -141,40 +171,110 @@ const formulariosConfig = {
   2: {
     endpoint: "unidadesActualesPaginacion",
     columnas: [
-      "paciente", "documento", "red", "fecha_ingreso", "VHB", "VHC", "VHI", "tipo_acceso"
+      "paciente", "documento", "fecha_creacion_acceso_actual", "tipo_acceso_actual", "localizacion_acceso_actual", "cambio_acceso", "fecha_creacion_acceso_nuevo", "tipo_acceso_nuevo", "localizacion_acceso_nuevo"
     ],
     parse: (item) => ({
       paciente: item.datosPaciente?.paciente ?? '-',
       documento: item.datosPaciente?.documento ?? '-',
-      red: item.datosRed?.red ?? '-',
-      fecha_ingreso: item.fecha_ingreso ?? '-',
-      VHB: item.VHB ?? '-',
-      VHC: item.VHC ?? '-',
-      VHI: item.VHI ?? '-',
-      tipo_acceso: item.tipo_acceso_actual ?? '-'
+      fecha_creacion_acceso_actual: item.fecha_creacion_acceso_actual ?? '-',
+      tipo_acceso_actual:item.tipo_acceso_nuevo,
+        localizacion_acceso_actual:item.localizacion_acceso_nuevo,
+        cambio_acceso: item.cambio_acceso=='true'?'Si':'No',
+        motivo_cambio: item.motivo_cambio,
+        fecha_creacion_acceso_nuevo:item.fecha_creacion_acceso_nuevo,
+        tipo_acceso_nuevo:item.tipo_acceso_nuevo,
+        localizacion_acceso_nuevo:item.localizacion_acceso_nuevo
     })
   },
   3: {
     endpoint: "eventosAccesosVasculares",
     columnas: [
-      "paciente", "documento", "fecha_evento", "tipo_evento", "descripcion"
+      "paciente", "documento", "fe_evento", "tpInfeccion", "tratamientoIV", "vancomicinaIV", "hemocultivoPositivo", "tipoGram", "tipoInfeccionLocal", "tpGermen", "bacteria", "tipoBacteria", "observaciones"
     ],
     parse: (item) => ({
       paciente: item.datosPaciente?.paciente ?? '-',
       documento: item.datosPaciente?.documento ?? '-',
-      fecha_evento: item.fecha_evento ?? '-',
-      tipo_evento: item.tipo_evento ?? '-',
-      descripcion: item.descripcion ?? '-'
+      fe_evento: item.fecha_evento ?? '-',
+      tpInfeccion: item.tipo_evento ?? '-',
+      tratamientoIV: item.descripcion ?? '-',
+      vancomicinaIV: item.vancomicinaIV ?? '-',
+      hemocultivoPositivo: item.hemocultivoPositivo ?? '-',
+      tipoGram: item.tipoGram ?? '-',
+      tipoInfeccionLocal: item.tipoInfeccionLocal ?? '-',
+      tpGermen: item.tpGermen ?? '-',
+      bacteria: item.bacteria ?? '-',
+      tipoBacteria: item.tipoBacteria ?? '-',
+      observaciones: item.observaciones ?? '-'
     })
   },
   4: {
     endpoint: "morbilidadesHospitalarias",
-    columnas: ["paciente", "documento", "diagnostico", "fecha_ingreso"],
+    columnas: ["paciente", "documento", "diagnostico", "codigo_diagnostico", "fIniHos", "fAltHos", "fuente"],
     parse: (item) => ({
       paciente: item.datosPaciente?.paciente ?? '-',
       documento: item.datosPaciente?.documento ?? '-',
       diagnostico: item.diagnostico ?? '-',
-      fecha_ingreso: item.fecha_ingreso ?? '-'
+      codigo_diagnostico: item.codigo_diagnostico ?? '-',
+      fIniHos: item.fIniHos ?? '-',
+      fAltHos: item.fAltHos ?? '-',
+      fuente: item.fuente ?? '-',
+    })
+  },
+  5: {
+    endpoint: "resultadosClinicos",
+    columnas: ["paciente", "documento", "tmpDialisis", "eritropoyetina", "hierro", "hiperparatiroidismo", "hb", "calcio", "fosforo", "pthi", "alb", "calcioCorregido", "kt"],
+    parse: (item) => ({
+      paciente: item.datosPaciente?.paciente ?? '-',
+      documento: item.datosPaciente?.documento ?? '-',
+      tmpDialisis: item.tmpDialisis ?? '-',
+      eritropoyetina: item.eritropoyetina ?? '-',
+      hierro: item.hierro ?? '-',
+      hiperparatiroidismo: item.hiperparatiroidismo ?? '-',
+      hb: item.hb ?? '-',
+      calcio: item.calcio ?? '-',
+      fosforo: item.fosforo ?? '-',
+      pthi: item.pthi ?? '-',
+      alb: item.alb ?? '-',
+      calcioCorregido: item.calcioCorregido ?? '-',
+      kt: item.kt ?? '-'
+    })
+  },
+  6: {
+    endpoint: "vacunaciones",
+    columnas: [
+      "paciente", "documento",
+      "turno", "frecuencia",
+      "vhbEstado", "vhbFecha", "vhcEstado", "vhcFecha", "vihEstado", "vihFecha",
+      "vacunaHepatitis", "estadoAcHBs", "fechaVacHepatitis",
+      "dosisHepatitisB", "fechaHepatitisB", "motivoNoHepatitisB",
+      "dosisCovid", "fechaCovid", "motivoNoCovid",
+      "fechaInfluenza", "motivoNoInfluenza",
+      "fechaNeumococo", "motivoNoNeumococo"
+    ],
+    parse: (item) => ({
+      paciente: item.datosPaciente?.paciente ?? '-',
+      documento: item.datosPaciente?.documento ?? '-',
+      turno: item.turno ?? '-',
+      frecuencia: item.frecuencia ?? '-',
+      vhbEstado: item.vhbEstado ?? '-',
+      vhbFecha: item.vhbFecha ?? '-',
+      vhcEstado: item.vhcEstado ?? '-',
+      vhcFecha: item.vhcFecha ?? '-',
+      vihEstado: item.vihEstado ?? '-',
+      vihFecha: item.vihFecha ?? '-',
+      vacunaHepatitis: item.vacunaHepatitis ?? '-',
+      estadoAcHBs: item.estadoAcHBs ?? '-',
+      fechaVacHepatitis: item.fechaVacHepatitis ?? '-',
+      dosisHepatitisB: item.dosisHepatitisB ?? '-',
+      fechaHepatitisB: item.fechaHepatitisB ?? '-',
+      motivoNoHepatitisB: item.motivoNoHepatitisB ?? '-',
+      dosisCovid: item.dosisCovid ?? '-',
+      fechaCovid: item.fechaCovid ?? '-',
+      motivoNoCovid: item.motivoNoCovid ?? '-',
+      fechaInfluenza: item.fechaInfluenza ?? '-',
+      motivoNoInfluenza: item.motivoNoInfluenza ?? '-',
+      fechaNeumococo: item.fechaNeumococo ?? '-',
+      motivoNoNeumococo: item.motivoNoNeumococo ?? '-'
     })
   },
   // Agrega aquí otros formularios
@@ -182,6 +282,8 @@ const formulariosConfig = {
 
 const datosTabla = ref([]);
 const columnasTabla = ref([]);
+const filtroNombre = ref("");
+const filtroDocumento = ref("");
 
 const colorClase = (n) => {
   if (n === 1) return 'text-red-600'
@@ -190,7 +292,54 @@ const colorClase = (n) => {
   if (n >= 4) return 'text-green-600'
   return 'text-gray-500'
 }
-
+const exportToExcel = async () => {
+  try {
+    const config = formulariosConfig[formularioSeleccionado.value];
+    if (!config) {
+      alert('No hay configuración de formulario');
+      return;
+    }
+    // Construir endpoint base con filtros
+    let endpoint = `/${config.endpoint}/?id_periodo_ipress=${idPeriodoIpress.value}`;
+    const params = [];
+    if (filtroNombre.value) params.push(`search=${encodeURIComponent(filtroNombre.value)}`);
+    if (filtroDocumento.value) params.push(`search=${encodeURIComponent(filtroDocumento.value)}`);
+    if (params.length > 0) {
+      endpoint += '&' + params.join('&');
+    }
+    // Función para obtener todos los registros paginando
+    let nextUrl = endpoint;
+    let allResults = [];
+    while (nextUrl) {
+      const data = await getAllIpress(nextUrl);
+      if (data && data.results) {
+        allResults = allResults.concat(data.results);
+        nextUrl = data.next;
+      } else {
+        break;
+      }
+    }
+    if (!allResults.length) {
+      alert('No hay datos para exportar');
+      return;
+    }
+    // Usar las columnas actuales para exportar
+    const exportData = allResults.map(config.parse).map(row => {
+      const obj = {};
+      columnasTabla.value.forEach(col => {
+        obj[col] = row[col];
+      });
+      return obj;
+    });
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Registros');
+    XLSX.writeFile(wb, 'registros_tabla.xlsx');
+  } catch (error) {
+    alert('Error al exportar a Excel');
+    console.error(error);
+  }
+};
 const numeroBadge = (paciente, n) => {
   if (n === 1) return paciente.cantidad_de_registros_unidades_actuales
   if (n === 2) return paciente.cantidad_de_eventos_accesos_vasculares
@@ -202,10 +351,26 @@ const cargarPagina = async (url) => {
   if (!url) return;
   const config = formulariosConfig[formularioSeleccionado.value];
   try {
-    const { data } = await axios.get(url);
+    let finalUrl = url;
+    const params = [];
+    if (filtroNombre.value) params.push(`paciente=${encodeURIComponent(filtroNombre.value)}`);
+    if (filtroDocumento.value) params.push(`documento=${encodeURIComponent(filtroDocumento.value)}`);
+    if (params.length > 0) {
+      finalUrl += (finalUrl.includes('?') ? '&' : '?') + params.join('&');
+    }
+    const data = await getAllIpress(finalUrl);
     datosTabla.value = data.results.map(config.parse);
     siguientePagina.value = data.next;
     anteriorPagina.value = data.previous;
+    totalRegistros.value = data.count ?? datosTabla.value.length;
+    // Calcular página actual
+    if (data.next || data.previous) {
+      const nextUrl = new URL(data.next ?? data.previous);
+      const pageParam = nextUrl.searchParams.get('page');
+      paginaActual.value = pageParam ? parseInt(pageParam) - (data.next ? 1 : -1) : 1;
+    } else {
+      paginaActual.value = 1;
+    }
   } catch (error) {
     console.error("Error en paginación:", error);
   }
@@ -225,12 +390,21 @@ const meses = [
 const anios = Array.from({ length: 10 }, (_, i) => fechaActual.getFullYear() - i)
 const mes = ref(meses[fechaActual.getMonth()])
 const ano = ref(fechaActual.getFullYear())
+
+
 const updateTabla = async () => {
   const config = formulariosConfig[formularioSeleccionado.value];
   if (!config) return;
 
   try {
-    const  data  = await getAllIpress(`/${config.endpoint}/`);
+    let endpoint = `/${config.endpoint}/?id_periodo_ipress=${idPeriodoIpress.value}`;
+    const params = [];
+    if (filtroNombre.value) params.push(`search=${encodeURIComponent(filtroNombre.value)}`);
+    if (filtroDocumento.value) params.push(`search=${encodeURIComponent(filtroDocumento.value)}`);
+    if (params.length > 0) {
+      endpoint += '&' + params.join('&');
+    }
+    const data = await getAllIpress(`${endpoint}`);
     const registros = data.results || [];
 
     datosTabla.value = registros.map(config.parse);
@@ -238,10 +412,32 @@ const updateTabla = async () => {
 
     siguientePagina.value = data.next;
     anteriorPagina.value = data.previous;
+    totalRegistros.value = data.count ?? datosTabla.value.length;
+    // Calcular página actual
+    if (data.next || data.previous) {
+      const nextUrl = new URL(data.next ?? data.previous);
+      const pageParam = nextUrl.searchParams.get('page');
+      paginaActual.value = pageParam ? parseInt(pageParam) - (data.next ? 1 : -1) : 1;
+    } else {
+      paginaActual.value = 1;
+    }
   } catch (error) {
     console.error("Error al cargar datos:", error);
     datosTabla.value = [];
     columnasTabla.value = [];
+    totalRegistros.value = 0;
+    paginaActual.value = 1;
+  }
+};
+const goToNextPage = () => {
+  if (siguientePagina.value) {
+    cargarPagina(siguientePagina.value);
+  }
+};
+
+const goToPreviousPage = () => {
+  if (anteriorPagina.value) {
+    cargarPagina(anteriorPagina.value);
   }
 };
 /* const updateTabla = async () => {
@@ -313,7 +509,7 @@ function searchPeriodoIpress() {
   console.log("imprimiendo valor de id periodo ipress",idPeriodoIpress.value)
   idIpress.value = idClinicaSeleccionada.value
   idPerido.value = periodoSeleccionado.value
-  fetchPacientes()
+  updateTabla()
 }
 
 const fetchPacientes = async (url = null) => {

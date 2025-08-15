@@ -7,12 +7,12 @@
                 <p class="text-sm text-gray-500">Gestiona y visualiza la información de todos los perfiles</p>
             </div>
             <div class="flex gap-3">
-                <button class="border border-[#007BFF] text-[#007BFF] px-4 py-2 rounded hover:bg-blue-50">
+                <!-- <button class="border border-[#007BFF] text-[#007BFF] px-4 py-2 rounded hover:bg-blue-50">
                     Exportar
-                </button>
-                <button @click="showCreateModal()" class="bg-[#007BFF] text-white px-4 py-2 rounded hover:bg-[#0066cc]">
+                </button> -->
+                <!-- <button @click="showCreateModal()" class="bg-[#007BFF] text-white px-4 py-2 rounded hover:bg-[#0066cc]">
                     Nuevo Paciente
-                </button>
+                </button> -->
             </div>
         </div>
 
@@ -41,17 +41,17 @@
                     <tr>
                         <th class="border p-3">ID</th>
                         <th class="border p-3">Perfil</th>
-                        <th class="border p-3">Acciones</th>
+                        <!-- <th class="border p-3">Acciones</th> -->
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="perfil in perfiles.results" :key="perfil.id_perfil" class="hover:bg-gray-50">
                         <td class="border p-3 font-medium">{{ perfil.id_perfil }}</td>
                         <td class="border p-3">{{ perfil.perfil }}</td>
-                        <td class="flex border p-3 gap-5">
+                        <!-- <td class="flex border p-3 gap-5">
                             <button @click="showEditModal(perfiles)" class="text-[#007BFF] hover:underline">Editar</button>
                             <button @click="deletePaciente(ipress.id_ipress)" class="text-[#007BFF] hover:underline">Eliminar</button>
-                        </td>
+                        </td> -->
                     </tr>
                 </tbody>
             </table>
@@ -81,10 +81,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+
+import { ref, reactive, onMounted, watch } from 'vue';
 import axios from 'axios';
 import { getAllIpress } from "@/services/ipress/Ipress.service";
 import UserTable from "../ipress/table.vue";
+const search = ref('');
+// Actualizar resultados al cambiar el filtro de búsqueda
+watch(search, () => {
+  fetchPerfiles();
+});
 
 // Estado
 const perfiles = reactive({
@@ -108,13 +114,15 @@ const filters = reactive({
   red: '',
 });
 
-const search = ref('');
 
 
 const fetchPerfiles = async (url = null) => {
   try {
-    const respuesta = await getAllIpress(url ?? "/perfiles/"); 
-
+    let endpoint = url ?? "/indexPerfil/";
+    if (!url && search.value.trim()) {
+      endpoint += `?search=${encodeURIComponent(search.value.trim())}`;
+    }
+    const respuesta = await getAllIpress(endpoint);
     perfiles.results = respuesta.results;
     perfiles.count = respuesta.count;
     perfiles.next = respuesta.next;
@@ -129,7 +137,7 @@ const fetchPerfiles = async (url = null) => {
     }
 
   } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+    console.error('Error al obtener perfiles:', error);
   }
 };
 
@@ -139,19 +147,7 @@ const clearFilters = () => {
   fetchPerfiles();
 };
 
-const showCreateModal = () => {
-  editingPaciente.value = null;
-  form.ipress = '';
-  form.red = '';
-  showModal.value = true;
-};
 
-const showEditModal = (paciente) => {
-  editingPaciente.value = paciente;
-  form.ipress = paciente.ipress;
-  form.red = paciente.red;
-  showModal.value = true;
-};
 
 const closeModal = () => {
   showModal.value = false;

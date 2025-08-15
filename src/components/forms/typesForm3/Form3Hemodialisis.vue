@@ -585,12 +585,12 @@ const eventosInfecciosos = ref([
                     <li><strong>Estado:</strong> Nuevo</li>
                     <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
                 </ul>
-                <div class="mt-4">
+               <!--  <div class="mt-4">
                     <label class="text-sm font-medium">Historial de Registros</label>
                     <select class="w-full border px-2 py-1 rounded">
                         <option>Registro 1</option>
                     </select>
-                </div>
+                </div> -->
             </div>
         </div>
     </div>

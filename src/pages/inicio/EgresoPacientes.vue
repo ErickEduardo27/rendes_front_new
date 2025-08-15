@@ -1,5 +1,5 @@
 <template>
-  <div class="p-6 max-w-2xl mx-auto">
+  <div class="space-y-6">
      <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
             ← Volver al inicio
         </div>
@@ -7,25 +7,44 @@
     <h3 class="text-md font-semibold mt-4">Egresar Pacientes:</h3>
 
     <!-- Búsqueda -->
-    <div class="my-4 flex items-center gap-4">
-      <label class="text-sm font-medium">Tipo de Documento*</label>
-      <select v-model="tipoDocumento" class="border px-2 py-1 rounded">
-        <option value="DNI">DNI</option>
-        <option value="CE">CE</option>
-        <option value="PASAPORTE">Pasaporte</option>
-      </select>
-      <input
-        v-model="filtroDocumento"
-        placeholder="Buscar número"
-        class="border px-2 py-1 rounded w-full"
-      />
+    <div class="flex items-center gap-4 mb-4 flex-wrap">
+      <div class="flex items-center gap-4">
+        <label class="text-sm font-medium">Tipo de Documento*</label>
+        <select v-model="tipoDocumento" class="border px-2 py-1 rounded">
+          <option value="DNI">DNI</option>
+          <option value="CE">CE</option>
+          <option value="PASAPORTE">Pasaporte</option>
+        </select>
+        <input
+          v-model="filtroDocumento"
+          placeholder="Buscar número"
+          class="border px-2 py-1 rounded w-full"
+        />
+      </div>
+      <div class="flex items-center gap-4 mt-2">
+        <label class="text-sm font-medium">Nombre</label>
+        <input
+          v-model="filtroNombre"
+          placeholder="Buscar por nombre"
+          class="border px-2 py-1 rounded w-full"
+        />
+      </div>
     </div>
 
-    <!-- Lista de pacientes filtrada -->
-    <div v-for="paciente in pacientesFiltrados" :key="paciente.id_paciente_dialisis" class="border p-4 rounded mb-2 cursor-pointer hover:border-sky-400"
+
+    <!-- Lista de pacientes filtrada con paginación -->
+    <div v-for="paciente in pacientesPaginados" :key="paciente.id_paciente_dialisis" class="border p-4 rounded mb-2 cursor-pointer hover:border-sky-400"
          @click="seleccionarPaciente(paciente)">
       <p class="font-medium">{{ paciente.paciente }}</p>
+      <p class="text-sm text-gray-500">DOCUMENTO: {{ paciente.documento }}</p>
       <p class="text-sm text-gray-500">ESTADO: {{ paciente.estado }}</p>
+    </div>
+
+    <!-- Controles de paginación -->
+    <div v-if="totalPaginas > 1" class="flex justify-center items-center gap-2 my-4">
+      <button class="px-2 py-1 rounded bg-gray-200" :disabled="paginaActual === 1" @click="paginaActual--">Anterior</button>
+      <span class="mx-2">Página {{ paginaActual }} de {{ totalPaginas }}</span>
+      <button class="px-2 py-1 rounded bg-gray-200" :disabled="paginaActual === totalPaginas" @click="paginaActual++">Siguiente</button>
     </div>
 
     <!-- Modal de egreso -->
@@ -74,11 +93,13 @@
 </template>
 
 <script setup>
+
 import { getAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service'
 import { ref, computed, onMounted } from 'vue'
 
 const tipoDocumento = ref('DNI')
 const filtroDocumento = ref('')
+const filtroNombre = ref('')
 const pacienteSeleccionado = ref(null)
 
 const formEgreso = ref({
@@ -86,14 +107,37 @@ const formEgreso = ref({
   tipo: ''
 })
 
+
 const pacientes = ref([])
 
-// Búsqueda por número y tipo de documento
+// Paginación
+const paginaActual = ref(1)
+const pacientesPorPagina = 5
+
+const totalPaginas = computed(() => {
+  return Math.ceil(pacientesFiltrados.value.length / pacientesPorPagina)
+})
+
+const pacientesPaginados = computed(() => {
+  const inicio = (paginaActual.value - 1) * pacientesPorPagina
+  return pacientesFiltrados.value.slice(inicio, inicio + pacientesPorPagina)
+})
+
+
+// Búsqueda por número, tipo de documento y nombre
 const pacientesFiltrados = computed(() => {
-  return pacientes.value.filter(
+  const doc = filtroDocumento.value.trim().toLowerCase();
+  const nombre = filtroNombre.value.trim().toLowerCase();
+  const filtrados = pacientes.value.filter(
     p =>
-      p.documento.includes(filtroDocumento.value.trim())
+      (!doc || (p.documento && p.documento.toLowerCase().includes(doc))) &&
+      (!nombre || (p.paciente && p.paciente.toLowerCase().includes(nombre)))
   )
+  // Reiniciar página si el filtro cambia y la página actual queda fuera de rango
+  if ((paginaActual.value - 1) * pacientesPorPagina >= filtrados.length && paginaActual.value !== 1) {
+    paginaActual.value = 1
+  }
+  return filtrados
 })
 
 const seleccionarPaciente = paciente => {
@@ -120,8 +164,8 @@ const fetchPacientes = async (url = null) => {
   try {
     const respuesta = await getAllIpress("/pacientes/?estado=NUEVO");
     pacientes.value = respuesta;
+    paginaActual.value = 1;
     console.log("paientes seleccionado", respuesta)
-
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }

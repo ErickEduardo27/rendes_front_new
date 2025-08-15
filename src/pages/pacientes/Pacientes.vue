@@ -119,8 +119,11 @@ const search = ref('');
 
 const fetchPacientes = async (url = null) => {
   try {
-    const respuesta = await getAllIpress(url ?? "/pacientes/"); 
-
+    let endpoint = url ?? "/indexPacientes/";
+    if (!url && search.value.trim()) {
+      endpoint += `?search=${encodeURIComponent(search.value.trim())}`;
+    }
+    const respuesta = await getAllIpress(endpoint);
     pacientes.results = respuesta.results;
     pacientes.count = respuesta.count;
     pacientes.next = respuesta.next;
@@ -135,9 +138,15 @@ const fetchPacientes = async (url = null) => {
     }
 
   } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+    console.error('Error al obtener pacientes:', error);
   }
 };
+import { watch } from 'vue';
+
+// Ejecutar búsqueda automáticamente al escribir
+watch(search, () => {
+  fetchPacientes();
+});
 
 const clearFilters = () => {
   filters.ipress = '';

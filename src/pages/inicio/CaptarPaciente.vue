@@ -44,17 +44,20 @@
         </select>
       </div>
 
+
       <div>
         <label class="invisible block">Número*</label>
-        <input v-model="numeroDocumento" class="w-full border px-2 py-1 rounded" />
+        <input v-model="numeroDocumento" class="w-full border px-2 py-1 rounded" placeholder="N° Documento" />
+      </div>
+      <div>
+        <label class="invisible block">Nombre*</label>
+        <input v-model="nombrePaciente" class="w-full border px-2 py-1 rounded" placeholder="Nombre o Apellidos" />
       </div>
 
       <!-- <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="$emit('ingreso-extra')">INGRESO EXTRAORDINARIO</button> -->
     </div>
 
-    <div class="text-center mt-2">
-      <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="buscarPaciente">Buscar</button>
-    </div>
+  <!-- El filtro es automático, no se necesita botón buscar -->
 
     <!-- Resultado de búsqueda -->
     <!-- <div v-if="busquedaRealizada && pacienteEncontrado" class="mt-4">
@@ -75,8 +78,9 @@
     <div class="mt-4 space-y-2">
       <div v-for="p in pacientesFiltrados" :key="p.documento"
         class="border px-3 py-2 rounded hover:bg-gray-100 cursor-pointer" @click="seleccionarPaciente(p)">
-        <p class="font-semibold">{{ p.paciente }}</p><!-- 
-        <p class="text-xs">ESTADO: {{ p.estado }}</p> -->
+        <p class="font-semibold">{{ p.paciente }}</p>
+        <p class="text-xs">DOCUMENTO: {{ p.documento }}</p>
+        <p class="text-xs">ESTADO: {{ p.estado }}</p>
       </div>
     </div>
     <div v-if="pacienteSeleccionado" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -138,6 +142,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+const emit = defineEmits(['cancelar'])
 import Home from './Home.vue'
 import { useRouter } from 'vue-router'
 import { getAllIpress, patchAllIpress, putAllIpress } from '@/services/ipress/Ipress.service'
@@ -146,6 +151,7 @@ const router = useRouter()
 const idPeriodoIpress = ref(17)
 const tipoDocumento = ref('DNI')
 const numeroDocumento = ref('')
+const nombrePaciente = ref('')
 const modalidad = ref('')
 const clinicaSeleccionada = ref('CENTRO NACIONAL DE SALUD RENAL')
 const clinicas = ['DA VIDA SAC.', 'NEFROLOGÍA S.A.C.', 'CLÍNICA DE RENALIS']
@@ -168,9 +174,7 @@ const idIpress = ref(62877)
 const periodoIpress = ref([])
 const periodoSeleccionado = ref(55)
 
-const pacientesFiltrados = computed(() => {
-  return pacientes.value
-})
+const pacientesFiltrados = computed(() => pacientes.value)
 
 function seleccionarPaciente(paciente) {
   pacienteEncontrado.value = paciente
@@ -181,15 +185,13 @@ function pushHome() {
   router.push('/calidad-agua')
 }
 
-function buscarPaciente() {
-  const encontrado = pacientes.value.find(p => p.documento === numeroDocumento.value)
-  pacienteEncontrado.value = encontrado || null
-  busquedaRealizada.value = true
-}
+// El filtro es automático, no se usa buscarPaciente
 function close() {
   pacienteSeleccionado.value = null
+  emit('cancelar')
 }
 const patchPacienteDialisis = async (paciente) => {
+  console.log("imprimiendo id periodo ipress", paciente)
   try {
     const respuesta = await patchAllIpress("/pacientesDialisis/"+paciente.id_paciente_dialisis+"/",{id_periodo_ipress:idPeriodoIpress.value});
     /* periodoIpress.value = respuesta; */
@@ -233,23 +235,27 @@ const querySearch = (queryString, cb) => {
   cb(results);
 };
 const fetchPacientes = async (url = null) => {
-  /* try {
-    const respuesta = await getAllIpress(url ?? "/pacientesDialisis/?id_periodo_ipress=null");
+  try {
+    let endpoint = "/pacientes/?estado=EGRESADO,REGISTRADO";
+    if (numeroDocumento.value.trim()) {
+      endpoint += `&documento=${encodeURIComponent(numeroDocumento.value.trim())}`;
+    }
+    if (nombrePaciente.value && nombrePaciente.value.trim()) {
+      endpoint += `&paciente=${encodeURIComponent(nombrePaciente.value.trim())}`;
+    }
+    const respuesta = await getAllIpress(endpoint);
     pacientes.value = respuesta;
     console.log("paientes seleccionado", respuesta)
-
-  } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
-  } */
- try {
-    const respuesta = await getAllIpress("/pacientes/?estado=EGRESADO");
-    pacientes.value = respuesta;
-    console.log("paientes seleccionado", respuesta)
-
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }
 };
+import { watch } from 'vue'
+
+// Filtro automático por documento y nombre
+watch([numeroDocumento, nombrePaciente], () => {
+  fetchPacientes();
+});
 const fetchIpress = async (url = null) => {
   try {
     const respuesta = await getAllIpress(url ?? "/ipress/");

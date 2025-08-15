@@ -278,7 +278,7 @@ export default {
           <button class="bg-gray-300 text-gray-800 px-4 py-2 rounded">Cancelar</button>
           <button class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded"
             @click="postForm()">Registrar</button>
-          <button class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button>
+          <!-- <button class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button> -->
         </div>
       </div>
 
@@ -297,12 +297,12 @@ export default {
           <li><strong>Estado:</strong> Nuevo</li>
           <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
         </ul>
-        <div class="mt-4">
+        <!-- <div class="mt-4">
           <label class="text-sm font-medium">Historial de Registros</label>
           <select class="w-full border px-2 py-1 rounded">
             <option>Registro 1</option>
           </select>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>

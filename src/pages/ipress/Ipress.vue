@@ -7,9 +7,9 @@
                 <p class="text-sm text-gray-500">Gestiona y visualiza la información de todos los establecimientos</p>
             </div>
             <div class="flex gap-3">
-                <button class="border border-[#007BFF] text-[#007BFF] px-4 py-2 rounded hover:bg-blue-50">
-                    Exportar
-                </button>
+        <button @click="exportToExcel" class="border border-[#007BFF] text-[#007BFF] px-4 py-2 rounded hover:bg-blue-50">
+          Exportar
+        </button>
                 <button @click="showCreateModal()" class="bg-[#007BFF] text-white px-4 py-2 rounded hover:bg-[#0066cc]">
                     Nuevo IPRESS
                 </button>
@@ -46,12 +46,12 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="ipress in pacientes.results" :key="ipress.id_ipress" class="hover:bg-gray-50">
+                    <tr v-for="ipress in filteredIpress" :key="ipress.id_ipress" class="hover:bg-gray-50">
                         <td class="border p-3 font-medium">{{ ipress.id_ipress }}</td>
                         <td class="border p-3">{{ ipress.ipress }}</td>
                         <td class="border p-3">{{ ipress.datosRed.red }}</td>
                         <td class="flex border p-3 gap-5">
-                            <button @click="showEditModal(pacientes)" class="text-[#007BFF] hover:underline">Editar</button>
+                            <button @click="showEditModal(ipress)" class="text-[#007BFF] hover:underline">Editar</button>
                             <button @click="deletePaciente(ipress.id_ipress)" class="text-[#007BFF] hover:underline">Eliminar</button>
                         </td>
                     </tr>
@@ -59,9 +59,62 @@
             </table>
         </div>
 
+        <!-- Modal flotante para crear/editar IPRESS -->
+        <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-lg relative">
+            <h3 class="text-lg font-bold mb-4">{{ editingPaciente ? 'Editar IPRESS' : 'Registrar nueva IPRESS' }}</h3>
+            <form @submit.prevent="submitForm">
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Nombre IPRESS</label>
+                <input v-model="form.ipress" required class="w-full border px-2 py-1 rounded" />
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Nombre Corto</label>
+                <input v-model="form.nombre_corto" required class="w-full border px-2 py-1 rounded" />
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Tipo de Unidad</label>
+                <input v-model="form.tipo_unidad" required class="w-full border px-2 py-1 rounded" />
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Estado</label>
+                <select v-model="form.estado" required class="w-full border px-2 py-1 rounded">
+                  <option value="ACTIVO">ACTIVO</option>
+                  <option value="INACTIVO">INACTIVO</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Redes</label>
+                <select v-model="form.id_red" required class="w-full border px-2 py-1 rounded">
+                  <option value="" disabled>Seleccione una red</option>
+                  <option v-for="red in redes" :key="red.id_red" :value="red.id_red">
+                    {{ red.red }}
+                  </option>
+                </select>
+              </div>
+             <!--  <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">ID Modalidad</label>
+                <input v-model="form.id_modalidad" required class="w-full border px-2 py-1 rounded" />
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">ID Ubigeo</label>
+                <input v-model="form.id_ubigeo" required class="w-full border px-2 py-1 rounded" />
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">ID Red</label>
+                <input v-model="form.id_red" required class="w-full border px-2 py-1 rounded" />
+              </div> -->
+              <div class="flex justify-end gap-2 mt-6">
+                <button type="button" @click="showModal = false" class="px-4 py-2 rounded bg-gray-300 text-gray-700">Cancelar</button>
+                <button type="submit" class="px-4 py-2 rounded bg-[#007BFF] text-white">{{ editingPaciente ? 'Guardar Cambios' : 'Registrar' }}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
         <!-- Paginación -->
-        <div class="flex justify-between items-center mt-4 text-sm text-[#6C7A91]">
-            <div>Mostrando {{ pacientes.results.length }} de {{ pacientes.count }} IPRESS</div>
+    <div class="flex justify-between items-center mt-4 text-sm text-[#6C7A91]">
+      <div>Mostrando {{ filteredIpress.length }} de {{ pacientes.count }} IPRESS</div>
             <div class="flex items-center gap-2">
                 <button @click="goToPreviousPage" :disabled="!pacientes.previous" class="px-3 py-1 border rounded"
                     :class="pacientes.previous ? 'text-[#007BFF]' : 'text-gray-400 cursor-not-allowed'">
@@ -83,26 +136,57 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
+import * as XLSX from 'xlsx';
+// El filtrado ahora lo hace el backend, solo mostramos los resultados de la página
+const filteredIpress = computed(() => pacientes.results);
 import axios from 'axios';
-import { getAllIpress } from "@/services/ipress/Ipress.service";
+import { getAllIpress, postAllIpress, putAllIpress } from "@/services/ipress/Ipress.service";
 import UserTable from "../ipress/table.vue";
 
 // Estado
+// Exportar todos los registros a Excel
+const exportToExcel = async () => {
+  try {
+    let endpoint = '/ipress/';
+    const respuesta = await getAllIpress(endpoint);
+    const data = (respuesta || []).map(ipress => ({
+      ID: ipress.id_ipress,
+      IPRESS: ipress.ipress,
+      Red: ipress.datosRed?.red || '',
+      Estado: ipress.estado || '',
+      NombreCorto: ipress.nombre_corto || '',
+      TipoUnidad: ipress.tipo_unidad || ''
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'IPRESS');
+    XLSX.writeFile(wb, 'ipress_lista.xlsx');
+  } catch (error) {
+    alert('Error al exportar a Excel');
+    console.error(error);
+  }
+};
+
 const pacientes = reactive({
   results: [],
   count: 0,
   next: null,
   previous: null,
 });
-
+const redes = ref([]);
 const currentPage = ref(1);
 const showModal = ref(false);
 const editingPaciente = ref(null);
 
 const form = reactive({
   ipress: '',
-  red: '',
+  nombre_corto: '',
+  tipo_unidad: '',
+  estado: 'ACTIVO',
+  id_modalidad: '1',
+  id_ubigeo: '1',
+  id_red: '1',
 });
 
 const filters = reactive({
@@ -115,8 +199,12 @@ const search = ref('');
 
 const fetchIpress = async (url = null) => {
   try {
-    const respuesta = await getAllIpress(url ?? "/ipress/"); 
-
+    let endpoint = url ?? "/indexIpress/";
+    // Si hay término de búsqueda, agrégalo como query param
+    if (!url && search.value.trim()) {
+      endpoint += `?search=${encodeURIComponent(search.value.trim())}`;
+    }
+    const respuesta = await getAllIpress(endpoint);
     pacientes.results = respuesta.results;
     pacientes.count = respuesta.count;
     pacientes.next = respuesta.next;
@@ -134,6 +222,23 @@ const fetchIpress = async (url = null) => {
     console.error('Error al obtener IPRESS:', error);
   }
 };
+import { watch } from 'vue';
+
+// Ejecutar búsqueda automáticamente al escribir
+watch(search, () => {
+  fetchIpress();
+});
+
+const fetchRedes = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/redes/"); 
+    redes.value=respuesta;
+    console.log('Redes obtenidas:', redes.value);
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
 
 const clearFilters = () => {
   filters.ipress = '';
@@ -144,32 +249,57 @@ const clearFilters = () => {
 const showCreateModal = () => {
   editingPaciente.value = null;
   form.ipress = '';
-  form.red = '';
+  form.nombre_corto = '';
+  form.tipo_unidad = '';
+  form.estado = 'ACTIVO';
+  form.id_modalidad = '1';
+  form.id_ubigeo = '1';
+  form.id_red = '';
   showModal.value = true;
 };
 
-const showEditModal = (paciente) => {
-  editingPaciente.value = paciente;
-  form.ipress = paciente.ipress;
-  form.red = paciente.red;
+const showEditModal = (ipress) => {
+  editingPaciente.value = ipress;
+  form.ipress = ipress.ipress;
+  form.nombre_corto = ipress.nombre_corto;
+  form.tipo_unidad = ipress.tipo_unidad;
+  form.estado = ipress.estado;
+  form.id_modalidad = ipress.id_modalidad;
+  form.id_ubigeo = ipress.id_ubigeo;
+  form.id_red = ipress.id_red;
   showModal.value = true;
 };
 
-const closeModal = () => {
-  showModal.value = false;
-};
-
-const savePaciente = async () => {
+const submitForm = async () => {
   try {
     if (editingPaciente.value) {
-      await axios.put(`http://10.0.54.88:8010/api/ipress/${editingPaciente.value.id}/`, form);
+      // Editar IPRESS existente
+      await putAllIpress(`/ipress/${editingPaciente.value.id_ipress}/`, {
+        ipress: form.ipress,
+        nombre_corto: form.nombre_corto,
+        tipo_unidad: form.tipo_unidad,
+        estado: form.estado,
+        id_modalidad: form.id_modalidad,
+        id_ubigeo: form.id_ubigeo,
+        id_red: form.id_red,
+      });
     } else {
-      await axios.post('http://10.0.54.88:8010/api/ipress/', form);
+      // Crear nueva IPRESS
+      await postAllIpress('/ipress/', {
+        ipress: form.ipress,
+        nombre_corto: form.nombre_corto,
+        tipo_unidad: form.tipo_unidad,
+        estado: form.estado,
+        id_modalidad: form.id_modalidad,
+        id_ubigeo: form.id_ubigeo,
+        id_red: form.id_red,
+      });
     }
     showModal.value = false;
     fetchIpress();
   } catch (error) {
-    console.error('Error al guardar IPRESS:', error);
+    alert('Error al guardar IPRESS');
+    console.error(error);
   }
 };
 
@@ -198,6 +328,7 @@ const goToPreviousPage = () => {
 
 onMounted(() => {
   fetchIpress();
+  fetchRedes();
 });
 </script>
 

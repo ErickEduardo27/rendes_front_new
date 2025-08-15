@@ -23,7 +23,7 @@
 import { ref } from 'vue'
 import ListaPacientes from './ListaPacientes.vue'
 import FormularioPaciente from './FormularioPaciente.vue'
-import CaptarPaciente from './IndexCaptarPaciente.vue'
+import CaptarPaciente from './CaptarPaciente.vue'
 import EgresoPacientes from './EgresoPacientes.vue'
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue'
 import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue'

@@ -1,81 +1,98 @@
 <template>
-  <div class="p-6 space-y-6">
+  <div class="p-6 space-y-8 bg-gradient-to-br from-blue-50 to-white min-h-screen">
     <!-- Filtros superiores -->
-    <div class="flex flex-wrap items-center gap-4">
-      <label>Mes de Reporte:</label>
-      <select v-model="filtros.mes" class="border px-2 py-1 rounded">
-        <option v-for="mes in meses" :key="mes" :value="mes">{{ mes }}</option>
-      </select>
-
-      <select v-model="filtros.anio" class="border px-2 py-1 rounded">
-        <option v-for="anio in anios" :key="anio" :value="anio">{{ anio }}</option>
-      </select>
-
-      <label>Clínica</label>
-      <select v-model="filtros.clinica" class="border px-2 py-1 rounded">
-        <option v-for="clinica in clinicas" :key="clinica" :value="clinica">{{ clinica }}</option>
-      </select>
-
-      <label>Modalidad de Diálisis</label>
-      <select v-model="filtros.modalidad" class="border px-2 py-1 rounded">
-        <option disabled value="">Seleccione</option>
-        <option>Hemodiálisis</option>
-        <option>Diálisis Peritoneal</option>
-      </select>
-
-      <label>Reporte</label>
-      <select v-model="filtros.reporte" class="border px-2 py-1 rounded">
-        <option v-for="reporte in reportes" :key="reporte" :value="reporte">{{ reporte }}</option>
-      </select>
+    <div class="flex flex-wrap items-center gap-4 bg-white/80 p-4 rounded-lg shadow mb-4">
+      <div class="flex flex-col">
+        <label class="text-xs font-semibold text-gray-600">Mes de Reporte</label>
+        <select v-model="filtros.mes" class="border px-2 py-1 rounded focus:ring-2 focus:ring-blue-200">
+          <option v-for="mes in meses" :key="mes" :value="mes">{{ mes }}</option>
+        </select>
+      </div>
+      <div class="flex flex-col">
+        <label class="text-xs font-semibold text-gray-600">Año</label>
+        <select v-model="filtros.anio" class="border px-2 py-1 rounded focus:ring-2 focus:ring-blue-200">
+          <option v-for="anio in anios" :key="anio" :value="anio">{{ anio }}</option>
+        </select>
+      </div>
+      <div class="flex flex-col">
+        <label class="text-xs font-semibold text-gray-600">Clínica</label>
+        <select v-model="filtros.clinica" class="border px-2 py-1 rounded focus:ring-2 focus:ring-blue-200">
+          <option v-for="clinica in clinicas" :key="clinica" :value="clinica">{{ clinica }}</option>
+        </select>
+      </div>
+      <!-- <div class="flex flex-col">
+        <label class="text-xs font-semibold text-gray-600">Modalidad de Diálisis</label>
+        <select v-model="filtros.modalidad" class="border px-2 py-1 rounded focus:ring-2 focus:ring-blue-200">
+          <option disabled value="">Seleccione</option>
+          <option>Hemodiálisis</option>
+          <option>Diálisis Peritoneal</option>
+        </select>
+      </div> -->
+     <!--  <div class="flex flex-col">
+        <label class="text-xs font-semibold text-gray-600">Reporte</label>
+        <select v-model="filtros.reporte" class="border px-2 py-1 rounded focus:ring-2 focus:ring-blue-200">
+          <option v-for="reporte in reportes" :key="reporte" :value="reporte">{{ reporte }}</option>
+        </select>
+      </div> -->
     </div>
 
     <!-- Tarjetas de resumen -->
-    <div class="grid grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       <!-- Pacientes atendidos -->
-      <div class="bg-green-200 p-4 rounded">
-        <h2 class="text-2xl font-bold">{{ resumen.totalPacientes }}</h2>
-        <p>{{ resumen.descripcion }}</p>
-        <p class="mt-2 text-sm bg-green-100 p-2 rounded">{{ resumen.cvcMensaje }}</p>
-        <div class="grid grid-cols-4 gap-2 mt-4 text-center">
-          <div v-for="(valor, tipo) in resumen.tipoAcceso" :key="tipo">
-            <div class="font-semibold">{{ tipo }}</div>
-            <div class="text-sm">{{ valor }}</div>
+      <div class="bg-gradient-to-br from-green-200 to-green-50 p-6 rounded-xl shadow-lg flex flex-col gap-2 relative overflow-hidden">
+        <div class="absolute right-4 top-4 text-green-400 text-4xl opacity-20">👩‍⚕️</div>
+        <h2 class="text-4xl font-extrabold text-green-700 flex items-center gap-2">
+          {{ resumen.totalPacientes }}
+          <span class="text-base font-normal text-green-900 bg-white/70 px-2 py-0.5 rounded-full shadow">Pacientes</span>
+        </h2>
+        <p class="text-gray-700 mt-2">{{ resumen.descripcion }}</p>
+        <div class="mt-2 text-xs bg-green-100/80 p-2 rounded flex items-center gap-2">
+          <span class="text-green-600 text-lg">⚠️</span> {{ resumen.cvcMensaje }}
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-4 text-center">
+          <div v-for="(valor, tipo) in resumen.tipoAcceso" :key="tipo" class="bg-white/80 rounded p-2 shadow text-green-800">
+            <div class="font-semibold text-xs uppercase tracking-wide">{{ tipo }}</div>
+            <div class="text-lg font-bold">{{ valor }}</div>
           </div>
         </div>
       </div>
 
       <!-- Vacunación -->
-      <div class="bg-blue-100 p-4 rounded space-y-2">
-        <p>{{ resumen.vhb }}</p>
-        <p>{{ resumen.covid }}</p>
-        <p>{{ resumen.influenza }}</p>
-        <p>{{ resumen.neumococo }}</p>
+      <div class="bg-gradient-to-br from-blue-100 to-blue-50 p-6 rounded-xl shadow-lg flex flex-col gap-2 relative overflow-hidden">
+        <div class="absolute right-4 top-4 text-blue-400 text-4xl opacity-20">💉</div>
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-2"><span class="text-blue-600">🦠</span> <span>{{ resumen.vhb }}</span></div>
+          <div class="flex items-center gap-2"><span class="text-blue-600">💉</span> <span>{{ resumen.covid }}</span></div>
+          <div class="flex items-center gap-2"><span class="text-blue-600">🌡️</span> <span>{{ resumen.influenza }}</span></div>
+          <div class="flex items-center gap-2"><span class="text-blue-600">🫁</span> <span>{{ resumen.neumococo }}</span></div>
+        </div>
       </div>
 
       <!-- Serología y resultados clínicos -->
       <div class="space-y-4">
-        <div class="bg-yellow-100 p-4 rounded">
-          <p>{{ resumen.serologia }}</p>
+        <div class="bg-gradient-to-br from-yellow-100 to-yellow-50 p-6 rounded-xl shadow-lg">
+          <div class="flex items-center gap-2 mb-2"><span class="text-yellow-500 text-lg">🧪</span> <span class="font-semibold">Serología</span></div>
+          <p class="text-gray-700">{{ resumen.serologia }}</p>
           <div class="grid grid-cols-3 gap-4 mt-2 text-center">
-            <div v-for="campo in ['VHB', 'VHC', 'VIH']" :key="campo">
+            <div v-for="campo in ['VHB', 'VHC', 'VIH']" :key="campo" class="bg-white/80 rounded p-2 shadow text-yellow-800">
               <div class="font-semibold">{{ campo }}</div>
               <div class="text-sm">{{ resumen[campo.toLowerCase()] || '-' }}</div>
             </div>
           </div>
         </div>
-        <div class="bg-orange-100 p-4 rounded">
-          <p class="font-semibold">Resultados Clínicos:</p>
+        <div class="bg-gradient-to-br from-orange-100 to-orange-50 p-6 rounded-xl shadow-lg">
+          <div class="flex items-center gap-2 mb-2"><span class="text-orange-500 text-lg">📊</span> <span class="font-semibold">Resultados Clínicos</span></div>
           <div class="grid grid-cols-2 gap-4 mt-2 text-center">
-            <div>
+            <div class="bg-white/80 rounded p-2 shadow text-orange-800">
               <div>Hb</div>
-              <div class="text-sm">{{ resumen.hbRegistrado }}</div>
+              <div class="text-sm font-bold">{{ resumen.hbRegistrado }}</div>
             </div>
-            <div>
+            <div class="bg-white/80 rounded p-2 shadow text-orange-800">
               <div>Kt/V</div>
-              <div class="text-sm">{{ resumen.ktvRegistrado }}</div>
+              <div class="text-sm font-bold">{{ resumen.ktvRegistrado }}</div>
             </div>
           </div>
-          <p class="text-sm mt-2 text-red-600">{{ resumen.alertaHb }}</p>
+          <p class="text-xs mt-2 text-red-600 flex items-center gap-1"><span>⚠️</span>{{ resumen.alertaHb }}</p>
         </div>
       </div>
     </div>
@@ -125,5 +142,128 @@ const resumen = ref({
 </script>
 
 <style scoped>
-/* Puedes personalizar colores y tipografías aquí si lo deseas */
+/* Personalización visual para el dashboard */
+.shadow-lg {
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.08), 0 1.5px 4px 0 rgba(0,0,0,0.04);
+}
+.rounded-xl {
+  border-radius: 1rem;
+}
+.bg-gradient-to-br {
+  background-size: 200% 200%;
+  animation: gradientMove 6s ease-in-out infinite;
+}
+@keyframes gradientMove {
+  0% {background-position: 0% 50%;}
+  50% {background-position: 100% 50%;}
+  100% {background-position: 0% 50%;}
+}
+.font-extrabold {
+  font-weight: 800;
+}
+.font-semibold {
+  font-weight: 600;
+}
+.font-bold {
+  font-weight: 700;
+}
+.text-4xl {
+  font-size: 2.25rem;
+}
+.text-green-700 {
+  color: #15803d;
+}
+.text-green-900 {
+  color: #14532d;
+}
+.text-green-600 {
+  color: #16a34a;
+}
+.text-blue-600 {
+  color: #2563eb;
+}
+.text-blue-400 {
+  color: #60a5fa;
+}
+.text-yellow-500 {
+  color: #eab308;
+}
+.text-yellow-800 {
+  color: #854d0e;
+}
+.text-orange-500 {
+  color: #f97316;
+}
+.text-orange-800 {
+  color: #9a3412;
+}
+.bg-white\/80 {
+  background: rgba(255,255,255,0.8);
+}
+.bg-green-100\/80 {
+  background: rgba(220,252,231,0.8);
+}
+.min-h-screen {
+  min-height: 100vh;
+}
+.tracking-wide {
+  letter-spacing: 0.05em;
+}
+.uppercase {
+  text-transform: uppercase;
+}
+.text-xs {
+  font-size: 0.75rem;
+}
+.text-base {
+  font-size: 1rem;
+}
+.text-lg {
+  font-size: 1.125rem;
+}
+.text-sm {
+  font-size: 0.875rem;
+}
+.p-6 {
+  padding: 1.5rem;
+}
+.p-4 {
+  padding: 1rem;
+}
+.rounded {
+  border-radius: 0.5rem;
+}
+.gap-2 {
+  gap: 0.5rem;
+}
+.gap-4 {
+  gap: 1rem;
+}
+.gap-8 {
+  gap: 2rem;
+}
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+.mb-4 {
+  margin-bottom: 1rem;
+}
+.mt-2 {
+  margin-top: 0.5rem;
+}
+.mt-4 {
+  margin-top: 1rem;
+}
+.mt-8 {
+  margin-top: 2rem;
+}
+.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+}
+.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.5rem;
+}
+.space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 2rem;
+}
 </style>

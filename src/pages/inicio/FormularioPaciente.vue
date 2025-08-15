@@ -231,7 +231,11 @@ const validarFormulario = () => {
 
   for (const campo of camposObligatorios) {
     if (!form[campo]) {
-      alert(`Por favor complete el campo: ${campo}`);
+      ElMessage({
+        message: `Por favor complete el campo: ${campo}`,
+        type: 'warning',
+        plain: true,
+      })
       return false;
     }
   }

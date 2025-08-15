@@ -120,20 +120,15 @@ const handleLogin = async (e) => {
         usuario: username.value,
         password: password.value,
     }
-
-    /* const credentials = {
-        usuario: "Erick",
-        password: "73131653",
-    } */
-    /* router.push('/')
-    return; */
     try {
         await AuthService.login(credentials)
 
         const userData = await AuthService.me();
 
         authStore.login(userData)
-
+        localStorage.setItem('user', JSON.stringify(userData))
+        localStorage.setItem('token', userData.token)
+        localStorage.setItem('perfil', userData.datosPerfil.perfil)
         await router.push('/')
 
         toast.success('¡Inicio de sesión exitoso!')

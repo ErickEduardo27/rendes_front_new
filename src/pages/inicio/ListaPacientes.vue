@@ -17,10 +17,10 @@
       <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('nuevo-registro')">
         Nuevo Registro
       </button>
-      <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('captar-paciente')">
+      <button v-if="perfil!=='Clinicas'" class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('captar-paciente')">
         Captar Paciente
       </button>
-      <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('egresar-paciente')">
+      <button v-if="perfil!=='Clinicas'" class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('egresar-paciente')">
         Egresar Paciente
       </button>
     </div>
@@ -35,7 +35,7 @@
       <span  style="display:flex;justify-content: center;align-items: center;">VACUNACION</span>
     </div>
 
-    <div v-for="paciente in pacientes" :key="paciente.nombre" class="border rounded mb-3 p-3">
+  <div v-for="paciente in pacientesPaginados" :key="paciente.nombre" class="border rounded mb-3 p-3">
       <div class="grid grid-cols-9 items-center">
         <div class="col-span-2 font-medium">
           {{ paciente.paciente }}
@@ -57,6 +57,11 @@
         </div>
       </div>
     </div>
+    <div class="flex justify-between items-center my-4">
+      <button class="px-3 py-1 rounded bg-gray-200" :disabled="paginaActual === 1" @click="paginaActual--">Anterior</button>
+      <span>Página {{ paginaActual }} de {{ totalPaginas }}</span>
+      <button class="px-3 py-1 rounded bg-gray-200" :disabled="paginaActual === totalPaginas" @click="paginaActual++">Siguiente</button>
+    </div>
 
     <div class="text-right mt-6">
       <button class="bg-sky-600 text-white px-6 py-2 rounded">
@@ -67,10 +72,24 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted,watch } from 'vue';
 import { getAllIpress } from "@/services/ipress/Ipress.service";
-const state1 = ref('')
+const perfil = localStorage.getItem('perfil')
+const pacientes = ref([])
+// --- Paginación ---
+const paginaActual = ref(1)
+const pacientesPorPagina = 5
+const totalPaginas = computed(() => Math.ceil(pacientes.value.length / pacientesPorPagina))
+const pacientesPaginados = computed(() => {
+  const inicio = (paginaActual.value - 1) * pacientesPorPagina
+  return pacientes.value.slice(inicio, inicio + pacientesPorPagina)
+})
 
+watch(pacientes, () => {
+  paginaActual.value = 1
+})
+
+const state1 = ref('')
 const aplicaTodos = ref(true)
 const modalidadSeleccionada = ref('todos')
 const clinicaSeleccionada = ref('CENTRO NACIONAL DE SALUD RENAL')
@@ -79,7 +98,16 @@ const idPeriodoIpress = ref(17)
 const periodoSeleccionado = ref(55)
 const mostrarFormulario = ref(false)
 const componenteFormulario = ref(null)
-const emit = defineEmits(['form2'])
+const emit = defineEmits([
+  'form2',
+  'form3',
+  'form4',
+  'form5',
+  'form7',
+  'captar-paciente',
+  'nuevo-registro',
+  'egresar-paciente'
+])
 
 const abrirFormulario = (paciente, numeroFormulario) => {
   console.log("paientessss",idPeriodoIpress.value)
@@ -112,7 +140,7 @@ const numeroBadge = (paciente, n) => {
   if (n === 5) return paciente.cantidad_de_vacunaciones
 };
 
-const pacientes = ref([])
+
 const ipress = ref([])
 const periodoIpress = ref([])
 const periodos = ref([])
@@ -195,6 +223,8 @@ const fetchPeriodo = async (url = null) => {
 };
 
 onMounted(() => {
+  localStorage.getItem('perfil')
+  console.log("perfil",localStorage.getItem('perfil'))
   fetchPeriodoIpress();
   fetchPacientes();
   fetchIpress();

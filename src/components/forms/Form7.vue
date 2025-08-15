@@ -568,7 +568,7 @@
         <div class="flex gap-2 mt-4">
           <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
           <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="postForm()">Registrar</button>
-          <button class="bg-blue-700 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button>
+          <!-- <button class="bg-blue-700 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button> -->
         </div>
       </div>
 
@@ -588,12 +588,12 @@
           <li><strong>Estado:</strong> Nuevo</li>
           <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
         </ul>
-        <div class="mt-4">
+        <!-- <div class="mt-4">
           <label class="text-sm font-medium">Historial de Registros</label>
           <select class="w-full border px-2 py-1 rounded">
             <option>Registro 1</option>
           </select>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
@@ -683,13 +683,37 @@ const periodoSeleccionado = periodo
 
 
 console.log("Paciente recibido:", periodo)  // ✅ No lanzará error
+const validarCampos = () => {
+  // Lista de campos requeridos (ajusta según tus necesidades)
+  const camposRequeridos = [
+    'turno', 'frecuencia',
+    'vhbEstado', 'vhbFecha',
+    'vhcEstado', 'vhcFecha',
+    'vihEstado', 'vihFecha',
+    'vacunaHepatitis', 'estadoAcHBs', 'fechaVacHepatitis',
+    'dosisHepatitisB', 'fechaHepatitisB', 'motivoNoHepatitisB',
+    'dosisCovid', 'fechaCovid', 'motivoNoCovid',
+    'fechaInfluenza', 'motivoNoInfluenza',
+    'fechaNeumococo', 'motivoNoNeumococo'
+  ];
+  for (const campo of camposRequeridos) {
+    if (!form[campo] || form[campo] === '' || form[campo] === null) {
+      return campo;
+    }
+  }
+  return null;
+};
+
 const postForm = async (url = null) => {
+  const campoFaltante = validarCampos();
+  if (campoFaltante) {
+    alert(`Por favor complete el campo obligatorio: ${campoFaltante}`);
+    return;
+  }
   try {
     const respuesta = await postAllIpress(url ?? "/vacunaciones/", form);
-    /* pacienteSeleccionado.value = respuesta; */
-    alert("Se registro con exito")
-    window.location.reload()
-
+    alert("Se registró con éxito");
+    window.location.reload();
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }

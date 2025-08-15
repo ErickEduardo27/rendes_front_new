@@ -446,12 +446,12 @@ select, input[type="text"], input[type="date"] {
                     <li><strong>Estado:</strong> Nuevo</li>
                     <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
                 </ul>
-                <div class="mt-4">
+                <!-- <div class="mt-4">
                     <label class="text-sm font-medium">Historial de Registros</label>
                     <select class="w-full border px-2 py-1 rounded">
                         <option>Registro 1</option>
                     </select>
-                </div>
+                </div> -->
             </div>
         </div>
     </div>
@@ -460,7 +460,8 @@ select, input[type="text"], input[type="date"] {
 <script setup>
 import { useRouter } from 'vue-router'
 import { ref, onMounted, reactive, computed } from 'vue';
-import { getAllIpress, postAllIpress, putAllIpress } from "@/services/ipress/Ipress.service";
+import { getAllIpress, patchAllIpress, postAllIpress, putAllIpress } from "@/services/ipress/Ipress.service";
+import { ElMessage } from 'element-plus';
 
 // 👇 defineProps debe estar fuera de cualquier función
 const { paciente, periodo,periodoIpress } = defineProps({
@@ -543,8 +544,28 @@ const minFechaNuevoAcceso = computed(() => {
   fecha.setDate(fecha.getDate() + 1);
   return fecha.toISOString().split('T')[0]; // formato YYYY-MM-DD
 });
+const validarFormulario = () => {
+  const camposObligatorios = [
+    'fecha_creacion_acceso_nuevo',
+    'tipo_acceso_nuevo',
+    'localizacion_acceso_nuevo',
+  ];
 
+  for (const campo of camposObligatorios) {
+    if (!form[campo]) {
+      ElMessage({
+        message: `Por favor complete el campo: ${campo}`,
+        type: 'warning',
+        plain: true,
+      })
+      return false;
+    }
+  }
+
+  return true;
+};
 const postForm = async (url = null) => {
+     if (!validarFormulario()) return;
     const formEnvio={
         fecha_creacion_acceso_actual:form.fecha_creacion_acceso_nuevo,
         tipo_acceso_actual:form.tipo_acceso_nuevo,
@@ -561,6 +582,7 @@ const postForm = async (url = null) => {
     try {
         await postAllIpress(url ?? "/unidadesActuales/", formEnvio);
         if(periodoActual.value[0]){
+        console.log("editar")
             await editForm();
         }else{
             alert("Se registro con exito")
@@ -574,7 +596,7 @@ const postForm = async (url = null) => {
 
 const editForm = async (url = null) => {
     try {
-        await putAllIpress(url ?? "/unidadesActuales/"+periodoActual.value[0].id_unidad_actual+"/", form);
+        await patchAllIpress(url ?? "/unidadesActuales/"+periodoActual.value[0].id_unidad_actual+"/", form);
             alert("Se registro con exito")
             window.location.reload()
     } catch (error) {
