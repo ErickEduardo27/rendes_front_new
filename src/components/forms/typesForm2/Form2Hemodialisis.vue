@@ -606,7 +606,7 @@ const editForm = async (url = null) => {
 
 const fetchPeriodoActual = async (url = null) => {
     try {
-        const respuesta = await getAllIpress(url ?? "/unidadesActuales/?id_periodo_ipress=" +periodoIpress);
+        const respuesta = await getAllIpress( "/unidadesActuales/?id_periodo_ipress=" +periodoIpress);
         periodoActual.value = respuesta;
         form.fecha_creacion_acceso_actual = periodoActual.value[0].fecha_creacion_acceso_actual;
         form.tipo_acceso_actual = periodoActual.value[0].tipo_acceso_actual;
@@ -615,9 +615,9 @@ const fetchPeriodoActual = async (url = null) => {
         console.error('Error al obtener IPRESS:', error);
     }
 };
-const fetchPaciente = async (url = null) => {
+const fetchPaciente = async () => {
     try {
-        const respuesta = await getAllIpress(url ?? "/pacientes/" + paciente.id_paciente);
+        const respuesta = await getAllIpress("/pacientes/" + paciente.id_paciente);
         pacienteSeleccionado.value = respuesta;
         console.log("paientes seleccionado", pacienteSeleccionado)
 
