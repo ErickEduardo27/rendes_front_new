@@ -1,7 +1,7 @@
 <template>
   <div class="p-6 space-y-8 bg-gradient-to-br from-blue-50 to-white min-h-screen">
     <!-- Filtros superiores -->
-    <div class="flex flex-wrap items-center gap-4 bg-white/80 p-4 rounded-lg shadow mb-4">
+    <!-- <div class="flex flex-wrap items-center gap-4 bg-white/80 p-4 rounded-lg shadow mb-4">
       <div class="flex flex-col">
         <label class="text-xs font-semibold text-gray-600">Mes de Reporte</label>
         <select v-model="filtros.mes" class="border px-2 py-1 rounded focus:ring-2 focus:ring-blue-200">
@@ -20,20 +20,18 @@
           <option v-for="clinica in clinicas" :key="clinica" :value="clinica">{{ clinica }}</option>
         </select>
       </div>
-      <!-- <div class="flex flex-col">
-        <label class="text-xs font-semibold text-gray-600">Modalidad de Diálisis</label>
-        <select v-model="filtros.modalidad" class="border px-2 py-1 rounded focus:ring-2 focus:ring-blue-200">
-          <option disabled value="">Seleccione</option>
-          <option>Hemodiálisis</option>
-          <option>Diálisis Peritoneal</option>
-        </select>
-      </div> -->
-     <!--  <div class="flex flex-col">
-        <label class="text-xs font-semibold text-gray-600">Reporte</label>
-        <select v-model="filtros.reporte" class="border px-2 py-1 rounded focus:ring-2 focus:ring-blue-200">
-          <option v-for="reporte in reportes" :key="reporte" :value="reporte">{{ reporte }}</option>
-        </select>
-      </div> -->
+    </div> -->
+     <div class="flex items-center gap-4 mb-4 flex-wrap">
+      <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
+      <select v-model="periodoSeleccionado" class="border p-1 rounded" @change="searchPeriodoIpress">
+        <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">{{ periodo.periodo }}
+        </option>
+      </select>
+      <div class="d-flex align-items-center">
+        <label>Clínica</label>
+        <el-autocomplete v-model="clinicaSeleccionada" :fetch-suggestions="querySearch" clearable
+          placeholder="Ingrese algo" @select="handleSelect" :value-key="'ipress'" style="margin: 0 1rem;width: 400px;"/>
+      </div>
     </div>
 
     <!-- Tarjetas de resumen -->
@@ -100,13 +98,20 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-
+import { getAllIpress } from '@/services/ipress/Ipress.service';
+import { onMounted, ref } from 'vue';
+const periodoSeleccionado = ref(94)
+const idClinicaSeleccionada = ref(62877)
 const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO'];
 const anios = [2024, 2025];
 const clinicas = ['DA VIDA SAC.', 'SANAR SAC.', 'SALUD RENAL'];
 const reportes = ['DA VIDA SAC', 'SANAR SAC'];
-
+const ipress = ref([])
+const periodoIpress = ref([])
+const periodos = ref([])
+const idPerido = ref(94)
+const idIpress = ref(62877)
+const clinicaSeleccionada = ref('CENTRO NACIONAL DE SALUD RENAL')
 const filtros = ref({
   mes: 'JULIO',
   anio: 2025,
@@ -117,7 +122,7 @@ const filtros = ref({
 
 const resumen = ref({
   totalPacientes: 92,
-  descripcion: '92 pacientes son atendidos en la IPRESS Clínica DA VIDA SAC, de los cuales 36 son mujeres (39%) y 56 varones (61%), así también 42 pacientes tienen 60 años o más (46%).',
+  descripcion: '92 pacientes son atendidos en Centro Nacional de Salud Renal, de los cuales 36 son mujeres (39%) y 56 varones (61%), así también 42 pacientes tienen 60 años o más (46%).',
   cvcMensaje: '11 pacientes tienen implantado un CVC/T como acceso actual (12%), recuerde que este tipo de acceso es de temporalidad corta y requiere cambiar a un acceso vascular definitivo.',
   tipoAcceso: {
     FAV: 20,
@@ -138,6 +143,62 @@ const resumen = ref({
   hbRegistrado: 'Registrado / No Registrado',
   ktvRegistrado: 'Registrado / No Registrado',
   alertaHb: '0 pacientes tienen Hemoglobina (Hb) menor a 10 g/dL (0%). 11 pacientes tienen Kt/V menor a 1.3 (15%).'
+});
+
+const fetchPeriodoIpress = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/periodoIpress/");
+    periodoIpress.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+
+const handleSelect = (item) => {
+  idClinicaSeleccionada.value = item.id_ipress; // ID u otros datos
+  searchPeriodoIpress();
+};
+const querySearch = (queryString, cb) => {
+  const results = queryString
+    ? ipress.value.filter(r =>
+      r.ipress?.toLowerCase().includes(queryString.toLowerCase())
+    )
+    : ipress.value;
+  cb(results);
+};
+const fetchReporte = async () => {
+  try {
+    const respuesta = await getAllIpress("/reporte_resultados/");
+    /* periodos.value = respuesta; */
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+const fetchIpress = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/ipress/");
+    ipress.value = respuesta
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+const fetchPeriodo = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/periodos/");
+    periodos.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+onMounted(() => {
+  fetchPeriodoIpress();
+  fetchIpress();
+  fetchPeriodo();
+  fetchReporte();
 });
 </script>
 
