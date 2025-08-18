@@ -145,7 +145,7 @@ const numeroBadge = (paciente, n) => {
 const ipress = ref([])
 const periodoIpress = ref([])
 const periodos = ref([])
-const idPerido = ref(55)
+const idPerido = ref(94)
 const idIpress = ref(62877)
 
 const fechaActual = new Date()
