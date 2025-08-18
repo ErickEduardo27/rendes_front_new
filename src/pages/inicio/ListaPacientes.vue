@@ -76,6 +76,7 @@ import { ref, computed, onMounted,watch } from 'vue';
 import { getAllIpress } from "@/services/ipress/Ipress.service";
 const perfil = localStorage.getItem('perfil')
 const pacientes = ref([])
+
 // --- Paginación ---
 const paginaActual = ref(1)
 const pacientesPorPagina = 5
@@ -95,7 +96,7 @@ const modalidadSeleccionada = ref('todos')
 const clinicaSeleccionada = ref('CENTRO NACIONAL DE SALUD RENAL')
 const idClinicaSeleccionada = ref(62877)
 const idPeriodoIpress = ref(17)
-const periodoSeleccionado = ref(55)
+const periodoSeleccionado = ref(94)
 const mostrarFormulario = ref(false)
 const componenteFormulario = ref(null)
 const emit = defineEmits([

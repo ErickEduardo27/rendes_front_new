@@ -175,11 +175,12 @@ const periodoIpress = ref([])
 const periodoSeleccionado = ref(55)
 
 const pacientesFiltrados = computed(() => pacientes.value)
-
+const pacienteDialisis = ref(null)
 function seleccionarPaciente(paciente) {
   pacienteEncontrado.value = paciente
   busquedaRealizada.value = true
   pacienteSeleccionado.value = paciente
+  fetchPacienteDialisis();
 }
 function pushHome() {
   router.push('/calidad-agua')
@@ -193,8 +194,21 @@ function close() {
 const patchPacienteDialisis = async (paciente) => {
   console.log("imprimiendo id periodo ipress", paciente)
   try {
-    const respuesta = await patchAllIpress("/pacientesDialisis/"+paciente.id_paciente_dialisis+"/",{id_periodo_ipress:idPeriodoIpress.value});
-    /* periodoIpress.value = respuesta; */
+    const respuesta = await patchAllIpress("/pacientesDialisis/"+pacienteDialisis.value+"/",{id_periodo_ipress:idPeriodoIpress.value});
+    if(pacienteSeleccionado.value.estado === 'REGISTRADO') {
+      await patchAllIpress("/pacientes/"+pacienteSeleccionado.value.id_paciente+"/",{estado:'NUEVO'});
+    }else {
+      await patchAllIpress("/pacientes/"+pacienteSeleccionado.value.id_paciente+"/",{estado:'REINGRESO'});
+    }
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+const fetchPacienteDialisis = async () => {
+  try {
+    const respuesta = await getAllIpress( "/pacientesDialisis/?id_paciente=" + pacienteSeleccionado.value.id_paciente);
+    pacienteDialisis.value = respuesta[0].id_paciente_dialisis;
 
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
