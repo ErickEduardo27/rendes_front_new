@@ -26,6 +26,10 @@
     </div>
 
     <h3 class="text-md font-bold my-2">Pacientes Ingresados:</h3>
+    <div class="flex gap-4 mb-4">
+      <input v-model="filtroNombre" placeholder="Buscar por nombre" class="border px-2 py-1 rounded w-48" />
+      <input v-model="filtroDni" placeholder="Buscar por DNI" class="border px-2 py-1 rounded w-48" />
+    </div>
     <div class="grid grid-cols-9 font-semibold border-b pb-1 mb-1">
       <span class="col-span-2" style="display:flex ;text-align: left;align-items: center;">Nombre</span>
       <span  style="display:flex;justify-content: center;align-items: center;">UNIDAD</span>
@@ -40,9 +44,9 @@
         <div class="col-span-2 font-medium">
           {{ paciente.paciente }}
           <div class="text-sm text-gray-500 uppercase">
-            ESTADO: NUEVO<br />
+            ESTADO: {{ paciente.estado }}<br />
             Modalidad: {{ paciente.modalidad == 1 ? "Hemodialisis" : "Peritoneal" }}<br />
-            Clínica: {{ paciente.ipress }}
+            <!-- Clínica: {{ paciente.ipress }} -->
           </div>
         </div>
         <div v-for="n in 5" :key="n" class="text-center relative inline-block">
@@ -63,15 +67,17 @@
       <button class="px-3 py-1 rounded bg-gray-200" :disabled="paginaActual === totalPaginas" @click="paginaActual++">Siguiente</button>
     </div>
 
-    <div class="text-right mt-6">
+    <!-- <div class="text-right mt-6">
       <button class="bg-sky-600 text-white px-6 py-2 rounded">
         Terminar Registro General
       </button>
-    </div>
+    </div> -->
   </div>
 </template>
 
 <script setup>
+const filtroNombre = ref("");
+const filtroDni = ref("");
 import { ref, computed, onMounted,watch } from 'vue';
 import { getAllIpress } from "@/services/ipress/Ipress.service";
 const perfil = localStorage.getItem('perfil')
@@ -80,10 +86,21 @@ const pacientes = ref([])
 // --- Paginación ---
 const paginaActual = ref(1)
 const pacientesPorPagina = 5
-const totalPaginas = computed(() => Math.ceil(pacientes.value.length / pacientesPorPagina))
+
+const pacientesFiltrados = computed(() => {
+  const nombre = filtroNombre.value.trim().toLowerCase();
+  const dni = filtroDni.value.trim().toLowerCase();
+  return pacientes.value.filter(p => {
+    const coincideNombre = !nombre || (p.paciente && p.paciente.toLowerCase().includes(nombre));
+    const coincideDni = !dni || (p.documento && p.documento.toLowerCase().includes(dni));
+    return coincideNombre && coincideDni;
+  });
+});
+
+const totalPaginas = computed(() => Math.ceil(pacientesFiltrados.value.length / pacientesPorPagina))
 const pacientesPaginados = computed(() => {
   const inicio = (paginaActual.value - 1) * pacientesPorPagina
-  return pacientes.value.slice(inicio, inicio + pacientesPorPagina)
+  return pacientesFiltrados.value.slice(inicio, inicio + pacientesPorPagina)
 })
 
 watch(pacientes, () => {
@@ -143,6 +160,7 @@ const numeroBadge = (paciente, n) => {
 
 
 const ipress = ref([])
+const ipressAsignadas = ref([])
 const periodoIpress = ref([])
 const periodos = ref([])
 const idPerido = ref(94)
@@ -206,11 +224,21 @@ const querySearch = (queryString, cb) => {
 };
 const fetchIpress = async (url = null) => {
   try {
-    const respuesta = await getAllIpress(url ?? "/ipress/");
-    ipress.value = respuesta
-
+    const usuario = JSON.parse(localStorage.getItem('user'));
+    if (!usuario || !usuario.id_usuario) {
+      ipress.value = [];
+      return;
+    }
+    // Obtener asignaciones del usuario
+    const asignaciones = await getAllIpress(`/asignaciones/?usuario=${usuario.id_usuario}`);
+    const idsAsignados = asignaciones.map(a => a.ipress);
+    ipressAsignadas.value = idsAsignados;
+    // Obtener solo las IPRESS asignadas
+    const todasIpress = await getAllIpress(url ?? "/ipress/");
+    ipress.value = todasIpress.filter(i => idsAsignados.includes(i.id_ipress));
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
+    ipress.value = [];
   }
 };
 const fetchPeriodo = async (url = null) => {

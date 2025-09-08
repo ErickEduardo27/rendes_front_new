@@ -582,7 +582,7 @@ const eventosInfecciosos = ref([
                     </li>
                     <li><strong>Tipo de Registro:</strong> {{ pacienteSeleccionado.value.id_modalidad
                         == 1 ? "Hemodialisis" : "Peritonial" }}</li>
-                    <li><strong>Estado:</strong> Nuevo</li>
+                    <li><strong>Estado:</strong> {{ pacienteSeleccionado.value.estado }}</li>
                     <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
                 </ul>
                <!--  <div class="mt-4">

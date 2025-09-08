@@ -431,7 +431,7 @@ select, input[type="text"], input[type="date"] {
             </div>
 
             <!-- Perfil del paciente al costado -->
-            <div class="w-80 p-4 border rounded shadow" v-if="pacienteSeleccionado.value">
+            <div class="w-80 p-4 border rounded shadow cursor-pointer" v-if="pacienteSeleccionado.value" @click="abrirHistorico">
                 <div class="flex items-center justify-center mb-2">
                     <div class="bg-gray-300 rounded-full h-16 w-16"></div>
                 </div>
@@ -443,21 +443,54 @@ select, input[type="text"], input[type="date"] {
                     </li>
                     <li><strong>Tipo de Registro:</strong> {{ pacienteSeleccionado.value.id_modalidad
                         == 1 ? "Hemodialisis" : "Peritonial" }}</li>
-                    <li><strong>Estado:</strong> Nuevo</li>
+                    <li><strong>Estado:</strong> {{ pacienteSeleccionado.value.estado }}</li>
                     <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
                 </ul>
-                <!-- <div class="mt-4">
-                    <label class="text-sm font-medium">Historial de Registros</label>
-                    <select class="w-full border px-2 py-1 rounded">
-                        <option>Registro 1</option>
-                    </select>
-                </div> -->
+            </div>
+
+            <!-- Modal flotante para histórico -->
+            <div v-if="mostrarHistorico" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div class="bg-white rounded shadow-lg p-6 w-[400px] max-h-[80vh] overflow-y-auto relative">
+                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarHistorico">&times;</button>
+                    <h3 class="text-lg font-bold mb-4 text-center">Histórico del Paciente</h3>
+                    <div v-if="historico.length === 0" class="text-gray-500 text-center">No hay registros históricos.</div>
+                    <ul v-else class="space-y-2">
+                        <li v-for="item in historico" :key="item.id_registro" class="border rounded p-2">
+                            <div><strong>Fecha:</strong> {{ item.fecha }}</div>
+                            <div><strong>Detalle:</strong> {{ item.detalle }}</div>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
+const mostrarHistorico = ref(false);
+const historico = ref([]);
+
+const abrirHistorico = async () => {
+    mostrarHistorico.value = true;
+    // Aquí deberías hacer la petición real al backend para obtener el histórico del paciente
+    // Ejemplo de datos mock:
+    historico.value = [];
+    try {
+        // Reemplaza esta llamada por la real:
+        // historico.value = await getAllIpress(`/historico_paciente/${pacienteSeleccionado.value.id_paciente}`);
+        historico.value = [
+            { id_registro: 1, fecha: '2024-01-15', detalle: 'Ingreso a unidad' },
+            { id_registro: 2, fecha: '2024-06-10', detalle: 'Cambio de acceso' },
+            { id_registro: 3, fecha: '2025-03-22', detalle: 'Egreso temporal' },
+        ];
+    } catch (e) {
+        historico.value = [];
+    }
+};
+
+const cerrarHistorico = () => {
+    mostrarHistorico.value = false;
+};
 import { useRouter } from 'vue-router'
 import { ref, onMounted, reactive, computed } from 'vue';
 import { getAllIpress, patchAllIpress, postAllIpress, putAllIpress } from "@/services/ipress/Ipress.service";

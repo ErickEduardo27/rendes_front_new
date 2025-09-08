@@ -182,10 +182,11 @@
 </template>
 
 <script setup>
-import { reactive, computed, watch, ref } from 'vue'
-import { postAllIpress } from "@/services/ipress/Ipress.service";
+import { reactive, computed, watch, ref ,onMounted } from 'vue'
+import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage } from 'element-plus';
 const seleccionadas = ref([])
+const periodos = ref([])
 const form = reactive({
   tipoDocumento: '',
   numeroDocumento: '',
@@ -247,19 +248,25 @@ const validarFormulario = () => {
 watch(() => form.fechaInicioTRR, (nuevaFecha) => {
   if (!nuevaFecha) {
     form.edadInicioTRR = '';
+    form.idPeriodo = null;
     return;
   }
 
+  // Calcular edad de inicio TRR
   const hoy = new Date();
   const nacimiento = new Date(nuevaFecha);
   let edad = hoy.getFullYear() - nacimiento.getFullYear();
   const m = hoy.getMonth() - nacimiento.getMonth();
-
   if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
     edad--;
   }
-
   form.edadInicioTRR = edad;
+
+  // Buscar el periodo por año y mes (ej: "2025-09")
+  const fecha = new Date(nuevaFecha);
+  const periodoStr = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+  const periodoEncontrado = periodos.value.find(p => p.periodo === periodoStr);
+  form.idPeriodo = periodoEncontrado ? periodoEncontrado.id_periodo : null;
 });
 
 const dropdownAbierto = ref(false)
@@ -574,6 +581,34 @@ const registrarPacienteDialisis = async (respuesta) => {
   };
   try {
     await postAllIpress("/pacientesDialisis/", payload);
+    /* alert("Se registro con exito")
+    window.location.reload() */
+    registroPacienteHistorial(respuesta);
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+
+}
+
+const fetchPeriodo = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/periodos/");
+    periodos.value = respuesta;
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+};
+
+const registroPacienteHistorial = async (respuesta) => {
+  const payload = {
+    paciente: respuesta.id_paciente,
+    periodo: form.idPeriodo,
+    condicion: 'REGISTRADO',
+  };
+  try {
+    await postAllIpress("/PacienteRegistro/", payload);
     alert("Se registro con exito")
     window.location.reload()
 
@@ -582,4 +617,7 @@ const registrarPacienteDialisis = async (respuesta) => {
   }
 
 }
+onMounted(() => {
+  fetchPeriodo();
+});
 </script>

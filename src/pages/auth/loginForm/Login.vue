@@ -1,5 +1,6 @@
 <template>
     <div :class="{ dark: isDark }">
+        <LoadingOverlay :active="loading" :is-full-page="true" :can-cancel="false" :color="isDark ? '#60a5fa' : '#2563eb'" :background="isDark ? 'rgba(30,41,59,0.7)' : 'rgba(255,255,255,0.7)'" :loader="loaderType" :width="64" :height="64" :z-index="9999"/>
         <div
             class="min-h-screen bg-gradient-to-b from-[#effdff] to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 relative">
             <button @click="toggleDarkMode"
@@ -86,12 +87,18 @@
 </template>
 
 <script setup>
+
+import LoadingOverlay from 'vue3-loading-overlay';
+import 'vue3-loading-overlay/dist/vue3-loading-overlay.css';
+
+
 import { AuthService } from '@/services/authService/authService'
 import { useAuthStore } from '@/store/auth'
 import { UserIcon, LockClosedIcon, EyeIcon, MoonIcon, SunIcon } from '@heroicons/vue/24/outline'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { toast } from 'vue-sonner'
+import { toast } from 'vue3-toastify';
+import 'vue3-toastify/dist/index.css';
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -99,6 +106,7 @@ const username = ref('')
 const password = ref('')
 const isDark = ref(localStorage.getItem('theme') === 'dark')
 const loading = ref(false)
+const loaderType = ref('dots'); // Puedes cambiar a 'spinner', 'bars', 'dots', etc.
 
 
 const toggleDarkMode = () => {
@@ -131,10 +139,35 @@ const handleLogin = async (e) => {
         localStorage.setItem('perfil', userData.datosPerfil.perfil)
         await router.push('/')
 
-        toast.success('¡Inicio de sesión exitoso!')
+    toast.success('¡Inicio de sesión exitoso! Bienvenido al sistema', {
+        autoClose: 3000,
+        position: 'top-center',
+        theme: isDark.value ? 'dark' : 'colored',
+        style: {
+            background: 'linear-gradient(90deg, #a7f3d0 0%, #38bdf8 100%)',
+            color: '#0f172a',
+            fontWeight: 'bold',
+            fontSize: '1rem',
+            borderRadius: '12px',
+        },
+        icon: '✅',
+    });
     } catch (err) {
         console.error('Error durante el login:', err)
-        alert('Correo o contraseña incorrectos ❌')
+                toast.error('¡Acceso denegado! Correo o contraseña incorrectos', {
+                    autoClose: 3500,
+                    position: 'top-center',
+                    theme: isDark.value ? 'dark' : 'colored',
+                    style: {
+                        background: 'linear-gradient(90deg, #fbc2eb 0%, #a6c1ee 100%)',
+                        color: '#7c2d12',
+                        fontWeight: 'bold',
+                        fontSize: '1rem',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)'
+                    },
+                    icon: '🔒',
+                });
     } finally {
         loading.value = false
     }

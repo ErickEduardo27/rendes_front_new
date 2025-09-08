@@ -52,7 +52,30 @@
             <td class="flex border p-3 gap-5">
               <button @click="showEditModal(usuario)" class="text-[#007BFF] hover:underline">Editar</button>
               <button @click="deleteUsuario(usuario.id_usuario)" class="text-[#007BFF] hover:underline">Eliminar</button>
+              <button @click="openAsignacionModal(usuario)" class="text-[#007BFF] hover:underline">Asignación</button>
             </td>
+    <!-- Modal flotante para asignar IPRESS -->
+    <div v-if="showAsignacionModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-lg relative">
+        <h3 class="text-lg font-bold mb-4">Asignar IPRESS a {{ usuarioAsignacion?.nombre }}</h3>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1">Selecciona las IPRESS a asignar</label>
+          <input v-model="filtroIpress" placeholder="Buscar IPRESS por nombre..." class="border px-2 py-1 rounded w-full mb-2" />
+          <div class="max-h-48 overflow-y-auto border rounded p-2">
+            <div v-for="ipress in listaIpressFiltrada" :key="ipress.id_ipress" class="flex items-center gap-2 py-1">
+              <input type="checkbox" :id="'ipress-' + ipress.id_ipress" :value="ipress.id_ipress" v-model="ipressSeleccionadas" />
+              <label :for="'ipress-' + ipress.id_ipress" class="cursor-pointer select-none">
+                {{ ipress.nombre_corto }} ({{ ipress.ipress }})
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button type="button" @click="showAsignacionModal = false" class="px-4 py-2 rounded bg-gray-300 text-gray-700">Cancelar</button>
+          <button type="button" @click="guardarAsignacion" class="px-4 py-2 rounded bg-[#007BFF] text-white">Guardar Asignación</button>
+        </div>
+      </div>
+    </div>
           </tr>
         </tbody>
       </table>
@@ -135,9 +158,58 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue';
+import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { deleteAllIpress, getAllIpress, postAllIpress, putAllIpress } from '@/services/ipress/Ipress.service';
 
+const filtroIpress = ref("");
+const listaIpressFiltrada = computed(() => {
+  const texto = filtroIpress.value.trim().toLowerCase();
+  if (!texto) return listaIpress.value;
+  return listaIpress.value.filter(i =>
+    (i.nombre_corto && i.nombre_corto.toLowerCase().includes(texto)) ||
+    (i.ipress && i.ipress.toLowerCase().includes(texto))
+  );
+});
+const showAsignacionModal = ref(false);
+const usuarioAsignacion = ref(null);
+const ipressSeleccionadas = ref([]);
+const listaIpress = ref([]);
+
+const openAsignacionModal = async (usuario) => {
+  usuarioAsignacion.value = usuario;
+  showAsignacionModal.value = true;
+  // Obtener todas las IPRESS
+  try {
+    listaIpress.value = await getAllIpress('/ipress/');
+    // Obtener asignaciones actuales del usuario
+    const asignaciones = await getAllIpress(`/asignaciones/?usuario=${usuario.id_usuario}`);
+    ipressSeleccionadas.value = asignaciones.map(a => a.ipress);
+  } catch (e) {
+    listaIpress.value = [];
+    ipressSeleccionadas.value = [];
+  }
+};
+
+const guardarAsignacion = async () => {
+  try {
+    // Eliminar asignaciones actuales del usuario
+    const asignacionesActuales = await getAllIpress(`/asignaciones/?usuario=${usuarioAsignacion.value.id_usuario}`);
+    for (const asignacion of asignacionesActuales) {
+      await deleteAllIpress(`/asignaciones/${asignacion.id_asignacion}/`);
+    }
+    // Crear nuevas asignaciones
+    for (const id_ipress of ipressSeleccionadas.value) {
+      await postAllIpress('/asignaciones/', {
+        usuario: usuarioAsignacion.value.id_usuario,
+        ipress: id_ipress
+      });
+    }
+    showAsignacionModal.value = false;
+    alert('Asignación guardada correctamente');
+  } catch (e) {
+    alert('Error al guardar asignación');
+  }
+};
 const usuarios = reactive({
   results: [],
   count: 0,
