@@ -1166,7 +1166,7 @@ const form = ref({
 
 const fetchPaciente = async (url = null) => {
     try {
-        const respuesta = await getAllIpress(url ?? "/pacientes/" + paciente.id_paciente);
+        const respuesta = await getAllIpress("/pacientes/" + paciente.id_paciente);
         pacienteSeleccionado.value = respuesta;
         console.log("paientes seleccionado", pacienteSeleccionado)
 

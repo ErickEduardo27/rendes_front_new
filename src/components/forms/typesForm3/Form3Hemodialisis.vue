@@ -628,7 +628,7 @@ const postForm = async (url = null) => {
 };
 const fetchPaciente = async (url = null) => {
     try {
-        const respuesta = await getAllIpress(url ?? "/pacientes/" + paciente.id_paciente);
+        const respuesta = await getAllIpress( "/pacientes/" + paciente.id_paciente);
         pacienteSeleccionado.value = respuesta;
 
     } catch (error) {
