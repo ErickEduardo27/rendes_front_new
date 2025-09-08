@@ -178,11 +178,20 @@ const fetchReporte = async () => {
 };
 const fetchIpress = async (url = null) => {
   try {
-    const respuesta = await getAllIpress(url ?? "/ipress/");
-    ipress.value = respuesta
-
+    const usuario = JSON.parse(localStorage.getItem('user'));
+    if (!usuario || !usuario.id_usuario) {
+      ipress.value = [];
+      return;
+    }
+    // Obtener asignaciones del usuario
+    const asignaciones = await getAllIpress(`/asignaciones/?usuario=${usuario.id_usuario}`);
+    const idsAsignados = asignaciones.map(a => a.ipress);
+    // Obtener solo las IPRESS asignadas
+    const todasIpress = await getAllIpress(url ?? "/ipress/");
+    ipress.value = todasIpress.filter(i => idsAsignados.includes(i.id_ipress));
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
+    ipress.value = [];
   }
 };
 const fetchPeriodo = async (url = null) => {

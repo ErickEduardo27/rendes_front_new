@@ -1,6 +1,7 @@
 <template>
         <n-config-provider>
                 <n-message-provider>
+                        <Toast />
                         <Toaster position="top-center" richColors/>
                         <router-view />
                 </n-message-provider>
@@ -8,6 +9,7 @@
 </template>
 
 <style></style>
+
 
 <script setup>
 import { NConfigProvider, NMessageProvider } from "naive-ui";

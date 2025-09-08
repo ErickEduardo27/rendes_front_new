@@ -145,7 +145,7 @@ import { ref, computed, onMounted } from 'vue'
 const emit = defineEmits(['cancelar'])
 import Home from './Home.vue'
 import { useRouter } from 'vue-router'
-import { getAllIpress, patchAllIpress, putAllIpress } from '@/services/ipress/Ipress.service'
+import { getAllIpress, patchAllIpress, postAllIpress, putAllIpress } from '@/services/ipress/Ipress.service'
 const pacienteSeleccionado = ref(null)
 const router = useRouter()
 const idPeriodoIpress = ref(17)
@@ -194,17 +194,36 @@ function close() {
 const patchPacienteDialisis = async (paciente) => {
   console.log("imprimiendo id periodo ipress", paciente)
   try {
-    const respuesta = await patchAllIpress("/pacientesDialisis/"+pacienteDialisis.value+"/",{id_periodo_ipress:idPeriodoIpress.value});
+    await patchAllIpress("/pacientesDialisis/"+pacienteDialisis.value+"/",{id_periodo_ipress:idPeriodoIpress.value});
     if(pacienteSeleccionado.value.estado === 'REGISTRADO') {
       await patchAllIpress("/pacientes/"+pacienteSeleccionado.value.id_paciente+"/",{estado:'NUEVO'});
+      registroPacienteHistorial('NUEVO')
     }else {
       await patchAllIpress("/pacientes/"+pacienteSeleccionado.value.id_paciente+"/",{estado:'REINGRESO'});
+      registroPacienteHistorial('REINGRESO')
     }
 
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }
 };
+const registroPacienteHistorial = async (estado_condicion) => {
+  const payload = {
+    paciente: pacienteSeleccionado.value.id_paciente,
+    periodo: idPerido.value,
+    ipress: idIpress.value,
+    condicion: estado_condicion,
+  };
+  try {
+    await postAllIpress("/PacienteRegistro/", payload);
+    alert("Se registro con exito")
+    window.location.reload()
+
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+  }
+
+}
 const fetchPacienteDialisis = async () => {
   try {
     const respuesta = await getAllIpress( "/pacientesDialisis/?id_paciente=" + pacienteSeleccionado.value.id_paciente);

@@ -2,7 +2,7 @@
   <div>
     <v-container max-width="2500" style="max-width: 3000px !important">
       <v-card class="mx-auto my-5" max-width="2500">
-        <v-system-bar  class="py-5 px-3" color="#1973a5" style="color:#fff" dark> Lista de usuarios </v-system-bar>
+        <v-system-bar  class="py-5 px-3" color="#1973a5" style="color:#fff" dark> Lista de usuariossss </v-system-bar>
       </v-card>
        <v-card class="mx-auto my-5" max-width="2500">
         <v-row>
