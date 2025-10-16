@@ -220,8 +220,18 @@ export default {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div v-for="(campo, index) in camposResultados" :key="index" class="space-y-1">
             <label class="block font-semibold text-sm text-gray-700">{{ campo.label }}</label>
-            <input v-model.number="campo.model" type="number" min="0" step="1" placeholder="Ingrese un número entero"
-              class="w-full border rounded p-2 text-sm" @keydown="bloquearDecimal" @input="validarEntero(campo)" />
+            <input 
+              v-model.number="campo.model" 
+              :type="campo.allowDecimals ? 'number' : 'number'"
+              :min="0" 
+              :step="campo.allowDecimals ? '0.01' : '1'" 
+              :placeholder="campo.allowDecimals ? 'Ingrese un número con decimales' : 'Ingrese un número entero'"
+              class="w-full border rounded p-2 text-sm" 
+              @keydown="campo.allowDecimals ? permitirDecimal : bloquearDecimal" 
+              @input="campo.allowDecimals ? validarDecimal(campo) : validarEntero(campo)" 
+              :readonly="campo.readonly"
+              :class="{ 'bg-gray-100': campo.readonly }"
+            />
           </div>
         </div>
 
@@ -310,7 +320,7 @@ export default {
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 
 // 👇 defineProps debe estar fuera de cualquier función
@@ -331,7 +341,7 @@ const clinicaSeleccionada = ref('');
 const clinicas = ref(['DA VIDA SAC.']);
 const modalidad = ref('');
 
-const form = {
+const form = ref({
   tmpDialisis: null,
   eritropoyetina: null,
   hierro: null,
@@ -346,8 +356,7 @@ const form = {
   id_periodo_ipress: 17,
   id_red: 1,
   id_paciente: paciente.id_paciente
-
-}
+})
 const router = useRouter()
 const pacienteSeleccionado = paciente
 const periodoSeleccionado = periodo
@@ -356,7 +365,7 @@ const periodoSeleccionado = periodo
 console.log("Paciente recibido:", periodo)  // ✅ No lanzará error
 const postForm = async (url = null) => {
   try {
-    const respuesta = await postAllIpress(url ?? "/resultadosClinicos/", form);
+    const respuesta = await postAllIpress(url ?? "/resultadosClinicos/", form.value);
     pacienteSeleccionado.value = respuesta;
     alert("Se registro con exito")
     window.location.reload()
@@ -382,12 +391,30 @@ function bloquearDecimal(event) {
   }
 }
 
+function permitirDecimal(event) {
+  // Permite punto decimal pero bloquea otros caracteres no deseados
+  if (event.key === ',' || event.key === 'e' || event.key === '-') {
+    event.preventDefault();
+  }
+}
+
 function validarEntero(campo) {
   const valor = campo.model;
   if (!Number.isInteger(valor)) {
     campo.model = Math.floor(valor) || 0;
   } else if (valor < 0) {
     campo.model = 0;
+  }
+}
+
+function validarDecimal(campo) {
+  const valor = campo.model;
+  if (valor < 0) {
+    campo.model = 0;
+  }
+  // Limitar a 2 decimales
+  if (valor && !Number.isInteger(valor)) {
+    campo.model = Math.round(valor * 100) / 100;
   }
 }
 
@@ -424,13 +451,31 @@ onMounted(() => {
 
 
 
+// Fórmula de calcio corregido: Calcio corregido = Calcio + 0.8 * (4 - Albúmina)
+const calcioCorregidoCalculado = computed(() => {
+  if (form.value.calcio && form.value.alb) {
+    const calcio = parseFloat(form.value.calcio);
+    const albumina = parseFloat(form.value.alb);
+    const calcioCorregido = calcio + 0.8 * (4 - albumina);
+    return Math.round(calcioCorregido * 100) / 100; // Redondear a 2 decimales
+  }
+  return null;
+});
+
+// Watcher para actualizar el calcio corregido cuando cambien los valores
+watch([() => form.value.calcio, () => form.value.alb], () => {
+  if (calcioCorregidoCalculado.value !== null) {
+    form.value.calcioCorregido = calcioCorregidoCalculado.value;
+  }
+});
+
 const camposResultados = [
-  { label: 'Hb (gr/dl)', model: form.hb },
-  { label: 'Calcio (mg/dl)', model: form.calcio },
-  { label: 'Fosforo (mg/dl)', model: form.fosforo },
-  { label: 'PTHi (pg/ml)', model: form.pthi },
-  { label: 'Alb (gr/dl)', model: form.alb },
-  { label: 'Calcio corregido (mg/dl)', model: form.calcioCorregido },
-  { label: 'Kt/v', model: form.kt },
+  { label: 'Hb (gr/dl)', model: form.value.hb, allowDecimals: true },
+  { label: 'Calcio (mg/dl)', model: form.value.calcio, allowDecimals: true },
+  { label: 'Fosforo (mg/dl)', model: form.value.fosforo, allowDecimals: true },
+  { label: 'PTHi (pg/ml)', model: form.value.pthi, allowDecimals: false },
+  { label: 'Alb (gr/dl)', model: form.value.alb, allowDecimals: true },
+  { label: 'Calcio corregido (mg/dl)', model: form.value.calcioCorregido, allowDecimals: true, readonly: true },
+  { label: 'Kt/v', model: form.value.kt, allowDecimals: true },
 ];
 </script>

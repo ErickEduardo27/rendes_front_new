@@ -3,7 +3,8 @@ import { TokenService } from "@/services/api/token.service";
 import { useAuthStore } from '@/store/auth';
 import router from '@/router/index'
 
-const baseURL = import.meta.env.VITE_API;
+// Si VITE_API no está definido, usa '' para que use rutas relativas y el proxy de Vite funcione
+const baseURL = import.meta.env.VITE_API || '';
 
 class ApiClient {
   constructor() {

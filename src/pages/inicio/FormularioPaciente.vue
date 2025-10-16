@@ -18,8 +18,21 @@
 
       <div>
         <label class="text-sm font-medium">Número de Documento*</label>
-        <input v-model="form.numeroDocumento" class="w-full border px-2 py-1 rounded" :maxlength="maxLengthDocumento"
-          :pattern="soloNumeros ? '\\d*' : null" @input="onDocumentoInput" />
+        <div class="flex gap-2">
+          <input v-model="form.numeroDocumento" class="flex-1 border px-2 py-1 rounded" :maxlength="maxLengthDocumento"
+            :pattern="soloNumeros ? '\\d*' : null" @input="onDocumentoInput" 
+            :disabled="consultandoDNI" placeholder="Ingrese DNI" />
+          <button v-if="form.tipoDocumento === 'DNI' && form.numeroDocumento.length === 8 && !consultandoDNI" 
+            @click="consultarDNI" 
+            class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
+            🔍 Consultar
+          </button>
+          <button v-if="consultandoDNI" disabled 
+            class="bg-gray-400 text-white px-3 py-1 rounded text-sm">
+            ⏳ Consultando...
+          </button>
+        </div>
+        <div v-if="errorDNI" class="text-red-500 text-xs mt-1">{{ errorDNI }}</div>
       </div>
       <div>
         <label class="text-sm font-medium">Apellidos y Nombres*</label>
@@ -30,7 +43,7 @@
         <input type="date" v-model="form.fechaNacimiento" class="w-full border px-2 py-1 rounded" />
       </div>
       <div>
-        <label class="text-sm font-medium">Edad</label>
+        <label class="text-sm font-medium">Edad actual</label>
         <input v-model="form.edad" class="w-full border px-2 py-1 rounded bg-gray-100" readonly />
       </div>
       <div>
@@ -106,6 +119,7 @@
           <option disabled value="">Seleccione</option>
           <option>Hemodiálisis</option>
           <option>Diálisis Peritoneal</option>
+          <option>Trasplante</option>
         </select>
       </div>
       <div>
@@ -123,9 +137,11 @@
         <label class="text-sm font-medium">Subsistema de Salud</label>
         <select v-model="form.subsistemaSalud" class="w-full border px-2 py-1 rounded">
           <option disabled value="">Seleccione</option>
-          <option>MINSA</option>
           <option>EsSalud</option>
-          <option>Privado</option>
+          <option>Minsa</option>
+          <option>Privados / EPS</option>
+          <option>FFAA / FFPP</option>
+          <option>Otro país</option>
         </select>
       </div>
       <div>
@@ -136,9 +152,12 @@
         <label class="text-sm font-medium">Tipo de Acceso de Inicio</label>
         <select v-model="form.tipoAccesoInicio" class="w-full border px-2 py-1 rounded">
           <option disabled value="">Seleccione</option>
-          <option>Catéter</option>
-          <option>Fístula</option>
-          <option>Injerto</option>
+          <option>Catéter Venoso Central Temporal</option>
+          <option>Catéter Venoso Central de Larga Permanencia</option>
+          <option>Fístula Arteriovenosa</option>
+          <option>Injerto Autólogo</option>
+          <option>Injerto Protésico</option>
+          <option>Catéter peritoneal</option>
         </select>
       </div>
       
@@ -156,10 +175,25 @@
         <label class="text-sm font-medium">Localización Acceso de Inicio</label>
         <select v-model="form.localizacionAcceso" class="w-full border px-2 py-1 rounded">
           <option disabled value="">Seleccione</option>
-          <option>MSD</option>
-          <option>MSI</option>
-          <option>MID</option>
-          <option>MII</option>
+          <option value="1">1. FAV radial derecha</option>
+          <option value="2">2. FAV radial izquierda</option>
+          <option value="3">3. FAV braquial o cubital derecha</option>
+          <option value="4">4. FAV braquial o cubital izquierda</option>
+          <option value="5">5. CVCT yugular derecha</option>
+          <option value="6">6. CVCT yugular izquierdo</option>
+          <option value="7">7. CVCT subclavio derecho</option>
+          <option value="8">8. CVCT subclavio izquierdo</option>
+          <option value="9">9. CVCT femoral derecho</option>
+          <option value="10">10. CVCT femoral izquierdo</option>
+          <option value="11">11. CVCLP yugular derecha</option>
+          <option value="12">12. CVCLP yugular izquierdo</option>
+          <option value="13">13. CVCLP femoral derecho</option>
+          <option value="14">14. CVCLP femoral izquierdo</option>
+          <option value="15">15. CVCLP translumbar</option>
+          <option value="16">16. CVCLP transhepático</option>
+          <option value="17">17. Injerto autólogo</option>
+          <option value="18">18. Injerto protésico</option>
+          <option value="19">19. Catéter peritoneal</option>
         </select>
       </div>
       <div>
@@ -184,9 +218,12 @@
 <script setup>
 import { reactive, computed, watch, ref ,onMounted } from 'vue'
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
+import { apiClient } from "@/services/api/ApiClient";
 import { ElMessage } from 'element-plus';
 const seleccionadas = ref([])
 const periodos = ref([])
+const consultandoDNI = ref(false)
+const errorDNI = ref('')
 const form = reactive({
   tipoDocumento: '',
   numeroDocumento: '',
@@ -222,13 +259,17 @@ const validarFormulario = () => {
     'modalidadTRR',
     'fechaInicioTRR',
     'subsistemaSalud',
-    'tipoAccesoInicio',
     'fechaCreacionAcceso',
     'fechaIngresoEsSalud',
     'fechaPrimerIngreso',
     'localizacionAcceso',
     'hospitalProcedencia'
   ];
+
+  // Si la modalidad no es Trasplante, el tipo de acceso es obligatorio
+  if (form.modalidadTRR !== 'Trasplante') {
+    camposObligatorios.push('tipoAccesoInicio');
+  }
 
   for (const campo of camposObligatorios) {
     if (!form[campo]) {
@@ -252,15 +293,17 @@ watch(() => form.fechaInicioTRR, (nuevaFecha) => {
     return;
   }
 
-  // Calcular edad de inicio TRR
-  const hoy = new Date();
-  const nacimiento = new Date(nuevaFecha);
-  let edad = hoy.getFullYear() - nacimiento.getFullYear();
-  const m = hoy.getMonth() - nacimiento.getMonth();
-  if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
-    edad--;
+  // Calcular edad de inicio TRR usando fecha de inicio TRR - fecha de nacimiento
+  if (form.fechaNacimiento) {
+    const fechaInicioTRR = new Date(nuevaFecha);
+    const nacimiento = new Date(form.fechaNacimiento);
+    let edad = fechaInicioTRR.getFullYear() - nacimiento.getFullYear();
+    const m = fechaInicioTRR.getMonth() - nacimiento.getMonth();
+    if (m < 0 || (m === 0 && fechaInicioTRR.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+    form.edadInicioTRR = edad;
   }
-  form.edadInicioTRR = edad;
 
   // Buscar el periodo por año y mes (ej: "2025-09")
   const fecha = new Date(nuevaFecha);
@@ -491,6 +534,49 @@ const querySearch = (queryString, cb) => {
 const handleSelect = (val) => {
   console.log('Hospital seleccionado:', val);
 };
+
+// Función para consultar DNI en RENIEC
+const consultarDNI = async () => {
+  if (!form.numeroDocumento || form.numeroDocumento.length !== 8) {
+    errorDNI.value = 'El DNI debe tener 8 dígitos';
+    return;
+  }
+
+  consultandoDNI.value = true;
+  errorDNI.value = '';
+
+  try {
+    const response =  await getAllIpress(`/consultar-dni/?numero=${form.numeroDocumento}`);
+    const data = response;
+    if (data.nombres && data.apellidoPaterno && data.apellidoMaterno) {
+      // Llenar automáticamente los campos con los datos de RENIEC
+      form.nombreCompleto = `${data.apellidoPaterno} ${data.apellidoMaterno}, ${data.nombres}`.toUpperCase();
+      
+      ElMessage({
+        message: 'Datos obtenidos correctamente de RENIEC',
+        type: 'success',
+        plain: true,
+      });
+    } else {
+      errorDNI.value = data.error || 'No se encontraron datos para este DNI';
+      ElMessage({
+        message: 'No se encontraron datos para este DNI',
+        type: 'warning',
+        plain: true,
+      });
+    }
+  } catch (error) {
+    console.error('Error al consultar DNI:', error);
+    errorDNI.value = 'Error al consultar el DNI. Intente nuevamente.';
+    ElMessage({
+      message: 'Error al consultar el DNI',
+      type: 'error',
+      plain: true,
+    });
+  } finally {
+    consultandoDNI.value = false;
+  }
+};
 const maxLengthDocumento = computed(() => {
   if (form.tipoDocumento === 'DNI') return 8;
   if (form.tipoDocumento === 'CE') return 10;
@@ -515,6 +601,38 @@ watch(() => form.fechaNacimiento, (nuevaFecha) => {
 
   form.edad = edad;
 });
+
+// Watcher para validación cruzada entre modalidad TRR y tipo de acceso
+watch(() => form.modalidadTRR, (nuevaModalidad) => {
+  if (nuevaModalidad === 'Diálisis Peritoneal') {
+    // Si la modalidad es Diálisis Peritoneal, el acceso debe ser Catéter peritoneal
+    form.tipoAccesoInicio = 'Catéter peritoneal';
+    form.localizacionAcceso = '19'; // Catéter peritoneal
+  } else if (nuevaModalidad === 'Trasplante') {
+    // Si la modalidad es Trasplante, no se requiere tipo de acceso
+    form.tipoAccesoInicio = '';
+    form.localizacionAcceso = '';
+  }
+  // Para Hemodiálisis, no se fuerza ningún valor específico
+});
+
+// Watcher para validación cruzada entre tipo de acceso y localización
+watch(() => form.tipoAccesoInicio, (nuevoTipoAcceso) => {
+  // Si se selecciona un tipo de acceso específico, sugerir localizaciones apropiadas
+  if (nuevoTipoAcceso === 'Catéter peritoneal') {
+    form.localizacionAcceso = '19';
+  } else if (nuevoTipoAcceso === 'Injerto Autólogo') {
+    form.localizacionAcceso = '17';
+  } else if (nuevoTipoAcceso === 'Injerto Protésico') {
+    form.localizacionAcceso = '18';
+  }
+  // Para otros tipos de acceso, no se fuerza una localización específica
+});
+
+// Watcher para limpiar errores cuando se cambia el DNI
+watch(() => form.numeroDocumento, () => {
+  errorDNI.value = '';
+});
 const soloNumeros = computed(() => {
   return form.tipoDocumento === 'DNI' || form.tipoDocumento === 'CE';
 });
@@ -535,7 +653,7 @@ const registrarPaciente = async (url = null) => {
     fecha_nacimiento: form.fechaNacimiento,
     genero: form.sexo,
     grado_instruccion: form.gradoInstruccion,
-    id_modalidad: form.modalidadTRR == 'Hemodiálisis' ? 1 : 2,
+    id_modalidad: form.modalidadTRR == 'Hemodiálisis' ? 1 : form.modalidadTRR == 'Diálisis Peritoneal' ? 2 : 3,
     estado: 'REGISTRADO'
   };
 

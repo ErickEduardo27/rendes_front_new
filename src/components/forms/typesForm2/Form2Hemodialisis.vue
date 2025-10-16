@@ -334,7 +334,7 @@ select, input[type="text"], input[type="date"] {
                 <!-- Sección Unidad Actual -->
                 <div>
                     <h2 class="text-xl font-semibold">UNIDAD ACTUAL</h2>
-                    <p class="text-sm text-gray-600">A continuación se presenta el Acceso Actual del paciente</p>
+                    <p class="text-sm text-gray-600">A continuación se presenta el Acceso Vascular Actual del paciente</p>
                 </div>
 
                 <div class="grid grid-cols-3 gap-4">
@@ -345,33 +345,41 @@ select, input[type="text"], input[type="date"] {
                     </div>
 
                     <div>
-                        <label class="text-sm">Tipo de Acceso Actual</label>
+                        <label class="text-sm">Tipo de Acceso Vascular Actual</label>
                         <select disabled v-model="form.tipo_acceso_actual" class="w-full border px-2 py-1 rounded">
                             <option disabled value="">Seleccione una opción</option>
-                            <option value="FAV">FAV</option>
-                            <option value="CVCT">CVCT</option>
-                            <option value="CVCLP">CVCLP</option>
+                            <option value="Catéter Venoso Central Temporal">Catéter Venoso Central Temporal</option>
+                            <option value="Catéter Venoso Central de Larga Permanencia">Catéter Venoso Central de Larga Permanencia</option>
+                            <option value="Fístula Arteriovenosa">Fístula Arteriovenosa</option>
+                            <option value="Injerto Autólogo">Injerto Autólogo</option>
+                            <option value="Injerto Protésico">Injerto Protésico</option>
+                            <option value="Catéter peritoneal">Catéter peritoneal</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="text-sm">Localización de Acceso Actual</label>
+                        <label class="text-sm">Localización de Acceso Vascular Actual</label>
                         <select disabled v-model="form.localizacion_acceso_actual" class="w-full border px-2 py-1 rounded">
                             <option disabled value="">Seleccione una opción</option>
-                            <option value="Radial derecha">Radial derecha</option>
-                            <option value="Radial izquierda">Radial izquierda</option>
-                            <option value="Braquial o cubital derecha">Braquial o cubital derecha</option>
-                            <option value="Braquial o cubital izquierdo">Braquial o cubital izquierdo</option>
-                            <option value="Yugular derecha">Yugular derecha</option>
-                            <option value="Yugular izquierda">Yugular izquierda</option>
-                            <option value="Subclavio derecho">Subclavio derecho</option>
-                            <option value="Subclavio izquierdo">Subclavio izquierdo</option>
-                            <option value="Femoral derecho">Femoral derecho</option>
-                            <option value="Femoral izquierdo">Femoral izquierdo</option>
-                            <option value="Translumbar">Translumbar</option>
-                            <option value="Transhepático">Transhepático</option>
-                            <option value="Injerto autólogo">Injerto autólogo</option>
-                            <option value="Injerto autólogo">Injerto protésico</option>
+                            <option value="1">1. FAV radial derecha</option>
+                            <option value="2">2. FAV radial izquierda</option>
+                            <option value="3">3. FAV braquial o cubital derecha</option>
+                            <option value="4">4. FAV braquial o cubital izquierda</option>
+                            <option value="5">5. CVCT yugular derecha</option>
+                            <option value="6">6. CVCT yugular izquierdo</option>
+                            <option value="7">7. CVCT subclavio derecho</option>
+                            <option value="8">8. CVCT subclavio izquierdo</option>
+                            <option value="9">9. CVCT femoral derecho</option>
+                            <option value="10">10. CVCT femoral izquierdo</option>
+                            <option value="11">11. CVCLP yugular derecha</option>
+                            <option value="12">12. CVCLP yugular izquierdo</option>
+                            <option value="13">13. CVCLP femoral derecho</option>
+                            <option value="14">14. CVCLP femoral izquierdo</option>
+                            <option value="15">15. CVCLP translumbar</option>
+                            <option value="16">16. CVCLP transhepático</option>
+                            <option value="17">17. Injerto autólogo</option>
+                            <option value="18">18. Injerto protésico</option>
+                            <option value="19">19. Catéter peritoneal</option>
                         </select>
                     </div>
 
@@ -402,31 +410,89 @@ select, input[type="text"], input[type="date"] {
                             class="w-full border px-2 py-1 rounded" />
                     </div>
                     <div>
-                        <label class="text-sm">Tipo de Nuevo Acceso</label>
+                        <label class="text-sm">Tipo de Nuevo Acceso Vascular</label>
                         <select v-model="form.tipo_acceso_nuevo" class="w-full border px-2 py-1 rounded">
                             <option disabled value="">Seleccione una opción</option>
-                            <option value="FAV">FAV</option>
-                            <option value="CVCT">CVCT</option>
-                            <option value="CVCLP">CVCLP</option>
+                            <option value="Catéter Venoso Central Temporal">Catéter Venoso Central Temporal</option>
+                            <option value="Catéter Venoso Central de Larga Permanencia">Catéter Venoso Central de Larga Permanencia</option>
+                            <option value="Fístula Arteriovenosa">Fístula Arteriovenosa</option>
+                            <option value="Injerto Autólogo">Injerto Autólogo</option>
+                            <option value="Injerto Protésico">Injerto Protésico</option>
+                            <option value="Catéter peritoneal">Catéter peritoneal</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="text-sm">Localización de Nuevo Acceso</label>
+                        <label class="text-sm">Localización de Nuevo Acceso Vascular</label>
                         <select v-model="form.localizacion_acceso_nuevo" class="w-full border px-2 py-1 rounded">
                             <option disabled value="">Seleccione una opción</option>
-                            <option v-for="op in localizacionesFiltradas" :key="op" :value="op">
-                                {{ op }}
-                            </option>
+                            <option value="1">1. FAV radial derecha</option>
+                            <option value="2">2. FAV radial izquierda</option>
+                            <option value="3">3. FAV braquial o cubital derecha</option>
+                            <option value="4">4. FAV braquial o cubital izquierda</option>
+                            <option value="5">5. CVCT yugular derecha</option>
+                            <option value="6">6. CVCT yugular izquierdo</option>
+                            <option value="7">7. CVCT subclavio derecho</option>
+                            <option value="8">8. CVCT subclavio izquierdo</option>
+                            <option value="9">9. CVCT femoral derecho</option>
+                            <option value="10">10. CVCT femoral izquierdo</option>
+                            <option value="11">11. CVCLP yugular derecha</option>
+                            <option value="12">12. CVCLP yugular izquierdo</option>
+                            <option value="13">13. CVCLP femoral derecho</option>
+                            <option value="14">14. CVCLP femoral izquierdo</option>
+                            <option value="15">15. CVCLP translumbar</option>
+                            <option value="16">16. CVCLP transhepático</option>
+                            <option value="17">17. Injerto autólogo</option>
+                            <option value="18">18. Injerto protésico</option>
+                            <option value="19">19. Catéter peritoneal</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- Botones -->
-                <div class="flex justify-end gap-2">
-                    <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
-                    <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="postForm()">Registrar</button>
-                    <!-- <button class="bg-sky-500 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button> -->
+                <!-- Historial de Cambios de Acceso -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold mb-4">Historial de Cambios de Acceso Vascular</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div v-if="historialAcceso.length === 0" class="text-gray-500 text-center py-4">
+                            No hay registros de cambios de acceso.
+                        </div>
+                        <div v-else class="space-y-3">
+                            <div v-for="(cambio, index) in historialAcceso" :key="index" 
+                                 class="bg-white p-3 rounded border-l-4 border-blue-500">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="font-medium text-sm text-gray-700">
+                                            <strong>Fecha:</strong> {{ cambio.fecha }}
+                                        </div>
+                                        <div class="text-sm text-gray-600 mt-1">
+                                            <strong>Tipo de Acceso:</strong> {{ cambio.tipo_acceso }}
+                                        </div>
+                                        <div class="text-sm text-gray-600">
+                                            <strong>Localización:</strong> {{ cambio.localizacion }}
+                                        </div>
+                                        <div v-if="cambio.motivo" class="text-sm text-gray-600">
+                                            <strong>Motivo de Cambio:</strong> {{ cambio.motivo }}
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-gray-400">
+                                        {{ cambio.estado }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botón para abrir módulo de infección -->
+                <div class="flex justify-between items-center mt-6">
+                    <button @click="abrirModuloInfeccion" class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
+                        🦠 Módulo de Infección
+                    </button>
+                    <div class="flex gap-2">
+                        <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+                        <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="postForm()">Registrar</button>
+                        <!-- <button class="bg-sky-500 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button> -->
+                    </div>
                 </div>
             </div>
 
@@ -455,11 +521,127 @@ select, input[type="text"], input[type="date"] {
                     <h3 class="text-lg font-bold mb-4 text-center">Histórico del Paciente</h3>
                     <div v-if="historico.length === 0" class="text-gray-500 text-center">No hay registros históricos.</div>
                     <ul v-else class="space-y-2">
-                        <li v-for="item in historico" :key="item.id_registro" class="border rounded p-2">
+                        <li v-for="item in historicoOrdenado" :key="item.id_registro" class="border rounded p-2">
                             <div><strong>Fecha:</strong> {{ item.fecha }}</div>
                             <div><strong>Detalle:</strong> {{ item.detalle }}</div>
                         </li>
                     </ul>
+                </div>
+            </div>
+
+            <!-- Modal flotante para módulo de infección -->
+            <div v-if="mostrarModuloInfeccion" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div class="bg-white rounded shadow-lg p-6 w-[800px] max-h-[90vh] overflow-y-auto relative">
+                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarModuloInfeccion">&times;</button>
+                    <h3 class="text-lg font-bold mb-4 text-center">🦠 Módulo de Infección</h3>
+                    
+                    <!-- Contenido del módulo de infección -->
+                    <div class="space-y-6">
+                        <!-- Pregunta principal -->
+                        <div class="space-y-2">
+                            <label class="block font-semibold text-sm text-gray-700">¿Presenta infecciones?</label>
+                            <select v-model="formInfeccion.presentaInfecciones" class="w-full border rounded p-2 text-sm">
+                                <option value="">Seleccione una opción</option>
+                                <option value="si">Sí</option>
+                                <option value="no">No</option>
+                            </select>
+                        </div>
+
+                        <!-- Detalles de infección (solo si responde "Sí") -->
+                        <div v-if="formInfeccion.presentaInfecciones === 'si'" class="space-y-4">
+                            <h4 class="font-medium text-gray-800">Detalles de la Infección</h4>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Tipo de Infección</label>
+                                    <select v-model="formInfeccion.tipoInfeccion" class="w-full border rounded p-2 text-sm">
+                                        <option value="">Seleccione una opción</option>
+                                        <option value="bacteriana">Bacteriana</option>
+                                        <option value="viral">Viral</option>
+                                        <option value="fungica">Fúngica</option>
+                                        <option value="otra">Otra</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Localización</label>
+                                    <select v-model="formInfeccion.localizacion" class="w-full border rounded p-2 text-sm">
+                                        <option value="">Seleccione una opción</option>
+                                        <option value="acceso_vascular">Acceso Vascular</option>
+                                        <option value="torrente_sanguineo">Torrente Sanguíneo</option>
+                                        <option value="respiratoria">Respiratoria</option>
+                                        <option value="urinaria">Urinaria</option>
+                                        <option value="piel">Piel</option>
+                                        <option value="otra">Otra</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
+                                    <input v-model="formInfeccion.fechaInicio" type="date" class="w-full border rounded p-2 text-sm" />
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Fecha de Resolución</label>
+                                    <input v-model="formInfeccion.fechaResolucion" type="date" class="w-full border rounded p-2 text-sm" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Tratamiento</label>
+                                <textarea v-model="formInfeccion.tratamiento" class="w-full border rounded p-2 text-sm" rows="3" 
+                                    placeholder="Describa el tratamiento administrado..."></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Observaciones</label>
+                                <textarea v-model="formInfeccion.observaciones" class="w-full border rounded p-2 text-sm" rows="2" 
+                                    placeholder="Observaciones adicionales..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Historial de infecciones -->
+                        <div class="mt-6">
+                            <h4 class="font-medium text-gray-800 mb-3">Historial de Infecciones</h4>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div v-if="historialInfecciones.length === 0" class="text-gray-500 text-center py-4">
+                                    No hay registros de infecciones previas.
+                                </div>
+                                <div v-else class="space-y-3">
+                                    <div v-for="(infeccion, index) in historialInfeccionesOrdenado" :key="index" 
+                                         class="bg-white p-3 rounded border-l-4 border-red-500">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex-1">
+                                                <div class="font-medium text-sm text-gray-700">
+                                                    <strong>Fecha:</strong> {{ infeccion.fecha }}
+                                                </div>
+                                                <div class="text-sm text-gray-600 mt-1">
+                                                    <strong>Tipo:</strong> {{ infeccion.tipo }}
+                                                </div>
+                                                <div class="text-sm text-gray-600">
+                                                    <strong>Localización:</strong> {{ infeccion.localizacion }}
+                                                </div>
+                                                <div v-if="infeccion.tratamiento" class="text-sm text-gray-600">
+                                                    <strong>Tratamiento:</strong> {{ infeccion.tratamiento }}
+                                                </div>
+                                            </div>
+                                            <div class="text-xs text-gray-400">
+                                                {{ infeccion.estado }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones del modal -->
+                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                        <button @click="cerrarModuloInfeccion" class="bg-gray-400 text-white px-4 py-2 rounded">Cerrar</button>
+                        <button @click="guardarInfeccion" class="bg-red-500 text-white px-4 py-2 rounded">Guardar Infección</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -469,6 +651,8 @@ select, input[type="text"], input[type="date"] {
 <script setup>
 const mostrarHistorico = ref(false);
 const historico = ref([]);
+const mostrarModuloInfeccion = ref(false);
+const historialInfecciones = ref([]);
 
 const abrirHistorico = async () => {
     mostrarHistorico.value = true;
@@ -490,6 +674,84 @@ const abrirHistorico = async () => {
 
 const cerrarHistorico = () => {
     mostrarHistorico.value = false;
+};
+
+// Funciones para el módulo de infección
+const abrirModuloInfeccion = () => {
+    mostrarModuloInfeccion.value = true;
+    fetchHistorialInfecciones();
+};
+
+const cerrarModuloInfeccion = () => {
+    mostrarModuloInfeccion.value = false;
+    // Limpiar formulario al cerrar
+    Object.keys(formInfeccion).forEach(key => {
+        formInfeccion[key] = '';
+    });
+};
+
+const guardarInfeccion = async () => {
+    if (formInfeccion.presentaInfecciones === 'si') {
+        // Validar campos requeridos
+        if (!formInfeccion.tipoInfeccion || !formInfeccion.localizacion || !formInfeccion.fechaInicio) {
+            alert('Por favor complete todos los campos requeridos.');
+            return;
+        }
+        
+        // Agregar a historial local
+        const nuevaInfeccion = {
+            id: Date.now(),
+            fecha: formInfeccion.fechaInicio,
+            tipo: formInfeccion.tipoInfeccion,
+            localizacion: formInfeccion.localizacion,
+            tratamiento: formInfeccion.tratamiento,
+            observaciones: formInfeccion.observaciones,
+            estado: 'Registrada'
+        };
+        
+        historialInfecciones.value.push(nuevaInfeccion);
+        
+        // Aquí deberías hacer la petición real al backend
+        // await postAllIpress("/infecciones/", formInfeccion);
+        
+        alert('Infección registrada correctamente.');
+        cerrarModuloInfeccion();
+    } else {
+        alert('No se registró ninguna infección.');
+        cerrarModuloInfeccion();
+    }
+};
+
+const fetchHistorialInfecciones = async () => {
+    try {
+        // Aquí deberías hacer la petición real al backend para obtener el historial de infecciones
+        // Ejemplo: const respuesta = await getAllIpress(`/infecciones/${paciente.id_paciente}`);
+        
+        // Datos de ejemplo para demostración
+        historialInfecciones.value = [
+            {
+                id: 1,
+                fecha: '2024-03-15',
+                tipo: 'Bacteriana',
+                localizacion: 'Acceso Vascular',
+                tratamiento: 'Vancomicina 1g IV cada 12h',
+                observaciones: 'Infección en sitio de inserción del catéter',
+                estado: 'Resuelta'
+            },
+            {
+                id: 2,
+                fecha: '2024-01-20',
+                tipo: 'Viral',
+                localizacion: 'Respiratoria',
+                tratamiento: 'Sintomático',
+                observaciones: 'Infección respiratoria leve',
+                estado: 'Resuelta'
+            }
+        ];
+    } catch (error) {
+        console.error('Error al obtener historial de infecciones:', error);
+        historialInfecciones.value = [];
+    }
 };
 import { useRouter } from 'vue-router'
 import { ref, onMounted, reactive, computed } from 'vue';
@@ -517,6 +779,7 @@ const pacienteSeleccionado = paciente
 const periodoSeleccionado = periodo
 const idPeriodoIpress=periodoIpress
 const periodoActual = ref([])
+const historialAcceso = ref([])
 console.log("ajlkdjflkasjdflkasdf",periodoIpress)
 
 const form = reactive({
@@ -531,44 +794,54 @@ const form = reactive({
     id_periodo_ipress: periodoIpress,
     id_red: 1,
     id_paciente: paciente.id_paciente
+})
 
+// Formulario para el módulo de infección
+const formInfeccion = reactive({
+    presentaInfecciones: '',
+    tipoInfeccion: '',
+    localizacion: '',
+    fechaInicio: '',
+    fechaResolucion: '',
+    tratamiento: '',
+    observaciones: ''
 })
 // Puedes usar props.paciente o hacer destructuring:
 
-const opcionesLocalizacion = {
-  'FAV': [ // FAV
-    'Radial derecha',
-    'Radial izquierda',
-    'Braquial o cubital derecha',
-    'Braquial o cubital izquierdo',
-  ],
-  'CVCT': [ // CVCT
-    'Yugular derecha',
-    'Yugular izquierda',
-    'Subclavio derecho',
-    'Subclavio izquierdo',
-    'Femoral derecho',
-    'Femoral izquierdo',
-  ],
-  'CVCLP': [ // CVCLP
-    'Yugular derecha',
-    'Yugular izquierda',
-    'Subclavio derecho',
-    'Subclavio izquierdo',
-    'Femoral derecho',
-    'Femoral izquierdo',
-    'Translumbar',
-    'Transhepático',
-  ],
-  'otros': [
-    'Injerto autólogo',
-    'Injerto protésico',
-  ]
-}
+// Todas las opciones de localización están ahora disponibles para todos los tipos de acceso
+const opcionesLocalizacion = [
+  { value: '1', label: '1. FAV radial derecha' },
+  { value: '2', label: '2. FAV radial izquierda' },
+  { value: '3', label: '3. FAV braquial o cubital derecha' },
+  { value: '4', label: '4. FAV braquial o cubital izquierda' },
+  { value: '5', label: '5. CVCT yugular derecha' },
+  { value: '6', label: '6. CVCT yugular izquierdo' },
+  { value: '7', label: '7. CVCT subclavio derecho' },
+  { value: '8', label: '8. CVCT subclavio izquierdo' },
+  { value: '9', label: '9. CVCT femoral derecho' },
+  { value: '10', label: '10. CVCT femoral izquierdo' },
+  { value: '11', label: '11. CVCLP yugular derecha' },
+  { value: '12', label: '12. CVCLP yugular izquierdo' },
+  { value: '13', label: '13. CVCLP femoral derecho' },
+  { value: '14', label: '14. CVCLP femoral izquierdo' },
+  { value: '15', label: '15. CVCLP translumbar' },
+  { value: '16', label: '16. CVCLP transhepático' },
+  { value: '17', label: '17. Injerto autólogo' },
+  { value: '18', label: '18. Injerto protésico' },
+  { value: '19', label: '19. Catéter peritoneal' }
+];
+
 const localizacionesFiltradas = computed(() => {
-  const tipo = form.tipo_acceso_nuevo;
-  const base = opcionesLocalizacion[tipo] || [];
-  return [...base, ...opcionesLocalizacion.otros];
+  return opcionesLocalizacion;
+});
+
+// Computed properties para ordenar por fecha
+const historicoOrdenado = computed(() => {
+  return [...historico.value].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+});
+
+const historialInfeccionesOrdenado = computed(() => {
+  return [...historialInfecciones.value].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 });
 
 const minFechaNuevoAcceso = computed(() => {
@@ -648,6 +921,41 @@ const fetchPeriodoActual = async (url = null) => {
         console.error('Error al obtener IPRESS:', error);
     }
 };
+
+const fetchHistorialAcceso = async () => {
+    try {
+        // Aquí deberías hacer la petición real al backend para obtener el historial de acceso
+        // Ejemplo: const respuesta = await getAllIpress(`/historial_acceso/${paciente.id_paciente}`);
+        
+        // Datos de ejemplo para demostración
+        historialAcceso.value = [
+            {
+                fecha: '2024-01-15',
+                tipo_acceso: 'Catéter Venoso Central Temporal',
+                localizacion: '5. CVCT yugular derecha',
+                motivo: 'Inicio de tratamiento',
+                estado: 'Activo'
+            },
+            {
+                fecha: '2024-06-10',
+                tipo_acceso: 'Fístula Arteriovenosa',
+                localizacion: '1. FAV radial derecha',
+                motivo: 'Complicación infecciosa',
+                estado: 'Activo'
+            },
+            {
+                fecha: '2024-03-22',
+                tipo_acceso: 'Catéter Venoso Central de Larga Permanencia',
+                localizacion: '11. CVCLP yugular derecha',
+                motivo: 'Prescripción Médica',
+                estado: 'Inactivo'
+            }
+        ];
+    } catch (error) {
+        console.error('Error al obtener historial de acceso:', error);
+        historialAcceso.value = [];
+    }
+};
 const fetchPaciente = async () => {
     try {
         const respuesta = await getAllIpress("/pacientes/" + paciente.id_paciente);
@@ -696,6 +1004,7 @@ onMounted(() => {
     fetchPaciente();
     fetchPeriodo();
     fetchPeriodoActual();
+    fetchHistorialAcceso();
 });
 
 </script>

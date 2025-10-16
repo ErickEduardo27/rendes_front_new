@@ -18,10 +18,10 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': {
+      // Proxy para todas las rutas de API (excepto las que son del frontend)
+      '^/(api|ipress|paciente|pacientes|usuarios|perfiles|periodos|periodoIpress|indexIpress|usuarioIpress|etiologia|pacientesDialisis|unidadesActuales|morbilidadesHospitalarias|eventosAccesosVasculares|vacunaciones|resultadosClinicos|redes|indexRedes|indexPacientes|PacienteRegistro|asignaciones|consultar-dni|reporte_resultados|resumen_registros)': {
         target: 'http://10.0.54.88:8010',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },

@@ -255,12 +255,13 @@ export default {
                 <!-- Fechas -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
                     <div>
-                        <label class="text-sm font-semibold">Fecha de Inicio</label>
+                        <label class="text-sm font-semibold">Fecha de Inicio de Hospitalización</label>
                         <input v-model="form.fIniHos" type="date" class="w-full border rounded p-2 text-sm" />
                     </div>
                     <div>
-                        <label class="text-sm font-semibold">Fecha de Alta</label>
-                        <input v-model="form.fAltHos" type="date" class="w-full border rounded p-2 text-sm" />
+                        <label class="text-sm font-semibold">Fecha de Alta de Hospitalización</label>
+                        <input v-model="form.fAltHos" type="date" :min="minFechaAlta" class="w-full border rounded p-2 text-sm" />
+                        <div v-if="errorFechaAlta" class="text-red-500 text-xs mt-1">{{ errorFechaAlta }}</div>
                     </div>
                     <div>
                         <label class="text-sm font-semibold">Fuente</label>
@@ -303,7 +304,7 @@ export default {
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 
 // 👇 defineProps debe estar fuera de cualquier función
@@ -1164,6 +1165,10 @@ const form = ref({
     id_paciente: null
 });
 
+// Variables para validación de fechas
+const errorFechaAlta = ref('');
+const fechaAltaAnterior = ref(''); // Esta se obtendría del historial del paciente
+
 const fetchPaciente = async (url = null) => {
     try {
         const respuesta = await getAllIpress("/pacientes/" + paciente.id_paciente);
@@ -1175,7 +1180,63 @@ const fetchPaciente = async (url = null) => {
     }
 };
 
+const fetchFechaAltaAnterior = async () => {
+    try {
+        // Aquí deberías hacer la petición real al backend para obtener la última fecha de alta
+        // Ejemplo: const respuesta = await getAllIpress(`/morbilidad_hospitalaria/${paciente.id_paciente}/ultima_fecha_alta`);
+        
+        // Por ahora, simulamos una fecha de alta anterior para demostración
+        // En producción, esto vendría del backend
+        fechaAltaAnterior.value = '2024-01-15'; // Fecha de ejemplo
+        
+    } catch (error) {
+        console.error('Error al obtener fecha de alta anterior:', error);
+        fechaAltaAnterior.value = '';
+    }
+};
+
 form.value.id_paciente = paciente.id_paciente
+
+// Computed property para validar fecha mínima de alta
+const minFechaAlta = computed(() => {
+    // La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización
+    if (form.value.fIniHos) {
+        return form.value.fIniHos;
+    }
+    return null;
+});
+
+// Watcher para validar fecha de alta
+watch(() => form.value.fAltHos, (nuevaFechaAlta) => {
+    errorFechaAlta.value = '';
+    
+    if (!nuevaFechaAlta) return;
+    
+    // Validación 1: Fecha de alta debe ser mayor o igual a fecha de inicio
+    if (form.value.fIniHos && nuevaFechaAlta < form.value.fIniHos) {
+        errorFechaAlta.value = 'La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización';
+        return;
+    }
+    
+    // Validación 2: Fecha de alta debe ser mayor a la fecha de alta anterior
+    if (fechaAltaAnterior.value && nuevaFechaAlta <= fechaAltaAnterior.value) {
+        errorFechaAlta.value = 'La fecha de alta debe ser mayor a la fecha de alta anterior';
+        return;
+    }
+});
+
+// Watcher para limpiar error cuando cambia la fecha de inicio
+watch(() => form.value.fIniHos, () => {
+    if (errorFechaAlta.value && form.value.fAltHos) {
+        // Re-validar cuando cambia la fecha de inicio
+        const tempFechaAlta = form.value.fAltHos;
+        form.value.fAltHos = '';
+        nextTick(() => {
+            form.value.fAltHos = tempFechaAlta;
+        });
+    }
+});
+
 const resultadosFiltrados = computed(() => {
     return items.value.filter((item) => {
         const matchCod = form.value.filtroCodigo
@@ -1201,6 +1262,24 @@ const quitarSeleccion = (item) => {
 };
 
 const postForm = async (url = null) => {
+    // Validar fechas antes de enviar
+    if (errorFechaAlta.value) {
+        alert('Por favor corrija los errores en las fechas antes de continuar.');
+        return;
+    }
+    
+    // Validación adicional: Fecha de alta debe ser mayor o igual a fecha de inicio
+    if (form.value.fIniHos && form.value.fAltHos && form.value.fAltHos < form.value.fIniHos) {
+        alert('La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización.');
+        return;
+    }
+    
+    // Validación adicional: Fecha de alta debe ser mayor a la fecha de alta anterior
+    if (fechaAltaAnterior.value && form.value.fAltHos && form.value.fAltHos <= fechaAltaAnterior.value) {
+        alert('La fecha de alta debe ser mayor a la fecha de alta anterior.');
+        return;
+    }
+    
     const payload = {
         ...form.value,
         seleccionados: form.value.seleccionados.map(item => item.codigo).join(',')
@@ -1242,5 +1321,6 @@ const edadPaciente = computed(() => {
 onMounted(() => {
     fetchPeriodo();
     fetchPaciente();
+    fetchFechaAltaAnterior();
 });
 </script>

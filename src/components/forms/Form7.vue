@@ -340,7 +340,7 @@
       <!-- Sección Izquierda (Formulario) -->
       <!-- Datos de Turno -->
       <div class="flex-1 space-y-6">
-        <h2 class="text-xl font-semibold">Vacunación</h2>
+        <h2 class="text-xl font-semibold">SEROLOGÍA Y VACUNACIÓN</h2>
         <p class="text-sm text-gray-500">Complete la información médica del paciente en las diferentes secciones</p>
 
         <!-- Datos de Turno -->
@@ -384,7 +384,7 @@
                 <option>Negativo</option>
                 <option>Desconocido</option>
               </select>
-              <label class="text-sm">Fecha Vacunación</label>
+              <label class="text-sm">Fecha de Examen</label>
               <input type="date" class="w-full border rounded px-2 py-1 mt-1" v-model="form.vhbFecha" />
             </div>
             <div>
@@ -395,7 +395,7 @@
                 <option>Negativo</option>
                 <option>Desconocido</option>
               </select>
-              <label class="text-sm">Fecha Vacunación</label>
+              <label class="text-sm">Fecha de Examen</label>
               <input type="date" class="w-full border rounded px-2 py-1 mt-1" v-model="form.vhcFecha" />
             </div>
             <div>
@@ -406,7 +406,7 @@
                 <option>Negativo</option>
                 <option>Desconocido</option>
               </select>
-              <label class="text-sm">Fecha Vacunación</label>
+              <label class="text-sm">Fecha de Examen</label>
               <input type="date" class="w-full border rounded px-2 py-1 mt-1" v-model="form.vihFecha" />
             </div>
           </div>
@@ -417,13 +417,13 @@
           <h3 class="font-medium">Vacunación Contra Hepatitis</h3>
           <div class="grid grid-cols-3 gap-4">
             <div>
-              <label class="text-sm">Tipo de AcHBs</label>
+              <label class="text-sm">Título de AcHBs</label>
               <select class="w-full border rounded px-2 py-1" v-model="form.vacunaHepatitis">
                 <option>Seleccione una opción</option>
-                <option>
-                  < 10 mUI/mL</option>
+                <option>< 10 mUI/mL</option>
                 <option>10-99 mUI/mL</option>
-                <option>>1000 mUI/mL</option>
+                <option>100-999 mUI/mL</option>
+                <option>≥ 1000 mUI/mL</option>
                 <option>Desconocido</option>
               </select>
             </div>
@@ -442,7 +442,7 @@
         <!-- Vacunación Contra Hepatitis B -->
         <div>
           <h3 class="font-medium">Vacunación Contra Hepatitis B</h3>
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="text-sm">Última Dosis Administrada</label>
               <select class="w-full border rounded px-2 py-1" v-model="form.dosisHepatitisB">
@@ -454,23 +454,9 @@
               </select>
             </div>
             <div>
-              <label class="text-sm">Fecha Última Dosis</label>
-              <input type="date" class="w-full border rounded px-2 py-1" placeholder="Fecha de Última Dosis"
+              <label class="text-sm">Fecha de Prueba</label>
+              <input type="date" class="w-full border rounded px-2 py-1" placeholder="Fecha de Prueba"
                 v-model="form.fechaHepatitisB" />
-            </div>
-            <div>
-              <label class="text-sm">Motivo de No Vacunación</label>
-              <select class="w-full border rounded px-2 py-1" v-model="form.motivoNoHepatitisB">
-                <option>Seleccione una opción</option>
-                <option>No corresponde</option>
-                <option>No aceptó la vacunación</option>
-                <option>Falleció</option>
-                <option>Está hospitalizado</option>
-                <option>Cursa con proceso infeccioso</option>
-                <option>Tiene diagnostico COVID-19</option>
-                <option>Tiene antecedente de vacunación reciente</option>
-                <option>Cambio de unidad</option>
-              </select>
             </div>
           </div>
         </div>
@@ -478,7 +464,7 @@
         <!-- Vacunación Contra Covid-19 -->
          <div>
           <h3 class="font-medium">Vacunación Contra Covid-19</h3>
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="text-sm">Última Dosis Administrada</label>
               <select class="w-full border rounded px-2 py-1" v-model="form.dosisCovid">
@@ -490,23 +476,9 @@
               </select>
             </div>
             <div>
-              <label class="text-sm">Fecha Última Dosis</label>
-              <input type="date" class="w-full border rounded px-2 py-1" placeholder="Fecha de Última Dosis"
+              <label class="text-sm">Fecha de Prueba</label>
+              <input type="date" class="w-full border rounded px-2 py-1" placeholder="Fecha de Prueba"
                 v-model="form.fechaCovid" />
-            </div>
-            <div>
-              <label class="text-sm">Motivo de No Vacunación</label>
-              <select class="w-full border rounded px-2 py-1" v-model="form.motivoNoCovid">
-                <option>Seleccione una opción</option>
-                <option>No corresponde</option>
-                <option>No aceptó la vacunación</option>
-                <option>Falleció</option>
-                <option>Está hospitalizado</option>
-                <option>Cursa con proceso infeccioso</option>
-                <option>Tiene diagnostico COVID-19</option>
-                <option>Tiene antecedente de vacunación reciente</option>
-                <option>Cambio de unidad</option>
-              </select>
             </div>
           </div>
         </div>
@@ -514,51 +486,23 @@
         <!-- Vacunación Contra Influenza -->
         <div>
           <h3 class="font-medium">Vacunación Contra Influenza</h3>
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 gap-4">
             <div>
-              <label class="text-sm">Fecha Última Dosis</label>
-              <input type="date" class="w-full border rounded px-2 py-1" placeholder="Fecha de Última Dosis"
+              <label class="text-sm">Fecha de Prueba</label>
+              <input type="date" class="w-full border rounded px-2 py-1" placeholder="Fecha de Prueba"
                 v-model="form.fechaInfluenza" />
-            </div>
-            <div>
-              <label class="text-sm">Motivo de No Vacunación</label>
-              <select class="w-full border rounded px-2 py-1" v-model="form.motivoNoInfluenza">
-                <option>Seleccione una opción</option>
-                <option>No corresponde</option>
-                <option>No aceptó la vacunación</option>
-                <option>Falleció</option>
-                <option>Está hospitalizado</option>
-                <option>Cursa con proceso infeccioso</option>
-                <option>Tiene diagnostico COVID-19</option>
-                <option>Tiene antecedente de vacunación reciente</option>
-                <option>Cambio de unidad</option>
-              </select>
             </div>
           </div>
         </div>
 
         <!-- Vacunación Contra Neumococo -->
         <div>
-          <h3 class="font-medium">Vacunación Contra Influenza</h3>
-          <div class="grid grid-cols-3 gap-4">
+          <h3 class="font-medium">Vacunación Contra Neumococo</h3>
+          <div class="grid grid-cols-1 gap-4">
             <div>
-              <label class="text-sm">Fecha Última Dosis</label>
-              <input type="date" class="w-full border rounded px-2 py-1" placeholder="Fecha de Última Dosis"
+              <label class="text-sm">Fecha de Prueba</label>
+              <input type="date" class="w-full border rounded px-2 py-1" placeholder="Fecha de Prueba"
                 v-model="form.fechaNeumococo" />
-            </div>
-            <div>
-              <label class="text-sm">Motivo de No Vacunación</label>
-              <select class="w-full border rounded px-2 py-1" v-model="form.motivoNoNeumococo">
-                <option>Seleccione una opción</option>
-                <option>No corresponde</option>
-                <option>No aceptó la vacunación</option>
-                <option>Falleció</option>
-                <option>Está hospitalizado</option>
-                <option>Cursa con proceso infeccioso</option>
-                <option>Tiene diagnostico COVID-19</option>
-                <option>Tiene antecedente de vacunación reciente</option>
-                <option>Cambio de unidad</option>
-              </select>
             </div>
           </div>
         </div>
@@ -637,17 +581,13 @@ const form = reactive({
   // Vacunación Hepatitis B
   dosisHepatitisB: null,
   fechaHepatitisB: null,
-  motivoNoHepatitisB: null,
   // Vacunación Covid-19
   dosisCovid: null,
   fechaCovid: null,
-  motivoNoCovid: null,
   // Vacunación Influenza
   fechaInfluenza: null,
-  motivoNoInfluenza: null,
   // Vacunación Neumococo
   fechaNeumococo: null,
-  motivoNoNeumococo: null,
   id_periodo_ipress: 17,
   id_red: 1,
   id_paciente: paciente.id_paciente
@@ -655,16 +595,16 @@ const form = reactive({
 watch(() => form.vacunaHepatitis, (nuevoValor) => {
   switch (nuevoValor) {
     case '< 10 mUI/mL':
-      form.estadoAcHBs = 'No respondedor';
+      form.estadoAcHBs = 'No Responde';
       break;
     case '10-99 mUI/mL':
       form.estadoAcHBs = 'Respuesta pobre';
       break;
-    case '100 – 999 mUI/mL':
-      form.estadoAcHBs = 'Respuesta óptima';
+    case '100-999 mUI/mL':
+      form.estadoAcHBs = 'Óptimo';
       break;
-    case '>1000 mUI/mL':
-      form.estadoAcHBs = 'Respuesta excelente';
+    case '≥ 1000 mUI/mL':
+      form.estadoAcHBs = 'Excelente';
       break;
     case 'Desconocido':
       form.estadoAcHBs = 'Desconocido';
@@ -691,10 +631,10 @@ const validarCampos = () => {
     'vhcEstado', 'vhcFecha',
     'vihEstado', 'vihFecha',
     'vacunaHepatitis', 'estadoAcHBs', 'fechaVacHepatitis',
-    'dosisHepatitisB', 'fechaHepatitisB', 'motivoNoHepatitisB',
-    'dosisCovid', 'fechaCovid', 'motivoNoCovid',
-    'fechaInfluenza', 'motivoNoInfluenza',
-    'fechaNeumococo', 'motivoNoNeumococo'
+    'dosisHepatitisB', 'fechaHepatitisB',
+    'dosisCovid', 'fechaCovid',
+    'fechaInfluenza',
+    'fechaNeumococo'
   ];
   for (const campo of camposRequeridos) {
     if (!form[campo] || form[campo] === '' || form[campo] === null) {
