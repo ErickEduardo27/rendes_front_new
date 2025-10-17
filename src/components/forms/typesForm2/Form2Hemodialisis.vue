@@ -329,14 +329,14 @@ select, input[type="text"], input[type="date"] {
             </div>
 
             <!-- Botones de Acción -->
-            <div class="flex gap-2">
+            <!-- <div class="flex gap-2">
                 <button @click="abrirModalCaptar" class="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600 text-sm">
                     ➕ Captar Paciente
                 </button>
                 <button @click="abrirModalEgresar" class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 text-sm">
                     ➖ Egresar Paciente
                 </button>
-            </div>
+            </div> -->
         </div>
 
         <!-- Contenedor principal en columnas -->
