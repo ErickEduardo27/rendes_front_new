@@ -14,15 +14,15 @@
     </div>
 
     <div class="flex items-center gap-4 my-4">
-      <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('nuevo-registro')">
+      <button class="bg-sky-500 text-white px-4 py-1 rounded" @click="emitNuevoRegistro">
         Nuevo Registro
       </button>
-      <button v-if="perfil!=='Clinicas'" class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('captar-paciente')">
+      <!-- <button v-if="perfil!=='Clinicas'" class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('captar-paciente')">
         Captar Paciente
       </button>
       <button v-if="perfil!=='Clinicas'" class="bg-sky-500 text-white px-4 py-1 rounded" @click="$emit('egresar-paciente')">
         Egresar Paciente
-      </button>
+      </button> -->
     </div>
 
     <h3 class="text-md font-bold my-2">Pacientes Ingresados:</h3>
@@ -249,6 +249,15 @@ const fetchPeriodo = async (url = null) => {
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }
+};
+
+const emitNuevoRegistro = () => {
+  emit('nuevo-registro', {
+    periodo: periodoSeleccionado.value,
+    idPeriodoIpress: idPeriodoIpress.value,
+    idClinica: idClinicaSeleccionada.value,
+    nombreClinica: clinicaSeleccionada.value
+  });
 };
 
 onMounted(() => {

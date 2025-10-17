@@ -16,6 +16,7 @@
         </div>
       <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
       <SidebarItem v-if="perfil=='Supervisor'||perfil=='Admin'" :icon="UserIcon" label="Registros" to="/tablas"/>
+      <SidebarItem :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
       <SidebarItem :icon="UserIcon" label="Prueba de Agua" to="/calidad-agua"/>
       <SidebarItem v-if="perfil=='Supervisor'||perfil=='Admin'"  :icon="DocumentMagnifyingGlassIcon" label="Administracion" :submenu="[
           { label: 'Ipress', to: '/ipress', icon: UserIcon },
@@ -55,7 +56,8 @@ import {
   UserIcon, 
   DocumentMagnifyingGlassIcon, 
   ComputerDesktopIcon, 
-  ChartBarIcon 
+  ChartBarIcon,
+  ArrowsRightLeftIcon
 } from '@heroicons/vue/24/outline';
 const perfil = localStorage.getItem('perfil')
 const openItem = ref(null);

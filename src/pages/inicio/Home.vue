@@ -1,10 +1,15 @@
 <template>
   <div class="p-6">
-    <FormularioPaciente v-if="mostrarFormulario == 1" @cancelar="mostrarFormulario = 4" />
+    <FormularioPaciente v-if="mostrarFormulario == 1" 
+      :periodoInicial="periodoSeleccionado" 
+      :idPeriodoIpressInicial="idPeriodoIpress"
+      :idClinicaInicial="idClinicaSeleccionada"
+      :nombreClinicaInicial="nombreClinicaSeleccionada"
+      @cancelar="mostrarFormulario = 4" />
     <CaptarPaciente v-if="mostrarFormulario == 2" @cancelar="mostrarFormulario = 4" />
     <EgresoPacientes v-if="mostrarFormulario == 3" @cancelar="mostrarFormulario = 4" />
     <ListaPacientes v-if="mostrarFormulario == 4" @form2="abrirFormulario" @form3="abrirFormulario"
-      @form4="abrirFormulario" @form5="abrirFormulario" @form7="abrirFormulario" @nuevo-registro="mostrarFormulario = 1"
+      @form4="abrirFormulario" @form5="abrirFormulario" @form7="abrirFormulario" @nuevo-registro="abrirNuevoRegistro"
       @captar-paciente="mostrarFormulario = 2" @egresar-paciente="mostrarFormulario = 3" />
 
     <Form2Hemodialisis v-if="mostrarFormulario == 5 && modalidad==1" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress"
@@ -34,16 +39,26 @@ import Form2Peritoneal from '@/components/forms/typesForm2/Form2Peritoneal.vue'
 
 const mostrarFormulario = ref(4)
 const pacienteSeleccionado = ref(null)
-const periodoSeleccionado =ref(null)
-const idPeriodoIpress =ref(null)
-const modalidad= ref(null)
+const periodoSeleccionado = ref(null)
+const idPeriodoIpress = ref(null)
+const idClinicaSeleccionada = ref(null)
+const nombreClinicaSeleccionada = ref('')
+const modalidad = ref(null)
 
-const abrirFormulario = ({ paciente, numeroFormulario,periodo,periodoIpress }) => {
-  console.log("se enviasdhkajshdasd",periodoIpress)
+const abrirFormulario = ({ paciente, numeroFormulario, periodo, periodoIpress }) => {
+  console.log("se enviasdhkajshdasd", periodoIpress)
   pacienteSeleccionado.value = paciente
-  modalidad.value=paciente.modalidad
+  modalidad.value = paciente.modalidad
   mostrarFormulario.value = numeroFormulario + 4 // adapta según tu lógica
   periodoSeleccionado.value = periodo
-  idPeriodoIpress.value=periodoIpress
+  idPeriodoIpress.value = periodoIpress
+}
+
+const abrirNuevoRegistro = (datos) => {
+  periodoSeleccionado.value = datos.periodo
+  idPeriodoIpress.value = datos.idPeriodoIpress
+  idClinicaSeleccionada.value = datos.idClinica
+  nombreClinicaSeleccionada.value = datos.nombreClinica
+  mostrarFormulario.value = 1
 }
 </script>

@@ -4,7 +4,7 @@ import { useAuthStore } from '@/store/auth';
 import router from '@/router/index'
 
 // Si VITE_API no está definido, usa '' para que use rutas relativas y el proxy de Vite funcione
-const baseURL = import.meta.env.VITE_API || '';
+const baseURL = import.meta.env.VITE_API || 'http://127.0.0.1:8010';
 
 class ApiClient {
   constructor() {

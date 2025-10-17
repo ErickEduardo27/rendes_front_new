@@ -314,6 +314,7 @@ select, input[type="text"], input[type="date"] {
         </div>
 
         <!-- Filtros Superiores -->
+        <div class="flex items-center gap-2 flex-wrap justify-between">
         <div class="flex items-center gap-2 flex-wrap">
             <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
             <select v-model="periodoSeleccionado" class="border p-1 rounded" :disabled="true">
@@ -325,6 +326,17 @@ select, input[type="text"], input[type="date"] {
 
             <label>Modalidad de Diálisis:</label>
             <label v-if="pacienteSeleccionado.value">{{ pacienteSeleccionado.value.id_modalidad == 1 ? "Hemodialisis" : "Peritonial" }}</label>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex gap-2">
+                <button @click="abrirModalCaptar" class="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600 text-sm">
+                    ➕ Captar Paciente
+                </button>
+                <button @click="abrirModalEgresar" class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 text-sm">
+                    ➖ Egresar Paciente
+                </button>
+            </div>
         </div>
 
         <!-- Contenedor principal en columnas -->
@@ -333,7 +345,7 @@ select, input[type="text"], input[type="date"] {
             <div class="flex-1 space-y-6">
                 <!-- Sección Unidad Actual -->
                 <div>
-                    <h2 class="text-xl font-semibold">UNIDAD ACTUAL</h2>
+                    <h2 class="text-xl font-semibold">ACCESO DE DIÁLISIS ACTUAL</h2>
                     <p class="text-sm text-gray-600">A continuación se presenta el Acceso Vascular Actual del paciente</p>
                 </div>
 
@@ -483,6 +495,45 @@ select, input[type="text"], input[type="date"] {
                     </div>
                 </div>
 
+                <!-- Historial de Movimientos del Paciente -->
+                <div class="mt-8">
+                    <h3 class="text-lg font-semibold mb-4">Movimientos del Paciente (Ingresos/Egresos)</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div v-if="historialMovimientos.length === 0" class="text-gray-500 text-center py-4">
+                            No hay registros de movimientos del paciente.
+                        </div>
+                        <div v-else class="space-y-3">
+                            <div v-for="(movimiento, index) in historialMovimientosOrdenado" :key="index" 
+                                 :class="['bg-white p-3 rounded border-l-4', 
+                                          movimiento.tipo === 'INGRESO' || movimiento.tipo === 'CAPTADO' ? 'border-green-500' : 
+                                          movimiento.tipo === 'EGRESO' ? 'border-red-500' : 'border-blue-500']">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <div class="font-medium text-sm text-gray-700">
+                                            <span :class="[movimiento.tipo === 'INGRESO' || movimiento.tipo === 'CAPTADO' ? 'text-green-600' : 
+                                                          movimiento.tipo === 'EGRESO' ? 'text-red-600' : 'text-blue-600']">
+                                                {{ movimiento.tipo }}
+                                            </span> - <strong>Fecha:</strong> {{ movimiento.fecha }}
+                                        </div>
+                                        <div class="text-sm text-gray-600 mt-1">
+                                            <strong>Condición:</strong> {{ movimiento.condicion }}
+                                        </div>
+                                        <div v-if="movimiento.tipo === 'EGRESO' && movimiento.tipo_egreso" class="text-sm text-gray-600">
+                                            <strong>Tipo de Egreso:</strong> {{ movimiento.tipo_egreso }}
+                                        </div>
+                                        <div v-if="movimiento.observaciones" class="text-sm text-gray-600">
+                                            <strong>Observaciones:</strong> {{ movimiento.observaciones }}
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-gray-400">
+                                        {{ movimiento.periodo }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Botón para abrir módulo de infección -->
                 <div class="flex justify-between items-center mt-6">
                     <button @click="abrirModuloInfeccion" class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
@@ -526,6 +577,100 @@ select, input[type="text"], input[type="date"] {
                             <div><strong>Detalle:</strong> {{ item.detalle }}</div>
                         </li>
                     </ul>
+                </div>
+            </div>
+
+            <!-- Modal para Captar Paciente -->
+            <div v-if="mostrarModalCaptar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div class="bg-white rounded shadow-lg p-6 w-[600px] max-h-[90vh] overflow-y-auto relative">
+                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarModalCaptar">&times;</button>
+                    <h3 class="text-lg font-bold mb-4 text-center">➕ Captar Paciente</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Condición del Paciente en la Unidad</label>
+                            <select v-model="formCaptar.condicion" class="w-full border rounded p-2 text-sm" disabled>
+                                <option value="">{{ condicionAutomatica }}</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">
+                                {{ mensajeCondicion }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Ingreso/Reingreso</label>
+                            <input v-model="formCaptar.fecha" type="date" class="w-full border rounded p-2 text-sm" />
+                        </div>
+
+                        <div v-if="condicionAutomatica === 'REINGRESO'">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Registro de Egreso Previo</label>
+                            <div class="bg-gray-50 p-3 rounded border">
+                                <div v-if="ultimoEgreso" class="text-sm">
+                                    <p><strong>Tipo de Egreso:</strong> {{ ultimoEgreso.tipo_egreso }}</p>
+                                    <p><strong>Fecha:</strong> {{ ultimoEgreso.fecha }}</p>
+                                </div>
+                                <div v-else class="text-red-500 text-sm">
+                                    ⚠️ No se encontró un egreso previo
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+                            <textarea v-model="formCaptar.observaciones" class="w-full border rounded p-2 text-sm" rows="3" 
+                                placeholder="Observaciones adicionales..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                        <button @click="cerrarModalCaptar" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+                        <button @click="captarPaciente" class="bg-green-500 text-white px-4 py-2 rounded">Captar Paciente</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal para Egresar Paciente -->
+            <div v-if="mostrarModalEgresar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div class="bg-white rounded shadow-lg p-6 w-[600px] max-h-[90vh] overflow-y-auto relative">
+                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarModalEgresar">&times;</button>
+                    <h3 class="text-lg font-bold mb-4 text-center">➖ Egresar Paciente</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Egreso*</label>
+                            <input v-model="formEgresar.fecha" type="date" class="w-full border rounded p-2 text-sm" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Egreso*</label>
+                            <select v-model="formEgresar.tipo_egreso" class="w-full border rounded p-2 text-sm">
+                                <option value="">Seleccione una opción</option>
+                                <option value="Hospitalización">Hospitalización</option>
+                                <option value="Fallecimiento">Fallecimiento</option>
+                                <option value="Trasplante">Trasplante</option>
+                                <option value="Cambio de Unidad">Cambio de Unidad</option>
+                                <option value="Cambio de Modalidad">Cambio de Modalidad</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+
+                        <div v-if="formEgresar.tipo_egreso === 'Otros'">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Especificar Motivo</label>
+                            <input v-model="formEgresar.motivo_especifico" type="text" class="w-full border rounded p-2 text-sm" 
+                                placeholder="Especifique el motivo del egreso" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+                            <textarea v-model="formEgresar.observaciones" class="w-full border rounded p-2 text-sm" rows="3" 
+                                placeholder="Observaciones adicionales..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                        <button @click="cerrarModalEgresar" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+                        <button @click="egresarPaciente" class="bg-red-500 text-white px-4 py-2 rounded">Egresar Paciente</button>
+                    </div>
                 </div>
             </div>
 
@@ -653,6 +798,12 @@ const mostrarHistorico = ref(false);
 const historico = ref([]);
 const mostrarModuloInfeccion = ref(false);
 const historialInfecciones = ref([]);
+const mostrarModalCaptar = ref(false);
+const mostrarModalEgresar = ref(false);
+const historialMovimientos = ref([]);
+const condicionAutomatica = ref('');
+const mensajeCondicion = ref('');
+const ultimoEgreso = ref(null);
 
 const abrirHistorico = async () => {
     mostrarHistorico.value = true;
@@ -753,6 +904,342 @@ const fetchHistorialInfecciones = async () => {
         historialInfecciones.value = [];
     }
 };
+
+// Funciones para Modal de Captar Paciente
+const abrirModalCaptar = async () => {
+    await determinarCondicionPaciente();
+    formCaptar.fecha = '';
+    formCaptar.observaciones = '';
+    mostrarModalCaptar.value = true;
+};
+
+const cerrarModalCaptar = () => {
+    mostrarModalCaptar.value = false;
+    Object.keys(formCaptar).forEach(key => {
+        formCaptar[key] = '';
+    });
+};
+
+const determinarCondicionPaciente = async () => {
+    try {
+        // Buscar si existe algún registro previo del paciente en PacienteRegistro
+        const respuesta = await getAllIpress(`/PacienteRegistro/?paciente=${paciente.id_paciente}`);
+        
+        if (!respuesta || respuesta.length === 0) {
+            // No hay registros previos = NUEVO
+            condicionAutomatica.value = 'NUEVO';
+            mensajeCondicion.value = 'Este es el primer registro del paciente en el sistema.';
+            formCaptar.condicion = 'NUEVO';
+        } else {
+            // Buscar si hay un egreso previo
+            const egresos = respuesta.filter(r => r.condicion === 'EGRESADO').sort((a, b) => 
+                new Date(b.fecha_created) - new Date(a.fecha_created)
+            );
+            
+            if (egresos.length > 0) {
+                // Tiene egreso previo = REINGRESO
+                condicionAutomatica.value = 'REINGRESO';
+                mensajeCondicion.value = 'El paciente tiene un egreso previo registrado.';
+                formCaptar.condicion = 'REINGRESO';
+                ultimoEgreso.value = {
+                    tipo_egreso: egresos[0].tipo_egreso || 'No especificado',
+                    fecha: egresos[0].fecha_created
+                };
+            } else {
+                // No tiene egreso = CONTINUADOR
+                condicionAutomatica.value = 'CONTINUADOR';
+                mensajeCondicion.value = 'El paciente no tiene egreso registrado en la unidad.';
+                formCaptar.condicion = 'CONTINUADOR';
+            }
+        }
+    } catch (error) {
+        console.error('Error al determinar condición del paciente:', error);
+        condicionAutomatica.value = 'NUEVO';
+        mensajeCondicion.value = 'Error al verificar condición. Se asignará como NUEVO.';
+        formCaptar.condicion = 'NUEVO';
+    }
+};
+
+const captarPaciente = async () => {
+    if (!formCaptar.fecha) {
+        ElMessage({
+            message: 'Por favor complete la fecha de ingreso/reingreso',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+
+    // Validar que la fecha de captura esté dentro del periodo seleccionado
+    const validacionPeriodo = await validarFechaPeriodo(formCaptar.fecha);
+    if (!validacionPeriodo.valido) {
+        ElMessage({
+            message: validacionPeriodo.mensaje,
+            type: 'error',
+            plain: true,
+        });
+        return;
+    }
+
+    if (condicionAutomatica.value === 'REINGRESO' && !ultimoEgreso.value) {
+        ElMessage({
+            message: 'No se puede registrar un reingreso sin un egreso previo',
+            type: 'error',
+            plain: true,
+        });
+        return;
+    }
+
+    // Validar que el punto de partida sea del cierre del mes anterior
+    const validacionCierreMesAnterior = await validarCierreMesAnterior(formCaptar.fecha);
+    if (!validacionCierreMesAnterior.valido) {
+        ElMessage({
+            message: validacionCierreMesAnterior.mensaje,
+            type: 'warning',
+            plain: true,
+            duration: 5000
+        });
+    }
+
+    try {
+        const payload = {
+            paciente: paciente.id_paciente,
+            periodo: periodoSeleccionado,
+            condicion: condicionAutomatica.value,
+            fecha_ingreso: formCaptar.fecha,
+            observaciones: formCaptar.observaciones
+        };
+
+        await postAllIpress("/PacienteRegistro/", payload);
+        
+        ElMessage({
+            message: 'Paciente captado exitosamente',
+            type: 'success',
+            plain: true,
+        });
+        
+        cerrarModalCaptar();
+        await fetchHistorialMovimientos();
+    } catch (error) {
+        console.error('Error al captar paciente:', error);
+        ElMessage({
+            message: 'Error al captar paciente. Intente nuevamente.',
+            type: 'error',
+            plain: true,
+        });
+    }
+};
+
+// Funciones para Modal de Egresar Paciente
+const abrirModalEgresar = () => {
+    formEgresar.fecha = '';
+    formEgresar.tipo_egreso = '';
+    formEgresar.motivo_especifico = '';
+    formEgresar.observaciones = '';
+    mostrarModalEgresar.value = true;
+};
+
+const cerrarModalEgresar = () => {
+    mostrarModalEgresar.value = false;
+    Object.keys(formEgresar).forEach(key => {
+        formEgresar[key] = '';
+    });
+};
+
+const egresarPaciente = async () => {
+    if (!formEgresar.fecha || !formEgresar.tipo_egreso) {
+        ElMessage({
+            message: 'Por favor complete todos los campos obligatorios',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+
+    if (formEgresar.tipo_egreso === 'Otros' && !formEgresar.motivo_especifico) {
+        ElMessage({
+            message: 'Por favor especifique el motivo del egreso',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+
+    // Validar que la fecha de egreso esté dentro del periodo seleccionado
+    const validacionPeriodo = await validarFechaPeriodo(formEgresar.fecha);
+    if (!validacionPeriodo.valido) {
+        ElMessage({
+            message: validacionPeriodo.mensaje,
+            type: 'error',
+            plain: true,
+        });
+        return;
+    }
+
+    // Validar que el punto de partida sea del cierre del mes anterior
+    const validacionCierreMesAnterior = await validarCierreMesAnterior(formEgresar.fecha);
+    if (!validacionCierreMesAnterior.valido) {
+        ElMessage({
+            message: validacionCierreMesAnterior.mensaje,
+            type: 'warning',
+            plain: true,
+            duration: 5000
+        });
+    }
+
+    try {
+        const payload = {
+            paciente: paciente.id_paciente,
+            periodo: periodoSeleccionado,
+            condicion: 'EGRESADO',
+            tipo_egreso: formEgresar.tipo_egreso === 'Otros' ? formEgresar.motivo_especifico : formEgresar.tipo_egreso,
+            fecha_egreso: formEgresar.fecha,
+            observaciones: formEgresar.observaciones
+        };
+
+        await postAllIpress("/PacienteRegistro/", payload);
+        
+        ElMessage({
+            message: 'Paciente egresado exitosamente',
+            type: 'success',
+            plain: true,
+        });
+        
+        cerrarModalEgresar();
+        await fetchHistorialMovimientos();
+    } catch (error) {
+        console.error('Error al egresar paciente:', error);
+        ElMessage({
+            message: 'Error al egresar paciente. Intente nuevamente.',
+            type: 'error',
+            plain: true,
+        });
+    }
+};
+
+// Función para obtener historial de movimientos
+const fetchHistorialMovimientos = async () => {
+    try {
+        const respuesta = await getAllIpress(`/PacienteRegistro/?paciente=${paciente.id_paciente}`);
+        historialMovimientos.value = respuesta.map(mov => ({
+            tipo: mov.condicion === 'EGRESADO' ? 'EGRESO' : 
+                  mov.condicion === 'NUEVO' || mov.condicion === 'REINGRESO' || mov.condicion === 'CONTINUADOR' ? 'INGRESO' : mov.condicion,
+            condicion: mov.condicion,
+            fecha: mov.fecha_created ? new Date(mov.fecha_created).toLocaleDateString() : 'N/A',
+            tipo_egreso: mov.tipo_egreso,
+            observaciones: mov.observaciones,
+            periodo: mov.periodo || 'N/A'
+        }));
+    } catch (error) {
+        console.error('Error al obtener historial de movimientos:', error);
+        historialMovimientos.value = [];
+    }
+};
+
+// Función para validar que la fecha esté dentro del periodo seleccionado
+const validarFechaPeriodo = async (fecha) => {
+    try {
+        // Obtener el periodo seleccionado
+        const periodo = periodos.value.find(p => p.id_periodo === periodoSeleccionado);
+        if (!periodo) {
+            return {
+                valido: false,
+                mensaje: 'No se pudo obtener información del periodo seleccionado'
+            };
+        }
+
+        // Formato del periodo: "2025-01" (año-mes)
+        const [year, month] = periodo.periodo.split('-');
+        const fechaIngresada = new Date(fecha);
+        const yearFecha = fechaIngresada.getFullYear();
+        const monthFecha = fechaIngresada.getMonth() + 1; // Los meses van de 0-11
+
+        if (yearFecha.toString() !== year || monthFecha.toString().padStart(2, '0') !== month) {
+            return {
+                valido: false,
+                mensaje: `La fecha debe estar dentro del periodo ${periodo.periodo}`
+            };
+        }
+
+        return { valido: true, mensaje: '' };
+    } catch (error) {
+        console.error('Error al validar periodo:', error);
+        return { valido: true, mensaje: '' }; // Permitir continuar si hay error
+    }
+};
+
+// Función para validar el cierre del mes anterior
+const validarCierreMesAnterior = async (fecha) => {
+    try {
+        // Obtener el periodo actual
+        const periodo = periodos.value.find(p => p.id_periodo === periodoSeleccionado);
+        if (!periodo) {
+            return { valido: true, mensaje: '' };
+        }
+
+        // Calcular el periodo anterior (mes anterior)
+        const [year, month] = periodo.periodo.split('-');
+        const monthNum = parseInt(month);
+        const yearNum = parseInt(year);
+        
+        let mesAnterior, yearAnterior;
+        if (monthNum === 1) {
+            mesAnterior = 12;
+            yearAnterior = yearNum - 1;
+        } else {
+            mesAnterior = monthNum - 1;
+            yearAnterior = yearNum;
+        }
+        
+        const periodoAnteriorStr = `${yearAnterior}-${String(mesAnterior).padStart(2, '0')}`;
+        const periodoAnterior = periodos.value.find(p => p.periodo === periodoAnteriorStr);
+
+        if (!periodoAnterior) {
+            return {
+                valido: true,
+                mensaje: `Nota: No se encontró el cierre del periodo anterior (${periodoAnteriorStr}). Verifique la consistencia de los datos.`
+            };
+        }
+
+        // Verificar si existe un registro del paciente en el periodo anterior
+        const registroPeriodoAnterior = await getAllIpress(`/PacienteRegistro/?paciente=${paciente.id_paciente}&periodo=${periodoAnterior.id_periodo}`);
+        
+        if (!registroPeriodoAnterior || registroPeriodoAnterior.length === 0) {
+            return {
+                valido: true,
+                mensaje: `Nota: El paciente no tiene registros en el periodo anterior (${periodoAnteriorStr}). Verifique si esto es correcto.`
+            };
+        }
+
+        // Si hay registros en el periodo anterior, verificar consistencia
+        const ultimoRegistroAnterior = registroPeriodoAnterior.sort((a, b) => 
+            new Date(b.fecha_created) - new Date(a.fecha_created)
+        )[0];
+
+        if (ultimoRegistroAnterior.condicion === 'EGRESADO' && condicionAutomatica.value !== 'REINGRESO') {
+            return {
+                valido: true,
+                mensaje: `Advertencia: El último registro del periodo anterior es un egreso, la condición actual debería ser REINGRESO.`
+            };
+        }
+
+        if (ultimoRegistroAnterior.condicion !== 'EGRESADO' && condicionAutomatica.value === 'NUEVO') {
+            return {
+                valido: true,
+                mensaje: `Advertencia: El paciente tiene registros previos, la condición no debería ser NUEVO.`
+            };
+        }
+
+        return {
+            valido: true,
+            mensaje: `✓ Consistente con el cierre del periodo anterior (${periodoAnteriorStr})`
+        };
+
+    } catch (error) {
+        console.error('Error al validar cierre mes anterior:', error);
+        return { valido: true, mensaje: '' }; // Permitir continuar si hay error
+    }
+};
 import { useRouter } from 'vue-router'
 import { ref, onMounted, reactive, computed } from 'vue';
 import { getAllIpress, patchAllIpress, postAllIpress, putAllIpress } from "@/services/ipress/Ipress.service";
@@ -806,6 +1293,21 @@ const formInfeccion = reactive({
     tratamiento: '',
     observaciones: ''
 })
+
+// Formulario para captar paciente
+const formCaptar = reactive({
+    condicion: '',
+    fecha: '',
+    observaciones: ''
+})
+
+// Formulario para egresar paciente
+const formEgresar = reactive({
+    fecha: '',
+    tipo_egreso: '',
+    motivo_especifico: '',
+    observaciones: ''
+})
 // Puedes usar props.paciente o hacer destructuring:
 
 // Todas las opciones de localización están ahora disponibles para todos los tipos de acceso
@@ -842,6 +1344,10 @@ const historicoOrdenado = computed(() => {
 
 const historialInfeccionesOrdenado = computed(() => {
   return [...historialInfecciones.value].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+});
+
+const historialMovimientosOrdenado = computed(() => {
+  return [...historialMovimientos.value].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 });
 
 const minFechaNuevoAcceso = computed(() => {
@@ -1005,6 +1511,7 @@ onMounted(() => {
     fetchPeriodo();
     fetchPeriodoActual();
     fetchHistorialAcceso();
+    fetchHistorialMovimientos();
 });
 
 </script>

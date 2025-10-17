@@ -60,6 +60,11 @@ const routes = [
         path: 'calidad-agua',
         name: 'CalidadMicrobiologica',
         component: () => import('@/pages/calidad-agua/CalidadMicrobiologica.vue'),
+      },
+      {
+        path: 'movimientos',
+        name: 'Movimientos',
+        component: () => import('@/pages/movimientos/movimientos.vue'),
       }
     ]
   },
