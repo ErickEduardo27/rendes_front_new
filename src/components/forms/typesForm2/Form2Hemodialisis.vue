@@ -496,7 +496,7 @@ select, input[type="text"], input[type="date"] {
                 </div>
 
                 <!-- Historial de Movimientos del Paciente -->
-                <div class="mt-8">
+                <!-- <div class="mt-8">
                     <h3 class="text-lg font-semibold mb-4">Movimientos del Paciente (Ingresos/Egresos)</h3>
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <div v-if="historialMovimientos.length === 0" class="text-gray-500 text-center py-4">
@@ -532,7 +532,7 @@ select, input[type="text"], input[type="date"] {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> -->
 
                 <!-- Botón para abrir módulo de infección -->
                 <div class="flex justify-between items-center mt-6">

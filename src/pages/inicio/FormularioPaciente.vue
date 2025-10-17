@@ -3,23 +3,7 @@
     <h2 class="text-xl font-bold">Registro de Nuevo Paciente en Diálisis:</h2>
     <p class="text-sm text-gray-600">Complete los respectivos datos del paciente para la creación del expediente médico.
     </p>
-
-    <!-- Selección de Periodo y Clínica -->
-    <div class="flex items-center gap-4 mb-4 flex-wrap bg-gray-50 p-4 rounded-lg border">
-      <div class="flex items-center gap-2">
-        <h2 class="text-sm font-semibold">Periodo de Reporte:</h2>
-        <select v-model="periodoSeleccionado" class="border p-2 rounded" @change="searchPeriodoIpress">
-          <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">{{ periodo.periodo }}
-          </option>
-        </select>
-      </div>
-      <div class="flex items-center gap-2">
-        <label class="text-sm font-semibold">Clínica:</label>
-        <el-autocomplete v-model="clinicaSeleccionada" :fetch-suggestions="querySearchClinica" clearable
-          placeholder="Ingrese nombre de clínica" @select="handleSelectClinica" :value-key="'ipress'" style="width: 400px;"/>
-      </div>
-    </div>
-
+    
     <!-- Datos personales -->
     <div class="grid grid-cols-4 gap-5">
       <div>
@@ -232,43 +216,14 @@
 </template>
 
 <script setup>
-import { reactive, computed, watch, ref, onMounted } from 'vue'
+import { reactive, computed, watch, ref ,onMounted } from 'vue'
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { apiClient } from "@/services/api/ApiClient";
 import { ElMessage } from 'element-plus';
-
-// Props recibidos desde el componente padre
-const props = defineProps({
-  periodoInicial: {
-    type: Number,
-    default: null
-  },
-  idPeriodoIpressInicial: {
-    type: Number,
-    default: null
-  },
-  idClinicaInicial: {
-    type: Number,
-    default: null
-  },
-  nombreClinicaInicial: {
-    type: String,
-    default: ''
-  }
-})
-
 const seleccionadas = ref([])
 const periodos = ref([])
 const consultandoDNI = ref(false)
 const errorDNI = ref('')
-
-// Variables para Periodo y Clínica
-const periodoSeleccionado = ref(props.periodoInicial)
-const clinicaSeleccionada = ref(props.nombreClinicaInicial)
-const idClinicaSeleccionada = ref(props.idClinicaInicial)
-const idPeriodoIpress = ref(props.idPeriodoIpressInicial)
-const ipress = ref([])
-const periodoIpress = ref([])
 const form = reactive({
   tipoDocumento: '',
   numeroDocumento: '',
@@ -689,25 +644,6 @@ const onDocumentoInput = (event) => {
   }
 };
 const registrarPaciente = async (url = null) => {
-  // Validar que se haya seleccionado periodo y clínica
-  if (!periodoSeleccionado.value || !idClinicaSeleccionada.value) {
-    ElMessage({
-      message: 'Por favor seleccione un Periodo de Reporte y una Clínica',
-      type: 'warning',
-      plain: true,
-    });
-    return;
-  }
-
-  if (!idPeriodoIpress.value) {
-    ElMessage({
-      message: 'No se encontró el periodo IPRESS para la combinación seleccionada',
-      type: 'warning',
-      plain: true,
-    });
-    return;
-  }
-
   if (!validarFormulario()) return;
   const payload = {
     documento: form.numeroDocumento,
@@ -759,7 +695,7 @@ const registrarPacienteDialisis = async (respuesta) => {
     enf_otra: form.comorbilidades.includes("Otra") ? 'Sí' : 'NO',
     id_paciente: respuesta.id_paciente,
     paciente: respuesta.id_paciente,
-    id_periodo_ipress: idPeriodoIpress.value,
+    id_periodo_ipress: null,
   };
   try {
     await postAllIpress("/pacientesDialisis/", payload);
@@ -799,87 +735,7 @@ const registroPacienteHistorial = async (respuesta) => {
   }
 
 }
-
-// Funciones para Autocomplete de Clínica
-const querySearchClinica = (queryString, cb) => {
-  const results = queryString
-    ? ipress.value.filter(r =>
-      r.ipress?.toLowerCase().includes(queryString.toLowerCase())
-    )
-    : ipress.value;
-  cb(results);
-};
-
-const handleSelectClinica = (item) => {
-  idClinicaSeleccionada.value = item.id_ipress;
-  searchPeriodoIpress();
-};
-
-// Función para buscar periodo IPRESS
-function searchPeriodoIpress() {
-  const resultado = periodoIpress.value.find(
-    item => item.id_ipress === idClinicaSeleccionada.value && item.periodo === periodoSeleccionado.value
-  );
-  if (resultado) {
-    idPeriodoIpress.value = resultado.id_periodo_ipress;
-    console.log("ID Periodo IPRESS seleccionado:", idPeriodoIpress.value);
-  } else {
-    idPeriodoIpress.value = null;
-    console.log("No se encontró periodo IPRESS para esta combinación");
-  }
-}
-
-// Fetch IPRESS asignadas al usuario
-const fetchIpress = async (url = null) => {
-  try {
-    const usuario = JSON.parse(localStorage.getItem('user'));
-    if (!usuario || !usuario.id_usuario) {
-      ipress.value = [];
-      return;
-    }
-    // Obtener asignaciones del usuario
-    const asignaciones = await getAllIpress(`/asignaciones/?usuario=${usuario.id_usuario}`);
-    const idsAsignados = asignaciones.map(a => a.ipress);
-    
-    // Obtener solo las IPRESS asignadas
-    const todasIpress = await getAllIpress(url ?? "/ipress/");
-    ipress.value = todasIpress.filter(i => idsAsignados.includes(i.id_ipress));
-  } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
-    ipress.value = [];
-  }
-};
-
-// Fetch Periodo IPRESS
-const fetchPeriodoIpress = async (url = null) => {
-  try {
-    const respuesta = await getAllIpress(url ?? "/periodoIpress/");
-    periodoIpress.value = respuesta;
-  } catch (error) {
-    console.error('Error al obtener Periodo IPRESS:', error);
-  }
-};
-
-// Watchers para actualizar cuando cambien los props
-watch(() => props.periodoInicial, (newVal) => {
-  if (newVal) periodoSeleccionado.value = newVal;
-}, { immediate: true });
-
-watch(() => props.idPeriodoIpressInicial, (newVal) => {
-  if (newVal) idPeriodoIpress.value = newVal;
-}, { immediate: true });
-
-watch(() => props.idClinicaInicial, (newVal) => {
-  if (newVal) idClinicaSeleccionada.value = newVal;
-}, { immediate: true });
-
-watch(() => props.nombreClinicaInicial, (newVal) => {
-  if (newVal) clinicaSeleccionada.value = newVal;
-}, { immediate: true });
-
 onMounted(() => {
   fetchPeriodo();
-  fetchIpress();
-  fetchPeriodoIpress();
 });
 </script>
