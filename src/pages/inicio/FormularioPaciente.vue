@@ -3,7 +3,23 @@
     <h2 class="text-xl font-bold">Registro de Nuevo Paciente en Diálisis:</h2>
     <p class="text-sm text-gray-600">Complete los respectivos datos del paciente para la creación del expediente médico.
     </p>
-    
+
+    <!-- Selección de Periodo y Clínica -->
+    <div class="flex items-center gap-4 mb-4 flex-wrap bg-gray-50 p-4 rounded-lg border">
+      <div class="flex items-center gap-2">
+        <h2 class="text-sm font-semibold">Periodo de Reporte:</h2>
+        <select v-model="periodoSeleccionado" class="border p-2 rounded" @change="searchPeriodoIpress">
+          <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">{{ periodo.periodo }}
+          </option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-sm font-semibold">Clínica:</label>
+        <el-autocomplete v-model="clinicaSeleccionada" :fetch-suggestions="querySearchClinica" clearable
+          placeholder="Ingrese nombre de clínica" @select="handleSelectClinica" :value-key="'ipress'" style="width: 400px;"/>
+      </div>
+    </div>
+
     <!-- Datos personales -->
     <div class="grid grid-cols-4 gap-5">
       <div>
@@ -66,7 +82,6 @@
       </div>
     </div>
 
-    <!-- Etiología -->
     <div class="grid grid-cols-2 gap-4 mt-6">
       <div class="space-y-2">
         <span class="block font-semibold text-sm text-gray-700">Etiología general</span>
@@ -78,7 +93,6 @@
         </select>
       </div>
 
-      <!-- Etiología específica -->
       <div class="space-y-2 relative">
         <span class="block font-semibold text-sm text-gray-700">Etiología específica</span>
         <div class="w-full">
@@ -92,16 +106,25 @@
       </div>
     </div>
 
-    <!-- Comorbilidad -->
     <div class="mt-6" :key="form.etiologiaGeneral">
       <label class="text-xl font-medium block mb-2">Comorbilidad</label>
       <div class="grid grid-cols-3 gap-4">
         <label><input type="checkbox" v-model="form.comorbilidades" value="Insuficiencia cardiaca" /> Insuficiencia
           cardiaca congestiva</label>
-        <label v-if="form.etiologiaGeneral!=1"><input type="checkbox" v-model="form.comorbilidades" value="Diabetes" /> Diabetes</label>
+        
+        <label v-if="form.etiologiaGeneral != '1'">
+            <input type="checkbox" v-model="form.comorbilidades" value="Diabetes" /> 
+            Diabetes
+        </label>
+
         <label><input type="checkbox" v-model="form.comorbilidades" value="Aterosclerosis" /> Aterosclerosis
           cardíaca</label>
-        <label v-if="form.etiologiaGeneral!=1"><input type="checkbox"   v-model="form.comorbilidades" value="Hipertensión" /> Hipertensión</label>
+
+        <label v-if="form.etiologiaGeneral != '5'">
+            <input type="checkbox" v-model="form.comorbilidades" value="Hipertensión" /> 
+            Hipertensión
+        </label>
+
         <label><input type="checkbox" v-model="form.comorbilidades" value="Vascular periférica" /> Enfermedad vascular
           periférica</label>
         <label><input type="checkbox" v-model="form.comorbilidades" value="Tuberculosis" /> Tuberculosis</label>
@@ -111,7 +134,6 @@
       </div>
     </div>
 
-    <!-- Acceso Vascular -->
     <div class="grid grid-cols-4 gap-4 mt-6">
       <div>
         <label class="text-sm font-medium">Modalidad de Inicio de TRR</label>
@@ -129,9 +151,16 @@
       </div>
       <div>
         <label class="text-sm font-medium">Fecha de Inicio de TRR</label>
-        <!-- Fecha de Inicio de TRR -->
-        <input type="date" v-model="form.fechaInicioTRR" :min="form.fechaCreacionAcceso || undefined"
-          class="w-full border px-2 py-1 rounded" />
+        <input 
+             type="date" 
+             v-model="form.fechaInicioTRR" 
+             :min="form.fechaCreacionAcceso || undefined"
+             :max="fechaMaximaPermitida"
+             class="w-full border px-2 py-1 rounded" 
+        />
+        <p class="text-xs text-gray-400 mt-1">
+             *Máximo hasta fin del periodo seleccionado.
+        </p>
       </div>
       <div>
         <label class="text-sm font-medium">Subsistema de Salud</label>
@@ -150,50 +179,53 @@
       </div>
       <div>
         <label class="text-sm font-medium">Tipo de Acceso de Inicio</label>
-        <select v-model="form.tipoAccesoInicio" class="w-full border px-2 py-1 rounded">
+        <select 
+          v-model="form.tipoAccesoInicio" 
+          class="w-full border px-2 py-1 rounded"
+          :disabled="form.modalidadTRR === 'Trasplante'"
+          :class="{
+            'bg-gray-200 text-gray-500 cursor-not-allowed': form.modalidadTRR === 'Trasplante',
+            'bg-gray-50 pointer-events-none text-gray-700': form.modalidadTRR === 'Diálisis Peritoneal'
+          }"
+        >
           <option disabled value="">Seleccione</option>
-          <option>Catéter Venoso Central Temporal</option>
-          <option>Catéter Venoso Central de Larga Permanencia</option>
-          <option>Fístula Arteriovenosa</option>
-          <option>Injerto Autólogo</option>
-          <option>Injerto Protésico</option>
-          <option>Catéter peritoneal</option>
+          <option value="1">Catéter Venoso Central Temporal</option>
+          <option value="2">Catéter Venoso Central de Larga Permanencia</option>
+          <option value="3">Fístula Arteriovenosa</option>
+          <option value="4">Injerto Autólogo</option>
+          <option value="5">Injerto Protésico</option>
+          <option value="6">Catéter peritoneal</option> 
         </select>
       </div>
-      
       <div>
         <label class="text-sm font-medium">Fecha de Ingreso a Hospital EsSalud</label>
         <input type="date" v-model="form.fechaIngresoEsSalud" class="w-full border px-2 py-1 rounded" />
       </div>
       <div>
         <label class="text-sm font-medium">Fecha de Primer Ingreso a Unidad</label>
-        <!-- <input type="date" v-model="form.fechaPrimerIngreso" class="w-full border px-2 py-1 rounded" /> -->
         <input type="date" v-model="form.fechaPrimerIngreso" 
           class="w-full border px-2 py-1 rounded" />
       </div>
       <div>
         <label class="text-sm font-medium">Localización Acceso de Inicio</label>
-        <select v-model="form.localizacionAcceso" class="w-full border px-2 py-1 rounded">
+        <select 
+            v-model="form.localizacionAcceso" 
+            class="w-full border px-2 py-1 rounded"
+            :disabled="form.modalidadTRR === 'Trasplante' || !form.modalidadTRR"
+            :class="{
+                'bg-gray-100 cursor-not-allowed': form.modalidadTRR === 'Trasplante'
+            }"
+        >
           <option disabled value="">Seleccione</option>
-          <option value="1">1. FAV radial derecha</option>
-          <option value="2">2. FAV radial izquierda</option>
-          <option value="3">3. FAV braquial o cubital derecha</option>
-          <option value="4">4. FAV braquial o cubital izquierda</option>
-          <option value="5">5. CVCT yugular derecha</option>
-          <option value="6">6. CVCT yugular izquierdo</option>
-          <option value="7">7. CVCT subclavio derecho</option>
-          <option value="8">8. CVCT subclavio izquierdo</option>
-          <option value="9">9. CVCT femoral derecho</option>
-          <option value="10">10. CVCT femoral izquierdo</option>
-          <option value="11">11. CVCLP yugular derecha</option>
-          <option value="12">12. CVCLP yugular izquierdo</option>
-          <option value="13">13. CVCLP femoral derecho</option>
-          <option value="14">14. CVCLP femoral izquierdo</option>
-          <option value="15">15. CVCLP translumbar</option>
-          <option value="16">16. CVCLP transhepático</option>
-          <option value="17">17. Injerto autólogo</option>
-          <option value="18">18. Injerto protésico</option>
-          <option value="19">19. Catéter peritoneal</option>
+          
+          <option 
+            v-for="opcion in opcionesAccesoFiltradas" 
+            :key="opcion.id" 
+            :value="opcion.id"
+          >
+            {{ opcion.label }}
+          </option>
+
         </select>
       </div>
       <div>
@@ -205,7 +237,6 @@
       </div>
     </div>
 
-    <!-- Botones -->
     <div class="flex justify-end gap-4 mt-6">
       <button class="bg-gray-400 text-white px-4 py-2 rounded" @click="$emit('cancelar')">Cancelar</button>
       <button class="bg-sky-600 text-white px-6 py-2 rounded font-semibold" @click="registrarPaciente">
@@ -220,6 +251,27 @@ import { reactive, computed, watch, ref ,onMounted } from 'vue'
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { apiClient } from "@/services/api/ApiClient";
 import { ElMessage } from 'element-plus';
+
+// Props recibidos desde el componente padre
+const props = defineProps({
+  periodoInicial: {
+    type: Number,
+    default: null
+  },
+  idPeriodoIpressInicial: {
+    type: Number,
+    default: null
+  },
+  idClinicaInicial: {
+    type: Number,
+    default: null
+  },
+  nombreClinicaInicial: {
+    type: String,
+    default: ''
+  }
+})
+
 const seleccionadas = ref([])
 const periodos = ref([])
 const consultandoDNI = ref(false)
@@ -441,6 +493,44 @@ const localizacionesFiltradas = computed(() => {
   const base = etiologiasEspecificas[tipo] || [];
   return [...base];
 });
+
+// ✅ PEGA ESTO (El bloque completo y sano)
+
+// 1. Lista maestra de opciones
+const listaOpcionesAcceso = [
+  { id: '1', label: '1. FAV radial derecha' },
+  { id: '2', label: '2. FAV radial izquierda' },
+  { id: '3', label: '3. FAV braquial o cubital derecha' },
+  { id: '4', label: '4. FAV braquial o cubital izquierda' },
+  { id: '5', label: '5. CVCT yugular derecha' },
+  { id: '6', label: '6. CVCT yugular izquierdo' },
+  { id: '7', label: '7. CVCT subclavio derecho' },
+  { id: '8', label: '8. CVCT subclavio izquierdo' },
+  { id: '9', label: '9. CVCT femoral derecho' },
+  { id: '10', label: '10. CVCT femoral izquierdo' },
+  { id: '11', label: '11. CVCLP yugular derecha' },
+  { id: '12', label: '12. CVCLP yugular izquierdo' },
+  { id: '13', label: '13. CVCLP femoral derecho' },
+  { id: '14', label: '14. CVCLP femoral izquierdo' },
+  { id: '15', label: '15. CVCLP translumbar' },
+  { id: '16', label: '16. CVCLP transhepático' },
+  { id: '17', label: '17. Injerto autólogo' },
+  { id: '18', label: '18. Injerto protésico' },
+  { id: '19', label: '19. Catéter peritoneal' }
+];
+
+// 2. Filtro (Con su inicio y su fin correctos)
+const opcionesAccesoFiltradas = computed(() => {
+  const modalidad = form.modalidadTRR;
+
+  if (modalidad === 'Hemodiálisis') {
+    return listaOpcionesAcceso.filter(op => parseInt(op.id) <= 18);
+  } else if (modalidad === 'Diálisis Peritoneal') {
+    return listaOpcionesAcceso.filter(op => op.id === '19');
+  }
+
+  return [];
+});
 const comorbilidadesLabels = [
   "Enfermedades Ateroescleróticas Cardiacas",
   "Insuficiencia Cardíaca Congestiva",
@@ -602,18 +692,17 @@ watch(() => form.fechaNacimiento, (nuevaFecha) => {
   form.edad = edad;
 });
 
-// Watcher para validación cruzada entre modalidad TRR y tipo de acceso
+  // Watcher para validación cruzada entre modalidad TRR y tipo de acceso
+ // Watcher para validación cruzada
 watch(() => form.modalidadTRR, (nuevaModalidad) => {
   if (nuevaModalidad === 'Diálisis Peritoneal') {
-    // Si la modalidad es Diálisis Peritoneal, el acceso debe ser Catéter peritoneal
-    form.tipoAccesoInicio = 'Catéter peritoneal';
-    form.localizacionAcceso = '19'; // Catéter peritoneal
+    // CAMBIO: Usamos el ID '6' en lugar del texto
+    form.tipoAccesoInicio = '6'; 
+    form.localizacionAcceso = '19'; 
   } else if (nuevaModalidad === 'Trasplante') {
-    // Si la modalidad es Trasplante, no se requiere tipo de acceso
     form.tipoAccesoInicio = '';
     form.localizacionAcceso = '';
   }
-  // Para Hemodiálisis, no se fuerza ningún valor específico
 });
 
 // Watcher para validación cruzada entre tipo de acceso y localización
@@ -627,6 +716,22 @@ watch(() => form.tipoAccesoInicio, (nuevoTipoAcceso) => {
     form.localizacionAcceso = '18';
   }
   // Para otros tipos de acceso, no se fuerza una localización específica
+});
+
+
+// Watcher: Limpia las comorbilidades si coinciden con la etiología
+watch(() => form.etiologiaGeneral, (nuevoValor) => {
+  // Aseguramos comparar como string o número
+  const valor = String(nuevoValor);
+
+  if (valor === '1') {
+    // Si la causa es Diabetes, quitamos 'Diabetes' de comorbilidades
+    form.comorbilidades = form.comorbilidades.filter(c => c !== 'Diabetes');
+  } 
+  else if (valor === '5') {
+    // Si la causa es Hipertensión, quitamos 'Hipertensión' de comorbilidades
+    form.comorbilidades = form.comorbilidades.filter(c => c !== 'Hipertensión');
+  }
 });
 
 // Watcher para limpiar errores cuando se cambia el DNI
@@ -676,12 +781,17 @@ const registrarPacienteDialisis = async (respuesta) => {
     modalidad_inicio_trr: form.modalidadTRR,
     fecha_inicio_trr: form.fechaInicioTRR,
     subsistema_salud: form.subsistemaSalud,
-    tipo_acceso: form.tipoAccesoInicio,
+
+    // Lógica Trasplante (Tipo de Acceso):
+    tipo_acceso: form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : form.tipoAccesoInicio,
+
     fecha_creacion_acceso: form.fechaCreacionAcceso,
     fecha_primer_ingreso: form.fechaPrimerIngreso,
-
     fecha_ingreso_hospital: form.fechaIngresoEsSalud,
-    localizacion_acceso_inicio: form.localizacionAcceso,
+
+    // Lógica Trasplante (Localización):
+    localizacion_acceso_inicio: form.modalidadTRR === 'Trasplante' ? null : form.localizacionAcceso,
+
     hospital_procedencia_trr: form.hospitalProcedencia,
 
     enf_ateroesclerotica_cardiaca: form.comorbilidades.includes("Aterosclerosis") ? 'Sí' : 'NO',
@@ -697,18 +807,14 @@ const registrarPacienteDialisis = async (respuesta) => {
     paciente: respuesta.id_paciente,
     id_periodo_ipress: null,
   };
+
   try {
     await postAllIpress("/pacientesDialisis/", payload);
-    /* alert("Se registro con exito")
-    window.location.reload() */
     registroPacienteHistorial(respuesta);
-
   } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+    console.error('Error al registrar diálisis:', error);
   }
-
 }
-
 const fetchPeriodo = async (url = null) => {
   try {
     const respuesta = await getAllIpress(url ?? "/periodos/");
@@ -722,19 +828,100 @@ const fetchPeriodo = async (url = null) => {
 const registroPacienteHistorial = async (respuesta) => {
   const payload = {
     paciente: respuesta.id_paciente,
-    periodo: form.idPeriodo,
+    periodo: periodoSeleccionado.value, 
+    
     condicion: 'REGISTRADO',
   };
+
   try {
     await postAllIpress("/PacienteRegistro/", payload);
-    alert("Se registro con exito")
-    window.location.reload()
+    ElMessage({ message: 'Paciente registrado exitosamente', type: 'success', plain: true });
+    
+    // Recargar la página después de un momento
+    setTimeout(() => window.location.reload(), 1500);
 
   } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+    console.error('Error al registrar historial:', error);
   }
-
 }
+
+// Funciones para Autocomplete de Clínica
+const querySearchClinica = (queryString, cb) => {
+  const results = queryString
+    ? ipress.value.filter(r =>
+      r.ipress?.toLowerCase().includes(queryString.toLowerCase())
+    )
+    : ipress.value;
+  cb(results);
+};
+
+const handleSelectClinica = (item) => {
+  idClinicaSeleccionada.value = item.id_ipress;
+  searchPeriodoIpress();
+};
+
+// Función para buscar periodo IPRESS
+function searchPeriodoIpress() {
+  const resultado = periodoIpress.value.find(
+    item => item.id_ipress === idClinicaSeleccionada.value && item.periodo === periodoSeleccionado.value
+  );
+  if (resultado) {
+    idPeriodoIpress.value = resultado.id_periodo_ipress;
+    console.log("ID Periodo IPRESS seleccionado:", idPeriodoIpress.value);
+  } else {
+    idPeriodoIpress.value = null;
+    console.log("No se encontró periodo IPRESS para esta combinación");
+  }
+}
+
+// Fetch IPRESS asignadas al usuario
+const fetchIpress = async (url = null) => {
+  try {
+    const usuario = JSON.parse(localStorage.getItem('user'));
+    if (!usuario || !usuario.id_usuario) {
+      ipress.value = [];
+      return;
+    }
+    // Obtener asignaciones del usuario
+    const asignaciones = await getAllIpress(`/asignaciones/?usuario=${usuario.id_usuario}`);
+    const idsAsignados = asignaciones.map(a => a.ipress);
+    
+    // Obtener solo las IPRESS asignadas
+    const todasIpress = await getAllIpress(url ?? "/ipress/");
+    ipress.value = todasIpress.filter(i => idsAsignados.includes(i.id_ipress));
+  } catch (error) {
+    console.error('Error al obtener IPRESS:', error);
+    ipress.value = [];
+  }
+};
+
+// Fetch Periodo IPRESS
+const fetchPeriodoIpress = async (url = null) => {
+  try {
+    const respuesta = await getAllIpress(url ?? "/periodoIpress/");
+    periodoIpress.value = respuesta;
+  } catch (error) {
+    console.error('Error al obtener Periodo IPRESS:', error);
+  }
+};
+
+// Watchers para actualizar cuando cambien los props
+watch(() => props.periodoInicial, (newVal) => {
+  if (newVal) periodoSeleccionado.value = newVal;
+}, { immediate: true });
+
+watch(() => props.idPeriodoIpressInicial, (newVal) => {
+  if (newVal) idPeriodoIpress.value = newVal;
+}, { immediate: true });
+
+watch(() => props.idClinicaInicial, (newVal) => {
+  if (newVal) idClinicaSeleccionada.value = newVal;
+}, { immediate: true });
+
+watch(() => props.nombreClinicaInicial, (newVal) => {
+  if (newVal) clinicaSeleccionada.value = newVal;
+}, { immediate: true });
+
 onMounted(() => {
   fetchPeriodo();
 });
