@@ -252,6 +252,12 @@ import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { apiClient } from "@/services/api/ApiClient";
 import { ElMessage } from 'element-plus';
 
+const periodoSeleccionado = ref(null);
+const clinicaSeleccionada = ref('');
+const idClinicaSeleccionada = ref(null);
+const idPeriodoIpress = ref(null);
+const ipress = ref([]);
+const periodoIpress = ref([]);
 // Props recibidos desde el componente padre
 const props = defineProps({
   periodoInicial: {
