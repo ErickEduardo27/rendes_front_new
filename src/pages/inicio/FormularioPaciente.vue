@@ -4,19 +4,37 @@
     <p class="text-sm text-gray-600">Complete los respectivos datos del paciente para la creación del expediente médico.
     </p>
 
-    <!-- Selección de Periodo y Clínica -->
     <div class="flex items-center gap-4 mb-4 flex-wrap bg-gray-50 p-4 rounded-lg border">
+      
       <div class="flex items-center gap-2">
-        <h2 class="text-sm font-semibold">Periodo de Reporte:</h2>
-        <select v-model="periodoSeleccionado" class="border p-2 rounded" @change="searchPeriodoIpress">
-          <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">{{ periodo.periodo }}
-          </option>
-        </select>
+        <h2 class="text-sm font-semibold text-gray-700">Periodo de Reporte:</h2>
+        <el-date-picker
+          v-model="fechaVisual"
+          type="month"
+          placeholder="Seleccione mes"
+          format="YYYY-MM"
+          value-format="YYYY-MM"
+          :editable="false"
+          :clearable="false"
+          style="width: 160px"
+          :disabled-date="esFechaDeshabilitada" 
+          @change="procesarCambioPeriodo"
+        />
       </div>
-      <div class="flex items-center gap-2">
-        <label class="text-sm font-semibold">Clínica:</label>
-        <el-autocomplete v-model="clinicaSeleccionada" :fetch-suggestions="querySearchClinica" clearable
-          placeholder="Ingrese nombre de clínica" @select="handleSelectClinica" :value-key="'ipress'" style="width: 400px;"/>
+      
+      <div class="w-px h-6 bg-gray-300 mx-2"></div>
+
+      <div class="flex items-center gap-2 flex-1">
+        <label class="text-sm font-semibold text-gray-700">Clínica:</label>
+        <el-autocomplete 
+          v-model="clinicaSeleccionada" 
+          :fetch-suggestions="querySearchClinica" 
+          clearable
+          placeholder="Ingrese nombre de clínica" 
+          @select="handleSelectClinica" 
+          :value-key="'ipress'" 
+          style="width: 100%; max-width: 400px;"
+        />
       </div>
     </div>
 
@@ -184,17 +202,19 @@
           class="w-full border px-2 py-1 rounded"
           :disabled="form.modalidadTRR === 'Trasplante'"
           :class="{
-            'bg-gray-200 text-gray-500 cursor-not-allowed': form.modalidadTRR === 'Trasplante',
-            'bg-gray-50 pointer-events-none text-gray-700': form.modalidadTRR === 'Diálisis Peritoneal'
+            'bg-gray-200 text-gray-500 cursor-not-allowed': form.modalidadTRR === 'Trasplante'
           }"
         >
           <option disabled value="">Seleccione</option>
-          <option value="1">Catéter Venoso Central Temporal</option>
-          <option value="2">Catéter Venoso Central de Larga Permanencia</option>
-          <option value="3">Fístula Arteriovenosa</option>
-          <option value="4">Injerto Autólogo</option>
-          <option value="5">Injerto Protésico</option>
-          <option value="6">Catéter peritoneal</option> 
+          
+          <option 
+            v-for="tipo in tiposAccesoFiltrados" 
+            :key="tipo.id" 
+            :value="tipo.id"
+          >
+            {{ tipo.label }}
+          </option>
+
         </select>
       </div>
       <div>
@@ -499,6 +519,80 @@ const localizacionesFiltradas = computed(() => {
   const base = etiologiasEspecificas[tipo] || [];
   return [...base];
 });
+
+// --- LÓGICA DEL SELECTOR DE PERIODO (NUEVO) ---
+
+const fechaVisual = ref(''); // Variable para el input visual del date-picker
+
+// 1. Validar fechas en el calendario (Bloquear las que no están en la lista)
+const esFechaDeshabilitada = (time) => {
+  if (periodos.value.length === 0) return true;
+
+  const year = time.getFullYear();
+  const month = String(time.getMonth() + 1).padStart(2, '0');
+  const fechaCalendario = `${year}-${month}`;
+
+  // Si la fecha existe en tus periodos cargados, devuelve false (habilitado)
+  const existe = periodos.value.some(p => p.periodo === fechaCalendario);
+  return !existe;
+};
+
+// --- 1. Definir la lista maestra de TIPOS de acceso ---
+const listaTiposAcceso = [
+  { id: '1', label: 'Catéter Venoso Central Temporal' },
+  { id: '2', label: 'Catéter Venoso Central de Larga Permanencia' },
+  { id: '3', label: 'Fístula Arteriovenosa' },
+  { id: '4', label: 'Injerto Autólogo' },
+  { id: '5', label: 'Injerto Protésico' },
+  { id: '6', label: 'Catéter peritoneal' } 
+];
+
+// --- 2. Crear el Filtro Inteligente ---
+const tiposAccesoFiltrados = computed(() => {
+  const modalidad = form.modalidadTRR;
+
+  // CASO A: Si es HEMODIÁLISIS -> Quitamos el Catéter Peritoneal (ID 6)
+  if (modalidad === 'Hemodiálisis') {
+    return listaTiposAcceso.filter(t => t.id !== '6');
+  }
+  
+  // CASO B: Si es DIÁLISIS PERITONEAL -> Solo mostramos Catéter Peritoneal
+  else if (modalidad === 'Diálisis Peritoneal') {
+    return listaTiposAcceso.filter(t => t.id === '6');
+  }
+
+  // Por defecto (o Trasplante) devolvemos vacío o la lista completa según prefieras
+  return []; 
+});
+
+// 2. Procesar el cambio cuando el usuario elige una fecha
+const procesarCambioPeriodo = (fecha) => {
+  if (!fecha) return;
+  
+  // Buscamos el objeto periodo completo usando el string "YYYY-MM"
+  const encontrado = periodos.value.find(p => p.periodo === fecha);
+  
+  if (encontrado) {
+    // Actualizamos la variable principal del formulario
+    periodoSeleccionado.value = encontrado.id_periodo;
+    
+    // Ejecutamos la búsqueda de IPRESS (lo que hacía tu @change antes)
+    searchPeriodoIpress();
+  } else {
+    ElMessage.warning('El periodo seleccionado no está disponible');
+    fechaVisual.value = ''; 
+  }
+};
+
+// 3. Sincronizar visualmente (ID -> Texto)
+const sincronizarVisual = (id) => {
+  if (id && periodos.value.length > 0) {
+    const p = periodos.value.find(item => item.id_periodo === id);
+    if (p) fechaVisual.value = p.periodo;
+  }
+};
+
+// --- FIN LÓGICA SELECTOR ---
 
 // ✅ PEGA ESTO (El bloque completo y sano)
 

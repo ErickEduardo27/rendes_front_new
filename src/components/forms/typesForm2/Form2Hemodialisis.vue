@@ -308,52 +308,51 @@ select, input[type="text"], input[type="date"] {
 
 <template>
     <div class="p-6 space-y-6">
-        <!-- Botón de regreso -->
         <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
             ← Volver al inicio
         </div>
 
-        <!-- Filtros Superiores -->
         <div class="flex items-center gap-2 flex-wrap justify-between">
-        <div class="flex items-center gap-2 flex-wrap">
-            <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
-            <select v-model="periodoSeleccionado" class="border p-1 rounded" :disabled="true">
-                <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
-            </select>
+            <div class="flex items-center gap-2 flex-wrap">
+                <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
+                <select v-model="periodoSeleccionado" class="border p-1 rounded" :disabled="true">
+                    <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}
+                    </option>
+                </select>
 
-            <label>Clínica:</label>
-            <label>{{ paciente.ipress }}</label>
+                <label>Clínica:</label>
+                <label>{{ paciente.ipress }}</label>
 
-            <label>Modalidad de Diálisis:</label>
-            <label v-if="pacienteSeleccionado.value">{{ pacienteSeleccionado.value.id_modalidad == 1 ? "Hemodialisis" : "Peritonial" }}</label>
+                <label>Modalidad de Diálisis:</label>
+                <label v-if="pacienteSeleccionado.value">{{ pacienteSeleccionado.value.id_modalidad == 1 ?
+                    "Hemodialisis" : "Peritonial" }}</label>
             </div>
 
-            <!-- Botones de Acción -->
-            <!-- <div class="flex gap-2">
-                <button @click="abrirModalCaptar" class="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600 text-sm">
+            <div class="flex gap-2">
+                <button @click="abrirModalCaptar"
+                    class="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600 text-sm">
                     ➕ Captar Paciente
                 </button>
-                <button @click="abrirModalEgresar" class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 text-sm">
+                <button @click="abrirModalEgresar"
+                    class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 text-sm">
                     ➖ Egresar Paciente
                 </button>
-            </div> -->
+            </div>
         </div>
 
-        <!-- Contenedor principal en columnas -->
         <div class="flex gap-6 mt-6">
-            <!-- Contenido principal -->
             <div class="flex-1 space-y-6">
-                <!-- Sección Unidad Actual -->
                 <div>
                     <h2 class="text-xl font-semibold">ACCESO DE DIÁLISIS ACTUAL</h2>
-                    <p class="text-sm text-gray-600">A continuación se presenta el Acceso Vascular Actual del paciente</p>
+                    <p class="text-sm text-gray-600">A continuación se presenta el Acceso Vascular Actual del paciente
+                    </p>
                 </div>
 
                 <div class="grid grid-cols-3 gap-4">
-                    <!-- Acceso Actual -->
                     <div>
                         <label class="text-sm">Fecha de Creación de Acceso Actual</label>
-                        <input disabled v-model="form.fecha_creacion_acceso_actual" type="date" class="w-full border px-2 py-1 rounded" />
+                        <input disabled v-model="form.fecha_creacion_acceso_actual" type="date"
+                            class="w-full border px-2 py-1 rounded" />
                     </div>
 
                     <div>
@@ -361,7 +360,8 @@ select, input[type="text"], input[type="date"] {
                         <select disabled v-model="form.tipo_acceso_actual" class="w-full border px-2 py-1 rounded">
                             <option disabled value="">Seleccione una opción</option>
                             <option value="Catéter Venoso Central Temporal">Catéter Venoso Central Temporal</option>
-                            <option value="Catéter Venoso Central de Larga Permanencia">Catéter Venoso Central de Larga Permanencia</option>
+                            <option value="Catéter Venoso Central de Larga Permanencia">Catéter Venoso Central de Larga
+                                Permanencia</option>
                             <option value="Fístula Arteriovenosa">Fístula Arteriovenosa</option>
                             <option value="Injerto Autólogo">Injerto Autólogo</option>
                             <option value="Injerto Protésico">Injerto Protésico</option>
@@ -371,30 +371,17 @@ select, input[type="text"], input[type="date"] {
 
                     <div>
                         <label class="text-sm">Localización de Acceso Vascular Actual</label>
-                        <select disabled v-model="form.localizacion_acceso_actual" class="w-full border px-2 py-1 rounded">
+                        <select disabled v-model="form.localizacion_acceso_actual"
+                            class="w-full border px-2 py-1 rounded">
                             <option disabled value="">Seleccione una opción</option>
-                            <option value="1">1. FAV radial derecha</option>
-                            <option value="2">2. FAV radial izquierda</option>
-                            <option value="3">3. FAV braquial o cubital derecha</option>
-                            <option value="4">4. FAV braquial o cubital izquierda</option>
-                            <option value="5">5. CVCT yugular derecha</option>
-                            <option value="6">6. CVCT yugular izquierdo</option>
-                            <option value="7">7. CVCT subclavio derecho</option>
-                            <option value="8">8. CVCT subclavio izquierdo</option>
-                            <option value="9">9. CVCT femoral derecho</option>
-                            <option value="10">10. CVCT femoral izquierdo</option>
-                            <option value="11">11. CVCLP yugular derecha</option>
-                            <option value="12">12. CVCLP yugular izquierdo</option>
-                            <option value="13">13. CVCLP femoral derecho</option>
-                            <option value="14">14. CVCLP femoral izquierdo</option>
-                            <option value="15">15. CVCLP translumbar</option>
-                            <option value="16">16. CVCLP transhepático</option>
-                            <option value="17">17. Injerto autólogo</option>
-                            <option value="18">18. Injerto protésico</option>
-                            <option value="19">19. Catéter peritoneal</option>
+                            <option v-for="op in opcionesLocalizacion" :key="op.value" :value="op.value">
+                                {{ op.label }}
+                            </option>
                         </select>
                     </div>
+                </div>
 
+                <div class="grid grid-cols-2 gap-4 mt-4">
                     <div>
                         <label class="text-sm">¿Se va a cambiar el acceso del paciente?</label>
                         <select v-model="form.cambio_acceso" class="w-full border px-2 py-1 rounded">
@@ -403,11 +390,7 @@ select, input[type="text"], input[type="date"] {
                         </select>
                     </div>
 
-                </div>
-
-                <!-- Nuevo Acceso -->
-                <div class="grid grid-cols-3 gap-4" v-if="form.cambio_acceso == 'true'">
-                    <div>
+                    <div v-if="form.cambio_acceso == 'true'">
                         <label class="text-sm">Especificar el Motivo de Cambio de Acceso</label>
                         <select v-model="form.motivo_cambio" class="w-full border px-2 py-1 rounded">
                             <option value="">Seleccione una opción</option>
@@ -416,17 +399,16 @@ select, input[type="text"], input[type="date"] {
                             <option value="3">Prescripción Médica</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="text-sm">Fecha de Creación de Nuevo Acceso</label>
-                        <input v-model="form.fecha_creacion_acceso_nuevo" type="date" :min="minFechaNuevoAcceso"
-                            class="w-full border px-2 py-1 rounded" />
-                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 mt-4" v-if="form.cambio_acceso == 'true'">
                     <div>
                         <label class="text-sm">Tipo de Nuevo Acceso Vascular</label>
                         <select v-model="form.tipo_acceso_nuevo" class="w-full border px-2 py-1 rounded">
                             <option disabled value="">Seleccione una opción</option>
                             <option value="Catéter Venoso Central Temporal">Catéter Venoso Central Temporal</option>
-                            <option value="Catéter Venoso Central de Larga Permanencia">Catéter Venoso Central de Larga Permanencia</option>
+                            <option value="Catéter Venoso Central de Larga Permanencia">Catéter Venoso Central de Larga
+                                Permanencia</option>
                             <option value="Fístula Arteriovenosa">Fístula Arteriovenosa</option>
                             <option value="Injerto Autólogo">Injerto Autólogo</option>
                             <option value="Injerto Protésico">Injerto Protésico</option>
@@ -438,30 +420,19 @@ select, input[type="text"], input[type="date"] {
                         <label class="text-sm">Localización de Nuevo Acceso Vascular</label>
                         <select v-model="form.localizacion_acceso_nuevo" class="w-full border px-2 py-1 rounded">
                             <option disabled value="">Seleccione una opción</option>
-                            <option value="1">1. FAV radial derecha</option>
-                            <option value="2">2. FAV radial izquierda</option>
-                            <option value="3">3. FAV braquial o cubital derecha</option>
-                            <option value="4">4. FAV braquial o cubital izquierda</option>
-                            <option value="5">5. CVCT yugular derecha</option>
-                            <option value="6">6. CVCT yugular izquierdo</option>
-                            <option value="7">7. CVCT subclavio derecho</option>
-                            <option value="8">8. CVCT subclavio izquierdo</option>
-                            <option value="9">9. CVCT femoral derecho</option>
-                            <option value="10">10. CVCT femoral izquierdo</option>
-                            <option value="11">11. CVCLP yugular derecha</option>
-                            <option value="12">12. CVCLP yugular izquierdo</option>
-                            <option value="13">13. CVCLP femoral derecho</option>
-                            <option value="14">14. CVCLP femoral izquierdo</option>
-                            <option value="15">15. CVCLP translumbar</option>
-                            <option value="16">16. CVCLP transhepático</option>
-                            <option value="17">17. Injerto autólogo</option>
-                            <option value="18">18. Injerto protésico</option>
-                            <option value="19">19. Catéter peritoneal</option>
+                            <option v-for="op in opcionesLocalizacion" :key="op.value" :value="op.value">
+                                {{ op.label }}
+                            </option>
                         </select>
+                    </div>
+
+                    <div>
+                        <label class="text-sm">Fecha de Creación de Nuevo Acceso</label>
+                        <input v-model="form.fecha_creacion_acceso_nuevo" type="date"
+                            class="w-full border px-2 py-1 rounded" />
                     </div>
                 </div>
 
-                <!-- Historial de Cambios de Acceso -->
                 <div class="mt-8">
                     <h3 class="text-lg font-semibold mb-4">Historial de Cambios de Acceso Vascular</h3>
                     <div class="bg-gray-50 p-4 rounded-lg">
@@ -469,8 +440,8 @@ select, input[type="text"], input[type="date"] {
                             No hay registros de cambios de acceso.
                         </div>
                         <div v-else class="space-y-3">
-                            <div v-for="(cambio, index) in historialAcceso" :key="index" 
-                                 class="bg-white p-3 rounded border-l-4 border-blue-500">
+                            <div v-for="(cambio, index) in historialAcceso" :key="index"
+                                class="bg-white p-3 rounded border-l-4 border-blue-500">
                                 <div class="flex justify-between items-start">
                                     <div class="flex-1">
                                         <div class="font-medium text-sm text-gray-700">
@@ -495,30 +466,29 @@ select, input[type="text"], input[type="date"] {
                     </div>
                 </div>
 
-                <!-- Historial de Movimientos del Paciente -->
-                <!-- <div class="mt-8">
+                <div class="mt-8">
                     <h3 class="text-lg font-semibold mb-4">Movimientos del Paciente (Ingresos/Egresos)</h3>
                     <div class="bg-gray-50 p-4 rounded-lg">
                         <div v-if="historialMovimientos.length === 0" class="text-gray-500 text-center py-4">
                             No hay registros de movimientos del paciente.
                         </div>
                         <div v-else class="space-y-3">
-                            <div v-for="(movimiento, index) in historialMovimientosOrdenado" :key="index" 
-                                 :class="['bg-white p-3 rounded border-l-4', 
-                                          movimiento.tipo === 'INGRESO' || movimiento.tipo === 'CAPTADO' ? 'border-green-500' : 
-                                          movimiento.tipo === 'EGRESO' ? 'border-red-500' : 'border-blue-500']">
+                            <div v-for="(movimiento, index) in historialMovimientosOrdenado" :key="index" :class="['bg-white p-3 rounded border-l-4',
+                                movimiento.tipo === 'INGRESO' || movimiento.tipo === 'CAPTADO' ? 'border-green-500' :
+                                    movimiento.tipo === 'EGRESO' ? 'border-red-500' : 'border-blue-500']">
                                 <div class="flex justify-between items-start">
                                     <div class="flex-1">
                                         <div class="font-medium text-sm text-gray-700">
-                                            <span :class="[movimiento.tipo === 'INGRESO' || movimiento.tipo === 'CAPTADO' ? 'text-green-600' : 
-                                                          movimiento.tipo === 'EGRESO' ? 'text-red-600' : 'text-blue-600']">
+                                            <span :class="[movimiento.tipo === 'INGRESO' || movimiento.tipo === 'CAPTADO' ? 'text-green-600' :
+                                                movimiento.tipo === 'EGRESO' ? 'text-red-600' : 'text-blue-600']">
                                                 {{ movimiento.tipo }}
                                             </span> - <strong>Fecha:</strong> {{ movimiento.fecha }}
                                         </div>
                                         <div class="text-sm text-gray-600 mt-1">
                                             <strong>Condición:</strong> {{ movimiento.condicion }}
                                         </div>
-                                        <div v-if="movimiento.tipo === 'EGRESO' && movimiento.tipo_egreso" class="text-sm text-gray-600">
+                                        <div v-if="movimiento.tipo === 'EGRESO' && movimiento.tipo_egreso"
+                                            class="text-sm text-gray-600">
                                             <strong>Tipo de Egreso:</strong> {{ movimiento.tipo_egreso }}
                                         </div>
                                         <div v-if="movimiento.observaciones" class="text-sm text-gray-600">
@@ -532,23 +502,22 @@ select, input[type="text"], input[type="date"] {
                             </div>
                         </div>
                     </div>
-                </div> -->
+                </div>
 
-                <!-- Botón para abrir módulo de infección -->
                 <div class="flex justify-between items-center mt-6">
-                    <button @click="abrirModuloInfeccion" class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
+                    <button @click="abrirModuloInfeccion"
+                        class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
                         🦠 Módulo de Infección
                     </button>
                     <div class="flex gap-2">
                         <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
                         <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="postForm()">Registrar</button>
-                        <!-- <button class="bg-sky-500 text-white px-4 py-2 rounded">Registrar y Volver a Llenar</button> -->
                     </div>
                 </div>
             </div>
 
-            <!-- Perfil del paciente al costado -->
-            <div class="w-80 p-4 border rounded shadow cursor-pointer" v-if="pacienteSeleccionado.value" @click="abrirHistorico">
+            <div class="w-80 p-4 border rounded shadow cursor-pointer" v-if="pacienteSeleccionado.value"
+                @click="abrirHistorico">
                 <div class="flex items-center justify-center mb-2">
                     <div class="bg-gray-300 rounded-full h-16 w-16"></div>
                 </div>
@@ -565,12 +534,14 @@ select, input[type="text"], input[type="date"] {
                 </ul>
             </div>
 
-            <!-- Modal flotante para histórico -->
-            <div v-if="mostrarHistorico" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div v-if="mostrarHistorico"
+                class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
                 <div class="bg-white rounded shadow-lg p-6 w-[400px] max-h-[80vh] overflow-y-auto relative">
-                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarHistorico">&times;</button>
+                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl"
+                        @click="cerrarHistorico">&times;</button>
                     <h3 class="text-lg font-bold mb-4 text-center">Histórico del Paciente</h3>
-                    <div v-if="historico.length === 0" class="text-gray-500 text-center">No hay registros históricos.</div>
+                    <div v-if="historico.length === 0" class="text-gray-500 text-center">No hay registros históricos.
+                    </div>
                     <ul v-else class="space-y-2">
                         <li v-for="item in historicoOrdenado" :key="item.id_registro" class="border rounded p-2">
                             <div><strong>Fecha:</strong> {{ item.fecha }}</div>
@@ -580,15 +551,17 @@ select, input[type="text"], input[type="date"] {
                 </div>
             </div>
 
-            <!-- Modal para Captar Paciente -->
-            <div v-if="mostrarModalCaptar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div v-if="mostrarModalCaptar"
+                class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
                 <div class="bg-white rounded shadow-lg p-6 w-[600px] max-h-[90vh] overflow-y-auto relative">
-                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarModalCaptar">&times;</button>
+                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl"
+                        @click="cerrarModalCaptar">&times;</button>
                     <h3 class="text-lg font-bold mb-4 text-center">➕ Captar Paciente</h3>
-                    
+
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Condición del Paciente en la Unidad</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Condición del Paciente en la
+                                Unidad</label>
                             <select v-model="formCaptar.condicion" class="w-full border rounded p-2 text-sm" disabled>
                                 <option value="">{{ condicionAutomatica }}</option>
                             </select>
@@ -598,12 +571,14 @@ select, input[type="text"], input[type="date"] {
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Ingreso/Reingreso</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de
+                                Ingreso/Reingreso</label>
                             <input v-model="formCaptar.fecha" type="date" class="w-full border rounded p-2 text-sm" />
                         </div>
 
                         <div v-if="condicionAutomatica === 'REINGRESO'">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Registro de Egreso Previo</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Registro de Egreso
+                                Previo</label>
                             <div class="bg-gray-50 p-3 rounded border">
                                 <div v-if="ultimoEgreso" class="text-sm">
                                     <p><strong>Tipo de Egreso:</strong> {{ ultimoEgreso.tipo_egreso }}</p>
@@ -617,24 +592,27 @@ select, input[type="text"], input[type="date"] {
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
-                            <textarea v-model="formCaptar.observaciones" class="w-full border rounded p-2 text-sm" rows="3" 
-                                placeholder="Observaciones adicionales..."></textarea>
+                            <textarea v-model="formCaptar.observaciones" class="w-full border rounded p-2 text-sm"
+                                rows="3" placeholder="Observaciones adicionales..."></textarea>
                         </div>
                     </div>
 
                     <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                        <button @click="cerrarModalCaptar" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
-                        <button @click="captarPaciente" class="bg-green-500 text-white px-4 py-2 rounded">Captar Paciente</button>
+                        <button @click="cerrarModalCaptar"
+                            class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+                        <button @click="captarPaciente" class="bg-green-500 text-white px-4 py-2 rounded">Captar
+                            Paciente</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Modal para Egresar Paciente -->
-            <div v-if="mostrarModalEgresar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div v-if="mostrarModalEgresar"
+                class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
                 <div class="bg-white rounded shadow-lg p-6 w-[600px] max-h-[90vh] overflow-y-auto relative">
-                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarModalEgresar">&times;</button>
+                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl"
+                        @click="cerrarModalEgresar">&times;</button>
                     <h3 class="text-lg font-bold mb-4 text-center">➖ Egresar Paciente</h3>
-                    
+
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Egreso*</label>
@@ -656,50 +634,53 @@ select, input[type="text"], input[type="date"] {
 
                         <div v-if="formEgresar.tipo_egreso === 'Otros'">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Especificar Motivo</label>
-                            <input v-model="formEgresar.motivo_especifico" type="text" class="w-full border rounded p-2 text-sm" 
+                            <input v-model="formEgresar.motivo_especifico" type="text"
+                                class="w-full border rounded p-2 text-sm"
                                 placeholder="Especifique el motivo del egreso" />
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
-                            <textarea v-model="formEgresar.observaciones" class="w-full border rounded p-2 text-sm" rows="3" 
-                                placeholder="Observaciones adicionales..."></textarea>
+                            <textarea v-model="formEgresar.observaciones" class="w-full border rounded p-2 text-sm"
+                                rows="3" placeholder="Observaciones adicionales..."></textarea>
                         </div>
                     </div>
 
                     <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                        <button @click="cerrarModalEgresar" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
-                        <button @click="egresarPaciente" class="bg-red-500 text-white px-4 py-2 rounded">Egresar Paciente</button>
+                        <button @click="cerrarModalEgresar"
+                            class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
+                        <button @click="egresarPaciente" class="bg-red-500 text-white px-4 py-2 rounded">Egresar
+                            Paciente</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Modal flotante para módulo de infección -->
-            <div v-if="mostrarModuloInfeccion" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div v-if="mostrarModuloInfeccion"
+                class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
                 <div class="bg-white rounded shadow-lg p-6 w-[800px] max-h-[90vh] overflow-y-auto relative">
-                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarModuloInfeccion">&times;</button>
+                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl"
+                        @click="cerrarModuloInfeccion">&times;</button>
                     <h3 class="text-lg font-bold mb-4 text-center">🦠 Módulo de Infección</h3>
-                    
-                    <!-- Contenido del módulo de infección -->
+
                     <div class="space-y-6">
-                        <!-- Pregunta principal -->
                         <div class="space-y-2">
                             <label class="block font-semibold text-sm text-gray-700">¿Presenta infecciones?</label>
-                            <select v-model="formInfeccion.presentaInfecciones" class="w-full border rounded p-2 text-sm">
+                            <select v-model="formInfeccion.presentaInfecciones"
+                                class="w-full border rounded p-2 text-sm">
                                 <option value="">Seleccione una opción</option>
                                 <option value="si">Sí</option>
                                 <option value="no">No</option>
                             </select>
                         </div>
 
-                        <!-- Detalles de infección (solo si responde "Sí") -->
                         <div v-if="formInfeccion.presentaInfecciones === 'si'" class="space-y-4">
                             <h4 class="font-medium text-gray-800">Detalles de la Infección</h4>
-                            
+
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Tipo de Infección</label>
-                                    <select v-model="formInfeccion.tipoInfeccion" class="w-full border rounded p-2 text-sm">
+                                    <select v-model="formInfeccion.tipoInfeccion"
+                                        class="w-full border rounded p-2 text-sm">
                                         <option value="">Seleccione una opción</option>
                                         <option value="bacteriana">Bacteriana</option>
                                         <option value="viral">Viral</option>
@@ -707,10 +688,11 @@ select, input[type="text"], input[type="date"] {
                                         <option value="otra">Otra</option>
                                     </select>
                                 </div>
-                                
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Localización</label>
-                                    <select v-model="formInfeccion.localizacion" class="w-full border rounded p-2 text-sm">
+                                    <select v-model="formInfeccion.localizacion"
+                                        class="w-full border rounded p-2 text-sm">
                                         <option value="">Seleccione una opción</option>
                                         <option value="acceso_vascular">Acceso Vascular</option>
                                         <option value="torrente_sanguineo">Torrente Sanguíneo</option>
@@ -725,29 +707,31 @@ select, input[type="text"], input[type="date"] {
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
-                                    <input v-model="formInfeccion.fechaInicio" type="date" class="w-full border rounded p-2 text-sm" />
+                                    <input v-model="formInfeccion.fechaInicio" type="date"
+                                        class="w-full border rounded p-2 text-sm" />
                                 </div>
-                                
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Fecha de Resolución</label>
-                                    <input v-model="formInfeccion.fechaResolucion" type="date" class="w-full border rounded p-2 text-sm" />
+                                    <input v-model="formInfeccion.fechaResolucion" type="date"
+                                        class="w-full border rounded p-2 text-sm" />
                                 </div>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Tratamiento</label>
-                                <textarea v-model="formInfeccion.tratamiento" class="w-full border rounded p-2 text-sm" rows="3" 
-                                    placeholder="Describa el tratamiento administrado..."></textarea>
+                                <textarea v-model="formInfeccion.tratamiento" class="w-full border rounded p-2 text-sm"
+                                    rows="3" placeholder="Describa el tratamiento administrado..."></textarea>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Observaciones</label>
-                                <textarea v-model="formInfeccion.observaciones" class="w-full border rounded p-2 text-sm" rows="2" 
+                                <textarea v-model="formInfeccion.observaciones"
+                                    class="w-full border rounded p-2 text-sm" rows="2"
                                     placeholder="Observaciones adicionales..."></textarea>
                             </div>
                         </div>
 
-                        <!-- Historial de infecciones -->
                         <div class="mt-6">
                             <h4 class="font-medium text-gray-800 mb-3">Historial de Infecciones</h4>
                             <div class="bg-gray-50 p-4 rounded-lg">
@@ -755,8 +739,8 @@ select, input[type="text"], input[type="date"] {
                                     No hay registros de infecciones previas.
                                 </div>
                                 <div v-else class="space-y-3">
-                                    <div v-for="(infeccion, index) in historialInfeccionesOrdenado" :key="index" 
-                                         class="bg-white p-3 rounded border-l-4 border-red-500">
+                                    <div v-for="(infeccion, index) in historialInfeccionesOrdenado" :key="index"
+                                        class="bg-white p-3 rounded border-l-4 border-red-500">
                                         <div class="flex justify-between items-start">
                                             <div class="flex-1">
                                                 <div class="font-medium text-sm text-gray-700">
@@ -782,17 +766,17 @@ select, input[type="text"], input[type="date"] {
                         </div>
                     </div>
 
-                    <!-- Botones del modal -->
                     <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                        <button @click="cerrarModuloInfeccion" class="bg-gray-400 text-white px-4 py-2 rounded">Cerrar</button>
-                        <button @click="guardarInfeccion" class="bg-red-500 text-white px-4 py-2 rounded">Guardar Infección</button>
+                        <button @click="cerrarModuloInfeccion"
+                            class="bg-gray-400 text-white px-4 py-2 rounded">Cerrar</button>
+                        <button @click="guardarInfeccion" class="bg-red-500 text-white px-4 py-2 rounded">Guardar
+                            Infección</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </template>
-
 <script setup>
 const mostrarHistorico = ref(false);
 const historico = ref([]);
