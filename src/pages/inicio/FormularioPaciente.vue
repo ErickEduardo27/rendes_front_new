@@ -173,13 +173,9 @@
              type="date" 
              v-model="form.fechaInicioTRR" 
              :min="form.fechaCreacionAcceso || undefined"
-             :max="fechaMaximaPermitida"
              class="w-full border px-2 py-1 rounded" 
         />
-        <p class="text-xs text-gray-400 mt-1">
-             *Máximo hasta fin del periodo seleccionado.
-        </p>
-      </div>
+        </div>
       <div>
         <label class="text-sm font-medium">Subsistema de Salud</label>
         <select v-model="form.subsistemaSalud" class="w-full border px-2 py-1 rounded">
@@ -547,21 +543,18 @@ const listaTiposAcceso = [
   { id: '6', label: 'Catéter peritoneal' } 
 ];
 
-// --- 2. Crear el Filtro Inteligente ---
+// Filtro A: Modalidad -> Tipos disponibles
 const tiposAccesoFiltrados = computed(() => {
   const modalidad = form.modalidadTRR;
 
-  // CASO A: Si es HEMODIÁLISIS -> Quitamos el Catéter Peritoneal (ID 6)
   if (modalidad === 'Hemodiálisis') {
+    // Mostramos todo MENOS Peritoneal (ID 6)
     return listaTiposAcceso.filter(t => t.id !== '6');
-  }
-  
-  // CASO B: Si es DIÁLISIS PERITONEAL -> Solo mostramos Catéter Peritoneal
+  } 
   else if (modalidad === 'Diálisis Peritoneal') {
+    // Solo mostramos Peritoneal (ID 6)
     return listaTiposAcceso.filter(t => t.id === '6');
   }
-
-  // Por defecto (o Trasplante) devolvemos vacío o la lista completa según prefieras
   return []; 
 });
 
@@ -598,38 +591,46 @@ const sincronizarVisual = (id) => {
 
 // 1. Lista maestra de opciones
 const listaOpcionesAcceso = [
-  { id: '1', label: '1. FAV radial derecha' },
-  { id: '2', label: '2. FAV radial izquierda' },
-  { id: '3', label: '3. FAV braquial o cubital derecha' },
-  { id: '4', label: '4. FAV braquial o cubital izquierda' },
-  { id: '5', label: '5. CVCT yugular derecha' },
-  { id: '6', label: '6. CVCT yugular izquierdo' },
-  { id: '7', label: '7. CVCT subclavio derecho' },
-  { id: '8', label: '8. CVCT subclavio izquierdo' },
-  { id: '9', label: '9. CVCT femoral derecho' },
-  { id: '10', label: '10. CVCT femoral izquierdo' },
-  { id: '11', label: '11. CVCLP yugular derecha' },
-  { id: '12', label: '12. CVCLP yugular izquierdo' },
-  { id: '13', label: '13. CVCLP femoral derecho' },
-  { id: '14', label: '14. CVCLP femoral izquierdo' },
-  { id: '15', label: '15. CVCLP translumbar' },
-  { id: '16', label: '16. CVCLP transhepático' },
-  { id: '17', label: '17. Injerto autólogo' },
-  { id: '18', label: '18. Injerto protésico' },
-  { id: '19', label: '19. Catéter peritoneal' }
+  // Fístula (Corresponde al id '3')
+  { id: '1', label: '1. FAV radial derecha', idPadre: '3' },
+  { id: '2', label: '2. FAV radial izquierda', idPadre: '3' },
+  { id: '3', label: '3. FAV braquial o cubital derecha', idPadre: '3' },
+  { id: '4', label: '4. FAV braquial o cubital izquierda', idPadre: '3' },
+
+  // Temporal (Corresponde al id '1')
+  { id: '5', label: '5. CVCT yugular derecha', idPadre: '1' },
+  { id: '6', label: '6. CVCT yugular izquierdo', idPadre: '1' },
+  { id: '7', label: '7. CVCT subclavio derecho', idPadre: '1' },
+  { id: '8', label: '8. CVCT subclavio izquierdo', idPadre: '1' },
+  { id: '9', label: '9. CVCT femoral derecho', idPadre: '1' },
+  { id: '10', label: '10. CVCT femoral izquierdo', idPadre: '1' },
+
+  // Larga Permanencia (Corresponde al id '2')
+  { id: '11', label: '11. CVCLP yugular derecha', idPadre: '2' },
+  { id: '12', label: '12. CVCLP yugular izquierdo', idPadre: '2' },
+  { id: '13', label: '13. CVCLP femoral derecho', idPadre: '2' },
+  { id: '14', label: '14. CVCLP femoral izquierdo', idPadre: '2' },
+  { id: '15', label: '15. CVCLP translumbar', idPadre: '2' },
+  { id: '16', label: '16. CVCLP transhepático', idPadre: '2' },
+
+  // Injerto Autólogo (Corresponde al id '4')
+  { id: '17', label: '17. Injerto autólogo', idPadre: '4' },
+
+  // Injerto Protésico (Corresponde al id '5')
+  { id: '18', label: '18. Injerto protésico', idPadre: '5' },
+
+  // Catéter Peritoneal (Corresponde al id '6')
+  { id: '19', label: '19. Catéter peritoneal', idPadre: '6' }
 ];
-
-// 2. Filtro (Con su inicio y su fin correctos)
+// Filtro B: Tipo de Acceso -> Localizaciones específicas (Validación Cruzada)
 const opcionesAccesoFiltradas = computed(() => {
-  const modalidad = form.modalidadTRR;
+  // CORRECCIÓN: Filtramos por el TIPO DE ACCESO, no solo la modalidad
+  const tipoSeleccionado = form.tipoAccesoInicio; 
 
-  if (modalidad === 'Hemodiálisis') {
-    return listaOpcionesAcceso.filter(op => parseInt(op.id) <= 18);
-  } else if (modalidad === 'Diálisis Peritoneal') {
-    return listaOpcionesAcceso.filter(op => op.id === '19');
-  }
+  if (!tipoSeleccionado) return [];
 
-  return [];
+  // Solo mostramos las localizaciones que son "hijas" del tipo seleccionado
+  return listaOpcionesAcceso.filter(op => op.idPadre === tipoSeleccionado);
 });
 const comorbilidadesLabels = [
   "Enfermedades Ateroescleróticas Cardiacas",
@@ -1004,6 +1005,46 @@ const fetchPeriodoIpress = async (url = null) => {
     console.error('Error al obtener Periodo IPRESS:', error);
   }
 };
+
+// --- PASO 3: WATCHERS DE LIMPIEZA Y AUTOSELECCIÓN ---
+
+// 1. Cuando cambia la MODALIDAD (Hemo vs Peritoneal)
+watch(() => form.modalidadTRR, (nuevaModalidad) => {
+  // Primero: Limpiamos siempre los hijos para evitar datos basura
+  form.tipoAccesoInicio = '';
+  form.localizacionAcceso = '';
+  
+  // Lógica inteligente según el Acta:
+  if (nuevaModalidad === 'Diálisis Peritoneal') {
+    // Si es Peritoneal, el único tipo posible es 'Catéter Peritoneal' (ID 6)
+    // Lo seleccionamos automáticamente por comodidad del usuario
+    form.tipoAccesoInicio = '6'; 
+  } 
+  // Si es 'Hemodiálisis', dejamos vacío para que el usuario elija (Fístula, Catéter, etc.)
+  else if (nuevaModalidad === 'Trasplante') {
+    // Trasplante no lleva accesos vasculares, se queda todo limpio
+  }
+});
+
+// 2. Cuando cambia el TIPO DE ACCESO
+watch(() => form.tipoAccesoInicio, (nuevoTipoId) => {
+  // Primero: Limpiamos la localización porque las opciones anteriores ya no son válidas
+  // (Ej: Si tenías "Brazo derecho" y cambias a "Catéter", esa localización ya no sirve)
+  form.localizacionAcceso = '';
+  
+  // Autoselección para los casos que tienen una ÚNICA localización
+  if (nuevoTipoId === '6') { 
+    form.localizacionAcceso = '19'; // Catéter peritoneal -> Loc 19
+  } 
+  else if (nuevoTipoId === '4') {
+    form.localizacionAcceso = '17'; // Injerto Autólogo -> Loc 17
+  } 
+  else if (nuevoTipoId === '5') {
+    form.localizacionAcceso = '18'; // Injerto Protésico -> Loc 18
+  }
+  // Para Fístulas (3) y Catéteres (1 y 2) NO seleccionamos nada automático
+  // porque el usuario debe elegir el lado (derecho/izquierdo, etc.)
+});
 
 // Watchers para actualizar cuando cambien los props
 watch(() => props.periodoInicial, (newVal) => {
