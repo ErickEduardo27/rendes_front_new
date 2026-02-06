@@ -224,7 +224,7 @@ export default {
                 <!-- Búsqueda -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
-                        <label class="text-sm font-semibold">Buscar por Código</label>
+                        <label class="text-sm font-semibold">Buscar por CIE-10</label>
                         <input v-model="form.filtroCodigo" type="text" class="w-full border rounded p-2 text-sm" />
                     </div>
                     <div>
