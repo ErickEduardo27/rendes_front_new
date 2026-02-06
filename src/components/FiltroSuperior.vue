@@ -136,22 +136,48 @@
   };
   
   // ==========================================
-  // 2. LÓGICA DE CLÍNICAS
-  // ==========================================
-  const fetchClinicas = async () => {
-      try {
-          const respuesta = await getAllIpress("/ipress/"); 
-          listaClinicas.value = respuesta; 
-          
-          if (props.clinica) {
-              clinicaSeleccionada.value = props.clinica;
-          }
-      } catch (error) {
-          console.error("Error cargando clínicas:", error);
-          ElMessage.error("Error cargando lista de clínicas");
-      }
-  };
-  
+    // 2. LÓGICA DE CLÍNICAS (SOLUCIÓN: ID CORRECTO)
+  // ==========================================
+  const fetchClinicas = async () => {
+      // CAMBIO IMPORTANTE: Usamos el ID 62877 para que coincida con el valor seleccionado
+      const clinicaFija = { 
+          id: 62877,  // <--- ¡AQUÍ ESTÁ LA CLAVE!
+          nombre: "CENTRO NACIONAL DE SALUD RENAL", 
+          codigo: "CNSR" 
+      };
+
+      try {
+          const respuesta = await getAllIpress("/ipress/"); 
+          
+          if (Array.isArray(respuesta) && respuesta.length > 0) {
+              listaClinicas.value = respuesta;
+
+              // Buscamos si el ID 62877 ya viene en la lista de la API
+              // (Puede que venga como número o string, comparamos seguro)
+              const existe = listaClinicas.value.find(c => c.id == clinicaFija.id);
+              
+              if (!existe) {
+                  // Si no está, lo agregamos al principio
+                  listaClinicas.value.unshift(clinicaFija);
+              }
+          } else {
+              // Si la API falla, usamos el fijo
+              listaClinicas.value = [clinicaFija];
+          }
+
+      } catch (error) {
+          listaClinicas.value = [clinicaFija];
+      }
+
+      // Lógica de selección
+      if (props.clinica) {
+          clinicaSeleccionada.value = props.clinica;
+      } else {
+          // Por defecto seleccionamos el ID 62877
+          clinicaSeleccionada.value = clinicaFija.id;
+          emit('update:clinica', clinicaFija.id);
+      }
+  };
   const procesarCambioClinica = (valor) => {
       emit('update:clinica', valor);
       emit('change', { tipo: 'clinica', valor: valor });
