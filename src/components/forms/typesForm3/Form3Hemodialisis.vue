@@ -14,7 +14,9 @@
             <label>{{ paciente.ipress }}</label>
 
             <label class="font-semibold ml-4">Modalidad de Diálisis:</label>
-            <label>{{ paciente.id_modalidad == 1 ? "Hemodialisis" : "Peritonial" }}</label>
+            <label v-if="pacienteSeleccionado">
+                {{ pacienteSeleccionado.id_modalidad == 1 ? "Hemodialisis" : "Peritonial" }}
+            </label>
         </div>
 
         <div class="flex gap-6 mt-6">
@@ -126,7 +128,7 @@
                     <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Historial de Eventos Infecciosos</h3>
                     
                     <div v-if="historial.length === 0" class="text-center py-8 bg-gray-50 rounded border border-dashed border-gray-300 text-gray-500">
-                        No hay eventos registrados.
+                        No hay eventos registrados para este paciente.
                     </div>
 
                     <div v-else class="space-y-3">
@@ -225,7 +227,7 @@ const catalogoInfecciones = {
 
 const eventosInfecciosos = reactive({
     fe_evento: '',
-    tpInfeccion: '', // Aquí guardaremos "1" si el usuario selecciona Bacteriana
+    tpInfeccion: '', 
     tratamientoIV: false,
     vancomicinaIV: false,
     hemocultivoPositivo: false,
@@ -233,7 +235,7 @@ const eventosInfecciosos = reactive({
     tpGermen: '',
     bacteria: '',
     observaciones: '',
-    id_periodo_ipress: 17, 
+    id_periodo_ipress: periodo, // CORRECCIÓN: Usa el periodo del prop, no "17" fijo
     id_red: 1,
     id_paciente: paciente.id_paciente
 })
@@ -247,6 +249,7 @@ const fetchHistorialEventos = async () => {
         const respuesta = await getAllIpress(`/eventosAccesosVasculares/?id_paciente=${paciente.id_paciente}`);
         
         if (Array.isArray(respuesta)) {
+            // Ordenamos del más reciente al más antiguo para que se vea primero el nuevo
             historial.value = respuesta.sort((a, b) => new Date(b.fe_evento) - new Date(a.fe_evento));
         } else {
             historial.value = [];
@@ -258,14 +261,41 @@ const fetchHistorialEventos = async () => {
 }
 
 const postForm = async (volverALlenar = false) => {
-    // Validaciones
+    // 1. Validaciones Básicas
     if (!eventosInfecciosos.fe_evento || !eventosInfecciosos.tpInfeccion) {
         alert("Por favor complete los campos obligatorios (Fecha y Tipo).");
         return;
     }
 
+    // 2. CONSTRUIR PAYLOAD (Mapeo exacto a tu models.py)
+    const payload = {
+        // Llaves foráneas
+        id_periodo_ipress: periodo, 
+        id_paciente: paciente.id_paciente,
+        // ⚠️ IMPORTANTE: Tu modelo exige 'id_usuario_ipress'. 
+        // Debes obtener este ID del login o props. Por ahora pongo 1 para que no falle.
+        id_usuario_ipress: 1, 
+
+        // Campos de texto (Mapeo de nombres)
+        fecha_evento: eventosInfecciosos.fe_evento,
+        tipo_acceso_vascular: String(eventosInfecciosos.tpInfeccion),
+        
+        // Conversión de Boolean a CharField (Django espera String)
+        inicio_antmicrobial: eventosInfecciosos.tratamientoIV ? 'SI' : 'NO',
+        inicio_vancomicina: eventosInfecciosos.vancomicinaIV ? 'SI' : 'NO',
+        hemocultivo_positivo: eventosInfecciosos.hemocultivoPositivo ? 'SI' : 'NO',
+        
+        // Campo obligatorio en BD que no estaba en el form
+        estado_acceso_vascular: 'REGISTRADO', 
+
+        // Concatenamos detalles extra en observaciones porque tu modelo NO tiene columnas para bacterias/gram
+        observaciones:  `${eventosInfecciosos.observaciones || ''} ${eventosInfecciosos.bacteria ? '| Bact: ' + eventosInfecciosos.bacteria : ''}`.trim()
+    };
+
+    console.log("Enviando a Django:", payload);
+
     try {
-        await postAllIpress("/eventosAccesosVasculares/", eventosInfecciosos);
+        await postAllIpress("/eventosAccesosVasculares/", payload);
         
         if (typeof ElMessage !== 'undefined') ElMessage.success("Evento registrado correctamente.");
         else alert("Evento registrado correctamente.");
@@ -290,8 +320,9 @@ const postForm = async (volverALlenar = false) => {
         }
 
     } catch (error) {
-        console.error('Error al registrar:', error);
-        alert("Ocurrió un error al guardar.");
+        console.error('Error detallado:', error.response?.data);
+        const errorMsg = JSON.stringify(error.response?.data) || "Error al guardar";
+        alert("Error del servidor: " + errorMsg);
     }
 };
 
@@ -328,7 +359,7 @@ const edadPaciente = computed(() => {
 onMounted(() => {
     fetchPaciente();
     fetchPeriodo();
-    fetchHistorialEventos(); 
+    fetchHistorialEventos(); // Carga inicial del historial
 });
 </script>
 

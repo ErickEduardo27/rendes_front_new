@@ -40,12 +40,40 @@
             Modalidad: {{ paciente.modalidad == 1 ? "Hemodialisis" : "Peritoneal" }}<br />
           </div>
         </div>
-        <div v-for="n in 5" :key="n" class="text-center relative inline-block">
-          <button @click="abrirFormulario(paciente, n)" class="text-lg hover:scale-110 relative" title="Abrir Formulario">
-            <span :class="colorClase(n)">📝</span>
-            <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5">
+        <div v-for="n in 5" :key="n" class="flex justify-center">
+          <button 
+            @click="abrirFormulario(paciente, n)" 
+            class="group relative flex h-12 w-12 items-center justify-center rounded-xl border transition-all duration-200 shadow-sm hover:-translate-y-1 hover:shadow-md active:scale-95"
+            :class="obtenerColor(n).clases"
+            :title="obtenerTitulo(n)"
+          >
+            <svg 
+              class="h-7 w-7 transition-colors duration-200"
+              :class="obtenerColor(n).icono"
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              stroke-width="1.8" 
+              stroke-linecap="round" 
+              stroke-linejoin="round"
+            >
+                <path v-if="n===1" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+                <path v-if="n===1" d="M12 17v-6" />
+                <path v-if="n===1" d="M12 7h.01" /> <path v-if="n===2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path v-if="n===2" d="M12 8v4" />
+                <path v-if="n===2" d="M12 16h.01" /> <path v-if="n===3" d="M22 12h-4l-3 9L9 3l-3 9H2" /> <path v-if="n===4" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /> <path v-if="n===5" d="M19 5l-2 2 2 2 2-2-2-2z" />
+                <path v-if="n===5" d="M14 10l-2 2" />
+                <path v-if="n===5" d="M6 22l6-6-3-3-6 6v3h3z" />
+                <path v-if="n===5" d="M9 13l2-2 4 4-2 2-4-4z" /> </svg>
+        
+            <span 
+              v-if="numeroBadge(paciente, n) > 0" 
+              class="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-red-600 text-[11px] font-bold text-white shadow-md"
+            >
               {{ numeroBadge(paciente, n) }}
             </span>
+            
+            <span v-else class="absolute bottom-1.5 h-1.5 w-1.5 rounded-full opacity-0 transition-opacity group-hover:opacity-100" :class="obtenerColor(n).punto"></span>
           </button>
         </div>
       </div>
@@ -94,6 +122,55 @@ const pacientesFiltrados = computed(() => {
     return coincideNombre && coincideDni && coincideModalidad;
   });
 });
+
+// Paleta de colores para cada tipo de formulario
+const obtenerColor = (n) => {
+  const estilos = {
+    // 1: Acceso Vascular (Azul Institucional)
+    1: { 
+      clases: 'border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-400', 
+      icono: 'text-blue-600',
+      punto: 'bg-blue-400'
+    },
+    // 2: Infección (Rojo/Rose - Alerta)
+    2: { 
+      clases: 'border-rose-200 bg-rose-50 hover:bg-rose-100 hover:border-rose-400', 
+      icono: 'text-rose-600',
+      punto: 'bg-rose-400'
+    },
+    // 3: Morbilidad (Naranja/Ámbar - Precaución)
+    3: { 
+      clases: 'border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400', 
+      icono: 'text-amber-600',
+      punto: 'bg-amber-400'
+    },
+    // 4: Resultados (Indigo - Datos)
+    4: { 
+      clases: 'border-indigo-200 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-400', 
+      icono: 'text-indigo-600',
+      punto: 'bg-indigo-400'
+    },
+    // 5: Vacunación (Verde/Emerald - Salud)
+    5: { 
+      clases: 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-400', 
+      icono: 'text-emerald-600',
+      punto: 'bg-emerald-400'
+    }
+  }
+  // Retornar estilo por defecto si no encuentra el ID
+  return estilos[n] || { clases: 'border-gray-200 bg-white', icono: 'text-gray-500', punto: 'bg-gray-400' };
+}
+
+const obtenerTitulo = (n) => {
+  const titulos = {
+    1: 'Acceso Vascular',
+    2: 'Registro de Infección',
+    3: 'Morbilidad Hospitalaria',
+    4: 'Resultados Clínicos',
+    5: 'Vacunación'
+  }
+  return titulos[n] || 'Formulario';
+}
 
 const totalPaginas = computed(() => Math.ceil(pacientesFiltrados.value.length / pacientesPorPagina))
 const pacientesPaginados = computed(() => {
