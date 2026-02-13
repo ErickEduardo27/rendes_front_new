@@ -1,102 +1,133 @@
 <template>
   <div class="space-y-5 mx-12">
     <h2 class="text-xl font-bold">Registro de Nuevo Paciente en Diálisis:</h2>
-    <p class="text-sm text-gray-600">Complete los respectivos datos del paciente para la creación del expediente médico.
-    </p>
+    <p class="text-sm text-gray-600">Complete los respectivos datos del paciente para la creación del expediente médico.</p>
 
     <div class="flex items-center gap-4 mb-4 flex-wrap bg-gray-50 p-4 rounded-lg border">
-      
       <div class="flex items-center gap-2">
         <h2 class="text-sm font-semibold text-gray-700">Periodo de Reporte:</h2>
-        <el-date-picker
-          v-model="fechaVisual"
-          type="month"
-          placeholder="Seleccione mes"
-          format="YYYY-MM"
-          value-format="YYYY-MM"
-          :editable="false"
-          :clearable="false"
-          style="width: 160px"
-          :disabled-date="esFechaDeshabilitada" 
-          @change="procesarCambioPeriodo"
-        />
+        <el-date-picker v-model="fechaVisual" type="month" placeholder="Seleccione mes" format="YYYY-MM"
+          value-format="YYYY-MM" :editable="false" :clearable="false" style="width: 160px"
+          :disabled-date="esFechaDeshabilitada" @change="procesarCambioPeriodo" />
       </div>
-      
+
       <div class="w-px h-6 bg-gray-300 mx-2"></div>
 
       <div class="flex items-center gap-2 flex-1">
         <label class="text-sm font-semibold text-gray-700">Clínica:</label>
-        <el-autocomplete 
-          v-model="clinicaSeleccionada" 
-          :fetch-suggestions="querySearchClinica" 
-          clearable
-          placeholder="Ingrese nombre de clínica" 
-          @select="handleSelectClinica" 
-          :value-key="'ipress'" 
-          style="width: 100%; max-width: 400px;"
-        />
+        <el-autocomplete v-model="clinicaSeleccionada" :fetch-suggestions="querySearchClinica" clearable
+          placeholder="Ingrese nombre de clínica" @select="handleSelectClinica" :value-key="'ipress'"
+          style="width: 100%; max-width: 400px;" />
       </div>
     </div>
 
-    <!-- Datos personales -->
-    <div class="grid grid-cols-4 gap-5">
-      <div>
-        <label class="text-sm font-medium">Tipo de Documento*</label>
-        <select v-model="form.tipoDocumento" class="w-full border px-2 py-1 rounded">
-          <option disabled value="">Seleccione</option>
-          <option value="DNI">DNI</option>
-          <option value="CE">CE</option>
-          <option value="PASAPORTE">PASAPORTE</option>
-        </select>
-      </div>
+    <div class="border p-4 rounded-md bg-white shadow-sm">
+      <h3 class="text-md font-bold text-gray-700 mb-3 border-b pb-2">Identificación y Ubicación</h3>
+      
+      <div class="grid grid-cols-4 gap-5 mb-4">
+        <div>
+          <label class="text-sm font-medium">Tipo de Documento*</label>
+          <select v-model="form.tipoDocumento" class="w-full border px-2 py-1 rounded focus:ring-2 focus:ring-sky-500">
+            <option disabled value="">Seleccione</option>
+            <option value="DNI">DNI</option>
+            <option value="CE">CE</option>
+            <option value="PASAPORTE">PASAPORTE</option>
+          </select>
+        </div>
 
-      <div>
-        <label class="text-sm font-medium">Número de Documento*</label>
-        <div class="flex gap-2">
-          <input v-model="form.numeroDocumento" class="flex-1 border px-2 py-1 rounded" :maxlength="maxLengthDocumento"
-            :pattern="soloNumeros ? '\\d*' : null" @input="onDocumentoInput" 
-            :disabled="consultandoDNI" placeholder="Ingrese DNI" />
-          <button v-if="form.tipoDocumento === 'DNI' && form.numeroDocumento.length === 8 && !consultandoDNI" 
+        <div>
+          <label class="text-sm font-medium">Número de Documento*</label>
+          <input v-model="form.numeroDocumento" class="w-full border px-2 py-1 rounded" :maxlength="maxLengthDocumento"
+            :pattern="soloNumeros ? '\\d*' : null" @input="onDocumentoInput" :disabled="consultandoDNI"
+            placeholder="Ingrese número" />
+          <div v-if="errorDNI" class="text-red-500 text-xs mt-1">{{ errorDNI }}</div>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium">Fecha de Nacimiento*</label>
+          <input type="date" v-model="form.fechaNacimiento" class="w-full border px-2 py-1 rounded" 
+                 :max="new Date().toISOString().split('T')[0]" />
+        </div>
+
+        <div class="flex items-end pb-1">
+          <button v-if="puedeConsultar"
             @click="consultarDNI" 
-            class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">
+            class="w-full bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 text-sm font-medium transition-colors shadow-sm flex justify-center items-center gap-2">
             🔍 Consultar
           </button>
-          <button v-if="consultandoDNI" disabled 
-            class="bg-gray-400 text-white px-3 py-1 rounded text-sm">
+          
+          <button v-if="consultandoDNI" disabled class="w-full bg-gray-400 text-white px-3 py-1.5 rounded text-sm cursor-wait">
             ⏳ Consultando...
           </button>
+
+          <span v-if="!puedeConsultar && form.tipoDocumento === 'DNI'" class="text-xs text-gray-400 mb-2">
+            *Ingrese DNI y Fecha Nac. para consultar
+          </span>
         </div>
-        <div v-if="errorDNI" class="text-red-500 text-xs mt-1">{{ errorDNI }}</div>
       </div>
-      <div>
-        <label class="text-sm font-medium">Apellidos y Nombres*</label>
-        <input v-model="form.nombreCompleto" class="w-full border px-2 py-1 rounded" />
+
+      <div class="grid grid-cols-4 gap-5 mb-4 bg-slate-50 p-3 rounded border border-slate-200">
+        <div class="col-span-4 text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">
+          Domicilio / Procedencia (Según Reniec/Asegurado)
+        </div>
+        
+        <div>
+          <label class="text-sm font-medium text-gray-700">Departamento</label>
+          <select v-model="form.departamento" class="w-full border px-2 py-1 rounded bg-white">
+             <option value="">Seleccione</option>
+             </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700">Provincia</label>
+          <select v-model="form.provincia" class="w-full border px-2 py-1 rounded bg-white">
+            <option value="">Seleccione</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700">Distrito</label>
+          <select v-model="form.distrito" class="w-full border px-2 py-1 rounded bg-white">
+            <option value="">Seleccione</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700">Ubigeo (Auto)</label>
+          <input v-model="form.ubigeo" readonly class="w-full border px-2 py-1 rounded bg-gray-200 text-gray-600 font-mono text-center" />
+        </div>
       </div>
-      <div>
-        <label class="text-sm font-medium">Fecha de Nacimiento*</label>
-        <input type="date" v-model="form.fechaNacimiento" class="w-full border px-2 py-1 rounded" />
-      </div>
-      <div>
-        <label class="text-sm font-medium">Edad actual</label>
-        <input v-model="form.edad" class="w-full border px-2 py-1 rounded bg-gray-100" readonly />
-      </div>
-      <div>
-        <label class="text-sm font-medium">Sexo*</label>
-        <select v-model="form.sexo" class="w-full border px-2 py-1 rounded">
-          <option disabled value="">Seleccione</option>
-          <option value="M">Masculino</option>
-          <option value="F">Femenino</option>
-        </select>
-      </div>
-      <div>
-        <label class="text-sm font-medium">Grado de Instrucción*</label>
-        <select v-model="form.gradoInstruccion" class="w-full border px-2 py-1 rounded">
-          <option disabled value="">Seleccione</option>
-          <option>Primaria</option>
-          <option>Secundaria</option>
-          <option>Técnico</option>
-          <option>Superior</option>
-        </select>
+
+      <div class="grid grid-cols-4 gap-5">
+        <div class="col-span-2">
+          <label class="text-sm font-medium">Apellidos y Nombres*</label>
+          <input v-model="form.nombreCompleto" class="w-full border px-2 py-1 rounded bg-gray-50" readonly placeholder="Se completará al consultar" />
+        </div>
+        
+        <div>
+          <label class="text-sm font-medium">Edad actual</label>
+          <input v-model="form.edad" class="w-full border px-2 py-1 rounded bg-gray-100" readonly />
+        </div>
+        
+        <div>
+          <label class="text-sm font-medium">Sexo*</label>
+          <select v-model="form.sexo" class="w-full border px-2 py-1 rounded">
+            <option disabled value="">Seleccione</option>
+            <option value="M">Masculino</option>
+            <option value="F">Femenino</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="text-sm font-medium">Grado de Instrucción*</label>
+          <select v-model="form.gradoInstruccion" class="w-full border px-2 py-1 rounded">
+            <option disabled value="">Seleccione</option>
+            <option>Primaria</option>
+            <option>Secundaria</option>
+            <option>Técnico</option>
+            <option>Superior</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -127,24 +158,19 @@
     <div class="mt-6" :key="form.etiologiaGeneral">
       <label class="text-xl font-medium block mb-2">Comorbilidad</label>
       <div class="grid grid-cols-3 gap-4">
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Insuficiencia cardiaca" /> Insuficiencia
-          cardiaca congestiva</label>
-        
+        <label><input type="checkbox" v-model="form.comorbilidades" value="Insuficiencia cardiaca" /> Insuficiencia cardiaca congestiva</label>
+
         <label v-if="form.etiologiaGeneral != '1'">
-            <input type="checkbox" v-model="form.comorbilidades" value="Diabetes" /> 
-            Diabetes
+          <input type="checkbox" v-model="form.comorbilidades" value="Diabetes" /> Diabetes
         </label>
 
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Aterosclerosis" /> Aterosclerosis
-          cardíaca</label>
+        <label><input type="checkbox" v-model="form.comorbilidades" value="Aterosclerosis" /> Aterosclerosis cardíaca</label>
 
         <label v-if="form.etiologiaGeneral != '5'">
-            <input type="checkbox" v-model="form.comorbilidades" value="Hipertensión" /> 
-            Hipertensión
+          <input type="checkbox" v-model="form.comorbilidades" value="Hipertensión" /> Hipertensión
         </label>
 
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Vascular periférica" /> Enfermedad vascular
-          periférica</label>
+        <label><input type="checkbox" v-model="form.comorbilidades" value="Vascular periférica" /> Enfermedad vascular periférica</label>
         <label><input type="checkbox" v-model="form.comorbilidades" value="Tuberculosis" /> Tuberculosis</label>
         <label><input type="checkbox" v-model="form.comorbilidades" value="ACV" /> Accidente cerebrovascular</label>
         <label><input type="checkbox" v-model="form.comorbilidades" value="Cáncer" /> Cáncer</label>
@@ -164,18 +190,13 @@
       </div>
       <div>
         <label class="text-sm font-medium">Fecha de Creación del Acceso de Inicio</label>
-        <input type="date" v-model="form.fechaCreacionAcceso" 
-           class="w-full border px-2 py-1 rounded" />
+        <input type="date" v-model="form.fechaCreacionAcceso" class="w-full border px-2 py-1 rounded" />
       </div>
       <div>
         <label class="text-sm font-medium">Fecha de Inicio de TRR</label>
-        <input 
-             type="date" 
-             v-model="form.fechaInicioTRR" 
-             :min="form.fechaCreacionAcceso || undefined"
-             class="w-full border px-2 py-1 rounded" 
-        />
-        </div>
+        <input type="date" v-model="form.fechaInicioTRR" :min="form.fechaCreacionAcceso || undefined"
+          class="w-full border px-2 py-1 rounded" />
+      </div>
       <div>
         <label class="text-sm font-medium">Subsistema de Salud</label>
         <select v-model="form.subsistemaSalud" class="w-full border px-2 py-1 rounded">
@@ -193,24 +214,14 @@
       </div>
       <div>
         <label class="text-sm font-medium">Tipo de Acceso de Inicio</label>
-        <select 
-          v-model="form.tipoAccesoInicio" 
-          class="w-full border px-2 py-1 rounded"
-          :disabled="form.modalidadTRR === 'Trasplante'"
-          :class="{
+        <select v-model="form.tipoAccesoInicio" class="w-full border px-2 py-1 rounded"
+          :disabled="form.modalidadTRR === 'Trasplante'" :class="{
             'bg-gray-200 text-gray-500 cursor-not-allowed': form.modalidadTRR === 'Trasplante'
-          }"
-        >
+          }">
           <option disabled value="">Seleccione</option>
-          
-          <option 
-            v-for="tipo in tiposAccesoFiltrados" 
-            :key="tipo.id" 
-            :value="tipo.id"
-          >
+          <option v-for="tipo in tiposAccesoFiltrados" :key="tipo.id" :value="tipo.id">
             {{ tipo.label }}
           </option>
-
         </select>
       </div>
       <div>
@@ -219,31 +230,22 @@
       </div>
       <div>
         <label class="text-sm font-medium">Fecha de Primer Ingreso a Unidad</label>
-        <input type="date" v-model="form.fechaPrimerIngreso" 
-          class="w-full border px-2 py-1 rounded" />
+        <input type="date" v-model="form.fechaPrimerIngreso" class="w-full border px-2 py-1 rounded" />
       </div>
-      <div>
+      
+      <div @mousedown.capture="validarOrden">
         <label class="text-sm font-medium">Localización Acceso de Inicio</label>
-        <select 
-            v-model="form.localizacionAcceso" 
-            class="w-full border px-2 py-1 rounded"
-            :disabled="form.modalidadTRR === 'Trasplante' || !form.modalidadTRR"
-            :class="{
-                'bg-gray-100 cursor-not-allowed': form.modalidadTRR === 'Trasplante'
-            }"
-        >
+        <select v-model="form.localizacionAcceso" class="w-full border px-2 py-1 rounded"
+          :disabled="form.modalidadTRR === 'Trasplante'" :class="{
+            'bg-gray-100 cursor-not-allowed': form.modalidadTRR === 'Trasplante'
+          }">
           <option disabled value="">Seleccione</option>
-          
-          <option 
-            v-for="opcion in opcionesAccesoFiltradas" 
-            :key="opcion.id" 
-            :value="opcion.id"
-          >
+          <option v-for="opcion in opcionesAccesoFiltradas" :key="opcion.id" :value="opcion.id">
             {{ opcion.label }}
           </option>
-
         </select>
       </div>
+
       <div>
         <label class="text-sm font-medium">Hospital Procedencia TRR en EsSalud</label>
         <div class="d-flex align-items-center">
@@ -259,11 +261,12 @@
         Registrar
       </button>
     </div>
+
   </div>
 </template>
 
 <script setup>
-import { reactive, computed, watch, ref ,onMounted } from 'vue'
+import { reactive, computed, watch, ref, onMounted } from 'vue'
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { apiClient } from "@/services/api/ApiClient";
 import { ElMessage } from 'element-plus';
@@ -540,7 +543,7 @@ const listaTiposAcceso = [
   { id: '3', label: 'Fístula Arteriovenosa' },
   { id: '4', label: 'Injerto Autólogo' },
   { id: '5', label: 'Injerto Protésico' },
-  { id: '6', label: 'Catéter peritoneal' } 
+  { id: '6', label: 'Catéter peritoneal' }
 ];
 
 // Filtro A: Modalidad -> Tipos disponibles
@@ -550,30 +553,30 @@ const tiposAccesoFiltrados = computed(() => {
   if (modalidad === 'Hemodiálisis') {
     // Mostramos todo MENOS Peritoneal (ID 6)
     return listaTiposAcceso.filter(t => t.id !== '6');
-  } 
+  }
   else if (modalidad === 'Diálisis Peritoneal') {
     // Solo mostramos Peritoneal (ID 6)
     return listaTiposAcceso.filter(t => t.id === '6');
   }
-  return []; 
+  return [];
 });
 
 // 2. Procesar el cambio cuando el usuario elige una fecha
 const procesarCambioPeriodo = (fecha) => {
   if (!fecha) return;
-  
+
   // Buscamos el objeto periodo completo usando el string "YYYY-MM"
   const encontrado = periodos.value.find(p => p.periodo === fecha);
-  
+
   if (encontrado) {
     // Actualizamos la variable principal del formulario
     periodoSeleccionado.value = encontrado.id_periodo;
-    
+
     // Ejecutamos la búsqueda de IPRESS (lo que hacía tu @change antes)
     searchPeriodoIpress();
   } else {
     ElMessage.warning('El periodo seleccionado no está disponible');
-    fechaVisual.value = ''; 
+    fechaVisual.value = '';
   }
 };
 
@@ -625,7 +628,7 @@ const listaOpcionesAcceso = [
 // Filtro B: Tipo de Acceso -> Localizaciones específicas (Validación Cruzada)
 const opcionesAccesoFiltradas = computed(() => {
   // CORRECCIÓN: Filtramos por el TIPO DE ACCESO, no solo la modalidad
-  const tipoSeleccionado = form.tipoAccesoInicio; 
+  const tipoSeleccionado = form.tipoAccesoInicio;
 
   if (!tipoSeleccionado) return [];
 
@@ -726,10 +729,14 @@ const handleSelect = (val) => {
   console.log('Hospital seleccionado:', val);
 };
 
-// Función para consultar DNI en RENIEC
 const consultarDNI = async () => {
+  // 1. Validaciones (Sin .value en form)
   if (!form.numeroDocumento || form.numeroDocumento.length !== 8) {
     errorDNI.value = 'El DNI debe tener 8 dígitos';
+    return;
+  }
+  if (!form.fechaNacimiento) {
+    errorDNI.value = 'Debe seleccionar una fecha de nacimiento';
     return;
   }
 
@@ -737,37 +744,87 @@ const consultarDNI = async () => {
   errorDNI.value = '';
 
   try {
-    const response =  await getAllIpress(`/consultar-dni/?numero=${form.numeroDocumento}`);
-    const data = response;
-    if (data.nombres && data.apellidoPaterno && data.apellidoMaterno) {
-      // Llenar automáticamente los campos con los datos de RENIEC
-      form.nombreCompleto = `${data.apellidoPaterno} ${data.apellidoMaterno}, ${data.nombres}`.toUpperCase();
-      
-      ElMessage({
-        message: 'Datos obtenidos correctamente de RENIEC',
-        type: 'success',
-        plain: true,
-      });
-    } else {
-      errorDNI.value = data.error || 'No se encontraron datos para este DNI';
-      ElMessage({
-        message: 'No se encontraron datos para este DNI',
-        type: 'warning',
-        plain: true,
-      });
-    }
-  } catch (error) {
-    console.error('Error al consultar DNI:', error);
-    errorDNI.value = 'Error al consultar el DNI. Intente nuevamente.';
-    ElMessage({
-      message: 'Error al consultar el DNI',
-      type: 'error',
-      plain: true,
+    // 2. Formatear fecha (Sin .value en form)
+    const [anio, mes, dia] = form.fechaNacimiento.split('-');
+    const fechaParaApi = `${dia}/${mes}/${anio}`;
+
+    const payload = {
+      codOpcion: "1",
+      codTipDoc: "1", 
+      numDoc: form.numeroDocumento, // Sin .value
+      fecNacimiento: fechaParaApi 
+    };
+
+    // 3. Petición
+    // Asegúrate que la URL sea correcta (http://localhost:8000 o 8010 según tu backend)
+    const response = await fetch('http://localhost:8010/consultar-seguro/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
+
+    if (!response.ok) throw new Error(`Error: ${response.status}`);
+
+    const data = await response.json();
+
+    // 4. Llenar datos (Verifica la estructura de tu respuesta JSON)
+    // A veces llega directo en 'data' o dentro de 'data.persona'
+    const persona = data.persona || data; 
+
+    if (persona.nombres) {
+       form.nombreCompleto = `${persona.apellidoPaterno} ${persona.apellidoMaterno}, ${persona.nombres}`.toUpperCase();
+       
+       if(persona.sexo) {
+         form.sexo = (persona.sexo === '1' || persona.sexo === 'M') ? 'M' : 'F';
+       }
+
+       // --- AQUI MAPEAR UBIGEO SI TU BACKEND LO DEVUELVE ---
+       // form.departamento = persona.ubigeo_departamento; 
+       // form.provincia = persona.ubigeo_provincia;
+       // form.distrito = persona.ubigeo_distrito;
+
+       ElMessage({ message: 'Datos encontrados', type: 'success', plain: true });
+    } else {
+       errorDNI.value = 'No se encontraron datos coincidente.';
+    }
+
+  } catch (error) {
+    console.error('Error:', error);
+    errorDNI.value = 'Error al consultar el servicio.';
   } finally {
     consultandoDNI.value = false;
   }
 };
+
+const puedeConsultar = computed(() => {
+  return form.tipoDocumento === 'DNI' && 
+         /^\d{8}$/.test(form.numeroDocumento) && 
+         form.fechaNacimiento && 
+         !consultandoDNI.value;
+});
+
+const validarOrden = (e) => {
+  // 1. Si es Trasplante, no hacemos nada (el input ya está disabled por HTML y eso está bien)
+  if (form.modalidadTRR === 'Trasplante') {
+    return;
+  }
+
+  // 2. Si NO ha seleccionado el Tipo de Acceso todavía
+  if (!form.tipoAccesoInicio) {
+    // DETENEMOS TODO:
+    e.preventDefault();  // Evita que el select se despliegue
+    e.stopPropagation(); // Evita que el evento siga propagándose
+
+    // 3. Mostramos la alerta
+    ElMessage({
+      message: '⚠️ Primero debe seleccionar el "Tipo de Acceso de Inicio".',
+      type: 'warning',
+      duration: 3000,
+      plain: true,
+    });
+  }
+};
+
 const maxLengthDocumento = computed(() => {
   if (form.tipoDocumento === 'DNI') return 8;
   if (form.tipoDocumento === 'CE') return 10;
@@ -793,13 +850,13 @@ watch(() => form.fechaNacimiento, (nuevaFecha) => {
   form.edad = edad;
 });
 
-  // Watcher para validación cruzada entre modalidad TRR y tipo de acceso
- // Watcher para validación cruzada
+// Watcher para validación cruzada entre modalidad TRR y tipo de acceso
+// Watcher para validación cruzada
 watch(() => form.modalidadTRR, (nuevaModalidad) => {
   if (nuevaModalidad === 'Diálisis Peritoneal') {
     // CAMBIO: Usamos el ID '6' en lugar del texto
-    form.tipoAccesoInicio = '6'; 
-    form.localizacionAcceso = '19'; 
+    form.tipoAccesoInicio = '6';
+    form.localizacionAcceso = '19';
   } else if (nuevaModalidad === 'Trasplante') {
     form.tipoAccesoInicio = '';
     form.localizacionAcceso = '';
@@ -828,7 +885,7 @@ watch(() => form.etiologiaGeneral, (nuevoValor) => {
   if (valor === '1') {
     // Si la causa es Diabetes, quitamos 'Diabetes' de comorbilidades
     form.comorbilidades = form.comorbilidades.filter(c => c !== 'Diabetes');
-  } 
+  }
   else if (valor === '5') {
     // Si la causa es Hipertensión, quitamos 'Hipertensión' de comorbilidades
     form.comorbilidades = form.comorbilidades.filter(c => c !== 'Hipertensión');
@@ -929,15 +986,15 @@ const fetchPeriodo = async (url = null) => {
 const registroPacienteHistorial = async (respuesta) => {
   const payload = {
     paciente: respuesta.id_paciente,
-    periodo: periodoSeleccionado.value, 
-    
+    periodo: periodoSeleccionado.value,
+
     condicion: 'REGISTRADO',
   };
 
   try {
     await postAllIpress("/PacienteRegistro/", payload);
     ElMessage({ message: 'Paciente registrado exitosamente', type: 'success', plain: true });
-    
+
     // Recargar la página después de un momento
     setTimeout(() => window.location.reload(), 1500);
 
@@ -986,7 +1043,7 @@ const fetchIpress = async (url = null) => {
     // Obtener asignaciones del usuario
     const asignaciones = await getAllIpress(`/asignaciones/?usuario=${usuario.id_usuario}`);
     const idsAsignados = asignaciones.map(a => a.ipress);
-    
+
     // Obtener solo las IPRESS asignadas
     const todasIpress = await getAllIpress(url ?? "/ipress/");
     ipress.value = todasIpress.filter(i => idsAsignados.includes(i.id_ipress));
@@ -1013,13 +1070,13 @@ watch(() => form.modalidadTRR, (nuevaModalidad) => {
   // Primero: Limpiamos siempre los hijos para evitar datos basura
   form.tipoAccesoInicio = '';
   form.localizacionAcceso = '';
-  
+
   // Lógica inteligente según el Acta:
   if (nuevaModalidad === 'Diálisis Peritoneal') {
     // Si es Peritoneal, el único tipo posible es 'Catéter Peritoneal' (ID 6)
     // Lo seleccionamos automáticamente por comodidad del usuario
-    form.tipoAccesoInicio = '6'; 
-  } 
+    form.tipoAccesoInicio = '6';
+  }
   // Si es 'Hemodiálisis', dejamos vacío para que el usuario elija (Fístula, Catéter, etc.)
   else if (nuevaModalidad === 'Trasplante') {
     // Trasplante no lleva accesos vasculares, se queda todo limpio
@@ -1031,14 +1088,14 @@ watch(() => form.tipoAccesoInicio, (nuevoTipoId) => {
   // Primero: Limpiamos la localización porque las opciones anteriores ya no son válidas
   // (Ej: Si tenías "Brazo derecho" y cambias a "Catéter", esa localización ya no sirve)
   form.localizacionAcceso = '';
-  
+
   // Autoselección para los casos que tienen una ÚNICA localización
-  if (nuevoTipoId === '6') { 
+  if (nuevoTipoId === '6') {
     form.localizacionAcceso = '19'; // Catéter peritoneal -> Loc 19
-  } 
+  }
   else if (nuevoTipoId === '4') {
     form.localizacionAcceso = '17'; // Injerto Autólogo -> Loc 17
-  } 
+  }
   else if (nuevoTipoId === '5') {
     form.localizacionAcceso = '18'; // Injerto Protésico -> Loc 18
   }

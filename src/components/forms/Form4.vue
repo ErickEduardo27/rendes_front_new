@@ -224,11 +224,11 @@ export default {
                 <!-- Búsqueda -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
-                        <label class="text-sm font-semibold">Buscar por CIE-10</label>
+                        <label class="text-sm font-semibold">Búsqueda de Diagnóstico por CIE-10</label>
                         <input v-model="form.filtroCodigo" type="text" class="w-full border rounded p-2 text-sm" />
                     </div>
                     <div>
-                        <label class="text-sm font-semibold">Buscar por Descripción</label>
+                        <label class="text-sm font-semibold">Buscar de Diagnótico por Descripción</label>
                         <input v-model="form.filtroDescripcion" type="text" class="w-full border rounded p-2 text-sm" />
                     </div>
                 </div>
@@ -242,7 +242,7 @@ export default {
                 <p v-else-if="hayBusqueda" class="italic text-gray-500">No se encontraron resultados.</p>
 
                 <div v-if="form.seleccionados.length" class="mt-4">
-                    <h3 class="text-sm font-semibold mb-2">Seleccionados:</h3>
+                    <h3 class="text-sm font-semibold mb-2">Diágnosticos seleccionados:</h3>
                     <ul>
                         <li v-for="item in form.seleccionados" :key="item.id"
                             class="bg-gray-100 p-2 rounded flex justify-between">
