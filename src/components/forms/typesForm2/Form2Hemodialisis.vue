@@ -1,300 +1,347 @@
 <template>
-    <div class="p-6 space-y-6">
-        <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
-            ← Volver al inicio
+    <div class="min-h-screen bg-gray-50/50 p-6">
+        
+        <div class="max-w-7xl mx-auto mb-6">
+            <div class="flex items-center text-sm font-medium cursor-pointer text-slate-500 hover:text-cyan-700 transition-colors mb-4" @click="$emit('cancelar')">
+                <span class="bg-white p-1 rounded-full shadow-sm mr-2 border border-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                </span>
+                Volver al inicio
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <FiltroSuperior
+                    v-model:periodo="periodoSeleccionado"
+                    v-model:clinica="clinicaFiltro"
+                    v-model:modalidad="modalidadFiltro"
+                    @change="procesarCambioFiltro"
+                />
+            </div>
         </div>
 
-        <div class="flex flex-col gap-4">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
             
-            <FiltroSuperior
-                v-model:periodo="periodoSeleccionado"
-                v-model:clinica="clinicaFiltro"
-                v-model:modalidad="modalidadFiltro"
-                @change="procesarCambioFiltro"
-            />
-
-            <div class="flex justify-end gap-2">
-                <button @click="abrirModalCaptar"
-                    class="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600 text-sm">
-                    ➕ Captar Paciente
-                </button>
-                <button @click="abrirModalEgresar"
-                    class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600 text-sm">
-                    ➖ Egresar Paciente
-                </button>
-            </div>
-        </div>
-        <div class="flex gap-6 mt-6">
-            <div class="flex-1 space-y-6">
+            <div class="flex-1 space-y-8">
+                
                 <div>
-                    <h2 class="text-xl font-semibold">ACCESO DE DIÁLISIS</h2>
-                    <p class="text-sm text-gray-600">A continuación se presenta el Acceso Vascular Actual del paciente
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-1.5 h-8 bg-cyan-500 rounded-full"></span>
+                        Acceso de Diálisis
+                    </h2>
+                    <p class="text-slate-500 mt-1 ml-4 text-sm">A continuación se presenta el Acceso Vascular Actual del paciente.</p>
                 </div>
 
-                <div class="grid grid-cols-3 gap-4">
-                    <div>
-                        <label class="text-sm">Tipo de Acceso Vascular</label>
-                        <select disabled v-model="form.tipo_acceso_actual" class="w-full border px-2 py-1 rounded">
-                            <option disabled value="">Seleccione una opción</option>
-                            <option value="Catéter Venoso Central Temporal">Catéter Venoso Central Temporal</option>
-                            <option value="Catéter Venoso Central de Larga Permanencia">Catéter Venoso Central de Larga Permanencia</option>
-                            <option value="Fístula Arteriovenosa">Fístula Arteriovenosa</option>
-                            <option value="Injerto Autólogo">Injerto Autólogo</option>
-                            <option value="Injerto Protésico">Injerto Protésico</option>
-                            <option value="Catéter peritoneal">Catéter peritoneal</option>
-                        </select>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wide">Acceso Vascular Vigente</h3>
+                        <span class="text-xs font-semibold px-2 py-1 bg-slate-200 text-slate-600 rounded">Solo Lectura</span>
                     </div>
-
-                    <div>
-                        <label class="text-sm">Localización de Acceso Vascular</label>
-                        <select disabled v-model="form.localizacion_acceso_actual" class="w-full border px-2 py-1 rounded">
-                            <option disabled value="">Seleccione una opción</option>
-                            <option v-for="op in opcionesLocalizacion" :key="op.value" :value="op.label">
-                                {{ op.label }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="text-sm">Fecha de Creación de Acceso</label>
-                        <input disabled v-model="form.fecha_creacion_acceso_actual" type="date"
-                            class="w-full border px-2 py-1 rounded" />
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                        <label class="text-sm">¿Se va a cambiar el acceso del paciente?</label>
-                        <select v-model="form.cambio_acceso" class="w-full border px-2 py-1 rounded">
-                            <option value="true">SÍ</option>
-                            <option value="false">NO</option>
-                        </select>
-                    </div>
-
-                    <div v-if="form.cambio_acceso == 'true'">
-                        <label class="text-sm">Especificar el Motivo de Cambio de Acceso</label>
-                        <select v-model="form.motivo_cambio" class="w-full border px-2 py-1 rounded">
-                            <option value="">Seleccione una opción</option>
-                            <option value="1">Complicación mecánica</option>
-                            <option value="2">Complicación infecciosa</option>
-                            <option value="3">Prescripción Médica</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-3 gap-4 mt-4" v-if="form.cambio_acceso == 'true'">
                     
-                    <div>
-                        <label class="text-sm">Tipo de Nuevo Acceso Vascular</label>
-                        <select v-model="form.tipo_acceso_nuevo" class="w-full border px-2 py-1 rounded">
-                            <option disabled value="">Seleccione una opción</option>
-                            <option v-for="tipo in tiposAccesoNuevoFiltrados" :key="tipo.value" :value="tipo.value">
-                                {{ tipo.label }}
-                            </option>
-                        </select>
-                    </div>
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Acceso</label>
+                            <div class="relative">
+                                <select disabled v-model="form.tipo_acceso_actual" 
+                                    class="w-full bg-slate-100 border border-slate-300 text-slate-600 text-sm rounded-lg p-2.5 appearance-none cursor-not-allowed font-medium">
+                                    <option disabled value="">Sin registro</option>
+                                    <option value="Catéter Venoso Central Temporal">Catéter Venoso Central Temporal</option>
+                                    <option value="Catéter Venoso Central de Larga Permanencia">Catéter Venoso Central de Larga Permanencia</option>
+                                    <option value="Fístula Arteriovenosa">Fístula Arteriovenosa</option>
+                                    <option value="Injerto Autólogo">Injerto Autólogo</option>
+                                    <option value="Injerto Protésico">Injerto Protésico</option>
+                                    <option value="Catéter peritoneal">Catéter peritoneal</option>
+                                </select>
+                            </div>
+                        </div>
 
-                    <div>
-                        <label class="text-sm">Localización de Nuevo Acceso Vascular</label>
-                        <select 
-                            v-model="form.localizacion_acceso_nuevo" 
-                            class="w-full border px-2 py-1 rounded"
-                            :disabled="!form.tipo_acceso_nuevo"
-                        >
-                            <option disabled value="">Seleccione una opción</option>
-                            <option v-for="op in opcionesLocalizacionNuevoFiltradas" :key="op.value" :value="op.label">
-                                {{ op.label }}
-                            </option>
-                        </select>
-                    </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Localización</label>
+                            <div class="relative">
+                                <select disabled v-model="form.localizacion_acceso_actual" 
+                                    class="w-full bg-slate-100 border border-slate-300 text-slate-600 text-sm rounded-lg p-2.5 appearance-none cursor-not-allowed font-medium">
+                                    <option disabled value="">Sin registro</option>
+                                    <option v-for="op in opcionesLocalizacion" :key="op.value" :value="op.label">{{ op.label }}</option>
+                                </select>
+                            </div>
+                        </div>
 
-                    <div>
-                        <label class="text-sm">Fecha de Creación de Nuevo Acceso</label>
-                        <input v-model="form.fecha_creacion_acceso_nuevo" type="date"
-                            class="w-full border px-2 py-1 rounded" />
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Creación</label>
+                            <input disabled v-model="form.fecha_creacion_acceso_actual" type="date"
+                                class="w-full bg-slate-100 border border-slate-300 text-slate-600 text-sm rounded-lg p-2.5 cursor-not-allowed font-medium" />
+                        </div>
                     </div>
                 </div>
 
-                <div class="mt-8">
-                    <h3 class="text-lg font-semibold mb-4">Historial de Cambios de Acceso Vascular</h3>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <div v-if="historialAcceso.length === 0" class="text-gray-500 text-center py-4">
-                            No hay registros de cambios de acceso.
+                <div class="bg-white rounded-xl shadow-lg border border-cyan-100 p-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-cyan-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
+                    
+                    <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-800 mb-2">¿Se requiere cambiar el acceso?</label>
+                            <select v-model="form.cambio_acceso" 
+                                class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block p-2.5 bg-white shadow-sm transition-all"
+                                :class="form.cambio_acceso == 'true' ? 'border-cyan-500 ring-1 ring-cyan-500 bg-cyan-50/30' : ''">
+                                <option value="true">SÍ, Registrar cambio</option>
+                                <option value="false">NO, Mantener actual</option>
+                            </select>
                         </div>
-                        <div v-else class="space-y-3">
-                            <div v-for="(cambio, index) in historialAcceso" :key="index"
-                                class="bg-white p-3 rounded border-l-4 border-blue-500">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex-1">
-                                        <div class="font-medium text-sm text-gray-700">
-                                            <strong>Fecha:</strong> {{ cambio.fecha }}
+
+                        <div v-if="form.cambio_acceso == 'true'" class="animate-fadeIn">
+                            <label class="block text-sm font-bold text-slate-800 mb-2">Motivo del Cambio</label>
+                            <select v-model="form.motivo_cambio" class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block p-2.5 shadow-sm">
+                                <option value="">-- Seleccione motivo --</option>
+                                <option value="1">Complicación mecánica</option>
+                                <option value="2">Complicación infecciosa</option>
+                                <option value="3">Prescripción Médica</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0">
+                    <div v-if="form.cambio_acceso == 'true'" class="bg-white rounded-xl shadow-md border border-cyan-200 overflow-hidden">
+                        <div class="bg-cyan-600 px-6 py-3 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                            <h3 class="font-bold text-white text-sm uppercase tracking-wide">Registro de Nuevo Acceso</h3>
+                        </div>
+
+                        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-cyan-50/10">
+                            <div>
+                                <label class="block text-xs font-bold text-cyan-800 uppercase mb-1">Tipo Nuevo Acceso</label>
+                                <select v-model="form.tipo_acceso_nuevo" class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 p-2.5 shadow-sm bg-white">
+                                    <option disabled value="">Seleccione tipo</option>
+                                    <option v-for="tipo in tiposAccesoNuevoFiltrados" :key="tipo.value" :value="tipo.value">{{ tipo.label }}</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-cyan-800 uppercase mb-1">Nueva Localización</label>
+                                <select v-model="form.localizacion_acceso_nuevo" 
+                                    class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 p-2.5 shadow-sm bg-white"
+                                    :disabled="!form.tipo_acceso_nuevo">
+                                    <option disabled value="">Seleccione localización</option>
+                                    <option v-for="op in opcionesLocalizacionNuevoFiltradas" :key="op.value" :value="op.label">{{ op.label }}</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-cyan-800 uppercase mb-1">Fecha de Creación</label>
+                                <input v-model="form.fecha_creacion_acceso_nuevo" type="date"
+                                    class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 p-2.5 shadow-sm bg-white" />
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+
+                <div class="pt-4">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Historial de Cambios
+                    </h3>
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div v-if="historialAcceso.length === 0" class="text-slate-400 text-center py-8 italic bg-slate-50">
+                            No se encontraron registros previos de cambios.
+                        </div>
+                        <div v-else class="divide-y divide-slate-100">
+                            <div v-for="(cambio, index) in historialAcceso" :key="index" class="p-4 hover:bg-slate-50 transition-colors">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                    <div class="flex items-start gap-3">
+                                        <div class="bg-blue-100 text-blue-600 p-2 rounded-lg mt-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
                                         </div>
-                                        <div class="text-sm text-gray-600 mt-1">
-                                            <strong>Tipo de Acceso:</strong> {{ cambio.tipo_acceso }}
-                                        </div>
-                                        <div class="text-sm text-gray-600">
-                                            <strong>Localización:</strong> {{ cambio.localizacion }}
-                                        </div>
-                                        <div v-if="cambio.motivo" class="text-sm text-gray-600">
-                                            <strong>Motivo de Cambio:</strong> {{ cambio.motivo }}
+                                        <div>
+                                            <p class="text-sm font-bold text-slate-800">{{ cambio.tipo_acceso }}</p>
+                                            <p class="text-xs text-slate-500">{{ cambio.localizacion }}</p>
+                                            <p v-if="cambio.motivo" class="text-xs text-slate-600 mt-1 bg-slate-100 inline-block px-2 py-0.5 rounded">Motivo: {{ cambio.motivo }}</p>
                                         </div>
                                     </div>
-                                    <div class="text-xs text-gray-400">
-                                        {{ cambio.estado }}
+                                    <div class="text-right">
+                                        <p class="text-sm font-semibold text-slate-700">{{ cambio.fecha }}</p>
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded-full" :class="cambio.estado === 'Activo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'">
+                                            {{ cambio.estado }}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="mt-8">
-                    <h3 class="text-lg font-semibold mb-4">Movimientos del Paciente (Ingresos/Egresos)</h3>
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <div v-if="historialMovimientos.length === 0" class="text-gray-500 text-center py-4">
-                            No hay registros de movimientos del paciente.
+            <div class="w-full lg:w-80 space-y-6">
+                
+                <div v-if="pacienteSeleccionado" class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg transition-shadow group" @click="abrirHistorico">
+                    <div class="h-2 bg-cyan-500 w-full"></div>
+                    <div class="p-6 flex flex-col items-center">
+                        <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3 border-2 border-white shadow-sm group-hover:border-cyan-200 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         </div>
-                        <div v-else class="space-y-3">
-                            <div v-for="(movimiento, index) in historialMovimientosOrdenado" :key="index" :class="['bg-white p-3 rounded border-l-4',
-                                movimiento.tipo === 'INGRESO' || movimiento.tipo === 'CAPTADO' ? 'border-green-500' :
-                                    movimiento.tipo === 'EGRESO' ? 'border-red-500' : 'border-blue-500']">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex-1">
-                                        <div class="font-medium text-sm text-gray-700">
-                                            <span :class="[movimiento.tipo === 'INGRESO' || movimiento.tipo === 'CAPTADO' ? 'text-green-600' :
-                                                movimiento.tipo === 'EGRESO' ? 'text-red-600' : 'text-blue-600']">
-                                                {{ movimiento.tipo }}
-                                            </span> - <strong>Fecha:</strong> {{ movimiento.fecha }}
-                                        </div>
-                                        <div class="text-sm text-gray-600 mt-1">
-                                            <strong>Condición:</strong> {{ movimiento.condicion }}
-                                        </div>
-                                        <div v-if="movimiento.tipo === 'EGRESO' && movimiento.tipo_egreso"
-                                            class="text-sm text-gray-600">
-                                            <strong>Tipo de Egreso:</strong> {{ movimiento.tipo_egreso }}
-                                        </div>
-                                        <div v-if="movimiento.observaciones" class="text-sm text-gray-600">
-                                            <strong>Observaciones:</strong> {{ movimiento.observaciones }}
-                                        </div>
-                                    </div>
-                                    <div class="text-xs text-gray-400">
-                                        {{ movimiento.periodo }}
-                                    </div>
-                                </div>
+                        <h3 class="text-center font-bold text-slate-800 leading-tight">{{ pacienteSeleccionado.paciente }}</h3>
+                        <p class="text-center text-xs text-slate-500 font-medium mt-1 bg-slate-100 px-2 py-0.5 rounded">DNI: {{ pacienteSeleccionado.documento }}</p>
+                        
+                        <div class="w-full mt-4 border-t border-slate-100 pt-4 space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-500">Edad:</span>
+                                <span class="font-semibold text-slate-700">{{ edadPaciente }}</span>
                             </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-500">Sexo:</span>
+                                <span class="font-semibold text-slate-700">{{ pacienteSeleccionado.genero == "M" ? "Masculino" : "Femenino" }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-500">Estado:</span>
+                                <span class="font-semibold px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">{{ pacienteSeleccionado.estado }}</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-xs text-cyan-600 font-bold flex items-center gap-1 group-hover:underline">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Ver Historial Clínico
                         </div>
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center mt-6">
-                    <button @click="abrirModuloInfeccion"
-                        class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">
-                        🦠 Módulo de Infección
+                </div>
+        </div>
+
+        <div v-if="mostrarHistorico" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col animate-scaleIn">
+                <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800">Historial del Paciente</h3>
+                    <button class="text-slate-400 hover:text-red-500 transition-colors" @click="cerrarHistorico">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
-                    <div class="flex gap-2">
-                        <button class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
-                        <button class="bg-sky-500 text-white px-4 py-2 rounded" @click="postForm()">Registrar</button>
-                    </div>
                 </div>
-            </div>
-
-            <div class="w-80 p-4 border rounded shadow cursor-pointer" v-if="pacienteSeleccionado"
-                @click="abrirHistorico">
-                <div class="flex items-center justify-center mb-2">
-                    <div class="bg-gray-300 rounded-full h-16 w-16"></div>
-                </div>
-                <p class="text-center font-bold">{{ pacienteSeleccionado.paciente }}</p>
-                <p class="text-center text-sm text-gray-600">DNI: {{ pacienteSeleccionado.documento }}</p>
-                <ul class="text-sm text-gray-700 mt-4 space-y-1">
-                    <li><strong>Edad:</strong> {{ edadPaciente }}</li>
-                    <li><strong>Sexo:</strong> {{ pacienteSeleccionado.genero == "M" ? "Masculino" : "Femenino" }}
-                    </li>
-                    <li><strong>Estado:</strong> {{ pacienteSeleccionado.estado }}</li>
-                </ul>
-            </div>
-
-            <div v-if="mostrarHistorico" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                <div class="bg-white rounded shadow-lg p-6 w-[400px] max-h-[80vh] overflow-y-auto relative">
-                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarHistorico">&times;</button>
-                    <h3 class="text-lg font-bold mb-4 text-center">Histórico del Paciente</h3>
-                    <div v-if="historico.length === 0" class="text-gray-500 text-center">No hay registros históricos.</div>
-                    <ul v-else class="space-y-2">
-                        <li v-for="item in historicoOrdenado" :key="item.id_registro" class="border rounded p-2">
-                            <div><strong>Fecha:</strong> {{ item.fecha }}</div>
-                            <div><strong>Detalle:</strong> {{ item.detalle }}</div>
+                <div class="p-6 overflow-y-auto custom-scrollbar">
+                    <div v-if="historico.length === 0" class="text-slate-400 text-center py-8">No hay registros.</div>
+                    <ul v-else class="space-y-3">
+                        <li v-for="item in historicoOrdenado" :key="item.id_registro" class="border border-slate-100 rounded-lg p-3 bg-slate-50 hover:bg-white hover:shadow-sm transition-all">
+                            <div class="text-xs text-slate-400 font-bold uppercase mb-1">{{ item.fecha }}</div>
+                            <div class="text-sm text-slate-700">{{ item.detalle }}</div>
                         </li>
                     </ul>
                 </div>
             </div>
-
-            <div v-if="mostrarModalCaptar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                <div class="bg-white rounded shadow-lg p-6 w-[600px] max-h-[90vh] overflow-y-auto relative">
-                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarModalCaptar">&times;</button>
-                    <h3 class="text-lg font-bold mb-4 text-center">➕ Captar Paciente</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Condición</label>
-                            <select v-model="formCaptar.condicion" class="w-full border rounded p-2 text-sm" disabled>
-                                <option value="">{{ condicionAutomatica }}</option>
-                            </select>
-                            <p class="text-xs text-gray-500 mt-1">{{ mensajeCondicion }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
-                            <input v-model="formCaptar.fecha" type="date" class="w-full border rounded p-2 text-sm" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
-                            <textarea v-model="formCaptar.observaciones" class="w-full border rounded p-2 text-sm" rows="3"></textarea>
-                        </div>
-                    </div>
-                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                        <button @click="cerrarModalCaptar" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
-                        <button @click="captarPaciente" class="bg-green-500 text-white px-4 py-2 rounded">Captar</button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="mostrarModalEgresar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                <div class="bg-white rounded shadow-lg p-6 w-[600px] max-h-[90vh] overflow-y-auto relative">
-                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarModalEgresar">&times;</button>
-                    <h3 class="text-lg font-bold mb-4 text-center">➖ Egresar Paciente</h3>
-                    <div class="space-y-4">
-                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Fecha</label><input v-model="formEgresar.fecha" type="date" class="w-full border rounded p-2 text-sm" /></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label><select v-model="formEgresar.tipo_egreso" class="w-full border rounded p-2 text-sm"><option value="Hospitalización">Hospitalización</option><option value="Fallecimiento">Fallecimiento</option><option value="Trasplante">Trasplante</option><option value="Otros">Otros</option></select></div>
-                        <div v-if="formEgresar.tipo_egreso === 'Otros'"><label class="block text-sm font-medium text-gray-700 mb-2">Especificar</label><input v-model="formEgresar.motivo_especifico" type="text" class="w-full border rounded p-2 text-sm" /></div>
-                    </div>
-                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                        <button @click="cerrarModalEgresar" class="bg-gray-400 text-white px-4 py-2 rounded">Cancelar</button>
-                        <button @click="egresarPaciente" class="bg-red-500 text-white px-4 py-2 rounded">Egresar</button>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="mostrarModuloInfeccion" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                <div class="bg-white rounded shadow-lg p-6 w-[800px] max-h-[90vh] overflow-y-auto relative">
-                    <button class="absolute top-2 right-2 text-gray-500 hover:text-black text-xl" @click="cerrarModuloInfeccion">&times;</button>
-                    <h3 class="text-lg font-bold mb-4 text-center">🦠 Módulo de Infección</h3>
-                    <div class="space-y-4">
-                        <select v-model="formInfeccion.presentaInfecciones" class="w-full border p-2"><option value="si">Sí</option><option value="no">No</option></select>
-                        <div v-if="formInfeccion.presentaInfecciones === 'si'">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label>Tipo</label><select v-model="formInfeccion.tipoInfeccion" class="w-full border p-2"><option value="bacteriana">Bacteriana</option><option value="viral">Viral</option></select></div>
-                                <div><label>Localización</label><select v-model="formInfeccion.localizacion" class="w-full border p-2"><option value="acceso_vascular">Acceso Vascular</option></select></div>
-                            </div>
-                            <input v-model="formInfeccion.fechaInicio" type="date" class="w-full border p-2 mt-2">
-                            <textarea v-model="formInfeccion.observaciones" class="w-full border p-2 mt-2" placeholder="Observaciones"></textarea>
-                        </div>
-                    </div>
-                    <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
-                        <button @click="cerrarModuloInfeccion" class="bg-gray-400 text-white px-4 py-2 rounded">Cerrar</button>
-                        <button @click="guardarInfeccion" class="bg-red-500 text-white px-4 py-2 rounded">Guardar</button>
-                    </div>
-                </div>
-            </div>
-
         </div>
+
+        <div v-if="mostrarModalCaptar" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scaleIn">
+                <div class="bg-green-600 px-6 py-4 flex justify-between items-center">
+                    <h3 class="font-bold text-white flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                        Captar Paciente
+                    </h3>
+                    <button class="text-white/70 hover:text-white" @click="cerrarModalCaptar">&times;</button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Condición</label>
+                        <select v-model="formCaptar.condicion" class="w-full bg-slate-100 border border-slate-300 rounded-lg p-2.5 text-sm font-bold text-slate-700" disabled>
+                            <option value="">{{ condicionAutomatica }}</option>
+                        </select>
+                        <p class="text-xs text-green-600 mt-1 font-medium">{{ mensajeCondicion }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
+                        <input v-model="formCaptar.fecha" type="date" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-green-500 focus:border-green-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
+                        <textarea v-model="formCaptar.observaciones" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-green-500 focus:border-green-500" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+                    <button @click="cerrarModalCaptar" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">Cancelar</button>
+                    <button @click="captarPaciente" class="px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg shadow-sm transition-colors">Confirmar Captación</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="mostrarModalEgresar" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scaleIn">
+                <div class="bg-red-600 px-6 py-4 flex justify-between items-center">
+                    <h3 class="font-bold text-white flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" /></svg>
+                        Egresar Paciente
+                    </h3>
+                    <button class="text-white/70 hover:text-white" @click="cerrarModalEgresar">&times;</button>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
+                        <input v-model="formEgresar.fecha" type="date" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-red-500 focus:border-red-500" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Egreso</label>
+                        <select v-model="formEgresar.tipo_egreso" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-red-500 focus:border-red-500">
+                            <option value="Hospitalización">Hospitalización</option>
+                            <option value="Fallecimiento">Fallecimiento</option>
+                            <option value="Trasplante">Trasplante</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                    <div v-if="formEgresar.tipo_egreso === 'Otros'">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Especificar</label>
+                        <input v-model="formEgresar.motivo_especifico" type="text" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-red-500 focus:border-red-500" />
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+                    <button @click="cerrarModalEgresar" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">Cancelar</button>
+                    <button @click="egresarPaciente" class="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors">Confirmar Egreso</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="mostrarModuloInfeccion" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden animate-scaleIn">
+                <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
+                    <h3 class="font-bold text-white flex items-center gap-2">
+                        <span>🦠</span> Módulo de Infección
+                    </h3>
+                    <button class="text-white/70 hover:text-white" @click="cerrarModuloInfeccion">&times;</button>
+                </div>
+                <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">¿Presenta infecciones?</label>
+                        <select v-model="formInfeccion.presentaInfecciones" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                            <option value="si">Sí</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    
+                    <div v-if="formInfeccion.presentaInfecciones === 'si'" class="p-4 bg-red-50 rounded-xl border border-red-100 space-y-4 animate-fadeIn">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo</label>
+                                <select v-model="formInfeccion.tipoInfeccion" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                                    <option value="bacteriana">Bacteriana</option>
+                                    <option value="viral">Viral</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Localización</label>
+                                <select v-model="formInfeccion.localizacion" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                                    <option value="acceso_vascular">Acceso Vascular</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Inicio</label>
+                            <input v-model="formInfeccion.fechaInicio" type="date" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
+                            <textarea v-model="formInfeccion.observaciones" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm" placeholder="Detalles clínicos..." rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
+                    <button @click="cerrarModuloInfeccion" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">Cerrar</button>
+                    <button @click="guardarInfeccion" class="px-4 py-2 text-sm font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm transition-colors">Guardar Datos</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </template>
 
@@ -303,7 +350,7 @@ import { useRouter } from 'vue-router'
 import { ref, onMounted, reactive, computed, watch } from 'vue'; 
 import { getAllIpress, patchAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage } from 'element-plus';
-import FiltroSuperior from '@/components/FiltroSuperior.vue'; // IMPORTACIÓN DEL FILTRO
+import FiltroSuperior from '@/components/FiltroSuperior.vue'; 
 
 const { paciente, periodo, periodoIpress } = defineProps({
     paciente: { type: Object, required: true },
@@ -313,7 +360,6 @@ const { paciente, periodo, periodoIpress } = defineProps({
 
 const router = useRouter()
 
-// CORRECCIÓN 2: MOVER 'form' ARRIBA DE TODO
 const form = reactive({
     fecha_creacion_acceso_actual: null,
     tipo_acceso_actual: null,
@@ -328,21 +374,17 @@ const form = reactive({
     id_paciente: paciente.id_paciente
 })
 
-// Variables para el Filtro Superior
 const clinicaFiltro = ref(null);
 const modalidadFiltro = ref(null);
 
-// Función dummy para el cambio de filtro (puedes conectarla a tu lógica si deseas)
 const procesarCambioFiltro = (evento) => {
     console.log("Filtro cambió:", evento);
-    // Aquí puedes llamar a fetchPeriodoActual() si quieres recargar al filtrar
 };
 
 const formInfeccion = reactive({ presentaInfecciones: '', tipoInfeccion: '', localizacion: '', fechaInicio: '', fechaResolucion: '', tratamiento: '', observaciones: '' })
 const formCaptar = reactive({ condicion: '', fecha: '', observaciones: '' })
 const formEgresar = reactive({ fecha: '', tipo_egreso: '', motivo_especifico: '', observaciones: '' })
 
-// CORRECCIÓN 3: Inicializar como ref(null)
 const pacienteSeleccionado = ref(null); 
 const periodoSeleccionado = periodo
 const idPeriodoIpress = periodoIpress
@@ -360,8 +402,6 @@ const condicionAutomatica = ref('');
 const mensajeCondicion = ref('');
 const ultimoEgreso = ref(null);
 
-// --- 2. LISTAS Y LÓGICA DEL ACTA (NUEVO ACCESO) ---
-
 const opcionesLocalizacion = [
   { value: '1', label: '1. FAV radial derecha' }, { value: '2', label: '2. FAV radial izquierda' },
   { value: '3', label: '3. FAV braquial o cubital derecha' }, { value: '4', label: '4. FAV braquial o cubital izquierda' },
@@ -375,7 +415,6 @@ const opcionesLocalizacion = [
   { value: '19', label: '19. Catéter peritoneal' }
 ];
 
-// Listas para el formulario de NUEVO ACCESO (Según Acta 1-19)
 const listaTiposNuevo = [
   { value: 'Catéter Venoso Central Temporal', label: 'Catéter Venoso Central Temporal' },
   { value: 'Catéter Venoso Central de Larga Permanencia', label: 'Catéter Venoso Central de Larga Permanencia' },
@@ -409,9 +448,9 @@ const listaLocalizacionesNuevo = [
 
 const tiposAccesoNuevoFiltrados = computed(() => {
   const idModalidad = pacienteSeleccionado.value?.id_modalidad || 1;
-  if (idModalidad == 1) { // Hemodiálisis
+  if (idModalidad == 1) { 
     return listaTiposNuevo.filter(t => t.value !== 'Catéter peritoneal');
-  } else { // Peritoneal
+  } else { 
     return listaTiposNuevo.filter(t => t.value === 'Catéter peritoneal');
   }
 });
@@ -419,23 +458,18 @@ const tiposAccesoNuevoFiltrados = computed(() => {
 const opcionesLocalizacionNuevoFiltradas = computed(() => {
   const tipoElegido = form.tipo_acceso_nuevo;
   if (!tipoElegido) return [];
-  // Filtro de validación cruzada
   return listaLocalizacionesNuevo.filter(op => op.tipo === tipoElegido);
 });
 
-// Watcher al final, porque ahora 'form' ya existe
 watch(() => form.tipo_acceso_nuevo, (val) => {
     form.localizacion_acceso_nuevo = '';
     if (val === 'Catéter peritoneal') form.localizacion_acceso_nuevo = '19. Catéter peritoneal';
 });
 
-// --- FIN LOGICA ---
-
 const localizacionesFiltradas = computed(() => {
     return opcionesLocalizacion;
 });
 
-// Computed properties para ordenar por fecha
 const historicoOrdenado = computed(() => {
     return [...(historico.value || [])].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 });
@@ -452,7 +486,7 @@ const minFechaNuevoAcceso = computed(() => {
     if (!form.fecha_creacion_acceso_actual) return null;
     const fecha = new Date(form.fecha_creacion_acceso_actual);
     fecha.setDate(fecha.getDate() + 1);
-    return fecha.toISOString().split('T')[0]; // formato YYYY-MM-DD
+    return fecha.toISOString().split('T')[0]; 
 });
 const validarFormulario = () => {
     const camposObligatorios = ['fecha_creacion_acceso_nuevo', 'tipo_acceso_nuevo', 'localizacion_acceso_nuevo'];
@@ -489,7 +523,6 @@ const editForm = async (url = null) => {
     } catch (error) { console.error(error); }
 };
 
-// Normaliza localizacion: si la API devuelve "5" o número, convierte a "5. CVCT yugular derecha"
 const normalizarLocalizacion = (valor) => {
     if (!valor) return null;
     const str = String(valor).trim();
@@ -503,7 +536,6 @@ const fetchPeriodoActual = async (url = null) => {
     try {
         const respuesta = await getAllIpress("/unidadesActuales/?id_periodo_ipress=" + periodoIpress);
         periodoActual.value = respuesta;
-        // VALIDACIÓN DE SEGURIDAD
         if (periodoActual.value && periodoActual.value.length > 0) {
             form.fecha_creacion_acceso_actual = periodoActual.value[0].fecha_creacion_acceso_actual;
             form.tipo_acceso_actual = periodoActual.value[0].tipo_acceso_actual;
@@ -517,9 +549,6 @@ const fetchPeriodoActual = async (url = null) => {
 
 const fetchHistorialAcceso = async () => {
     try {
-        // Aquí deberías hacer la petición real al backend para obtener el historial de acceso
-        // Ejemplo: const respuesta = await getAllIpress(`/historial_acceso/${paciente.id_paciente}`);
-
         // Datos de ejemplo para demostración
         historialAcceso.value = [
             { fecha: '2024-01-15', tipo_acceso: 'Catéter Venoso Central Temporal', localizacion: '5. CVCT yugular derecha', motivo: 'Inicio de tratamiento', estado: 'Activo' }
@@ -568,5 +597,33 @@ onMounted(() => {
 </script>
 
 <style scoped>
-select, input[type="text"], input[type="date"] { font-size: 14px; }
+.animate-fadeIn {
+    animation: fadeIn 0.4s ease-out forwards;
+}
+.animate-scaleIn {
+    animation: scaleIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f8fafc;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 20px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
 </style>

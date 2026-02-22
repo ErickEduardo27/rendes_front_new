@@ -70,10 +70,10 @@
                 <option value="2">No</option>
               </select>
             </div>
-            <div class="space-y-2">
+            <!-- <div class="space-y-2">
               <label class="block font-semibold text-sm text-gray-700">Periodo</label>
               <input v-model="periodo" type="date" class="w-full border rounded p-2 text-sm" />
-            </div>
+            </div> -->
           </div>
 
           <h2 class="text-lg font-semibold mt-6">Recuento Bacteriano en Agua Tratada (UFC/ML)</h2>
@@ -85,7 +85,7 @@
           <h2 class="text-lg font-semibold mt-6">Nivel de Endotoxinas en Agua Tratada (UE/ML)</h2>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="flex flex-col lg:flex-row gap-2 items-start lg:items-center">
-              <select v-model="endoAguaTrata" class="w-full border rounded p-2 text-sm">
+              <select v-model="endMaquiHemodi" class="w-full border rounded p-2 text-sm">
                 <option value="">Seleccione una opción</option>
                 <option value="Normal">Normal (&le;0.25 UE/ML)</option>
                 <option value="Alto">Alto (&gt;0.25 UE/ML)</option>
@@ -93,7 +93,39 @@
               <input disabled class="w-full border rounded p-2 text-sm bg-gray-200" placeholder="Estado" />
             </div>
             <div class="flex flex-col lg:flex-row gap-2 items-start lg:items-center">
-              <select v-model="rtnAnilloCir" class="w-full border rounded p-2 text-sm">
+              <h6>Salida de la Ósmosis</h6>
+              <select v-model="endMaquiHemodi2" class="w-full border rounded p-2 text-sm">
+                <option value="">Seleccione una opción</option>
+                <option value="Normal">Normal (&le;0.25 UE/ML)</option>
+                <option value="Alto">Alto (&gt;0.25 UE/ML)</option>
+              </select>
+              <input disabled class="w-full border rounded p-2 text-sm bg-gray-200" placeholder="Estado" />
+            </div>
+            <div class="flex flex-col lg:flex-row gap-2 items-start lg:items-center">
+              <h6>Retorno del anillo de circulación</h6>
+              <select v-model="endMaquiHemodi2" class="w-full border rounded p-2 text-sm">
+                <option value="">Seleccione una opción</option>
+                <option value="Normal">Normal (&le;0.25 UE/ML)</option>
+                <option value="Alto">Alto (&gt;0.25 UE/ML)</option>
+              </select>
+              <input disabled class="w-full border rounded p-2 text-sm bg-gray-200" placeholder="Estado" />
+            </div>
+          </div>
+
+          <h2 class="text-lg font-semibold mt-6">Nivel de Endotoxinas en Agua Tratada (UE/ML)</h2>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="flex flex-col lg:flex-row gap-2 items-start lg:items-center">
+              <h6>Salida de la Ósmosis</h6>
+              <select v-model="endMaquiHemodi2" class="w-full border rounded p-2 text-sm">
+                <option value="">Seleccione una opción</option>
+                <option value="Normal">Normal (&le;0.25 UE/ML)</option>
+                <option value="Alto">Alto (&gt;0.25 UE/ML)</option>
+              </select>
+              <input disabled class="w-full border rounded p-2 text-sm bg-gray-200" placeholder="Estado" />
+            </div>
+            <div class="flex flex-col lg:flex-row gap-2 items-start lg:items-center">
+              <h6>Retorno del anillo de circulación</h6>
+              <select v-model="endMaquiHemodi2" class="w-full border rounded p-2 text-sm">
                 <option value="">Seleccione una opción</option>
                 <option value="Normal">Normal (&le;0.25 UE/ML)</option>
                 <option value="Alto">Alto (&gt;0.25 UE/ML)</option>
@@ -108,25 +140,7 @@
             <input v-model="bacMaquiHemodi2" type="number" placeholder="Escriba solo valores numéricos" class="w-full border rounded p-2 text-sm" />
           </div>
 
-          <h2 class="text-lg font-semibold mt-6">Nivel de Endotoxinas en Agua Tratada (UE/ML)</h2>
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="flex flex-col lg:flex-row gap-2 items-start lg:items-center">
-              <select v-model="endMaquiHemodi" class="w-full border rounded p-2 text-sm">
-                <option value="">Seleccione una opción</option>
-                <option value="Normal">Normal (&le;0.25 UE/ML)</option>
-                <option value="Alto">Alto (&gt;0.25 UE/ML)</option>
-              </select>
-              <input disabled class="w-full border rounded p-2 text-sm bg-gray-200" placeholder="Estado" />
-            </div>
-            <div class="flex flex-col lg:flex-row gap-2 items-start lg:items-center">
-              <select v-model="endMaquiHemodi2" class="w-full border rounded p-2 text-sm">
-                <option value="">Seleccione una opción</option>
-                <option value="Normal">Normal (&le;0.25 UE/ML)</option>
-                <option value="Alto">Alto (&gt;0.25 UE/ML)</option>
-              </select>
-              <input disabled class="w-full border rounded p-2 text-sm bg-gray-200" placeholder="Estado" />
-            </div>
-          </div>
+          
 
           <div class="flex justify-between mt-8">
             <button type="button" class="bg-gray-300 text-black px-4 py-2 rounded" @click="cerrarModalNuevo">Cancelar</button>

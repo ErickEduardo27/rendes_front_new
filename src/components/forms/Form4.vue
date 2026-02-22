@@ -195,113 +195,152 @@ export default {
 
 
 <template>
-    <div class="p-6 space-y-6">
-        <!-- Botón de regreso -->
-        <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
-            ← Volver al inicio
+    <div class="p-6 space-y-6 bg-gray-50 min-h-screen">
+        
+        <button class="flex items-center text-sm cursor-pointer text-gray-500 hover:text-gray-800 transition-colors font-medium" @click="$emit('cancelar')">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Volver al inicio
+        </button>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-x-8 gap-y-4">
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Periodo de Reporte:</span>
+                <select v-model="periodoSeleccionado" class="border border-gray-200 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-600 font-medium outline-none focus:border-cyan-500" disabled>
+                    <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Clínica:</span>
+                <span class="text-sm border border-gray-200 rounded-md px-3 py-1.5 bg-gray-50 text-gray-600 font-medium">{{ pacienteSeleccionado.ipress }}</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Modalidad de Diálisis:</span>
+                <span class="text-sm border border-gray-200 rounded-md px-3 py-1.5 bg-gray-50 text-gray-600 font-medium">{{ pacienteSeleccionado.id_modalidad == 1 ? 'Hemodiálisis' : 'Peritoneal' }}</span>
+            </div>
         </div>
 
-        <!-- Filtros Superiores -->
-        <div class="flex items-center gap-2 flex-wrap">
-            <h2 class="text-lg font-semibold">Periodo de Reporte:</h2>
-            <select v-model="periodoSeleccionado" class="border p-1 rounded" disabled>
-                <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
-            </select>
-
-            <label>Clínica:</label>
-            <span>{{ pacienteSeleccionado.ipress }}</span>
-
-            <label>Modalidad de Diálisis:</label>
-            <span>{{ pacienteSeleccionado.id_modalidad == 1 ? 'Hemodiálisis' : 'Peritoneal' }}</span>
+        <div class="border-l-4 border-cyan-600 pl-3 my-6">
+            <h2 class="text-xl font-bold text-gray-800">Morbilidad Hospitalaria</h2>
         </div>
 
-        <!-- Contenido -->
-        <div class="flex gap-6 mt-6">
-            <!-- Formulario -->
-            <div class="flex-1 space-y-6">
-                <h2 class="text-2xl font-semibold">Morbilidad Hospitalaria</h2>
-
-                <!-- Búsqueda -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-sm font-semibold">Búsqueda de Diagnóstico por CIE-10</label>
-                        <input v-model="form.filtroCodigo" type="text" class="w-full border rounded p-2 text-sm" />
+        <div class="flex flex-col lg:flex-row gap-6 items-start">
+            
+            <div class="flex-1 w-full space-y-6">
+                
+                <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Búsqueda de Diagnóstico por CIE-10</label>
+                            <input v-model="form.filtroCodigo" type="text" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition-all bg-gray-50 focus:bg-white" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Buscar de Diagnótico por Descripción</label>
+                            <input v-model="form.filtroDescripcion" type="text" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition-all bg-gray-50 focus:bg-white" />
+                        </div>
                     </div>
-                    <div>
-                        <label class="text-sm font-semibold">Buscar de Diagnótico por Descripción</label>
-                        <input v-model="form.filtroDescripcion" type="text" class="w-full border rounded p-2 text-sm" />
+
+                    <div v-if="mostrarLista" class="border border-gray-200 rounded-md max-h-48 overflow-y-auto bg-white">
+                        <div v-for="item in resultadosFiltrados" :key="item.id" class="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-cyan-50 transition-colors">
+                            <input type="checkbox" :value="item" v-model="form.seleccionados" class="w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500 cursor-pointer" />
+                            <span class="text-sm text-gray-700 cursor-default"><strong>{{ item.codigo }}</strong> - {{ item.descripcion }}</span>
+                        </div>
+                    </div>
+                    <p v-else-if="hayBusqueda" class="italic text-sm text-gray-500 bg-gray-50 p-3 rounded-md border border-gray-200">No se encontraron resultados.</p>
+
+                    <div v-if="form.seleccionados.length" class="pt-2">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Diágnosticos seleccionados:</h3>
+                        <ul class="space-y-2">
+                            <li v-for="item in form.seleccionados" :key="item.id" class="bg-cyan-50 border border-cyan-100 p-3 rounded-md flex justify-between items-center">
+                                <span class="text-sm text-cyan-900"><strong>{{ item.codigo }}</strong> - {{ item.descripcion }}</span>
+                                <button @click="quitarSeleccion(item)" class="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded text-xs font-semibold transition-colors">Quitar</button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <hr class="border-gray-100 my-4" />
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Inicio de Hospitalización</label>
+                            <input v-model="form.fIniHos" type="date" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Alta de Hospitalización</label>
+                            <input v-model="form.fAltHos" type="date" :min="minFechaAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{'border-red-500 focus:ring-red-500 focus:border-red-500': errorFechaAlta}" />
+                            <div v-if="errorFechaAlta" class="text-red-500 text-xs mt-1.5 font-medium">{{ errorFechaAlta }}</div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fuente</label>
+                            <select v-model="form.fuente" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
+                                <option value="">Seleccione</option>
+                                <option value="1">Epicrisis</option>
+                                <option value="2">Informe de Alta</option>
+                                <option value="3">Otro</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <div v-if="mostrarLista" class="mt-2 space-y-2">
-                    <div v-for="item in resultadosFiltrados" :key="item.id" class="flex items-center gap-2">
-                        <input type="checkbox" :value="item" v-model="form.seleccionados" />
-                        <span><strong>{{ item.codigo }}</strong> - {{ item.descripcion }}</span>
-                    </div>
-                </div>
-                <p v-else-if="hayBusqueda" class="italic text-gray-500">No se encontraron resultados.</p>
-
-                <div v-if="form.seleccionados.length" class="mt-4">
-                    <h3 class="text-sm font-semibold mb-2">Diágnosticos seleccionados:</h3>
-                    <ul>
-                        <li v-for="item in form.seleccionados" :key="item.id"
-                            class="bg-gray-100 p-2 rounded flex justify-between">
-                            <span><strong>{{ item.codigo }}</strong> - {{ item.descripcion }}</span>
-                            <button @click="quitarSeleccion(item)" class="text-red-500 text-xs">Quitar</button>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Fechas -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-                    <div>
-                        <label class="text-sm font-semibold">Fecha de Inicio de Hospitalización</label>
-                        <input v-model="form.fIniHos" type="date" class="w-full border rounded p-2 text-sm" />
-                    </div>
-                    <div>
-                        <label class="text-sm font-semibold">Fecha de Alta de Hospitalización</label>
-                        <input v-model="form.fAltHos" type="date" :min="minFechaAlta" class="w-full border rounded p-2 text-sm" />
-                        <div v-if="errorFechaAlta" class="text-red-500 text-xs mt-1">{{ errorFechaAlta }}</div>
-                    </div>
-                    <div>
-                        <label class="text-sm font-semibold">Fuente</label>
-                        <select v-model="form.fuente" class="w-full border rounded p-2 text-sm">
-                            <option value="">Seleccione</option>
-                            <option value="1">Epicrisis</option>
-                            <option value="2">Informe de Alta</option>
-                            <option value="3">Otro</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Botones -->
-                <div class="flex justify-end gap-2 mt-6">
-                    <button class="bg-gray-300 text-gray-800 px-4 py-2 rounded text-sm">Cancelar</button>
-                    <button @click="postForm()"
-                        class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Registrar</button>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button @click="$emit('cancelar')" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                        Cancelar
+                    </button>
+                    <button @click="postForm()" class="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                        Registrar
+                    </button>
                 </div>
             </div>
 
-            <!-- Perfil -->
-            <div class="w-80 p-4 border rounded shadow" v-if="pacienteSeleccionado.value">
-                <div class="flex justify-center mb-2">
-                    <div class="bg-gray-300 rounded-full h-16 w-16"></div>
+            <div class="w-full lg:w-80 shrink-0" v-if="pacienteSeleccionado.value">
+                <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden sticky top-6">
+                    <div class="h-2 bg-cyan-500 w-full"></div>
+                    
+                    <div class="p-6 flex flex-col items-center">
+                        <div class="bg-gray-100 rounded-full h-20 w-20 flex items-center justify-center mb-4 border border-gray-200">
+                            <svg class="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                        </div>
+                        
+                        <h3 class="text-center font-bold text-gray-900 text-[15px] uppercase leading-tight mb-1">{{ pacienteSeleccionado.value.paciente }}</h3>
+                        <p class="text-center text-xs font-medium text-gray-500 mb-6">DNI: {{ pacienteSeleccionado.value.documento }}</p>
+                        
+                        <div class="w-full space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500">Edad:</span>
+                                <span class="font-medium text-gray-800">{{ edadPaciente }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500">Sexo:</span>
+                                <span class="font-medium text-gray-800">{{ pacienteSeleccionado.value.genero === 'M' ? 'Masculino' : 'Femenino' }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500">Tipo de Registro:</span>
+                                <span class="font-medium text-gray-800">{{ pacienteSeleccionado.value.id_modalidad === 1 ? 'Hemodiálisis' : 'Peritoneal' }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500">Estado:</span>
+                                <span class="text-[11px] font-bold px-2 py-0.5 bg-green-50 text-green-600 border border-green-200 rounded uppercase tracking-wider">{{ pacienteSeleccionado.value.estado }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm mt-4 pt-3 border-t border-gray-100">
+                                <span class="text-gray-500">Fecha de Ingreso:</span>
+                                <span class="font-medium text-gray-800">15/06/2025</span>
+                            </div>
+                        </div>
+
+                        <button class="mt-5 text-sm text-cyan-600 font-medium hover:text-cyan-800 transition-colors flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Ver Historial Clínico
+                        </button>
+                    </div>
                 </div>
-                <p class="text-center font-bold">{{ pacienteSeleccionado.value.paciente }}</p>
-                <p class="text-center text-sm text-gray-600">DNI: {{ pacienteSeleccionado.value.documento }}</p>
-                <ul class="text-sm text-gray-700 mt-4 space-y-1">
-                    <li><strong>Edad:</strong> {{ edadPaciente }}</li>
-                    <li><strong>Sexo:</strong> {{ pacienteSeleccionado.value.genero === 'M' ? 'Masculino' : 'Femenino'
-                        }}</li>
-                    <li><strong>Tipo de Registro:</strong> {{ pacienteSeleccionado.value.id_modalidad === 1 ?
-                        'Hemodiálisis' : 'Peritoneal' }}</li>
-                    <li><strong>Estado:</strong> {{ pacienteSeleccionado.value.estado }}</li>
-                    <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
-                </ul>
             </div>
+            
         </div>
     </div>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue';

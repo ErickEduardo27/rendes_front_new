@@ -767,26 +767,80 @@ const consultarDNI = async () => {
 
     const data = await response.json();
 
-    // 4. Llenar datos (Verifica la estructura de tu respuesta JSON)
-    // A veces llega directo en 'data' o dentro de 'data.persona'
-    const persona = data.persona || data; 
-
-    if (persona.nombres) {
-       form.nombreCompleto = `${persona.apellidoPaterno} ${persona.apellidoMaterno}, ${persona.nombres}`.toUpperCase();
-       
-       if(persona.sexo) {
-         form.sexo = (persona.sexo === '1' || persona.sexo === 'M') ? 'M' : 'F';
-       }
-
-       // --- AQUI MAPEAR UBIGEO SI TU BACKEND LO DEVUELVE ---
-       // form.departamento = persona.ubigeo_departamento; 
-       // form.provincia = persona.ubigeo_provincia;
-       // form.distrito = persona.ubigeo_distrito;
-
-       ElMessage({ message: 'Datos encontrados', type: 'success', plain: true });
-    } else {
-       errorDNI.value = 'No se encontraron datos coincidente.';
+    // 4. Validar respuesta y extraer datos
+    if (data.codError !== "0") {
+      errorDNI.value = data.desError || 'Error en la consulta del servicio.';
+      return;
     }
+
+    if (!data.vDataItem || !Array.isArray(data.vDataItem) || data.vDataItem.length === 0) {
+      errorDNI.value = 'No se encontraron datos coincidentes.';
+      return;
+    }
+
+    const persona = data.vDataItem[0];
+
+    // 5. Mapear nombre completo
+    const apellidos = `${persona.apePaterno || ''} ${persona.apeMaterno || ''}`.trim();
+    const nombres = `${persona.priNombre || ''} ${persona.segNombre || ''}`.trim();
+    if (apellidos && nombres) {
+      form.nombreCompleto = `${apellidos}, ${nombres}`.toUpperCase();
+    }
+
+    // 6. Mapear sexo (codGenero: "1" = Masculino, "2" = Femenino)
+    if (persona.codGenero) {
+      form.sexo = persona.codGenero === "1" ? 'M' : 'F';
+    }
+
+    // 7. Mapear fecha de nacimiento (convertir de DD/MM/YYYY a YYYY-MM-DD)
+    if (persona.fecNac) {
+      const [diaNac, mesNac, anioNac] = persona.fecNac.split('/');
+      if (diaNac && mesNac && anioNac) {
+        form.fechaNacimiento = `${anioNac}-${mesNac.padStart(2, '0')}-${diaNac.padStart(2, '0')}`;
+      }
+    }
+
+    // 8. Mapear ubigeo y ubicación
+    if (persona.codUbigeoDomicilio) {
+      form.ubigeo = persona.codUbigeoDomicilio;
+    }
+    
+    // 9. Extraer y mapear departamento, provincia y distrito desde desUbiDom
+    // Formato: "LIMA LIMA SAN JUAN DE LURIGANCHO 1"
+    // Orden: [DEPARTAMENTO] [PROVINCIA] [DISTRITO...] [NÚMERO]
+    if (persona.desUbiDom) {
+      const partes = persona.desUbiDom.trim().split(/\s+/);
+      
+      if (partes.length >= 2) {
+        // Primera palabra: Departamento
+        const nombreDepartamento = partes[0] || '';
+        
+        // Segunda palabra: Provincia
+        const nombreProvincia = partes[1] || '';
+        
+        // Del tercer elemento hasta el penúltimo: Distrito (puede tener múltiples palabras)
+        // El último elemento generalmente es un número que se ignora
+        let nombreDistrito = '';
+        if (partes.length >= 3) {
+          // Tomar desde el índice 2 hasta el penúltimo (excluyendo el último si es número)
+          const distritoPartes = partes.slice(2);
+          // Si el último elemento es solo un número, excluirlo
+          const ultimoElemento = distritoPartes[distritoPartes.length - 1];
+          if (/^\d+$/.test(ultimoElemento)) {
+            nombreDistrito = distritoPartes.slice(0, -1).join(' ').trim();
+          } else {
+            nombreDistrito = distritoPartes.join(' ').trim();
+          }
+        }
+        
+        // Asignar valores a los campos del formulario
+        if (nombreDepartamento) form.departamento = nombreDepartamento;
+        if (nombreProvincia) form.provincia = nombreProvincia;
+        if (nombreDistrito) form.distrito = nombreDistrito;
+      }
+    }
+
+    ElMessage({ message: 'Datos encontrados y completados', type: 'success', plain: true });
 
   } catch (error) {
     console.error('Error:', error);
