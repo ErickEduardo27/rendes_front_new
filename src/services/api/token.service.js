@@ -1,3 +1,7 @@
+import axios from 'axios';
+
+const baseURL = import.meta.env.VITE_API || 'http://127.0.0.1:8010';
+
 class TokenService {
     static ACCESS_TOKEN_KEY = 'access_token';
     static REFRESH_TOKEN_KEY = 'refresh_token';
@@ -23,22 +27,17 @@ class TokenService {
         localStorage.removeItem(this.REFRESH_TOKEN_KEY);
     }
 
-    /* static async refreshToken(refreshToken: string): Promise<Tokens> {
-        // Implementa la lógica para refrescar el token
-        const response = await apiClient.post<RefreshTokenResponse>(
-            '/auth/refresh-token'
-            , { refreshToken }
-        );
-
-        if (!response.data.accessToken || !response.data.refreshToken) {
-            throw new Error('Invalid token response format');
+    /** Llama al backend api/token/refresh/ con el refresh token. Retorna { accessToken }. */
+    static async refreshToken(refreshToken) {
+        const response = await axios.post(`${baseURL}/api/token/refresh/`, { refresh: refreshToken }, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000
+        });
+        if (!response.data || !response.data.access) {
+            throw new Error('Invalid refresh response');
         }
-    
-        return {
-            accessToken: response.data.accessToken,
-            refreshToken: response.data.refreshToken,
-        };
-    } */
+        return { accessToken: response.data.access };
+    }
 }
 
 export { TokenService };

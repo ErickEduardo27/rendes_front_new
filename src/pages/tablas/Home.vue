@@ -1,7 +1,7 @@
 <template>
-  <div class="p-4 md:p-6 bg-slate-50 min-h-screen space-y-6 w-full max-w-full overflow-x-hidden box-border flex flex-col">
+  <div class="tablas-page p-4 md:p-6 bg-slate-50 min-h-screen space-y-6 w-full min-w-0 max-w-full overflow-hidden box-border flex flex-col">
     
-    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 transition-all hover:shadow-md w-full">
+    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 transition-all hover:shadow-md w-full min-w-0">
       <div class="flex flex-wrap items-center gap-6 w-full md:w-auto">
         
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5 transition-all hover:shadow-md w-full">
+    <div class="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5 transition-all hover:shadow-md w-full min-w-0">
       <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
         <label class="text-sm font-bold text-slate-700 uppercase flex items-center gap-2">
           <div class="p-1.5 bg-indigo-100 rounded-lg text-indigo-600">
@@ -44,6 +44,11 @@
           <option value="5">Resultados Clínicos</option>
           <option value="6">Vacunación</option>
         </select>
+        <button v-if="formularioSeleccionado === '2'" @click="abrirModalNuevo"
+          class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all active:scale-95">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          Nuevo
+        </button>
       </div>
 
       <div class="flex flex-col lg:flex-row gap-4 items-center justify-between pt-1">
@@ -64,10 +69,10 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col w-full max-w-full flex-1 overflow-hidden relative">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col w-full min-w-0 flex-1 overflow-hidden relative table-card">
       
-      <div class="w-full max-w-full overflow-x-auto overflow-y-visible custom-scrollbar pb-3">
-        <table class="w-full text-left border-collapse min-w-max">
+      <div class="table-scroll-wrapper custom-scrollbar pb-3">
+        <table class="tablas-table text-left border-collapse">
           <thead>
             <tr class="bg-slate-100/80 border-b border-slate-200">
               <th class="px-4 py-3 text-xs font-extrabold text-slate-700 uppercase tracking-wider text-center sticky left-0 bg-slate-100 z-20 shadow-[4px_0_8px_-2px_rgba(0,0,0,0.05)] border-r border-slate-200 backdrop-blur-md">
@@ -124,6 +129,64 @@
             Siguiente
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal flotante Nuevo (Unidad Actual) -->
+    <div v-if="mostrarModalNuevo" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity animate-fade-in" @click="cerrarModalNuevo"></div>
+      <div class="relative w-full max-w-5xl max-h-[90vh] bg-slate-50 rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden border border-white/20 animate-pop-in">
+        <div class="relative overflow-hidden px-8 py-6 bg-gradient-to-r from-indigo-600 to-indigo-800 shrink-0">
+          <div class="relative z-10 flex justify-between items-center">
+            <h3 class="text-xl font-extrabold text-white tracking-tight">Nueva Unidad Actual</h3>
+            <button @click="cerrarModalNuevo" class="p-2 bg-white/10 hover:bg-red-500 hover:text-white text-white/90 rounded-xl backdrop-blur-sm transition-all active:scale-90">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
+        </div>
+        <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+          <div v-if="!pacienteParaNuevo" class="space-y-4">
+            <label class="block text-sm font-bold text-slate-700">Busque el paciente para registrar la unidad actual:</label>
+            <div ref="buscadorPacienteRef" class="relative w-full max-w-md">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 pointer-events-none">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </span>
+              <input
+                v-model="busquedaPaciente"
+                type="text"
+                placeholder="Buscar por nombre o documento (DNI)..."
+                class="w-full border border-slate-300 pl-11 pr-4 py-2.5 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                @focus="mostrarListaPacientes = true"
+                @keydown.escape="mostrarListaPacientes = false"
+              />
+              <div
+                v-show="mostrarListaPacientes"
+                class="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto custom-scrollbar"
+              >
+                <div
+                  v-for="(p, i) in pacientesFiltradosModal"
+                  :key="p.id_paciente || p.documento || i"
+                  class="px-4 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors"
+                  @mousedown.prevent="seleccionarPacienteModal(p)"
+                >
+                  <p class="font-medium text-slate-800">{{ p.paciente || p.nombre || 'Sin nombre' }}</p>
+                  <p v-if="p.documento" class="text-xs text-slate-500">DNI: {{ p.documento }}</p>
+                </div>
+                <p v-if="pacientesFiltradosModal.length === 0" class="px-4 py-3 text-sm text-slate-500 italic">
+                  No se encontraron pacientes.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div v-else class="pt-2">
+            <Form2Hemodialisis
+              :paciente="pacienteParaNuevo"
+              :periodo="periodoSeleccionado"
+              :periodoIpress="idPeriodoIpress"
+              @cancelar="cerrarModalNuevo"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -192,8 +255,9 @@
 import * as XLSX from 'xlsx';
 const totalRegistros = ref(0);
 const paginaActual = ref(1);
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
+import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
 
 // ==========================================
 // NUEVAS VARIABLES Y LÓGICA PARA EL MODAL
@@ -213,6 +277,68 @@ const cerrarModalDetalle = () => {
   setTimeout(() => {
       registroSeleccionado.value = null;
   }, 300); // Limpia después de la animación de cierre
+};
+
+const mostrarModalNuevo = ref(false);
+const idPacienteParaNuevo = ref('');
+const busquedaPaciente = ref('');
+const mostrarListaPacientes = ref(false);
+
+const pacienteParaNuevo = computed(() => {
+  if (!idPacienteParaNuevo.value) return null;
+  return pacientes.value.find(p => (p.id_paciente && String(p.id_paciente) === String(idPacienteParaNuevo.value)) || (p.documento && p.documento === idPacienteParaNuevo.value)) || null;
+});
+
+const pacientesFiltradosModal = computed(() => {
+  const q = (busquedaPaciente.value || '').trim().toLowerCase();
+  if (!q) return pacientes.value.slice(0, 50);
+  return pacientes.value.filter(p => {
+    const nombre = (p.paciente || p.nombre || '').toLowerCase();
+    const doc = (p.documento || '').toString().toLowerCase();
+    return nombre.includes(q) || doc.includes(q);
+  }).slice(0, 50);
+});
+
+const buscadorPacienteRef = ref(null);
+
+const seleccionarPacienteModal = (p) => {
+  idPacienteParaNuevo.value = p.id_paciente || p.documento;
+  busquedaPaciente.value = '';
+  mostrarListaPacientes.value = false;
+};
+
+const cerrarListaPacientesSiFuera = (e) => {
+  if (buscadorPacienteRef.value && !buscadorPacienteRef.value.contains(e.target)) {
+    mostrarListaPacientes.value = false;
+    document.removeEventListener('click', cerrarListaPacientesSiFuera);
+  }
+};
+
+watch(mostrarListaPacientes, (open) => {
+  if (open) {
+    nextTick(() => document.addEventListener('click', cerrarListaPacientesSiFuera));
+  } else {
+    document.removeEventListener('click', cerrarListaPacientesSiFuera);
+  }
+});
+
+const abrirModalNuevo = () => {
+  idPacienteParaNuevo.value = '';
+  busquedaPaciente.value = '';
+  mostrarListaPacientes.value = false;
+  document.body.style.overflow = 'hidden';
+  mostrarModalNuevo.value = true;
+};
+
+const cerrarModalNuevo = () => {
+  mostrarModalNuevo.value = false;
+  document.body.style.overflow = '';
+  setTimeout(() => {
+    idPacienteParaNuevo.value = '';
+    busquedaPaciente.value = '';
+    mostrarListaPacientes.value = false;
+  }, 300);
+  updateTabla(); // Refrescar tabla por si se guardó algo
 };
 // ==========================================
 
@@ -266,7 +392,7 @@ const formulariosConfig = {
     })
   },
   3: {
-    endpoint: "eventosAccesosVasculares",
+    endpoint: "eventosAccesosVascularesPaginacion",
     columnas: [
       "paciente", "documento", "fe_evento", "tpInfeccion", "tratamientoIV", "vancomicinaIV", "hemocultivoPositivo", "tipoGram", "tipoInfeccionLocal", "tpGermen", "bacteria", "tipoBacteria", "observaciones"
     ],
@@ -642,6 +768,25 @@ onMounted(() => {
 }
 .animate-pop-in {
   animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Contenedor de la tabla: scroll horizontal sin expandir la página */
+.tablas-page {
+  max-width: 100%;
+}
+.table-card {
+  max-width: 100%;
+}
+.table-scroll-wrapper {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+.tablas-table {
+  width: max-content;
+  min-width: 100%;
 }
 
 /* Utilidades */

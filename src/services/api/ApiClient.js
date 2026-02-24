@@ -10,7 +10,7 @@ class ApiClient {
   constructor() {
     this.instance = axios.create({
       baseURL,
-      timeout: 10000,
+      timeout: 100000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -34,19 +34,30 @@ class ApiClient {
     this.instance.interceptors.response.use(
       (response) => response,
       async (error) => {
-
         const authStore = useAuthStore();
         if (error.response) {
+          if (error.response.status === 401) {
+            // No intentar refresh si el 401 fue en la propia petición de refresh
+            const isRefreshRequest = error.config?.url?.includes?.('token/refresh');
+            const alreadyRetried = error.config?.__retry401;
+            const refreshToken = TokenService.getRefreshToken();
 
-          if (error.response && error.response.status === 401) {
-            // 🔒 Token expirado o inválido
-            authStore.logout()
-            // ⚠️ Mostrar alerta (puedes usar tu lib de notificaciones aquí)
-            alert('Tu sesión ha expirado. Por favor vuelve a iniciar sesión.')
-            // ⏩ Redirigir al login
-            router.push('/login')
+            if (!isRefreshRequest && !alreadyRetried && refreshToken) {
+              try {
+                const newTokens = await TokenService.refreshToken(refreshToken);
+                TokenService.saveToken(newTokens.accessToken);
+                error.config.headers.Authorization = `Bearer ${newTokens.accessToken}`;
+                error.config.__retry401 = true;
+                return this.instance(error.config);
+              } catch (e) {
+                // Refresh falló: limpiar y redirigir a login
+              }
+            }
+            authStore.logout();
+            TokenService.clearTokens();
+            alert('Tu sesión ha expirado. Por favor vuelve a iniciar sesión.');
+            router.push('/login');
           }
-          // 🔁 Aquí transforma el error con datos reales
           return Promise.reject(this.transformErrorData(error.response));
         }
         return Promise.reject(this.transformNetworkError(error));

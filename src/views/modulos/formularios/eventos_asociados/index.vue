@@ -664,7 +664,7 @@ export default {
         .then((response) => {
           this.auth = "Bearer " + response.data.access;
           axios
-            .patch(RUTA_API + "/eventosAccesosVasculares/" + this.formId.split("/")[4] + "/", dataEnvio1, {
+            .patch(RUTA_API + "/eventosAccesosVascularesPaginacion/" + this.formId.split("/")[4] + "/", dataEnvio1, {
               headers: { Authorization: this.auth },
             })
             .then((res) => {
@@ -737,7 +737,7 @@ export default {
         .then((response) => {
           this.auth = "Bearer " + response.data.access;
           axios
-            .post(RUTA_API + "/eventosAccesosVasculares/", dataEnvio1, {
+            .post(RUTA_API + "/eventosAccesosVascularesPaginacion/", dataEnvio1, {
               headers: { Authorization: this.auth },
             })
             .then((res) => {

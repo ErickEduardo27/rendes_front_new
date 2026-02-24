@@ -8,10 +8,10 @@
       @click="toggleSidebar"
     />
 
-    <div class="container-general-sub flex flex-col flex-1">
+    <div class="container-general-sub flex flex-col flex-1 min-w-0">
       <Navbar @toggle-sidebar="toggleSidebar" />
       
-      <div class="main-responsive w-full max-w-[100%] max-h-[100%] flex-1">
+      <div class="main-responsive w-full min-w-0 max-w-full max-h-[100%] flex-1 overflow-hidden flex flex-col">
         <router-view />
       </div>
     </div>
