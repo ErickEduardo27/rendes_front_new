@@ -73,28 +73,31 @@
         
         <div>
           <label class="text-sm font-medium text-gray-700">Departamento</label>
-          <select v-model="form.departamento" class="w-full border px-2 py-1 rounded bg-white">
+          <select v-model="form.departamento" class="w-full border px-2 py-1 rounded bg-white uppercase">
              <option value="">Seleccione</option>
-             </select>
+             <option v-for="dep in listaDepartamentos" :key="dep" :value="dep">{{ dep }}</option>
+          </select>
         </div>
 
         <div>
           <label class="text-sm font-medium text-gray-700">Provincia</label>
-          <select v-model="form.provincia" class="w-full border px-2 py-1 rounded bg-white">
+          <select v-model="form.provincia" :disabled="!form.departamento" class="w-full border px-2 py-1 rounded bg-white uppercase disabled:bg-gray-100">
             <option value="">Seleccione</option>
+            <option v-for="prov in listaProvincias" :key="prov" :value="prov">{{ prov }}</option>
           </select>
         </div>
 
         <div>
           <label class="text-sm font-medium text-gray-700">Distrito</label>
-          <select v-model="form.distrito" class="w-full border px-2 py-1 rounded bg-white">
+          <select v-model="form.distrito" :disabled="!form.provincia" class="w-full border px-2 py-1 rounded bg-white uppercase disabled:bg-gray-100">
             <option value="">Seleccione</option>
+            <option v-for="dist in listaDistritos" :key="dist" :value="dist">{{ dist }}</option>
           </select>
         </div>
 
         <div>
           <label class="text-sm font-medium text-gray-700">Ubigeo (Auto)</label>
-          <input v-model="form.ubigeo" readonly class="w-full border px-2 py-1 rounded bg-gray-200 text-gray-600 font-mono text-center" />
+          <input v-model="form.ubigeo" class="w-full border px-2 py-1 rounded bg-gray-200 text-gray-600 font-mono text-center" />
         </div>
       </div>
 
@@ -266,7 +269,8 @@
 </template>
 
 <script setup>
-import { reactive, computed, watch, ref, onMounted } from 'vue'
+// AQUÍ ESTABA EL ERROR 2: Faltaba importar nextTick
+import { reactive, computed, watch, ref, onMounted, nextTick } from 'vue' 
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { apiClient } from "@/services/api/ApiClient";
 import { ElMessage } from 'element-plus';
@@ -322,8 +326,66 @@ const form = reactive({
   fechaPrimerIngreso: '',
   localizacionAcceso: '',
   hospitalProcedencia: '',
+  departamento: '', // <-- AGREGADO
+  provincia: '',    // <-- AGREGADO
+  distrito: '',     // <-- AGREGADO
+  ubigeo: '',       // <-- AGREGADO
   estado: 'REGISTRADO'
 })
+
+// ==========================================
+// LÓGICA DE DIRECCIÓN EN CASCADA
+// ==========================================
+const catalogoUbigeo = ref([
+  { departamento: 'LIMA', provincia: 'LIMA', distrito: 'LIMA', ubigeo: '150101' },
+  { departamento: 'LIMA', provincia: 'LIMA', distrito: 'SAN BORJA', ubigeo: '150130' },
+  { departamento: 'LIMA', provincia: 'LIMA', distrito: 'SAN ISIDRO', ubigeo: '150131' },
+  { departamento: 'LIMA', provincia: 'LIMA', distrito: 'MIRAFLORES', ubigeo: '150122' },
+  { departamento: 'AREQUIPA', provincia: 'AREQUIPA', distrito: 'AREQUIPA', ubigeo: '040101' },
+  { departamento: 'CALLAO', provincia: 'CALLAO', distrito: 'CALLAO', ubigeo: '070101' }
+]);
+
+const listaDepartamentos = computed(() => {
+  const deps = catalogoUbigeo.value.map(u => u.departamento);
+  return [...new Set(deps)].sort(); 
+});
+
+const listaProvincias = computed(() => {
+  if (!form.departamento) return [];
+  const provs = catalogoUbigeo.value
+    .filter(u => u.departamento === form.departamento)
+    .map(u => u.provincia);
+  return [...new Set(provs)].sort();
+});
+
+const listaDistritos = computed(() => {
+  if (!form.provincia) return [];
+  const dists = catalogoUbigeo.value
+    .filter(u => u.departamento === form.departamento && u.provincia === form.provincia)
+    .map(u => u.distrito);
+  return [...new Set(dists)].sort();
+});
+
+// Limpiadores si el usuario cambia los datos a mano
+watch(() => form.departamento, (newVal, oldVal) => {
+  if (oldVal && newVal !== oldVal) {
+    form.provincia = ''; form.distrito = ''; form.ubigeo = '';
+  }
+});
+watch(() => form.provincia, (newVal, oldVal) => {
+  if (oldVal && newVal !== oldVal) {
+    form.distrito = ''; form.ubigeo = '';
+  }
+});
+watch(() => form.distrito, (newVal) => {
+  if (newVal && form.departamento && form.provincia) {
+    const ubi = catalogoUbigeo.value.find(
+      u => u.departamento === form.departamento && u.provincia === form.provincia && u.distrito === newVal
+    );
+    if (ubi) form.ubigeo = ubi.ubigeo;
+  }
+});
+// ==========================================
 const validarFormulario = () => {
   const camposObligatorios = [
     'tipoDocumento',
@@ -757,11 +819,11 @@ const consultarDNI = async () => {
 
     // 3. Petición
     // Asegúrate que la URL sea correcta (http://localhost:8000 o 8010 según tu backend)
-    const response = await fetch('http://localhost:8010/consultar-seguro/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    const response = await fetch('http://localhost:8010/consultar-dni/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+});
 
     if (!response.ok) throw new Error(`Error: ${response.status}`);
 
@@ -808,23 +870,17 @@ const consultarDNI = async () => {
     // 9. Extraer y mapear departamento, provincia y distrito desde desUbiDom
     // Formato: "LIMA LIMA SAN JUAN DE LURIGANCHO 1"
     // Orden: [DEPARTAMENTO] [PROVINCIA] [DISTRITO...] [NÚMERO]
+    // Reemplaza desde if (persona.desUbiDom) hasta antes de ElMessage(...)
     if (persona.desUbiDom) {
       const partes = persona.desUbiDom.trim().split(/\s+/);
       
       if (partes.length >= 2) {
-        // Primera palabra: Departamento
         const nombreDepartamento = partes[0] || '';
-        
-        // Segunda palabra: Provincia
         const nombreProvincia = partes[1] || '';
-        
-        // Del tercer elemento hasta el penúltimo: Distrito (puede tener múltiples palabras)
-        // El último elemento generalmente es un número que se ignora
         let nombreDistrito = '';
+        
         if (partes.length >= 3) {
-          // Tomar desde el índice 2 hasta el penúltimo (excluyendo el último si es número)
           const distritoPartes = partes.slice(2);
-          // Si el último elemento es solo un número, excluirlo
           const ultimoElemento = distritoPartes[distritoPartes.length - 1];
           if (/^\d+$/.test(ultimoElemento)) {
             nombreDistrito = distritoPartes.slice(0, -1).join(' ').trim();
@@ -833,10 +889,28 @@ const consultarDNI = async () => {
           }
         }
         
-        // Asignar valores a los campos del formulario
-        if (nombreDepartamento) form.departamento = nombreDepartamento;
-        if (nombreProvincia) form.provincia = nombreProvincia;
-        if (nombreDistrito) form.distrito = nombreDistrito;
+        const ubigeoObtenido = persona.codUbigeoDomicilio || '';
+
+        // Si EsSalud trae una zona nueva que no tienes, la guarda temporalmente
+        if (nombreDepartamento && nombreProvincia && nombreDistrito) {
+          const existe = catalogoUbigeo.value.find(u => u.departamento === nombreDepartamento && u.provincia === nombreProvincia && u.distrito === nombreDistrito);
+          if (!existe) {
+            catalogoUbigeo.value.push({
+              departamento: nombreDepartamento,
+              provincia: nombreProvincia,
+              distrito: nombreDistrito,
+              ubigeo: ubigeoObtenido
+            });
+          }
+        }
+
+        // ¡AQUÍ ESTÁ LA MAGIA DEL NEXTTICK!
+        form.departamento = nombreDepartamento;
+        await nextTick(); // Espera 1 milisegundo a que se armen las provincias
+        form.provincia = nombreProvincia;
+        await nextTick(); // Espera 1 milisegundo a que se armen los distritos
+        form.distrito = nombreDistrito;
+        form.ubigeo = ubigeoObtenido;
       }
     }
 
@@ -907,13 +981,19 @@ watch(() => form.fechaNacimiento, (nuevaFecha) => {
 // Watcher para validación cruzada entre modalidad TRR y tipo de acceso
 // Watcher para validación cruzada
 watch(() => form.modalidadTRR, (nuevaModalidad) => {
+  // Primero: Limpiamos siempre los hijos para evitar datos basura
+  form.tipoAccesoInicio = '';
+  form.localizacionAcceso = '';
+
+  // Lógica inteligente según el Acta:
   if (nuevaModalidad === 'Diálisis Peritoneal') {
-    // CAMBIO: Usamos el ID '6' en lugar del texto
+    // Si es Peritoneal, el único tipo posible es 'Catéter Peritoneal' (ID 6)
+    // Lo seleccionamos automáticamente por comodidad del usuario
     form.tipoAccesoInicio = '6';
-    form.localizacionAcceso = '19';
-  } else if (nuevaModalidad === 'Trasplante') {
-    form.tipoAccesoInicio = '';
-    form.localizacionAcceso = '';
+  }
+  // Si es 'Hemodiálisis', dejamos vacío para que el usuario elija (Fístula, Catéter, etc.)
+  else if (nuevaModalidad === 'Trasplante') {
+    // Trasplante no lleva accesos vasculares, se queda todo limpio
   }
 });
 
