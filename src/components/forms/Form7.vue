@@ -1,8 +1,5 @@
 <template>
   <div class="p-6 space-y-6">
-    <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
-      ← Volver al inicio
-    </div>
 
     <div class="flex items-center gap-4 flex-wrap bg-white p-4 rounded-lg shadow-sm border border-gray-100">
       <div class="flex items-center gap-2">
@@ -239,7 +236,7 @@ import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import confetti from 'canvas-confetti';
 
 // 👇 defineProps debe estar fuera de cualquier función
-const { paciente, periodo } = defineProps({
+const props = defineProps({
   paciente: {
     type: Object,
     required: true
@@ -247,8 +244,18 @@ const { paciente, periodo } = defineProps({
   periodo: {
     type: Number,
     required: true
+  },
+  idPeriodoIpress: {
+    type: Number,
+    default: null
+  },
+  idRed: {
+    type: Number,
+    default: 1
   }
 })
+const { paciente, periodo } = props
+const emit = defineEmits(['cancelar', 'guardado'])
 
 const clinicaSeleccionada = ref('');
 const clinicas = ref(['DA VIDA SAC.']);
@@ -280,8 +287,8 @@ const form = reactive({
   fechaInfluenza: null,
   // Vacunación Neumococo
   fechaNeumococo: null,
-  id_periodo_ipress: 17,
-  id_red: 1,
+  id_periodo_ipress: props.idPeriodoIpress ?? 17,
+  id_red: props.idRed ?? 1,
   id_paciente: paciente.id_paciente
 })
 
@@ -377,6 +384,9 @@ const postForm = async (url = null) => {
     alert(`Por favor complete el campo obligatorio: ${campoFaltante}`);
     return;
   }
+  if (props.idPeriodoIpress != null) form.id_periodo_ipress = props.idPeriodoIpress;
+  if (props.idRed != null) form.id_red = props.idRed;
+  form.id_paciente = paciente.id_paciente;
   try {
     const respuesta = await postAllIpress(url ?? "/vacunaciones/", form);
     
@@ -386,7 +396,7 @@ const postForm = async (url = null) => {
     // 2. Esperar 1 segundo antes de mostrar la alerta para que se vea la animación
     setTimeout(() => {
       alert("Se registró con éxito");
-      window.location.reload();
+      emit('guardado');
     }, 1000);
 
   } catch (error) {

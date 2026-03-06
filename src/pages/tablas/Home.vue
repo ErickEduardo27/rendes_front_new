@@ -382,13 +382,13 @@ const formulariosConfig = {
       paciente: item.datosPaciente?.paciente ?? '-',
       documento: item.datosPaciente?.documento ?? '-',
       fecha_creacion_acceso_actual: item.fecha_creacion_acceso_actual ?? '-',
-      tipo_acceso_actual:item.tipo_acceso_nuevo,
-        localizacion_acceso_actual:item.localizacion_acceso_nuevo,
-        cambio_acceso: item.cambio_acceso=='true'?'Si':'No',
-        motivo_cambio: item.motivo_cambio,
-        fecha_creacion_acceso_nuevo:item.fecha_creacion_acceso_nuevo,
-        tipo_acceso_nuevo:item.tipo_acceso_nuevo,
-        localizacion_acceso_nuevo:item.localizacion_acceso_nuevo
+      tipo_acceso_actual: item.tipo_acceso_actual ?? item.tipo_acceso ?? '-',
+      localizacion_acceso_actual: item.localizacion_acceso_actual ?? '-',
+      cambio_acceso: item.cambio_acceso === 'true' || item.cambio_acceso === true ? 'Si' : 'No',
+      motivo_cambio: item.motivo_cambio ?? '-',
+      fecha_creacion_acceso_nuevo: item.fecha_creacion_acceso_nuevo ?? '-',
+      tipo_acceso_nuevo: item.tipo_acceso_nuevo ?? '-',
+      localizacion_acceso_nuevo: item.localizacion_acceso_nuevo ?? '-'
     })
   },
   3: {

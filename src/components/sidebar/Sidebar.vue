@@ -18,9 +18,21 @@
 
         <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
         
-        <template v-if="['Supervisor', 'Admin'].includes(perfil)">
+        <!-- <template v-if="['Supervisor', 'Admin'].includes(perfil)">
            <SidebarItem :icon="UserIcon" label="Registros" to="/tablas"/>
-        </template>
+        </template> -->
+        <SidebarItem 
+            v-if="['Supervisor', 'Admin'].includes(perfil)"
+            :icon="DocumentMagnifyingGlassIcon" 
+            label="Registros" 
+            :submenu="[
+              { label: 'Acceso Vascular', to: '/acceso-vascular' },
+              { label: 'Eventos Infecciosos', to: '/eventos-infecciosos' },
+              { label: 'Morbilidad Hospitalaria', to: '/morbilidad-hospitalaria' },
+              { label: 'Resultados Clínicos', to: '/resultados-clinicos' },
+              { label: 'Vacunación', to: '/vacunacion' }
+            ]"
+        />
 
         <SidebarItem :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
         <SidebarItem :icon="UserIcon" label="Prueba de Agua" to="/calidad-agua"/>

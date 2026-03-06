@@ -34,12 +34,12 @@
           >
             <el-option
               v-for="item in listaClinicas"
-              :key="item.id" 
-              :label="item.nombre"
-              :value="item.id"
+              :key="item.id_ipress"
+              :label="item.nombre_corto || item.ipress"
+              :value="item.id_ipress"
             >
-              <span style="float: left">{{ item.nombre }}</span>
-              <span style="float: right; color: #8492a6; font-size: 13px; margin-left: 10px">{{ item.codigo }}</span>
+              <span style="float: left">{{ item.nombre_corto || item.ipress }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px; margin-left: 10px">{{ item.ipress }}</span>
             </el-option>
           </el-select>
         </div>
@@ -51,11 +51,16 @@
             v-model="modalidadSeleccionada"
             placeholder="Todas"
             clearable
+            filterable
             style="width: 180px"
             @change="procesarCambioModalidad"
           >
-            <el-option label="Hemodiálisis" value="HEMO" />
-            <el-option label="Diálisis Peritoneal" value="DP" />
+            <el-option
+              v-for="m in listaModalidades"
+              :key="m.id_modalidad"
+              :label="m.modalidad"
+              :value="m.id_modalidad"
+            />
           </el-select>
         </div>
   
@@ -82,9 +87,12 @@
   const locale = ref(es);
   const periodos = ref([]);
   const fechaVisual = ref('');
+  /** Último id_periodo válido emitido (para que todos los formularios usen siempre el id) */
+  const ultimoIdPeriodoEmitido = ref(null);
   
   const listaClinicas = ref([]);
   const clinicaSeleccionada = ref(null);
+  const listaModalidades = ref([]);
   const modalidadSeleccionada = ref(null);
   
   // ==========================================
@@ -93,91 +101,113 @@
   const fetchPeriodos = async () => {
     try {
       const respuesta = await getAllIpress("/periodos/");
-      periodos.value = respuesta;
-      sincronizarVisual(props.periodo); 
+      periodos.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+      sincronizarVisual(props.periodo);
+      // Si no hay periodo inicial desde el padre, fijamos el primero de la tabla y emitimos su id para todo el sistema
+      if (props.periodo == null || props.periodo === '' || props.periodo === undefined) {
+        if (periodos.value.length > 0) {
+          const primerPeriodo = periodos.value[0];
+          fechaVisual.value = primerPeriodo.periodo;
+          ultimoIdPeriodoEmitido.value = primerPeriodo.id_periodo;
+          emit('update:periodo', primerPeriodo.id_periodo);
+          emit('change', { tipo: 'periodo', valor: primerPeriodo.id_periodo });
+        }
+      }
     } catch (error) {
       console.error("Error cargando periodos:", error);
     }
   };
-  
-  // NOTA: Se eliminó la función "esFechaDeshabilitada" para dejar todos los meses libres.
-  
+
+  /**
+   * Al seleccionar un mes en el date-picker se busca en la tabla periodos el id que coincida
+   * y se emite ese id para que todos los formularios del sistema lo usen (nunca la fecha texto).
+   */
   const procesarCambioPeriodo = (fecha) => {
     if (!fecha) return;
-    
-    // Buscamos si el periodo existe en la lista cargada
+    console.log("imprimiendo valor de fecha", fecha)
     const encontrado = periodos.value.find(p => p.periodo === fecha);
-    
+
     if (encontrado) {
-      // Si existe, mandamos el ID (Lógica normal)
+      ultimoIdPeriodoEmitido.value = encontrado.id_periodo;
       emit('update:periodo', encontrado.id_periodo);
       emit('change', { tipo: 'periodo', valor: encontrado.id_periodo });
     } else {
-      // Si NO existe (mes nuevo o futuro), mandamos la FECHA TEXTO
-      // y NO bloqueamos ni mostramos error.
-      emit('update:periodo', fecha); 
-      emit('change', { tipo: 'periodo', valor: fecha });
+      ElMessage.warning('Ese mes no está registrado como periodo. Elija un mes que exista en el sistema.');
+      // Dejar el date-picker en el último periodo válido para que siempre haya un id coherente
+      if (ultimoIdPeriodoEmitido.value != null && periodos.value.length > 0) {
+        const p = periodos.value.find(item => item.id_periodo === ultimoIdPeriodoEmitido.value);
+        if (p) fechaVisual.value = p.periodo;
+      } else if (periodos.value.length > 0) {
+        fechaVisual.value = periodos.value[0].periodo;
+        ultimoIdPeriodoEmitido.value = periodos.value[0].id_periodo;
+        emit('update:periodo', periodos.value[0].id_periodo);
+        emit('change', { tipo: 'periodo', valor: periodos.value[0].id_periodo });
+      }
     }
   };
-  
+
   const sincronizarVisual = (idOFecha) => {
-    // Sincronización inteligente:
-    // 1. Si es ID, busca en la lista.
-    // 2. Si es string de fecha (YYYY-MM), lo pone directo.
-    if (!idOFecha) return;
-  
+    if (idOFecha == null || idOFecha === '') return;
+
     if (typeof idOFecha === 'number' && periodos.value.length > 0) {
-       const p = periodos.value.find(item => item.id_periodo === idOFecha);
-       if (p) fechaVisual.value = p.periodo;
-    } else {
-       // Asumimos que es un string "2025-08" si no es ID numérico
-       fechaVisual.value = idOFecha;
+      const p = periodos.value.find(item => item.id_periodo === idOFecha);
+      if (p) {
+        fechaVisual.value = p.periodo;
+        ultimoIdPeriodoEmitido.value = idOFecha;
+      }
+    } else if (typeof idOFecha === 'string') {
+      const p = periodos.value.find(item => item.periodo === idOFecha);
+      if (p) {
+        fechaVisual.value = p.periodo;
+        ultimoIdPeriodoEmitido.value = p.id_periodo;
+      } else {
+        fechaVisual.value = idOFecha;
+      }
     }
   };
   
+// ==========================================
+  // 2. LÓGICA DE CLÍNICAS (IPRESS desde el back)
   // ==========================================
-    // 2. LÓGICA DE CLÍNICAS (SOLUCIÓN: ID CORRECTO)
-  // ==========================================
-  const fetchClinicas = async () => {
-      // CAMBIO IMPORTANTE: Usamos el ID 62877 para que coincida con el valor seleccionado
-      const clinicaFija = { 
-          id: 62877,  // <--- ¡AQUÍ ESTÁ LA CLAVE!
-          nombre: "CENTRO NACIONAL DE SALUD RENAL", 
-          codigo: "CNSR" 
-      };
+  const fetchClinicas = async () => {
+    try {
+      const respuesta = await getAllIpress("/ipress/");
+      const list = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+      listaClinicas.value = list;
+    } catch (error) {
+      console.error("Error cargando clínicas (IPRESS):", error);
+      listaClinicas.value = [];
+    }
+    if (props.clinica != null && props.clinica !== '') {
+      clinicaSeleccionada.value = props.clinica;
+    } else if (listaClinicas.value.length > 0) {
+      clinicaSeleccionada.value = listaClinicas.value[0].id_ipress;
+      emit('update:clinica', listaClinicas.value[0].id_ipress);
+    } else {
+      clinicaSeleccionada.value = null;
+    }
+  };
 
-      try {
-          const respuesta = await getAllIpress("/ipress/"); 
-          
-          if (Array.isArray(respuesta) && respuesta.length > 0) {
-              listaClinicas.value = respuesta;
-
-              // Buscamos si el ID 62877 ya viene en la lista de la API
-              // (Puede que venga como número o string, comparamos seguro)
-              const existe = listaClinicas.value.find(c => c.id == clinicaFija.id);
-              
-              if (!existe) {
-                  // Si no está, lo agregamos al principio
-                  listaClinicas.value.unshift(clinicaFija);
-              }
-          } else {
-              // Si la API falla, usamos el fijo
-              listaClinicas.value = [clinicaFija];
-          }
-
-      } catch (error) {
-          listaClinicas.value = [clinicaFija];
-      }
-
-      // Lógica de selección
-      if (props.clinica) {
-          clinicaSeleccionada.value = props.clinica;
-      } else {
-          // Por defecto seleccionamos el ID 62877
-          clinicaSeleccionada.value = clinicaFija.id;
-          emit('update:clinica', clinicaFija.id);
-      }
-  };
+  // ==========================================
+  // 2b. MODALIDADES desde el back
+  // ==========================================
+  const fetchModalidades = async () => {
+    try {
+      const respuesta = await getAllIpress("/modalidades/");
+      listaModalidades.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+    } catch (error) {
+      console.error("Error cargando modalidades:", error);
+      listaModalidades.value = [];
+    }
+    if (props.modalidad != null && props.modalidad !== '') {
+      modalidadSeleccionada.value = props.modalidad;
+    } else if (listaModalidades.value.length > 0) {
+      modalidadSeleccionada.value = listaModalidades.value[0].id_modalidad;
+      emit('update:modalidad', listaModalidades.value[0].id_modalidad);
+    } else {
+      modalidadSeleccionada.value = null;
+    }
+  };
   const procesarCambioClinica = (valor) => {
       emit('update:clinica', valor);
       emit('change', { tipo: 'clinica', valor: valor });
@@ -199,5 +229,6 @@
   onMounted(() => {
     fetchPeriodos();
     fetchClinicas();
+    fetchModalidades();
   });
   </script>

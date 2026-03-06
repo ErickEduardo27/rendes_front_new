@@ -3,24 +3,6 @@
     <h2 class="text-xl font-bold">Registro de Nuevo Paciente en Diálisis:</h2>
     <p class="text-sm text-gray-600">Complete los respectivos datos del paciente para la creación del expediente médico.</p>
 
-    <div class="flex items-center gap-4 mb-4 flex-wrap bg-gray-50 p-4 rounded-lg border">
-      <div class="flex items-center gap-2">
-        <h2 class="text-sm font-semibold text-gray-700">Periodo de Reporte:</h2>
-        <el-date-picker v-model="fechaVisual" type="month" placeholder="Seleccione mes" format="YYYY-MM"
-          value-format="YYYY-MM" :editable="false" :clearable="false" style="width: 160px"
-          :disabled-date="esFechaDeshabilitada" @change="procesarCambioPeriodo" />
-      </div>
-
-      <div class="w-px h-6 bg-gray-300 mx-2"></div>
-
-      <div class="flex items-center gap-2 flex-1">
-        <label class="text-sm font-semibold text-gray-700">Clínica:</label>
-        <el-autocomplete v-model="clinicaSeleccionada" :fetch-suggestions="querySearchClinica" clearable
-          placeholder="Ingrese nombre de clínica" @select="handleSelectClinica" :value-key="'ipress'"
-          style="width: 100%; max-width: 400px;" />
-      </div>
-    </div>
-
     <div class="border p-4 rounded-md bg-white shadow-sm">
       <h3 class="text-md font-bold text-gray-700 mb-3 border-b pb-2">Identificación y Ubicación</h3>
       
@@ -150,8 +132,8 @@
         <div class="w-full">
           <select v-model="form.etiologiaEspecifica" class="w-full border rounded p-2 text-sm">
             <option value="">Seleccione una opción</option>
-            <option v-for="(item, key) in localizacionesFiltradas" :key="key" :value="item.value">
-              {{ item.label }}
+            <option v-for="e in opcionesEtiologiaEspecificaFromApi" :key="e.id_etiologia" :value="e.id_etiologia">
+              {{ e.especifica || e.codigo || e.id_etiologia }}
             </option>
           </select>
         </div>
@@ -272,7 +254,6 @@
 // AQUÍ ESTABA EL ERROR 2: Faltaba importar nextTick
 import { reactive, computed, watch, ref, onMounted, nextTick } from 'vue' 
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
-import { apiClient } from "@/services/api/ApiClient";
 import { ElMessage } from 'element-plus';
 
 const periodoSeleccionado = ref(null);
@@ -303,6 +284,7 @@ const props = defineProps({
 
 const seleccionadas = ref([])
 const periodos = ref([])
+const listaEtiologias = ref([])
 const consultandoDNI = ref(false)
 const errorDNI = ref('')
 const form = reactive({
@@ -395,6 +377,7 @@ const validarFormulario = () => {
     'sexo',
     'gradoInstruccion',
     'etiologiaGeneral',
+    'etiologiaEspecifica',
     'modalidadTRR',
     'fechaInicioTRR',
     'subsistemaSalud',
@@ -575,10 +558,23 @@ const etiologiasEspecificas = {
   ]
 };
 const localizacionesFiltradas = computed(() => {
-  console.log("etiiiii", form.etiologiaGeneral)
   const tipo = form.etiologiaGeneral;
   const base = etiologiasEspecificas[tipo] || [];
   return [...base];
+});
+
+/** Etiologías específicas desde la tabla del backend, filtradas por la categoría general seleccionada (1-9). */
+const opcionesEtiologiaEspecificaFromApi = computed(() => {
+  const categoriaKey = form.etiologiaGeneral;
+  if (!categoriaKey) return [];
+  const labelCategoria = etologiasGenerales[categoriaKey];
+  if (!labelCategoria) return [];
+  const lista = listaEtiologias.value || [];
+  const labelNorm = String(labelCategoria).toUpperCase().trim();
+  return lista.filter((e) => {
+    const g = (e.general && String(e.general).toUpperCase().trim()) || '';
+    return g === labelNorm || g.includes(labelNorm) || labelNorm.includes(g);
+  });
 });
 
 // --- LÓGICA DEL SELECTOR DE PERIODO (NUEVO) ---
@@ -810,24 +806,17 @@ const consultarDNI = async () => {
     const [anio, mes, dia] = form.fechaNacimiento.split('-');
     const fechaParaApi = `${dia}/${mes}/${anio}`;
 
+    // Payload esperado por consulta_seguro en el backend
     const payload = {
-      codOpcion: "1",
-      codTipDoc: "1", 
-      numDoc: form.numeroDocumento, // Sin .value
-      fecNacimiento: fechaParaApi 
+      codOpcion: '1',
+      codTipDoc: form.tipoDocumento === 'DNI' ? '1' : form.tipoDocumento === 'CE' ? '2' : '3',
+      numDoc: form.numeroDocumento,
+      fecNacimiento: fechaParaApi
     };
 
-    // 3. Petición
-    // Asegúrate que la URL sea correcta (http://localhost:8000 o 8010 según tu backend)
-    const response = await fetch('http://localhost:8010/consultar-dni/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-});
-
-    if (!response.ok) throw new Error(`Error: ${response.status}`);
-
-    const data = await response.json();
+    // 3. Petición al backend con la misma base URL que el resto del formulario (evita ERR_CONNECTION)
+    const response = await postAllIpress('/consulta-seguro/', payload);
+    const data = response?.data ?? response;
 
     // 4. Validar respuesta y extraer datos
     if (data.codError !== "0") {
@@ -917,8 +906,13 @@ const consultarDNI = async () => {
     ElMessage({ message: 'Datos encontrados y completados', type: 'success', plain: true });
 
   } catch (error) {
-    console.error('Error:', error);
-    errorDNI.value = 'Error al consultar el servicio.';
+    console.error('Error consulta seguro:', error);
+    const msg = error?.message || error?.error || '';
+    if (msg.includes('Network') || msg.includes('ERR_')) {
+      errorDNI.value = 'No se pudo conectar al servidor. Compruebe que el backend esté en ejecución y que VITE_API en .env apunte a la URL correcta (ej. http://localhost:8000).';
+    } else {
+      errorDNI.value = error?.error || 'Error al consultar el servicio.';
+    }
   } finally {
     consultandoDNI.value = false;
   }
@@ -1011,17 +1005,17 @@ watch(() => form.tipoAccesoInicio, (nuevoTipoAcceso) => {
 });
 
 
-// Watcher: Limpia las comorbilidades si coinciden con la etiología
+// Watcher: Limpia las comorbilidades si coinciden con la etiología y resetea etiología específica
 watch(() => form.etiologiaGeneral, (nuevoValor) => {
-  // Aseguramos comparar como string o número
   const valor = String(nuevoValor);
+  form.etiologiaEspecifica = ''; // al cambiar categoría, limpiar específica
 
   if (valor === '1') {
-    // Si la causa es Diabetes, quitamos 'Diabetes' de comorbilidades
+    // Si la causa es Diabetes, no debe estar Diabetes en comorbilidades
     form.comorbilidades = form.comorbilidades.filter(c => c !== 'Diabetes');
   }
   else if (valor === '5') {
-    // Si la causa es Hipertensión, quitamos 'Hipertensión' de comorbilidades
+    // Si la causa es Hipertensión, no debe estar Hipertensión en comorbilidades
     form.comorbilidades = form.comorbilidades.filter(c => c !== 'Hipertensión');
   }
 });
@@ -1042,6 +1036,11 @@ const onDocumentoInput = (event) => {
 };
 const registrarPaciente = async (url = null) => {
   if (!validarFormulario()) return;
+  const idPeriodo = getIdPeriodoParaPayload();
+  if (idPeriodo == null) {
+    ElMessage({ message: 'El periodo seleccionado no existe en el sistema. Elija un mes que ya esté registrado.', type: 'warning', plain: true });
+    return;
+  }
   const payload = {
     documento: form.numeroDocumento,
     tipo_documento: form.tipoDocumento,
@@ -1051,7 +1050,9 @@ const registrarPaciente = async (url = null) => {
     genero: form.sexo,
     grado_instruccion: form.gradoInstruccion,
     id_modalidad: form.modalidadTRR == 'Hemodiálisis' ? 1 : form.modalidadTRR == 'Diálisis Peritoneal' ? 2 : 3,
-    estado: 'REGISTRADO'
+    // Nuevos campos para cumplir con el modelo de backend
+    id_ipress: idClinicaSeleccionada.value,
+    id_periodo: idPeriodo,
   };
 
   try {
@@ -1068,24 +1069,20 @@ const registrarPaciente = async (url = null) => {
   }
 }
 const registrarPacienteDialisis = async (respuesta) => {
+  const idEtiologia = form.etiologiaEspecifica != null && form.etiologiaEspecifica !== '' ? (Number(form.etiologiaEspecifica) || parseInt(form.etiologiaEspecifica, 10)) : null;
+  if (idEtiologia == null || isNaN(idEtiologia)) {
+    ElMessage({ message: 'Seleccione una etiología específica de la lista.', type: 'warning', plain: true });
+    return;
+  }
   const payload = {
-    etiologia: form.etiologiaEspecifica || form.etiologiaGeneral,
+    id_paciente: respuesta.id_paciente,
+    id_etiologia: idEtiologia,
     modalidad_inicio_trr: form.modalidadTRR,
     fecha_inicio_trr: form.fechaInicioTRR,
     subsistema_salud: form.subsistemaSalud,
-
-    // Lógica Trasplante (Tipo de Acceso):
     tipo_acceso: form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : form.tipoAccesoInicio,
-
     fecha_creacion_acceso: form.fechaCreacionAcceso,
     fecha_primer_ingreso: form.fechaPrimerIngreso,
-    fecha_ingreso_hospital: form.fechaIngresoEsSalud,
-
-    // Lógica Trasplante (Localización):
-    localizacion_acceso_inicio: form.modalidadTRR === 'Trasplante' ? null : form.localizacionAcceso,
-
-    hospital_procedencia_trr: form.hospitalProcedencia,
-
     enf_ateroesclerotica_cardiaca: form.comorbilidades.includes("Aterosclerosis") ? 'Sí' : 'NO',
     enf_insuficiencia_cardiaca_congestiva: form.comorbilidades.includes("Insuficiencia cardiaca") ? 'Sí' : 'NO',
     enf_vascular_periferica: form.comorbilidades.includes("Vascular periférica") ? 'Sí' : 'NO',
@@ -1095,9 +1092,6 @@ const registrarPacienteDialisis = async (respuesta) => {
     enf_hipertension: form.comorbilidades.includes("Hipertensión") ? 'Sí' : 'NO',
     enf_tuberculosis: form.comorbilidades.includes("Tuberculosis") ? 'Sí' : 'NO',
     enf_otra: form.comorbilidades.includes("Otra") ? 'Sí' : 'NO',
-    id_paciente: respuesta.id_paciente,
-    paciente: respuesta.id_paciente,
-    id_periodo_ipress: null,
   };
 
   try {
@@ -1105,16 +1099,36 @@ const registrarPacienteDialisis = async (respuesta) => {
     registroPacienteHistorial(respuesta);
   } catch (error) {
     console.error('Error al registrar diálisis:', error);
+    ElMessage({ message: error?.error || 'Error al registrar datos de diálisis', type: 'error', plain: true });
   }
 }
 const fetchPeriodo = async (url = null) => {
   try {
     const respuesta = await getAllIpress(url ?? "/periodos/");
-    periodos.value = respuesta;
-
+    periodos.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
   } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+    console.error('Error al obtener periodos:', error);
   }
+};
+
+const fetchEtiologias = async () => {
+  try {
+    const respuesta = await getAllIpress("/etiologia/");
+    listaEtiologias.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+  } catch (error) {
+    console.error('Error al obtener etiologías:', error);
+    listaEtiologias.value = [];
+  }
+};
+
+/** Resuelve periodo (id numérico o string "YYYY-MM") al id_periodo que espera el backend. */
+const getIdPeriodoParaPayload = () => {
+  const v = periodoSeleccionado.value;
+  console.log("imprimiendo valor de periodo seleccionado", v)
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return v;
+  const p = periodos.value.find(periodo => periodo.periodo === v);
+  return p ? p.id_periodo : null;
 };
 
 const registroPacienteHistorial = async (respuesta) => {
@@ -1137,20 +1151,6 @@ const registroPacienteHistorial = async (respuesta) => {
   }
 }
 
-// Funciones para Autocomplete de Clínica
-const querySearchClinica = (queryString, cb) => {
-  const results = queryString
-    ? ipress.value.filter(r =>
-      r.ipress?.toLowerCase().includes(queryString.toLowerCase())
-    )
-    : ipress.value;
-  cb(results);
-};
-
-const handleSelectClinica = (item) => {
-  idClinicaSeleccionada.value = item.id_ipress;
-  searchPeriodoIpress();
-};
 
 // Función para buscar periodo IPRESS
 function searchPeriodoIpress() {
@@ -1256,5 +1256,6 @@ watch(() => props.nombreClinicaInicial, (newVal) => {
 
 onMounted(() => {
   fetchPeriodo();
+  fetchEtiologias();
 });
 </script>

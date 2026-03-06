@@ -27,10 +27,10 @@
                         d="M21 21l-4.35-4.35M16.65 16.65A7.5 7.5 0 1 0 3 10a7.5 7.5 0 0 0 13.65 6.65Z" />
                 </svg>
             </div>
-            <select class="border border-gray-300 rounded px-3 py-2 text-sm text-gray-600 bg-white">
-                <option>Todos los estados</option>
-                <option>Activo</option>
-                <option>Inactivo</option>
+            <select v-model="estadoFilter" class="border border-gray-300 rounded px-3 py-2 text-sm text-gray-600 bg-white">
+                <option value="">Todos los estados</option>
+                <option value="ACTIVO">Activo</option>
+                <option value="INACTIVO">Inactivo</option>
             </select>
         </div>  
 
@@ -49,7 +49,7 @@
                     <tr v-for="ipress in filteredIpress" :key="ipress.id_ipress" class="hover:bg-gray-50">
                         <td class="border p-3 font-medium">{{ ipress.id_ipress }}</td>
                         <td class="border p-3">{{ ipress.ipress }}</td>
-                        <td class="border p-3">{{ ipress.datosRed.red }}</td>
+                        <td class="border p-3">{{ ipress.datosRed?.red ?? '' }}</td>
                         <td class="flex border p-3 gap-5">
                             <button @click="showEditModal(ipress)" class="text-[#007BFF] hover:underline">Editar</button>
                             <button @click="deletePaciente(ipress.id_ipress)" class="text-[#007BFF] hover:underline">Eliminar</button>
@@ -84,7 +84,16 @@
                 </select>
               </div>
               <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">Redes</label>
+                <label class="block text-sm font-medium mb-1">Ubigeo</label>
+                <select v-model="form.id_ubigeo" required class="w-full border px-2 py-1 rounded">
+                  <option value="" disabled>Seleccione un ubigeo</option>
+                  <option v-for="u in ubigeos" :key="u.id_ubigeo" :value="u.id_ubigeo">
+                    {{ u.ubigeo_reniec }} {{ u.ubigeo_inei ? `(${u.ubigeo_inei})` : '' }}
+                  </option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Red</label>
                 <select v-model="form.id_red" required class="w-full border px-2 py-1 rounded">
                   <option value="" disabled>Seleccione una red</option>
                   <option v-for="red in redes" :key="red.id_red" :value="red.id_red">
@@ -92,18 +101,6 @@
                   </option>
                 </select>
               </div>
-             <!--  <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">ID Modalidad</label>
-                <input v-model="form.id_modalidad" required class="w-full border px-2 py-1 rounded" />
-              </div>
-              <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">ID Ubigeo</label>
-                <input v-model="form.id_ubigeo" required class="w-full border px-2 py-1 rounded" />
-              </div>
-              <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">ID Red</label>
-                <input v-model="form.id_red" required class="w-full border px-2 py-1 rounded" />
-              </div> -->
               <div class="flex justify-end gap-2 mt-6">
                 <button type="button" @click="showModal = false" class="px-4 py-2 rounded bg-gray-300 text-gray-700">Cancelar</button>
                 <button type="submit" class="px-4 py-2 rounded bg-[#007BFF] text-white">{{ editingPaciente ? 'Guardar Cambios' : 'Registrar' }}</button>
@@ -114,19 +111,19 @@
 
         <!-- Paginación -->
     <div class="flex justify-between items-center mt-4 text-sm text-[#6C7A91]">
-      <div>Mostrando {{ filteredIpress.length }} de {{ pacientes.count }} IPRESS</div>
+      <div>Mostrando {{ pacientes.count ? ((currentPage - 1) * pageSize + 1) : 0 }}-{{ Math.min(currentPage * pageSize, pacientes.count) }} de {{ pacientes.count }} IPRESS</div>
             <div class="flex items-center gap-2">
-                <button @click="goToPreviousPage" :disabled="!pacientes.previous" class="px-3 py-1 border rounded"
-                    :class="pacientes.previous ? 'text-[#007BFF]' : 'text-gray-400 cursor-not-allowed'">
+                <button @click="goToPreviousPage" :disabled="!hasPrevious" class="px-3 py-1 border rounded"
+                    :class="hasPrevious ? 'text-[#007BFF]' : 'text-gray-400 cursor-not-allowed'">
                     Anterior
                 </button>
 
                 <span class="px-3 py-1 border rounded bg-[#007BFF] text-white">
-                    {{ currentPage }}
+                    {{ currentPage }} / {{ totalPages }}
                 </span>
 
-                <button @click="goToNextPage" :disabled="!pacientes.next" class="px-3 py-1 border rounded"
-                    :class="pacientes.next ? 'text-[#007BFF]' : 'text-gray-400 cursor-not-allowed'">
+                <button @click="goToNextPage" :disabled="!hasNext" class="px-3 py-1 border rounded"
+                    :class="hasNext ? 'text-[#007BFF]' : 'text-gray-400 cursor-not-allowed'">
                     Siguiente
                 </button>
             </div>
@@ -138,19 +135,22 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
 import * as XLSX from 'xlsx';
-// El filtrado ahora lo hace el backend, solo mostramos los resultados de la página
-const filteredIpress = computed(() => pacientes.results);
-import axios from 'axios';
-import { getAllIpress, postAllIpress, putAllIpress } from "@/services/ipress/Ipress.service";
-import UserTable from "../ipress/table.vue";
+const pageSize = 10;
+const totalPages = computed(() => Math.max(1, Math.ceil(pacientes.count / pageSize)));
+const filteredIpress = computed(() => {
+  const list = pacientes.results;
+  const start = (currentPage.value - 1) * pageSize;
+  return list.slice(start, start + pageSize);
+});
+import { getAllIpress, postAllIpress, putAllIpress, deleteAllIpress } from "@/services/ipress/Ipress.service";
 
 // Estado
 // Exportar todos los registros a Excel
 const exportToExcel = async () => {
   try {
-    let endpoint = '/ipress/';
-    const respuesta = await getAllIpress(endpoint);
-    const data = (respuesta || []).map(ipress => ({
+    const respuesta = await getAllIpress('/ipress/');
+    const list = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+    const data = (list || []).map(ipress => ({
       ID: ipress.id_ipress,
       IPRESS: ipress.ipress,
       Red: ipress.datosRed?.red || '',
@@ -175,6 +175,7 @@ const pacientes = reactive({
   previous: null,
 });
 const redes = ref([]);
+const ubigeos = ref([]);
 const currentPage = ref(1);
 const showModal = ref(false);
 const editingPaciente = ref(null);
@@ -184,9 +185,9 @@ const form = reactive({
   nombre_corto: '',
   tipo_unidad: '',
   estado: 'ACTIVO',
-  id_modalidad: '1',
-  id_ubigeo: '1',
-  id_red: '1',
+  id_modalidad: 1,
+  id_ubigeo: '',
+  id_red: '',
 });
 
 const filters = reactive({
@@ -195,29 +196,31 @@ const filters = reactive({
 });
 
 const search = ref('');
+const estadoFilter = ref('');
 
 
 const fetchIpress = async (url = null) => {
   try {
     let endpoint = url ?? "/indexIpress/";
-    // Si hay término de búsqueda, agrégalo como query param
-    if (!url && search.value.trim()) {
-      endpoint += `?search=${encodeURIComponent(search.value.trim())}`;
+    if (!url) {
+      const params = new URLSearchParams();
+      if (search.value.trim()) params.set('search', search.value.trim());
+      if (estadoFilter.value) params.set('estado', estadoFilter.value);
+      const qs = params.toString();
+      if (qs) endpoint += `?${qs}`;
     }
     const respuesta = await getAllIpress(endpoint);
-    pacientes.results = respuesta.results;
-    pacientes.count = respuesta.count;
-    pacientes.next = respuesta.next;
-    pacientes.previous = respuesta.previous;
-
-    if (respuesta.next || respuesta.previous) {
+    const isArray = Array.isArray(respuesta);
+    pacientes.results = isArray ? respuesta : (respuesta.results || []);
+    pacientes.count = isArray ? respuesta.length : (respuesta.count ?? pacientes.results.length);
+    pacientes.next = isArray ? null : (respuesta.next ?? null);
+    pacientes.previous = isArray ? null : (respuesta.previous ?? null);
+    if (isArray || !respuesta.next) currentPage.value = 1;
+    else if (respuesta.next || respuesta.previous) {
       const nextUrl = new URL(respuesta.next ?? respuesta.previous);
       const pageParam = nextUrl.searchParams.get("page");
-      currentPage.value = pageParam ? parseInt(pageParam) - (respuesta.next ? 1 : -1) : 1;
-    } else {
-      currentPage.value = 1;
+      currentPage.value = pageParam ? parseInt(pageParam, 10) - (respuesta.next ? 1 : -1) : 1;
     }
-
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }
@@ -225,18 +228,25 @@ const fetchIpress = async (url = null) => {
 import { watch } from 'vue';
 
 // Ejecutar búsqueda automáticamente al escribir
-watch(search, () => {
+watch([search, estadoFilter], () => {
   fetchIpress();
 });
 
-const fetchRedes = async (url = null) => {
+const fetchRedes = async () => {
   try {
-    const respuesta = await getAllIpress(url ?? "/redes/"); 
-    redes.value=respuesta;
-    console.log('Redes obtenidas:', redes.value);
-
+    const respuesta = await getAllIpress("/red/");
+    redes.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || respuesta || []);
   } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+    console.error('Error al obtener redes:', error);
+  }
+};
+
+const fetchUbigeos = async () => {
+  try {
+    const respuesta = await getAllIpress("/ubigeo/");
+    ubigeos.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || respuesta || []);
+  } catch (error) {
+    console.error('Error al obtener ubigeos:', error);
   }
 };
 
@@ -252,8 +262,8 @@ const showCreateModal = () => {
   form.nombre_corto = '';
   form.tipo_unidad = '';
   form.estado = 'ACTIVO';
-  form.id_modalidad = '1';
-  form.id_ubigeo = '1';
+  form.id_modalidad = 1;
+  form.id_ubigeo = '';
   form.id_red = '';
   showModal.value = true;
 };
@@ -264,36 +274,29 @@ const showEditModal = (ipress) => {
   form.nombre_corto = ipress.nombre_corto;
   form.tipo_unidad = ipress.tipo_unidad;
   form.estado = ipress.estado;
-  form.id_modalidad = ipress.id_modalidad;
-  form.id_ubigeo = ipress.id_ubigeo;
-  form.id_red = ipress.id_red;
+  form.id_modalidad = ipress.id_modalidad ?? 1;
+  form.id_ubigeo = ipress.id_ubigeo ?? '';
+  form.id_red = ipress.id_red ?? '';
   showModal.value = true;
 };
 
+const payloadFromForm = () => ({
+  ipress: form.ipress,
+  nombre_corto: form.nombre_corto,
+  tipo_unidad: form.tipo_unidad,
+  estado: form.estado,
+  id_modalidad: parseInt(form.id_modalidad, 10) || 1,
+  id_ubigeo: parseInt(form.id_ubigeo, 10) || (ubigeos.value[0]?.id_ubigeo ?? 1),
+  id_red: parseInt(form.id_red, 10) || (redes.value[0]?.id_red ?? 1),
+});
+
 const submitForm = async () => {
   try {
+    const payload = payloadFromForm();
     if (editingPaciente.value) {
-      // Editar IPRESS existente
-      await putAllIpress(`/ipress/${editingPaciente.value.id_ipress}/`, {
-        ipress: form.ipress,
-        nombre_corto: form.nombre_corto,
-        tipo_unidad: form.tipo_unidad,
-        estado: form.estado,
-        id_modalidad: form.id_modalidad,
-        id_ubigeo: form.id_ubigeo,
-        id_red: form.id_red,
-      });
+      await putAllIpress(`/ipress/${editingPaciente.value.id_ipress}/`, payload);
     } else {
-      // Crear nueva IPRESS
-      await postAllIpress('/ipress/', {
-        ipress: form.ipress,
-        nombre_corto: form.nombre_corto,
-        tipo_unidad: form.tipo_unidad,
-        estado: form.estado,
-        id_modalidad: form.id_modalidad,
-        id_ubigeo: form.id_ubigeo,
-        id_red: form.id_red,
-      });
+      await postAllIpress('/ipress/', payload);
     }
     showModal.value = false;
     fetchIpress();
@@ -304,31 +307,33 @@ const submitForm = async () => {
 };
 
 const deletePaciente = async (id) => {
-  if (confirm('¿Estás seguro de que quieres eliminar esta IPRESS?')) {
-    try {
-      await axios.delete(`http://10.0.54.88:8010/api/ipress/${id}/`);
-      fetchIpress();
-    } catch (error) {
-      console.error('Error al eliminar IPRESS:', error);
-    }
+  if (!confirm('¿Estás seguro de que quieres eliminar esta IPRESS?')) return;
+  try {
+    await deleteAllIpress(`/ipress/${id}/`);
+    fetchIpress();
+  } catch (error) {
+    console.error('Error al eliminar IPRESS:', error);
+    alert('Error al eliminar IPRESS');
   }
 };
 
 const goToNextPage = () => {
-  if (pacientes.next) {
-    fetchIpress(pacientes.next);
-  }
+  if (pacientes.next) fetchIpress(pacientes.next);
+  else if (currentPage.value < totalPages.value) currentPage.value++;
 };
 
 const goToPreviousPage = () => {
-  if (pacientes.previous) {
-    fetchIpress(pacientes.previous);
-  }
+  if (pacientes.previous) fetchIpress(pacientes.previous);
+  else if (currentPage.value > 1) currentPage.value--;
 };
+
+const hasNext = computed(() => pacientes.next || currentPage.value < totalPages.value);
+const hasPrevious = computed(() => pacientes.previous || currentPage.value > 1);
 
 onMounted(() => {
   fetchIpress();
   fetchRedes();
+  fetchUbigeos();
 });
 </script>
 

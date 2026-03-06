@@ -1,13 +1,7 @@
 <template>
-    <div class="min-h-screen bg-gray-50/50 p-6">
+    <div class="min-h-screen bg-gray-50/50 p-3">
         
         <div class="max-w-7xl mx-auto mb-6">
-            <div class="flex items-center text-sm font-medium cursor-pointer text-slate-500 hover:text-cyan-700 transition-colors mb-4" @click="$emit('cancelar')">
-                <span class="bg-white p-1 rounded-full shadow-sm mr-2 border border-slate-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                </span>
-                Volver al inicio
-            </div>
 
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                 <FiltroSuperior
@@ -16,10 +10,17 @@
                     v-model:modalidad="modalidadFiltro"
                     @change="procesarCambioFiltro"
                 />
+                <div v-if="paciente" class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
+                    <span class="text-sm font-bold text-slate-700">Paciente:</span>
+                    <span class="text-slate-800 font-medium">{{ paciente.paciente || '—' }}</span>
+                    <span class="text-slate-400">|</span>
+                    <span class="text-sm font-bold text-slate-700">DNI:</span>
+                    <span class="text-slate-800 font-medium">{{ paciente.documento || '—' }}</span>
+                </div>
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
             
             <div class="flex-1 space-y-8">
                 
@@ -31,7 +32,7 @@
                     <p class="text-slate-500 mt-1 ml-4 text-sm">A continuación se presenta el Acceso Vascular Actual del paciente.</p>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div v-if="tieneHistorialAcceso" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
                         <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wide">Acceso Vascular Vigente</h3>
                         <span class="text-xs font-semibold px-2 py-1 bg-slate-200 text-slate-600 rounded">Solo Lectura</span>
@@ -73,7 +74,7 @@
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-lg border border-cyan-100 p-6 relative overflow-hidden">
+                <div v-if="tieneHistorialAcceso" class="bg-white rounded-xl shadow-lg border border-cyan-100 p-6 relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-24 h-24 bg-cyan-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
                     
                     <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
@@ -91,16 +92,16 @@
                             <label class="block text-sm font-bold text-slate-800 mb-2">Motivo del Cambio</label>
                             <select v-model="form.motivo_cambio" class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block p-2.5 shadow-sm">
                                 <option value="">-- Seleccione motivo --</option>
-                                <option value="1">Complicación mecánica</option>
-                                <option value="2">Complicación infecciosa</option>
-                                <option value="3">Prescripción Médica</option>
+                                <option value="Complicación mecánica">Complicación mecánica</option>
+                                <option value="Complicación infecciosa">Complicación infecciosa</option>
+                                <option value="Prescripción Médica">Prescripción Médica</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
                 <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0">
-                    <div v-if="form.cambio_acceso == 'true'" class="bg-white rounded-xl shadow-md border border-cyan-200 overflow-hidden">
+                    <div v-if="mostrarRegistroNuevoAcceso" class="bg-white rounded-xl shadow-md border border-cyan-200 overflow-hidden">
                         <div class="bg-cyan-600 px-6 py-3 flex items-center gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
                             <h3 class="font-bold text-white text-sm uppercase tracking-wide">Registro de Nuevo Acceso</h3>
@@ -128,8 +129,22 @@
                             <div>
                                 <label class="block text-xs font-bold text-cyan-800 uppercase mb-1">Fecha de Creación</label>
                                 <input v-model="form.fecha_creacion_acceso_nuevo" type="date"
+                                    :min="rangoFechasPeriodo.min"
+                                    :max="rangoFechasPeriodo.max"
                                     class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 p-2.5 shadow-sm bg-white" />
+                                <p v-if="rangoFechasPeriodo.min" class="text-xs text-slate-500 mt-1">Debe estar dentro del periodo seleccionado ({{ rangoFechasPeriodo.min }} a {{ rangoFechasPeriodo.max }})</p>
                             </div>
+                        </div>
+                        <div class="px-6 pb-6 pt-2 flex justify-end">
+                            <button
+                                type="button"
+                                class="px-5 py-2.5 bg-cyan-600 text-white font-semibold rounded-lg shadow-sm hover:bg-cyan-700 transition-colors flex items-center gap-2"
+                                :disabled="guardando"
+                                @click="guardarRegistro"
+                            >
+                                <span v-if="guardando" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                {{ guardando ? 'Guardando...' : 'Guardar' }}
+                            </button>
                         </div>
                     </div>
                 </transition>
@@ -352,11 +367,14 @@ import { getAllIpress, patchAllIpress, postAllIpress } from "@/services/ipress/I
 import { ElMessage } from 'element-plus';
 import FiltroSuperior from '@/components/FiltroSuperior.vue'; 
 
-const { paciente, periodo, periodoIpress } = defineProps({
+const props = defineProps({
     paciente: { type: Object, required: true },
     periodo: { type: Number, required: true },
-    periodoIpress: { type: Number, required: true }
+    periodoIpress: { type: Number, required: true },
+    idPacienteAtencion: { type: [Number, String], default: null }
 })
+const { paciente, periodo, periodoIpress, idPacienteAtencion } = props
+const emit = defineEmits(['cancelar', 'guardado'])
 
 const router = useRouter()
 
@@ -390,6 +408,9 @@ const periodoSeleccionado = periodo
 const idPeriodoIpress = periodoIpress
 const periodoActual = ref([])
 const historialAcceso = ref([])
+const tieneHistorialAcceso = computed(() => (historialAcceso.value && historialAcceso.value.length > 0))
+const mostrarRegistroNuevoAcceso = computed(() => !tieneHistorialAcceso.value || form.cambio_acceso === 'true')
+const guardando = ref(false)
 const periodos = ref([])
 const mostrarHistorico = ref(false);
 const historico = ref([]);
@@ -466,28 +487,27 @@ watch(() => form.tipo_acceso_nuevo, (val) => {
     if (val === 'Catéter peritoneal') form.localizacion_acceso_nuevo = '19. Catéter peritoneal';
 });
 
-const localizacionesFiltradas = computed(() => {
-    return opcionesLocalizacion;
-});
-
 const historicoOrdenado = computed(() => {
     return [...(historico.value || [])].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 });
 
-const historialInfeccionesOrdenado = computed(() => {
-    return [...(historialInfecciones.value || [])].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+const rangoFechasPeriodo = computed(() => {
+    const lista = Array.isArray(periodos.value) ? periodos.value : [];
+    const p = lista.find(per => per.id_periodo === periodo);
+    if (!p || !p.periodo) return { min: null, max: null };
+    const parts = String(p.periodo).trim().split('-');
+    if (parts.length < 2) return { min: null, max: null };
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    if (isNaN(year) || isNaN(month)) return { min: null, max: null };
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    return {
+        min: firstDay.toISOString().split('T')[0],
+        max: lastDay.toISOString().split('T')[0]
+    };
 });
 
-const historialMovimientosOrdenado = computed(() => {
-    return [...(historialMovimientos.value || [])].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-});
-
-const minFechaNuevoAcceso = computed(() => {
-    if (!form.fecha_creacion_acceso_actual) return null;
-    const fecha = new Date(form.fecha_creacion_acceso_actual);
-    fecha.setDate(fecha.getDate() + 1);
-    return fecha.toISOString().split('T')[0]; 
-});
 const validarFormulario = () => {
     const camposObligatorios = ['fecha_creacion_acceso_nuevo', 'tipo_acceso_nuevo', 'localizacion_acceso_nuevo'];
     for (const campo of camposObligatorios) {
@@ -496,7 +516,48 @@ const validarFormulario = () => {
             return false;
         }
     }
+    const rango = rangoFechasPeriodo.value;
+    if (rango.min && rango.max && form.fecha_creacion_acceso_nuevo) {
+        const f = form.fecha_creacion_acceso_nuevo;
+        if (f < rango.min || f > rango.max) {
+            ElMessage({ message: `La fecha debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max})`, type: 'warning', plain: true });
+            return false;
+        }
+    }
     return true;
+};
+
+const guardarRegistro = async () => {
+    if (!validarFormulario()) return;
+    const idAtencion = idPacienteAtencion != null && idPacienteAtencion !== '' ? idPacienteAtencion : null;
+    if (!idAtencion) {
+        ElMessage({ message: 'Falta identificar la atención del paciente. Vuelva a abrir el formulario desde Acceso Vascular.', type: 'warning', plain: true });
+        return;
+    }
+    guardando.value = true;
+    try {
+        const payload = {
+            id_paciente_atencion: Number(idAtencion),
+            tipo_acceso: form.tipo_acceso_nuevo,
+            localizacion_acceso: form.localizacion_acceso_nuevo,
+            fecha_creacion_acceso: form.fecha_creacion_acceso_nuevo,
+            motivo_cambio: form.motivo_cambio || null
+        };
+        await postAllIpress('/unidadesActuales/', payload);
+        ElMessage({ message: 'Registro guardado correctamente.', type: 'success', plain: true });
+        emit('guardado');
+        await fetchUnidadesActualesPaciente();
+        form.fecha_creacion_acceso_nuevo = null;
+        form.tipo_acceso_nuevo = null;
+        form.localizacion_acceso_nuevo = null;
+        form.motivo_cambio = null;
+        if (!tieneHistorialAcceso.value) form.cambio_acceso = 'false';
+    } catch (error) {
+        console.error(error);
+        ElMessage({ message: 'Error al guardar el registro.', type: 'error', plain: true });
+    } finally {
+        guardando.value = false;
+    }
 };
 
 const postForm = async (url = null) => {
@@ -532,28 +593,43 @@ const normalizarLocalizacion = (valor) => {
     return porNumero?.value ?? valor;
 };
 
-const fetchPeriodoActual = async (url = null) => {
-    try {
-        const respuesta = await getAllIpress("/unidadesActuales/?id_periodo_ipress=" + periodoIpress);
-        periodoActual.value = respuesta;
-        if (periodoActual.value && periodoActual.value.length > 0) {
-            form.fecha_creacion_acceso_actual = periodoActual.value[0].fecha_creacion_acceso_actual;
-            form.tipo_acceso_actual = periodoActual.value[0].tipo_acceso_actual;
-            const locApi = periodoActual.value[0].localizacion_acceso_actual;
-            form.localizacion_acceso_actual = normalizarLocalizacion(locApi) ?? locApi;
-        }
-    } catch (error) {
-        console.error('Error al obtener IPRESS:', error);
+const fetchUnidadesActualesPaciente = async () => {
+    const idPaciente = paciente?.id_paciente;
+    if (!idPaciente) {
+        historialAcceso.value = [];
+        periodoActual.value = [];
+        return;
     }
-};
-
-const fetchHistorialAcceso = async () => {
     try {
-        // Datos de ejemplo para demostración
-        historialAcceso.value = [
-            { fecha: '2024-01-15', tipo_acceso: 'Catéter Venoso Central Temporal', localizacion: '5. CVCT yugular derecha', motivo: 'Inicio de tratamiento', estado: 'Activo' }
-        ];
-    } catch (error) { historialAcceso.value = []; }
+        const respuesta = await getAllIpress("/unidadesActuales/?id_paciente=" + idPaciente);
+        const lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+        periodoActual.value = lista;
+        if (lista.length === 0) {
+            historialAcceso.value = [];
+            form.fecha_creacion_acceso_actual = null;
+            form.tipo_acceso_actual = null;
+            form.localizacion_acceso_actual = null;
+            return;
+        }
+        const ordenados = [...lista].sort((a, b) => (b.id_unidad_actual || 0) - (a.id_unidad_actual || 0));
+        const actual = ordenados[0];
+        form.fecha_creacion_acceso_actual = actual.fecha_creacion_acceso || actual.fecha_creacion_acceso_actual || null;
+        form.tipo_acceso_actual = actual.tipo_acceso || actual.tipo_acceso_actual || null;
+        const locApi = actual.localizacion_acceso || actual.localizacion_acceso_actual;
+        form.localizacion_acceso_actual = normalizarLocalizacion(locApi) ?? locApi ?? null;
+        const motivoLabels = { '1': 'Complicación mecánica', '2': 'Complicación infecciosa', '3': 'Prescripción Médica' };
+        historialAcceso.value = ordenados.map((r, i) => ({
+            fecha: r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
+            tipo_acceso: r.tipo_acceso || r.tipo_acceso_actual || '—',
+            localizacion: r.localizacion_acceso || r.localizacion_acceso_actual || '—',
+            motivo: motivoLabels[r.motivo_cambio] || r.motivo_cambio || '',
+            estado: i === 0 ? 'Activo' : 'Anterior'
+        }));
+    } catch (error) {
+        console.error('Error al obtener unidades actuales del paciente:', error);
+        historialAcceso.value = [];
+        periodoActual.value = [];
+    }
 };
 
 const fetchPaciente = async () => {
@@ -590,8 +666,7 @@ const validarCierreMesAnterior = async () => ({ valido: true });
 onMounted(() => {
     fetchPaciente();
     fetchPeriodo();
-    fetchPeriodoActual();
-    fetchHistorialAcceso();
+    fetchUnidadesActualesPaciente();
     fetchHistorialMovimientos();
 });
 </script>

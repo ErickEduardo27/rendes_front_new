@@ -22,27 +22,6 @@
         <div class="bg-white p-4 rounded-lg shadow border">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Periodo de Reporte</label>
-                    <select v-model="filtros.periodo" class="w-full border rounded p-2 text-sm" @change="fetchMovimientos">
-                        <option value="">Todos los periodos</option>
-                        <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">
-                            {{ periodo.periodo }}
-                        </option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Clínica</label>
-                    <el-autocomplete 
-                        v-model="filtros.clinicaNombre" 
-                        :fetch-suggestions="querySearchClinica" 
-                        clearable
-                        placeholder="Buscar clínica..." 
-                        @select="handleSelectClinica" 
-                        :value-key="'ipress'" 
-                        class="w-full"
-                    />
-                </div>
-                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Buscar Paciente (DNI o Nombre)</label>
                     <input 
                         v-model="filtros.busqueda" 
@@ -216,7 +195,6 @@
                         <div class="grid grid-cols-2 gap-2 text-sm">
                             <div><strong>Nombre:</strong> {{ pacienteSeleccionado.paciente }}</div>
                             <div><strong>DNI:</strong> {{ pacienteSeleccionado.documento }}</div>
-                            <div><strong>Estado:</strong> {{ pacienteSeleccionado.estado }}</div>
                             <div><strong>Modalidad:</strong> {{ pacienteSeleccionado.id_modalidad == 1 ? 'Hemodiálisis' : 'Peritoneal' }}</div>
                         </div>
                     </div>
@@ -244,29 +222,13 @@
                         </div>
                     </div>
 
-                    <!-- Clínica -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Clínica*</label>
-                        <el-autocomplete 
-                            v-model="formCaptar.clinicaNombre" 
-                            :fetch-suggestions="querySearchClinica" 
-                            clearable
-                            placeholder="Seleccione clínica..." 
-                            @select="handleSelectClinicaCaptar" 
-                            :value-key="'ipress'" 
-                            class="w-full"
-                        />
-                    </div>
-
-                    <!-- Periodo -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Periodo*</label>
-                        <select v-model="formCaptar.periodo" class="w-full border rounded p-2 text-sm">
-                            <option value="">Seleccione un periodo</option>
-                            <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">
-                                {{ periodo.periodo }}
-                            </option>
-                        </select>
+                    <!-- Clínica y Periodo (desde el selector global del NavBar) -->
+                    <div class="bg-gray-50 p-3 rounded border border-gray-200 text-sm text-gray-600">
+                        <strong>Clínica y periodo</strong> se toman del selector superior (estado global del sistema).
+                        <template v-if="nombreClinicaGlobal || nombrePeriodoGlobal">
+                            <span v-if="nombreClinicaGlobal" class="block mt-1">Clínica: {{ nombreClinicaGlobal }}</span>
+                            <span v-if="nombrePeriodoGlobal" class="block">Periodo: {{ nombrePeriodoGlobal }}</span>
+                        </template>
                     </div>
 
                     <!-- Fecha de Ingreso/Reingreso -->
@@ -339,35 +301,34 @@
                         </div>
                     </div>
 
-                    <!-- Clínica -->
+                    <!-- Clínica (solo lectura desde estado global) -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Clínica*</label>
-                        <el-autocomplete 
-                            v-model="formEgresar.clinicaNombre" 
-                            :fetch-suggestions="querySearchClinica" 
-                            clearable
-                            placeholder="Seleccione clínica..." 
-                            @select="handleSelectClinicaEgresar" 
-                            :value-key="'ipress'" 
-                            class="w-full"
-                        />
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Clínica</label>
+                        <div class="w-full border border-gray-200 rounded p-2.5 text-sm bg-gray-50 text-gray-700">
+                            {{ nombreClinicaGlobal || '— Seleccione clínica en la barra superior —' }}
+                        </div>
                     </div>
 
-                    <!-- Periodo -->
+                    <!-- Periodo (solo lectura desde estado global) -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Periodo*</label>
-                        <select v-model="formEgresar.periodo" class="w-full border rounded p-2 text-sm">
-                            <option value="">Seleccione un periodo</option>
-                            <option v-for="periodo in periodos" :key="periodo.id_periodo" :value="periodo.id_periodo">
-                                {{ periodo.periodo }}
-                            </option>
-                        </select>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Periodo</label>
+                        <div class="w-full border border-gray-200 rounded p-2.5 text-sm bg-gray-50 text-gray-700">
+                            {{ nombrePeriodoGlobal || '— Seleccione periodo en la barra superior —' }}
+                        </div>
                     </div>
 
-                    <!-- Fecha de Egreso -->
+                    <!-- Fecha de Egreso (solo fechas dentro del periodo seleccionado) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Egreso*</label>
-                        <input v-model="formEgresar.fecha" type="date" class="w-full border rounded p-2 text-sm" />
+                        <input
+                            v-model="formEgresar.fecha"
+                            type="date"
+                            class="w-full border rounded p-2 text-sm"
+                            :min="rangoFechaEgreso.min"
+                            :max="rangoFechaEgreso.max"
+                            :placeholder="rangoFechaEgreso.placeholder"
+                        />
+                        <p v-if="rangoFechaEgreso.placeholder" class="text-xs text-amber-600 mt-1">{{ rangoFechaEgreso.placeholder }}</p>
                     </div>
 
                     <!-- Tipo de Egreso -->
@@ -413,9 +374,48 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue';
+import { ref, computed, onMounted, reactive, inject, watch } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage } from 'element-plus';
+
+// Estados globales del sistema (NavBar: periodo, clínica, modalidad)
+const periodoGlobal = inject('periodoGlobal', ref(null));
+const clinicaGlobal = inject('clinicaGlobal', ref(null));
+const modalidadGlobal = inject('modalidadGlobal', ref(null));
+
+const nombrePeriodoGlobal = computed(() => {
+  const id = periodoGlobal.value;
+  if (id == null) return '';
+  const p = (Array.isArray(periodos.value) ? periodos.value : []).find(per => per.id_periodo === id);
+  return p ? p.periodo : '';
+});
+const nombreClinicaGlobal = computed(() => {
+  const id = clinicaGlobal.value;
+  if (id == null) return '';
+  const list = Array.isArray(ipress.value) ? ipress.value : [];
+  const c = list.find(i => i.id_ipress === id);
+  return c ? (c.nombre_corto || c.ipress || '') : '';
+});
+
+// Rango de fechas permitidas para Fecha de Egreso (solo dentro del periodo global)
+const rangoFechaEgreso = computed(() => {
+  const periodoId = periodoGlobal.value;
+  if (periodoId == null || periodoId === '') {
+    return { min: undefined, max: undefined, placeholder: 'Seleccione periodo en la barra superior para habilitar fechas.' };
+  }
+  const periodo = (Array.isArray(periodos.value) ? periodos.value : []).find(p => p.id_periodo === periodoId);
+  if (!periodo || !periodo.periodo) {
+    return { min: undefined, max: undefined, placeholder: '' };
+  }
+  const parts = periodo.periodo.split('-');
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  if (isNaN(year) || isNaN(month)) return { min: undefined, max: undefined, placeholder: '' };
+  const min = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const max = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return { min, max, placeholder: '' };
+});
 
 // Estados
 const movimientos = ref([]);
@@ -514,10 +514,6 @@ const handleSelectClinica = (item) => {
     fetchMovimientos();
 };
 
-const handleSelectClinicaCaptar = (item) => {
-    formCaptar.clinica = item.id_ipress;
-};
-
 const handleSelectClinicaEgresar = (item) => {
     formEgresar.clinica = item.id_ipress;
 };
@@ -542,9 +538,6 @@ const abrirModalCaptar = async () => {
     await fetchPacientes();
     formCaptar.paciente = null;
     formCaptar.pacienteBusqueda = '';
-    formCaptar.clinica = null;
-    formCaptar.clinicaNombre = '';
-    formCaptar.periodo = '';
     formCaptar.fecha = '';
     formCaptar.observaciones = '';
     pacienteSeleccionado.value = null;
@@ -593,17 +586,44 @@ const determinarCondicionPaciente = async (pacienteId) => {
 };
 
 const captarPaciente = async () => {
-    if (!formCaptar.paciente || !formCaptar.periodo || !formCaptar.fecha || !formCaptar.clinica) {
+    const idPeriodo = periodoGlobal.value;
+    const idIpress = clinicaGlobal.value;
+    const idModalidad = modalidadGlobal.value;
+
+    if (!formCaptar.paciente || !formCaptar.fecha) {
         ElMessage({
-            message: 'Por favor complete todos los campos obligatorios',
+            message: 'Seleccione paciente y fecha de ingreso/reingreso',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+    if (idPeriodo == null || idPeriodo === '') {
+        ElMessage({
+            message: 'Seleccione un periodo en el selector superior (NavBar)',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+    if (idIpress == null || idIpress === '') {
+        ElMessage({
+            message: 'Seleccione una clínica en el selector superior (NavBar)',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+    if (idModalidad == null || idModalidad === '') {
+        ElMessage({
+            message: 'Seleccione una modalidad en el selector superior (NavBar)',
             type: 'warning',
             plain: true,
         });
         return;
     }
 
-    // Validar que la fecha esté dentro del periodo seleccionado
-    const validacionPeriodo = validarFechaPeriodo(formCaptar.fecha, formCaptar.periodo);
+    const validacionPeriodo = validarFechaPeriodo(formCaptar.fecha, idPeriodo);
     if (!validacionPeriodo.valido) {
         ElMessage({
             message: validacionPeriodo.mensaje,
@@ -622,8 +642,7 @@ const captarPaciente = async () => {
         return;
     }
 
-    // Validar consistencia con cierre del mes anterior
-    const validacionCierre = await validarCierreMesAnterior(formCaptar.paciente, formCaptar.periodo);
+    const validacionCierre = await validarCierreMesAnterior(formCaptar.paciente, idPeriodo);
     if (validacionCierre.mensaje) {
         ElMessage({
             message: validacionCierre.mensaje,
@@ -634,51 +653,54 @@ const captarPaciente = async () => {
     }
 
     try {
-        // Registrar en historial de movimientos
+        const tipoAtencion = condicionAutomatica.value === 'REINGRESO' ? 'REINGRESO' : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR');
+        const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
         const payload = {
-            paciente: formCaptar.paciente,
-            periodo: formCaptar.periodo,
-            ipress: formCaptar.clinica,
-            condicion: condicionAutomatica.value,
-            fecha_ingreso: formCaptar.fecha,
-            observaciones: formCaptar.observaciones
+            id_paciente: formCaptar.paciente,
+            id_ipress: idIpress,
+            id_periodo: idPeriodo,
+            id_modalidad: idModalidad,
+            fecha_atencion: formCaptar.fecha,
+            tipo_atencion: tipoAtencion,
+            fecha_inicio: formCaptar.fecha,
+            fecha_fin: '',
+            estado: 'ACTIVO',
+            observaciones: formCaptar.observaciones || '',
+            created_at: now
         };
 
-        await postAllIpress("/PacienteRegistro/", payload);
+        await postAllIpress("/pacienteAtencion/", payload);
 
-        // Actualizar estado del paciente
-        const estadoPaciente = pacienteSeleccionado.value.estado === 'REGISTRADO' ? 'NUEVO' : 'REINGRESO';
+        const estadoPaciente = pacienteSeleccionado.value?.estado === 'REGISTRADO' ? 'NUEVO' : 'REINGRESO';
         await patchPacienteEstado(formCaptar.paciente, estadoPaciente);
+        await actualizarPeriodoIpressPaciente(formCaptar.paciente, idPeriodo, idIpress);
 
-        // Actualizar periodo_ipress en pacientesDialisis
-        await actualizarPeriodoIpressPaciente(formCaptar.paciente, formCaptar.periodo, formCaptar.clinica);
-        
         ElMessage({
             message: 'Paciente captado exitosamente',
             type: 'success',
             plain: true,
         });
-        
+
         cerrarModalCaptar();
         await fetchMovimientos();
     } catch (error) {
         console.error('Error al captar paciente:', error);
         ElMessage({
-            message: 'Error al captar paciente. Intente nuevamente.',
+            message: error?.error || 'Error al captar paciente. Intente nuevamente.',
             type: 'error',
             plain: true,
         });
     }
 };
 
-// Funciones de Modal Egresar
+// Funciones de Modal Egresar (clínica y periodo se toman del estado global)
 const abrirModalEgresar = async () => {
     await fetchPacientes();
     formEgresar.paciente = null;
     formEgresar.pacienteBusqueda = '';
-    formEgresar.clinica = null;
-    formEgresar.clinicaNombre = '';
-    formEgresar.periodo = '';
+    formEgresar.clinica = clinicaGlobal.value ?? null;
+    formEgresar.periodo = periodoGlobal.value ?? '';
     formEgresar.fecha = '';
     formEgresar.tipo_egreso = '';
     formEgresar.motivo_especifico = '';
@@ -767,22 +789,38 @@ const egresarPaciente = async () => {
     }
 };
 
-// Funciones de carga de datos
+// Funciones de carga de datos: listar atenciones según periodo, ipress y modalidad globales
 const fetchMovimientos = async () => {
     try {
-        const respuesta = await getAllIpress('/PacienteRegistro/');
-        movimientos.value = respuesta.map(mov => ({
-            id: mov.id_registro_paciente,
-            tipo: mov.condicion === 'EGRESADO' ? 'EGRESO' : 'INGRESO',
-            condicion: mov.condicion,
-            fecha: mov.fecha_created ? new Date(mov.fecha_created).toLocaleDateString() : 'N/A',
-            paciente_nombre: mov.paciente_nombre || 'N/A',
-            paciente_dni: mov.paciente_dni || 'N/A',
-            tipo_egreso: mov.tipo_egreso,
-            observaciones: mov.observaciones,
-            periodo: mov.periodo_nombre || 'N/A',
-            clinica: mov.ipress_nombre || 'N/A'
-        }));
+        const idPeriodo = periodoGlobal.value;
+        const idIpress = clinicaGlobal.value;
+        const idModalidad = modalidadGlobal.value;
+
+        const params = new URLSearchParams();
+        if (idPeriodo != null && idPeriodo !== '') params.set('id_periodo', idPeriodo);
+        if (idIpress != null && idIpress !== '') params.set('id_ipress', idIpress);
+        if (idModalidad != null && idModalidad !== '') params.set('id_modalidad', idModalidad);
+
+        const qs = params.toString();
+        const url = qs ? `/pacienteAtencion/?${qs}` : '/pacienteAtencion/';
+        const respuesta = await getAllIpress(url);
+        const lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+
+        movimientos.value = lista.map(mov => {
+            const fechaStr = mov.fecha_atencion || (mov.created_at ? new Date(mov.created_at).toLocaleDateString() : 'N/A');
+            return {
+                id: mov.id_paciente_atencion,
+                tipo: 'INGRESO',
+                condicion: mov.tipo_atencion || 'N/A',
+                fecha: typeof mov.created_at === 'string' ? (mov.created_at.slice(0, 10) || fechaStr) : (mov.fecha_atencion || 'N/A'),
+                paciente_nombre: mov.datosPaciente?.paciente || 'N/A',
+                paciente_dni: mov.datosPaciente?.documento || 'N/A',
+                tipo_egreso: mov.tipo_egreso || null,
+                observaciones: mov.observaciones,
+                periodo: mov.datosPeriodo?.periodo || 'N/A',
+                clinica: mov.datosIpress?.nombre_corto || mov.datosIpress?.ipress || 'N/A'
+            };
+        });
     } catch (error) {
         console.error('Error al obtener movimientos:', error);
         movimientos.value = [];
@@ -792,7 +830,7 @@ const fetchMovimientos = async () => {
 const fetchPeriodos = async () => {
     try {
         const respuesta = await getAllIpress("/periodos/");
-        periodos.value = respuesta;
+        periodos.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
     } catch (error) {
         console.error('Error al obtener periodos:', error);
     }
@@ -801,7 +839,7 @@ const fetchPeriodos = async () => {
 const fetchIpress = async (url = null) => {
     try {
         const respuesta = await getAllIpress(url ?? "/ipress/");
-        ipress.value = respuesta;
+        ipress.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
     } catch (error) {
         console.error('Error al obtener IPRESS:', error);
     }
@@ -810,7 +848,7 @@ const fetchIpress = async (url = null) => {
 const fetchPacientes = async () => {
     try {
         const respuesta = await getAllIpress("/pacientes/");
-        pacientes.value = respuesta;
+        pacientes.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
     } catch (error) {
         console.error('Error al obtener pacientes:', error);
         pacientes.value = [];
@@ -950,6 +988,11 @@ const actualizarPeriodoIpressPaciente = async (pacienteId, periodoId, ipressId) 
         // No lanzamos el error para no bloquear el proceso principal
     }
 };
+
+// Recargar movimientos al cambiar periodo, clínica o modalidad
+watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
+    fetchMovimientos();
+}, { deep: true });
 
 // Inicialización
 onMounted(() => {

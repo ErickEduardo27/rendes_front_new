@@ -1,226 +1,7 @@
-<!-- <template>
-        <div class="p-6 space-y-6">
-    
-        <div class="flex items-center text-sm cursor-pointer text-gray-600 hover:underline" @click="$emit('cancelar')">
-            ← Volver al inicio
-        </div>
-
-   
-        <div class="flex items-center gap-2 flex-wrap">
-            <label>Mes de Reporte:</label>
-            <select v-model="mes" class="border px-2 py-1 rounded">
-                <option value="JULIO">JULIO</option>
-                <option value="AGOSTO">AGOSTO</option>
-            </select>
-
-            <select v-model="anio" class="border px-2 py-1 rounded">
-                <option value="2025">2025</option>
-            </select>
-
-            <label>Clínica:</label>
-            <select v-model="clinicaSeleccionada" class="border px-2 py-1 rounded">
-                <option v-for="c in clinicas" :key="c">{{ c }}</option>
-            </select>
-
-            <label>Modalidad de Diálisis:</label>
-            <select v-model="modalidad" class="border px-2 py-1 rounded">
-                <option disabled value="">Seleccione</option>
-                <option>Hemodiálisis</option>
-                <option>Peritoneal</option>
-            </select>
-        </div>
-
-        <div class="flex gap-6 mt-6">
-            <div class="flex-1 space-y-6">
-                <div class="space-y-4 max-h-[500px] overflow-y-auto pr-2 mt-2">
-        <h2 class="text-xl font-semibold mb-1">Diagnóstico de Alta de Hospitalización (CIE10)</h2>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Por Código:</label>
-                <input v-model="filtroCodigo" type="text" placeholder="Buscar por código..."
-                    class="w-full border rounded p-2 text-sm" />
-            </div>
-
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Por Descripción:</label>
-                <input v-model="filtroDescripcion" type="text" placeholder="Buscar por descripción..."
-                    class="w-full border rounded p-2 text-sm" />
-            </div>
-        </div>
-
-        <div v-if="mostrarLista" class="space-y-1 mt-3">
-            <ul>
-                <li v-for="item in resultadosFiltrados" :key="item.id"
-                    class="border p-2 rounded text-sm flex items-center gap-2">
-                    <input type="checkbox" :value="item" v-model="seleccionados" />
-                    <span><strong>{{ item.codigo }}</strong> - {{ item.descripcion }}</span>
-                </li>
-            </ul>
-        </div>
-
-
-        <div v-else-if="hayBusqueda" class="text-gray-500 text-sm italic mt-2">
-            No se encontraron resultados.
-        </div>
-
-
-        <div v-if="seleccionados.length > 0" class="mt-4">
-            <h3 class="font-semibold text-sm text-gray-700 mb-2">Seleccionados:</h3>
-            <ul class="space-y-1 text-sm">
-                <li v-for="item in seleccionados" :key="item.id"
-                    class="bg-gray-100 p-2 rounded flex justify-between items-center">
-                    <span><strong>{{ item.codigo }}</strong> - {{ item.descripcion }}</span>
-                    <button @click="quitarSeleccion(item)" class="text-red-500 hover:underline text-xs">Quitar</button>
-                </li>
-            </ul>
-        </div>
-
-        <hr />
-        <h2 class="text-xl font-semibold mb-1">Datos Adicionales</h2>
-         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Fecha de Inicio de Hospitalización</label>
-                <input v-model="fIniHos" type="date" class="w-full border rounded p-2 text-sm" />
-            </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Fecha de Alta de Hospitalización</label>
-                <input v-model="fAltHos" type="date" class="w-full border rounded p-2 text-sm" />
-            </div>
-            <div class="space-y-2">
-                <label class="block font-semibold text-sm text-gray-700">Fuente *</label>
-                <select v-model="fuente" class="w-full border rounded p-2 text-sm">
-                    <option value="">Seleccione una opción</option>
-                    <option value="1">Epicrisis</option>
-                    <option value="2">Informe de Alta</option>
-                    <option value="3">Otro</option>
-                </select>
-            </div>
-        </div>
-
-
-
-        <button class="w-full bg-black text-white py-2 rounded hover:bg-gray-900">
-            💾 Guardar Unidad Actual
-        </button>
-    </div>
-            </div>
-
-
-            <div class="w-80 p-4 border rounded shadow">
-                <div class="flex items-center justify-center mb-2">
-                    <div class="bg-gray-300 rounded-full h-16 w-16"></div>
-                </div>
-                <p class="text-center font-bold">Alejandro Antony Cerpa de la Cruz</p>
-                <p class="text-center text-sm text-gray-600">DNI: 74456747</p>
-                <ul class="text-sm text-gray-700 mt-4 space-y-1">
-                    <li><strong>Edad:</strong> 38</li>
-                    <li><strong>Sexo:</strong> Masculino</li>
-                    <li><strong>Tipo de Registro:</strong> Hemodiálisis</li>
-                    <li><strong>Estado:</strong> Nuevo</li>
-                    <li><strong>Fecha de Ingreso:</strong> 15/06/2025</li>
-                </ul>
-                <div class="mt-4">
-                    <label class="text-sm font-medium">Historial de Registros</label>
-                    <select class="w-full border px-2 py-1 rounded">
-                        <option>Registro 1</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
-
-
-<script>
-import { ref, computed } from 'vue';
-
-export default {
-    setup() {
-        const filtroCodigo = ref('');
-        const filtroDescripcion = ref('');
-        const seleccionados = ref([]);
-        const fIniHos = ref('');
-        const fAltHos = ref('');
-        const fuente = ref('');
-
-        const items = ref([
-            { id: 1, codigo: 'A123', descripcion: 'Hipertensión esencial' },
-            { id: 2, codigo: 'B456', descripcion: 'Diabetes tipo 2' },
-            { id: 3, codigo: 'C789', descripcion: 'Asma bronquial' },
-            // Agrega más diagnósticos según lo necesites
-        ]);
-
-        const resultadosFiltrados = computed(() => {
-            return items.value.filter((item) => {
-                const coincideCodigo = filtroCodigo.value
-                    ? item.codigo.toLowerCase().includes(filtroCodigo.value.toLowerCase())
-                    : true;
-
-                const coincideDescripcion = filtroDescripcion.value.length >= 3
-                    ? item.descripcion.toLowerCase().includes(filtroDescripcion.value.toLowerCase())
-                    : true;
-
-                return coincideCodigo && coincideDescripcion;
-            });
-        });
-
-        const hayBusqueda = computed(() => {
-            return filtroCodigo.value.length > 0 || filtroDescripcion.value.length >= 3;
-        });
-
-        const mostrarLista = computed(() => {
-            return hayBusqueda.value && resultadosFiltrados.value.length > 0;
-        });
-
-        const quitarSeleccion = (item) => {
-            seleccionados.value = seleccionados.value.filter(sel => sel.id !== item.id);
-        };
-
-
-        return {
-            filtroCodigo,
-            filtroDescripcion,
-            resultadosFiltrados,
-            seleccionados,
-            mostrarLista,
-            hayBusqueda,
-            quitarSeleccion,
-            fIniHos,
-            fAltHos,
-            fuente,
-        };
-    },
-};
-</script> -->
-
 
 <template>
     <div class="p-6 space-y-6 bg-gray-50 min-h-screen">
         
-        <button class="flex items-center text-sm cursor-pointer text-gray-500 hover:text-gray-800 transition-colors font-medium" @click="$emit('cancelar')">
-            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            Volver al inicio
-        </button>
-
-        <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-x-8 gap-y-4">
-            <div class="flex items-center gap-3">
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Periodo de Reporte:</span>
-                <select v-model="periodoSeleccionado" class="border border-gray-200 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-600 font-medium outline-none focus:border-cyan-500" disabled>
-                    <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
-                </select>
-            </div>
-
-            <div class="flex items-center gap-3">
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Clínica:</span>
-                <span class="text-sm border border-gray-200 rounded-md px-3 py-1.5 bg-gray-50 text-gray-600 font-medium">{{ pacienteSeleccionado.ipress }}</span>
-            </div>
-
-            <div class="flex items-center gap-3">
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Modalidad de Diálisis:</span>
-                <span class="text-sm border border-gray-200 rounded-md px-3 py-1.5 bg-gray-50 text-gray-600 font-medium">{{ pacienteSeleccionado.id_modalidad == 1 ? 'Hemodiálisis' : 'Peritoneal' }}</span>
-            </div>
-        </div>
-
         <div class="border-l-4 border-cyan-600 pl-3 my-6">
             <h2 class="text-xl font-bold text-gray-800">Morbilidad Hospitalaria</h2>
         </div>
@@ -231,7 +12,7 @@ export default {
                 
                 <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div v-if="!modoCompletarAlta" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Búsqueda de Diagnóstico por CIE-10</label>
                             <input v-model="form.filtroCodigo" type="text" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition-all bg-gray-50 focus:bg-white" />
@@ -242,15 +23,22 @@ export default {
                         </div>
                     </div>
 
-                    <div v-if="mostrarLista" class="border border-gray-200 rounded-md max-h-48 overflow-y-auto bg-white">
+                    <div v-if="modoCompletarAlta && form.seleccionados.length" class="mb-4">
+                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Diagnósticos del registro (solo complete la fecha de alta)</h3>
+                        <ul class="space-y-1 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-md p-3">
+                            <li v-for="item in form.seleccionados" :key="item.id"><strong>{{ item.codigo }}</strong> – {{ item.descripcion }}</li>
+                        </ul>
+                    </div>
+
+                    <div v-if="!modoCompletarAlta && mostrarLista" class="border border-gray-200 rounded-md max-h-48 overflow-y-auto bg-white">
                         <div v-for="item in resultadosFiltrados" :key="item.id" class="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-cyan-50 transition-colors">
                             <input type="checkbox" :value="item" v-model="form.seleccionados" class="w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500 cursor-pointer" />
                             <span class="text-sm text-gray-700 cursor-default"><strong>{{ item.codigo }}</strong> - {{ item.descripcion }}</span>
                         </div>
                     </div>
-                    <p v-else-if="hayBusqueda" class="italic text-sm text-gray-500 bg-gray-50 p-3 rounded-md border border-gray-200">No se encontraron resultados.</p>
+                    <p v-if="!modoCompletarAlta && hayBusqueda && !mostrarLista" class="italic text-sm text-gray-500 bg-gray-50 p-3 rounded-md border border-gray-200">No se encontraron resultados.</p>
 
-                    <div v-if="form.seleccionados.length" class="pt-2">
+                    <div v-if="!modoCompletarAlta && form.seleccionados.length" class="pt-2">
                         <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Diágnosticos seleccionados:</h3>
                         <ul class="space-y-2">
                             <li v-for="item in form.seleccionados" :key="item.id" class="bg-cyan-50 border border-cyan-100 p-3 rounded-md flex justify-between items-center">
@@ -260,25 +48,31 @@ export default {
                         </ul>
                     </div>
 
+                    <div v-if="modoCompletarAlta" class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p class="text-sm font-medium text-amber-800">Registro sin fecha de alta. Complete la fecha de alta de hospitalización (debe estar dentro del periodo seleccionado).</p>
+                    </div>
+
                     <hr class="border-gray-100 my-4" />
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Inicio de Hospitalización</label>
-                            <input v-model="form.fIniHos" type="date" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" />
+                            <input v-model="form.fIniHos" type="date" :min="modoCompletarAlta ? undefined : rangoFechasPeriodo.min" :max="modoCompletarAlta ? undefined : rangoFechasPeriodo.max" :readonly="modoCompletarAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{ 'bg-gray-100 cursor-not-allowed': modoCompletarAlta }" />
+                            <p v-if="!modoCompletarAlta && rangoFechasPeriodo.min" class="text-xs text-gray-500 mt-1">Dentro del periodo ({{ rangoFechasPeriodo.min }} a {{ rangoFechasPeriodo.max }})</p>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Alta de Hospitalización</label>
-                            <input v-model="form.fAltHos" type="date" :min="minFechaAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{'border-red-500 focus:ring-red-500 focus:border-red-500': errorFechaAlta}" />
+                            <input v-model="form.fAltHos" type="date" :min="minFechaAlta" :max="maxFechaAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{'border-red-500 focus:ring-red-500 focus:border-red-500': errorFechaAlta}" />
+                            <p v-if="maxFechaAlta" class="text-xs text-gray-500 mt-1">No debe salir del periodo (máx. {{ maxFechaAlta }})</p>
                             <div v-if="errorFechaAlta" class="text-red-500 text-xs mt-1.5 font-medium">{{ errorFechaAlta }}</div>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fuente</label>
-                            <select v-model="form.fuente" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
+                            <select v-model="form.fuente" :disabled="modoCompletarAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{ 'bg-gray-100 cursor-not-allowed': modoCompletarAlta }">
                                 <option value="">Seleccione</option>
-                                <option value="1">Epicrisis</option>
-                                <option value="2">Informe de Alta</option>
-                                <option value="3">Otro</option>
+                                <option value="Epicrisis">Epicrisis</option>
+                                <option value="Informe de Alta">Informe de Alta</option>
+                                <option value="Otro">Otro</option>
                             </select>
                         </div>
                     </div>
@@ -289,51 +83,8 @@ export default {
                         Cancelar
                     </button>
                     <button @click="postForm()" class="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-                        Registrar
+                        {{ modoCompletarAlta ? 'Guardar fecha de alta' : 'Registrar' }}
                     </button>
-                </div>
-            </div>
-
-            <div class="w-full lg:w-80 shrink-0" v-if="pacienteSeleccionado.value">
-                <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden sticky top-6">
-                    <div class="h-2 bg-cyan-500 w-full"></div>
-                    
-                    <div class="p-6 flex flex-col items-center">
-                        <div class="bg-gray-100 rounded-full h-20 w-20 flex items-center justify-center mb-4 border border-gray-200">
-                            <svg class="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
-                        </div>
-                        
-                        <h3 class="text-center font-bold text-gray-900 text-[15px] uppercase leading-tight mb-1">{{ pacienteSeleccionado.value.paciente }}</h3>
-                        <p class="text-center text-xs font-medium text-gray-500 mb-6">DNI: {{ pacienteSeleccionado.value.documento }}</p>
-                        
-                        <div class="w-full space-y-3">
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-500">Edad:</span>
-                                <span class="font-medium text-gray-800">{{ edadPaciente }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-500">Sexo:</span>
-                                <span class="font-medium text-gray-800">{{ pacienteSeleccionado.value.genero === 'M' ? 'Masculino' : 'Femenino' }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-500">Tipo de Registro:</span>
-                                <span class="font-medium text-gray-800">{{ pacienteSeleccionado.value.id_modalidad === 1 ? 'Hemodiálisis' : 'Peritoneal' }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-500">Estado:</span>
-                                <span class="text-[11px] font-bold px-2 py-0.5 bg-green-50 text-green-600 border border-green-200 rounded uppercase tracking-wider">{{ pacienteSeleccionado.value.estado }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-sm mt-4 pt-3 border-t border-gray-100">
-                                <span class="text-gray-500">Fecha de Ingreso:</span>
-                                <span class="font-medium text-gray-800">15/06/2025</span>
-                            </div>
-                        </div>
-
-                        <button class="mt-5 text-sm text-cyan-600 font-medium hover:text-cyan-800 transition-colors flex items-center gap-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            Ver Historial Clínico
-                        </button>
-                    </div>
                 </div>
             </div>
             
@@ -344,24 +95,54 @@ export default {
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
-import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
+import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
 
 // 👇 defineProps debe estar fuera de cualquier función
-const { paciente, periodo } = defineProps({
+const { paciente, periodo, idPacienteAtencion } = defineProps({
     paciente: {
         type: Object,
         required: true
     },
     periodo: {
         type: Number,
-        required: true
+        default: null
+    },
+    idPacienteAtencion: {
+        type: [Number, String],
+        default: null
     }
 })
+
+const emit = defineEmits(['cancelar', 'guardado'])
 
 const pacienteSeleccionado = paciente
 const periodoSeleccionado = periodo
 
 const periodos = ref([]);
+const rangoFechasPeriodo = computed(() => {
+  const lista = Array.isArray(periodos.value) ? periodos.value : [];
+  const pid = periodo ?? periodoSeleccionado;
+  if (pid == null || pid === '') return { min: null, max: null };
+  const pidNum = Number(pid);
+  const p = lista.find(per => Number(per.id_periodo) === pidNum || String(per.id_periodo) === String(pid));
+  if (!p || !p.periodo) return { min: null, max: null };
+  const periodoStr = String(p.periodo).trim();
+  const parts = periodoStr.split('-');
+  if (parts.length < 2) return { min: null, max: null };
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  if (isNaN(year) || isNaN(month)) return { min: null, max: null };
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  return {
+    min: firstDay.toISOString().split('T')[0],
+    max: lastDay.toISOString().split('T')[0]
+  };
+});
+
+const ultimoRegistroHospitalizacion = ref(null);
+const modoCompletarAlta = ref(false);
+const idMorbilidadCompletar = ref(null);
 
 const items = ref([
     { id: 1, codigo: 'J96.0', descripcion: 'Insuficiencia respiratoria aguda' },
@@ -1219,18 +1000,42 @@ const fetchPaciente = async (url = null) => {
     }
 };
 
-const fetchFechaAltaAnterior = async () => {
+const fetchUltimoRegistroHospitalizacion = async () => {
+    if (idPacienteAtencion == null || idPacienteAtencion === '') return;
     try {
-        // Aquí deberías hacer la petición real al backend para obtener la última fecha de alta
-        // Ejemplo: const respuesta = await getAllIpress(`/morbilidad_hospitalaria/${paciente.id_paciente}/ultima_fecha_alta`);
-        
-        // Por ahora, simulamos una fecha de alta anterior para demostración
-        // En producción, esto vendría del backend
-        fechaAltaAnterior.value = '2024-01-15'; // Fecha de ejemplo
-        
-    } catch (error) {
-        console.error('Error al obtener fecha de alta anterior:', error);
-        fechaAltaAnterior.value = '';
+        const res = await getAllIpress(`/morbilidadesHospitalarias/?id_paciente_atencion=${idPacienteAtencion}`);
+        const lista = Array.isArray(res) ? res : (res?.results || []);
+        const ultimo = lista[0] || null;
+        ultimoRegistroHospitalizacion.value = ultimo;
+        if (ultimo?.fecha_alta_hospitalizacion) {
+            fechaAltaAnterior.value = ultimo.fecha_alta_hospitalizacion;
+        } else {
+            fechaAltaAnterior.value = '';
+        }
+        if (ultimo && !ultimo.fecha_alta_hospitalizacion) {
+            modoCompletarAlta.value = true;
+            idMorbilidadCompletar.value = ultimo.id_morbilidad_hospitalaria;
+            form.value.fIniHos = ultimo.fecha_hospitalizacion || '';
+            form.value.fAltHos = '';
+            form.value.fuente = ultimo.fuente || '';
+            const codigos = (ultimo.codigo_diagnostico || '').split(',').map(c => c.trim()).filter(Boolean);
+            const diagnosticos = (ultimo.diagnostico || '').split(',').map(d => d.trim()).filter(Boolean);
+            const sel = [];
+            codigos.forEach((cod, i) => {
+                const item = items.value.find(it => String(it.codigo).trim() === cod);
+                if (item) sel.push(item);
+                else if (diagnosticos[i]) sel.push({ id: 9000 + i, codigo: cod, descripcion: diagnosticos[i] });
+            });
+            form.value.seleccionados = sel;
+        } else {
+            modoCompletarAlta.value = false;
+            idMorbilidadCompletar.value = null;
+        }
+    } catch (e) {
+        console.error('Error al cargar último registro de hospitalización:', e);
+        ultimoRegistroHospitalizacion.value = null;
+        modoCompletarAlta.value = false;
+        idMorbilidadCompletar.value = null;
     }
 };
 
@@ -1238,29 +1043,27 @@ form.value.id_paciente = paciente.id_paciente
 
 // Computed property para validar fecha mínima de alta
 const minFechaAlta = computed(() => {
-    // La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización
-    if (form.value.fIniHos) {
-        return form.value.fIniHos;
-    }
+    if (form.value.fIniHos) return form.value.fIniHos;
     return null;
 });
+// Fecha de alta no debe salir del periodo seleccionado
+const maxFechaAlta = computed(() => rangoFechasPeriodo.value?.max ?? null);
 
 // Watcher para validar fecha de alta
 watch(() => form.value.fAltHos, (nuevaFechaAlta) => {
     errorFechaAlta.value = '';
-    
     if (!nuevaFechaAlta) return;
-    
-    // Validación 1: Fecha de alta debe ser mayor o igual a fecha de inicio
     if (form.value.fIniHos && nuevaFechaAlta < form.value.fIniHos) {
         errorFechaAlta.value = 'La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización';
         return;
     }
-    
-    // Validación 2: Fecha de alta debe ser mayor a la fecha de alta anterior
     if (fechaAltaAnterior.value && nuevaFechaAlta <= fechaAltaAnterior.value) {
         errorFechaAlta.value = 'La fecha de alta debe ser mayor a la fecha de alta anterior';
         return;
+    }
+    const rango = rangoFechasPeriodo.value;
+    if (rango.min && rango.max && (nuevaFechaAlta < rango.min || nuevaFechaAlta > rango.max)) {
+        errorFechaAlta.value = `La fecha de alta debe estar dentro del periodo (${rango.min} a ${rango.max})`;
     }
 });
 
@@ -1301,44 +1104,74 @@ const quitarSeleccion = (item) => {
 };
 
 const postForm = async (url = null) => {
-    // Validar fechas antes de enviar
     if (errorFechaAlta.value) {
         alert('Por favor corrija los errores en las fechas antes de continuar.');
         return;
     }
-    
-    // Validación adicional: Fecha de alta debe ser mayor o igual a fecha de inicio
     if (form.value.fIniHos && form.value.fAltHos && form.value.fAltHos < form.value.fIniHos) {
         alert('La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización.');
         return;
     }
-    
-    // Validación adicional: Fecha de alta debe ser mayor a la fecha de alta anterior
     if (fechaAltaAnterior.value && form.value.fAltHos && form.value.fAltHos <= fechaAltaAnterior.value) {
         alert('La fecha de alta debe ser mayor a la fecha de alta anterior.');
         return;
     }
-    
-    const payload = {
-        ...form.value,
-        seleccionados: form.value.seleccionados.map(item => item.codigo).join(',')
+    const rango = rangoFechasPeriodo.value;
+    if (rango.min && rango.max) {
+        if (form.value.fIniHos && (form.value.fIniHos < rango.min || form.value.fIniHos > rango.max)) {
+            alert(`La fecha de hospitalización debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
+            return;
+        }
+        if (form.value.fAltHos && (form.value.fAltHos < rango.min || form.value.fAltHos > rango.max)) {
+            alert(`La fecha de alta debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
+            return;
+        }
     }
     try {
+        if (modoCompletarAlta.value && idMorbilidadCompletar.value != null) {
+            await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, {
+                fecha_alta_hospitalizacion: form.value.fAltHos || ''
+            });
+            if (idPacienteAtencion != null && idPacienteAtencion !== '') emit('guardado');
+            else { alert('Se registró la fecha de alta con éxito.'); window.location.reload(); }
+            return;
+        }
+        let payload;
+        if (idPacienteAtencion != null && idPacienteAtencion !== '') {
+            payload = {
+                id_paciente_atencion: Number(idPacienteAtencion),
+                diagnostico: form.value.seleccionados.map(item => item.descripcion || '').join(', '),
+                codigo_diagnostico: form.value.seleccionados.map(item => item.codigo).join(','),
+                fecha_hospitalizacion: form.value.fIniHos || '',
+                fecha_alta_hospitalizacion: form.value.fAltHos || '',
+                fuente: form.value.fuente || ''
+            };
+        } else {
+            payload = {
+                ...form.value,
+                seleccionados: form.value.seleccionados.map(item => item.codigo).join(',')
+            };
+        }
         const respuesta = await postAllIpress(url ?? "/morbilidadesHospitalarias/", payload);
+        if (idPacienteAtencion != null && idPacienteAtencion !== '') {
+            emit('guardado');
+            return;
+        }
         pacienteSeleccionado.value = respuesta;
-        alert("Se registro con exito")
-        window.location.reload()
-
+        alert("Se registro con exito");
+        window.location.reload();
     } catch (error) {
-        console.error('Error al obtener IPRESS:', error);
+        console.error('Error al guardar:', error);
     }
 };
 
 const fetchPeriodo = async () => {
     try {
-        periodos.value = await getAllIpress("/periodos/");
+        const respuesta = await getAllIpress("/periodos/");
+        periodos.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
     } catch (e) {
         console.error("Error obteniendo periodos:", e);
+        periodos.value = [];
     }
 };
 
@@ -1357,9 +1190,11 @@ const edadPaciente = computed(() => {
     return `${edad} años`
 })
 
-onMounted(() => {
-    fetchPeriodo();
+onMounted(async () => {
+    await fetchPeriodo();
     fetchPaciente();
-    fetchFechaAltaAnterior();
+    if (idPacienteAtencion != null && idPacienteAtencion !== '') {
+        fetchUltimoRegistroHospitalizacion();
+    }
 });
 </script>

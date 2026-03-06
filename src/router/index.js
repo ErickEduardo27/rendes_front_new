@@ -65,6 +65,31 @@ const routes = [
         path: 'movimientos',
         name: 'Movimientos',
         component: () => import('@/pages/movimientos/movimientos.vue'),
+      },
+      {
+        path: 'acceso-vascular',
+        name: 'AccesoVascular',
+        component: () => import('@/pages/registros/accesoActual/index.vue'),
+      },
+      {
+        path: 'eventos-infecciosos',
+        name: 'EventosInfecciosos',
+        component: () => import('@/pages/registros/eventosInfecciosos/index.vue'),
+      },
+      {
+        path: 'morbilidad-hospitalaria',
+        name: 'MorbilidadHospitalaria',
+        component: () => import('@/pages/registros/morbilidadHospitalaria/index.vue'),
+      },
+      {
+        path: 'resultados-clinicos',
+        name: 'ResultadosClinicos',
+        component: () => import('@/pages/registros/resultadosClinicos/index.vue'),
+      },
+      {
+        path: 'vacunacion',
+        name: 'Vacunacion',
+        component: () => import('@/pages/registros/vacunacion/index.vue'),
       }
     ]
   },

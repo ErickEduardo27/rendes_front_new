@@ -1,10 +1,5 @@
 <template>
   <div class="p-6 space-y-6 bg-gray-50 min-h-screen">
-    
-    <button class="flex items-center text-sm cursor-pointer text-gray-500 hover:text-gray-800 transition-colors font-medium" @click="$emit('cancelar')">
-      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-      Volver al inicio
-    </button>
 
     <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-x-8 gap-y-4">
       <div class="flex items-center gap-3">
@@ -133,41 +128,7 @@
         </div>
       </div>
 
-      <div class="w-full lg:w-80 shrink-0" v-if="paciente">
-        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden sticky top-6">
-          <div class="h-2 bg-cyan-500 w-full"></div>
-          <div class="p-6 flex flex-col items-center">
-            <div class="bg-gray-100 rounded-full h-20 w-20 flex items-center justify-center mb-4 border border-gray-200">
-              <svg class="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
-            </div>
-            <h3 class="text-center font-bold text-gray-900 text-[15px] uppercase leading-tight mb-1">{{ paciente.paciente || 'ERICK TRUJILLO SANTE' }}</h3>
-            <p class="text-center text-xs font-medium text-gray-500 mb-6">DNI: {{ paciente.documento || '73131653' }}</p>
-            
-            <div class="w-full space-y-3">
-              <div class="flex justify-between items-center text-sm">
-                <span class="text-gray-500">Edad:</span>
-                <span class="font-medium text-gray-800">{{ edadPaciente }}</span>
-              </div>
-              <div class="flex justify-between items-center text-sm">
-                <span class="text-gray-500">Sexo:</span>
-                <span class="font-medium text-gray-800">{{ paciente.genero === 'M' ? 'Masculino' : 'Femenino' }}</span>
-              </div>
-              <div class="flex justify-between items-center text-sm">
-                <span class="text-gray-500">Tipo de Registro:</span>
-                <span class="font-medium text-gray-800">{{ paciente.id_modalidad === 1 ? 'Hemodiálisis' : 'Peritoneal' }}</span>
-              </div>
-              <div class="flex justify-between items-center text-sm">
-                <span class="text-gray-500">Estado:</span>
-                <span class="text-[11px] font-bold px-2 py-0.5 bg-green-50 text-green-600 border border-green-200 rounded uppercase tracking-wider">{{ paciente.estado || 'NUEVO' }}</span>
-              </div>
-              <div class="flex justify-between items-center text-sm mt-4 pt-3 border-t border-gray-100">
-                <span class="text-gray-500">Fecha de Ingreso:</span>
-                <span class="font-medium text-gray-800">15/06/2025</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+   
 
     </div>
   </div>
@@ -177,10 +138,13 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 
-const { paciente, periodo } = defineProps({
-  paciente: Object,
-  periodo: Number
+const { paciente, periodo, idPacienteAtencion } = defineProps({
+  paciente: { type: Object, required: true },
+  periodo: { type: Number, default: null },
+  idPacienteAtencion: { type: [Number, String], default: null }
 })
+
+const emit = defineEmits(['cancelar', 'guardado'])
 
 const pacienteSeleccionado = ref(paciente)
 const periodoSeleccionado = ref(periodo)
@@ -190,7 +154,7 @@ const form = ref({
   tmpDialisis: null,
   eritropoyetina: null,
   hierro: null,
-  hiperparatiroidismo: null, // Mantenemos el v-model intacto aunque el label diga Calcitriol
+  hiperparatiroidismo: null,
   hb: null,
   calcio: null,
   fosforo: null,
@@ -200,7 +164,7 @@ const form = ref({
   kt: null,
   id_periodo_ipress: 17,
   id_red: 1,
-  id_paciente: paciente.id_paciente
+  id_paciente: paciente?.id_paciente ?? null
 })
 
 /* CAMPOS: RANGOS ACTUALIZADOS Y RANGOS NORMALES PARA SEMÁFORO */
@@ -324,6 +288,8 @@ const fetchPeriodo = async () => {
   periodos.value = await getAllIpress("/periodos/")
 }
 
+const tiempoDialisisMap = { 1: '2.00', 2: '2.25', 3: '2.50', 4: '2.75', 5: '3.00', 6: '3.25', 7: '3.50', 8: '3.75', 9: '4.00', 10: '4.25', 11: '4.50' }
+
 const postForm = async () => {
   const camposInvalidos = camposResultados.filter(campo => {
     if (campo.readonly) return false
@@ -337,7 +303,30 @@ const postForm = async () => {
   }
   
   try {
-    await postAllIpress("/resultadosClinicos/", form.value)
+    let payload
+    if (idPacienteAtencion != null && idPacienteAtencion !== '') {
+      payload = {
+        id_paciente_atencion: Number(idPacienteAtencion),
+        Hb: form.value.hb != null && form.value.hb !== '' ? String(form.value.hb) : '',
+        calcio: form.value.calcio != null && form.value.calcio !== '' ? String(form.value.calcio) : '',
+        fosforo: form.value.fosforo != null && form.value.fosforo !== '' ? String(form.value.fosforo) : '',
+        PTHi: form.value.pthi != null && form.value.pthi !== '' ? String(form.value.pthi) : '',
+        Alb: form.value.alb != null && form.value.alb !== '' ? String(form.value.alb) : '',
+        calcio_corregido: form.value.calcioCorregido != null && form.value.calcioCorregido !== '' ? String(form.value.calcioCorregido) : '',
+        ktv: form.value.kt != null && form.value.kt !== '' ? String(form.value.kt) : '',
+        tiempo_dialisis: tiempoDialisisMap[form.value.tmpDialisis] || (form.value.tmpDialisis != null ? String(form.value.tmpDialisis) : ''),
+        eritoproyetina: form.value.eritropoyetina === 1 || form.value.eritropoyetina === '1',
+        hierro: form.value.hierro === 1 || form.value.hierro === '1',
+        calcitriol: form.value.hiperparatiroidismo === 1 || form.value.hiperparatiroidismo === '1'
+      }
+    } else {
+      payload = form.value
+    }
+    await postAllIpress("/resultadosClinicos/", payload)
+    if (idPacienteAtencion != null && idPacienteAtencion !== '') {
+      emit('guardado')
+      return
+    }
     alert("Se registró con éxito")
     window.location.reload()
   } catch (error) {

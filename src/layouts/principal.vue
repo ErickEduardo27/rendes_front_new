@@ -1,31 +1,49 @@
 <template>
   <div class="container-general flex h-screen overflow-x-hidden">
     <Sidebar class="sidebar" :class="{ 'sidebar--open': isSidebarOpen }" v-show="isSidebarOpen" />
-    
-    <div 
-      v-if="isSidebarOpen && isMobile" 
-      class="sidebar-backdrop" 
+
+    <div
+      v-if="isSidebarOpen && isMobile"
+      class="sidebar-backdrop"
       @click="toggleSidebar"
     />
 
-    <div class="container-general-sub flex flex-col flex-1 min-w-0">
-      <Navbar @toggle-sidebar="toggleSidebar" />
-      
-      <div class="main-responsive w-full min-w-0 max-w-full max-h-[100%] flex-1 overflow-hidden flex flex-col">
+    <div class="container-general-sub flex flex-col flex-1 min-w-0 overflow-auto">
+      <Navbar
+        v-model:periodo="periodoGlobal"
+        v-model:clinica="clinicaGlobal"
+        v-model:modalidad="modalidadGlobal"
+        @toggle-sidebar="toggleSidebar"
+        @change="onFiltroChange"
+      />
+
+      <div class="main-responsive w-full min-w-0 max-w-full flex-1 overflow-auto flex flex-col">
         <router-view />
       </div>
     </div>
   </div>
 </template>
 
-
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, provide, onMounted, onBeforeUnmount } from 'vue'
 import Navbar from '@/components/navbar/NavBar.vue'
 import Sidebar from '@/components/sidebar/Sidebar.vue'
 
 const isSidebarOpen = ref(window.innerWidth > 767)
 const isMobile = ref(window.innerWidth <= 767)
+
+// Estado global del sistema: periodo, clínica (IPRESS) y modalidad (usado por el selector en el NavBar)
+const periodoGlobal = ref(null)
+const clinicaGlobal = ref(null)
+const modalidadGlobal = ref(null)
+
+provide('periodoGlobal', periodoGlobal)
+provide('clinicaGlobal', clinicaGlobal)
+provide('modalidadGlobal', modalidadGlobal)
+
+const onFiltroChange = (payload) => {
+  // Opcional: reaccionar a cambios del selector (ej. guardar en store)
+}
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
@@ -33,7 +51,6 @@ const toggleSidebar = () => {
 
 const checkIfMobile = () => {
   isMobile.value = window.innerWidth <= 767
-
   if (isMobile.value) {
     isSidebarOpen.value = false
   } else {
