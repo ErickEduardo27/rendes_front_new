@@ -1,260 +1,194 @@
 <template>
-  <div class="space-y-5 mx-12">
-    <h2 class="text-xl font-bold">Registro de Nuevo Paciente en Diálisis:</h2>
-    <p class="text-sm text-gray-600">Complete los respectivos datos del paciente para la creación del expediente médico.</p>
-
-    <div class="border p-4 rounded-md bg-white shadow-sm">
-      <h3 class="text-md font-bold text-gray-700 mb-3 border-b pb-2">Identificación y Ubicación</h3>
-      
-      <div class="grid grid-cols-4 gap-5 mb-4">
-        <div>
-          <label class="text-sm font-medium">Tipo de Documento*</label>
-          <select v-model="form.tipoDocumento" class="w-full border px-2 py-1 rounded focus:ring-2 focus:ring-sky-500">
-            <option disabled value="">Seleccione</option>
-            <option value="DNI">DNI</option>
-            <option value="CE">CE</option>
-            <option value="PASAPORTE">PASAPORTE</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="text-sm font-medium">Número de Documento*</label>
-          <input v-model="form.numeroDocumento" class="w-full border px-2 py-1 rounded" :maxlength="maxLengthDocumento"
-            :pattern="soloNumeros ? '\\d*' : null" @input="onDocumentoInput" :disabled="consultandoDNI"
-            placeholder="Ingrese número" />
-          <div v-if="errorDNI" class="text-red-500 text-xs mt-1">{{ errorDNI }}</div>
-        </div>
-
-        <div>
-          <label class="text-sm font-medium">Fecha de Nacimiento*</label>
-          <input type="date" v-model="form.fechaNacimiento" class="w-full border px-2 py-1 rounded" 
-                 :max="new Date().toISOString().split('T')[0]" />
-        </div>
-
-        <div class="flex items-end pb-1">
-          <button v-if="puedeConsultar"
-            @click="consultarDNI" 
-            class="w-full bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 text-sm font-medium transition-colors shadow-sm flex justify-center items-center gap-2">
-            🔍 Consultar
-          </button>
-          
-          <button v-if="consultandoDNI" disabled class="w-full bg-gray-400 text-white px-3 py-1.5 rounded text-sm cursor-wait">
-            ⏳ Consultando...
-          </button>
-
-          <span v-if="!puedeConsultar && form.tipoDocumento === 'DNI'" class="text-xs text-gray-400 mb-2">
-            *Ingrese DNI y Fecha Nac. para consultar
-          </span>
-        </div>
+  <el-config-provider :locale="es">
+    <div class="space-y-6 mx-6 max-w-6xl">
+      <div>
+        <h2 class="text-2xl font-bold text-slate-800">Registro de Nuevo Paciente en Diálisis</h2>
+        <p class="text-sm text-slate-500 mt-1">Complete los datos del paciente para la creación del expediente médico.</p>
       </div>
 
-      <div class="grid grid-cols-4 gap-5 mb-4 bg-slate-50 p-3 rounded border border-slate-200">
-        <div class="col-span-4 text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">
-          Domicilio / Procedencia (Según Reniec/Asegurado)
-        </div>
-        
-        <div>
-          <label class="text-sm font-medium text-gray-700">Departamento</label>
-          <select v-model="form.departamento" class="w-full border px-2 py-1 rounded bg-white uppercase">
-             <option value="">Seleccione</option>
-             <option v-for="dep in listaDepartamentos" :key="dep" :value="dep">{{ dep }}</option>
-          </select>
+      <el-form label-position="top" class="space-y-6">
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 class="text-base font-semibold text-slate-700 mb-4 pb-2 border-b border-slate-200">Identificación y Ubicación</h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <el-form-item label="Tipo de Documento" required>
+              <el-select v-model="form.tipoDocumento" placeholder="Seleccione" class="w-full" clearable>
+                <el-option label="DNI" value="DNI" />
+                <el-option label="CE" value="CE" />
+                <el-option label="PASAPORTE" value="PASAPORTE" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Número de Documento" required>
+              <el-input
+                v-model="form.numeroDocumento"
+                :maxlength="maxLengthDocumento"
+                placeholder="Ingrese número"
+                :disabled="consultandoDNI"
+                @input="onDocumentoInput"
+              />
+              <div v-if="errorDNI" class="text-red-500 text-xs mt-1">{{ errorDNI }}</div>
+            </el-form-item>
+            <el-form-item label="Fecha de Nacimiento" required>
+              <el-date-picker
+                v-model="form.fechaNacimiento"
+                type="date"
+                placeholder="Seleccione fecha"
+                value-format="YYYY-MM-DD"
+                format="DD/MM/YYYY"
+                :editable="false"
+                :clearable="false"
+                class="w-full"
+                :disabled-date="(d) => d > new Date()"
+              />
+            </el-form-item>
+            <el-form-item label=" " class="flex items-end">
+              <el-button v-if="puedeConsultar" type="primary" :loading="consultandoDNI" @click="consultarDNI" class="w-full">
+                Consultar DNI
+              </el-button>
+              <span v-else-if="form.tipoDocumento === 'DNI'" class="text-xs text-slate-400">Ingrese DNI y F. Nac. para consultar</span>
+            </el-form-item>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 rounded-lg bg-slate-50 p-4 border border-slate-100">
+            <div class="col-span-full text-xs font-semibold text-slate-500 uppercase tracking-wide">Domicilio / Procedencia (Según Reniec/Asegurado)</div>
+            <el-form-item label="Departamento">
+              <el-select v-model="form.departamento" placeholder="Seleccione" class="w-full" clearable>
+                <el-option v-for="dep in listaDepartamentos" :key="dep" :label="dep" :value="dep" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Provincia">
+              <el-select v-model="form.provincia" placeholder="Seleccione" class="w-full" clearable :disabled="!form.departamento">
+                <el-option v-for="prov in listaProvincias" :key="prov" :label="prov" :value="prov" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Distrito">
+              <el-select v-model="form.distrito" placeholder="Seleccione" class="w-full" clearable :disabled="!form.provincia">
+                <el-option v-for="dist in listaDistritos" :key="dist" :label="dist" :value="dist" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Ubigeo (Auto)">
+              <el-input v-model="form.ubigeo" readonly class="font-mono text-center" />
+            </el-form-item>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <el-form-item label="Apellidos y Nombres" required class="sm:col-span-2">
+              <el-input v-model="form.nombreCompleto" readonly placeholder="Se completará al consultar" />
+            </el-form-item>
+            <el-form-item label="Edad actual">
+              <el-input v-model="form.edad" readonly />
+            </el-form-item>
+            <el-form-item label="Sexo" required>
+              <el-select v-model="form.sexo" placeholder="Seleccione" class="w-full" clearable>
+                <el-option label="Masculino" value="M" />
+                <el-option label="Femenino" value="F" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Grado de Instrucción" required>
+              <el-select v-model="form.gradoInstruccion" placeholder="Seleccione" class="w-full" clearable>
+                <el-option label="Primaria" value="Primaria" />
+                <el-option label="Secundaria" value="Secundaria" />
+                <el-option label="Técnico" value="Técnico" />
+                <el-option label="Superior" value="Superior" />
+              </el-select>
+            </el-form-item>
+          </div>
         </div>
 
-        <div>
-          <label class="text-sm font-medium text-gray-700">Provincia</label>
-          <select v-model="form.provincia" :disabled="!form.departamento" class="w-full border px-2 py-1 rounded bg-white uppercase disabled:bg-gray-100">
-            <option value="">Seleccione</option>
-            <option v-for="prov in listaProvincias" :key="prov" :value="prov">{{ prov }}</option>
-          </select>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <el-form-item label="Etiología general">
+            <el-select v-model="form.etiologiaGeneral" placeholder="Seleccione una opción" class="w-full" clearable>
+              <el-option v-for="(item, key) in etologiasGenerales" :key="key" :label="item" :value="key" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="Etiología específica">
+            <el-select v-model="form.etiologiaEspecifica" placeholder="Seleccione una opción" class="w-full" clearable filterable>
+              <el-option v-for="e in opcionesEtiologiaEspecificaFromApi" :key="e.id_etiologia" :label="e.especifica || e.codigo || e.id_etiologia" :value="e.id_etiologia" />
+            </el-select>
+          </el-form-item>
         </div>
 
-        <div>
-          <label class="text-sm font-medium text-gray-700">Distrito</label>
-          <select v-model="form.distrito" :disabled="!form.provincia" class="w-full border px-2 py-1 rounded bg-white uppercase disabled:bg-gray-100">
-            <option value="">Seleccione</option>
-            <option v-for="dist in listaDistritos" :key="dist" :value="dist">{{ dist }}</option>
-          </select>
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" :key="form.etiologiaGeneral">
+          <h3 class="text-base font-semibold text-slate-700 mb-4">Comorbilidad</h3>
+          <el-checkbox-group v-model="form.comorbilidades">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <el-checkbox value="Insuficiencia cardiaca">Insuficiencia cardiaca congestiva</el-checkbox>
+              <el-checkbox v-if="form.etiologiaGeneral != '1'" value="Diabetes">Diabetes</el-checkbox>
+              <el-checkbox value="Aterosclerosis">Aterosclerosis cardíaca</el-checkbox>
+              <el-checkbox v-if="form.etiologiaGeneral != '5'" value="Hipertensión">Hipertensión</el-checkbox>
+              <el-checkbox value="Vascular periférica">Enfermedad vascular periférica</el-checkbox>
+              <el-checkbox value="Tuberculosis">Tuberculosis</el-checkbox>
+              <el-checkbox value="ACV">Accidente cerebrovascular</el-checkbox>
+              <el-checkbox value="Cáncer">Cáncer</el-checkbox>
+              <el-checkbox value="Otra">Otra</el-checkbox>
+            </div>
+          </el-checkbox-group>
         </div>
 
-        <div>
-          <label class="text-sm font-medium text-gray-700">Ubigeo (Auto)</label>
-          <input v-model="form.ubigeo" class="w-full border px-2 py-1 rounded bg-gray-200 text-gray-600 font-mono text-center" />
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 class="text-base font-semibold text-slate-700 mb-4 pb-2 border-b border-slate-200">Datos de TRR y Acceso</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <el-form-item label="Modalidad de Inicio de TRR">
+              <el-select v-model="form.modalidadTRR" placeholder="Seleccione" class="w-full" clearable>
+                <el-option label="Hemodiálisis" value="Hemodiálisis" />
+                <el-option label="Diálisis Peritoneal" value="Diálisis Peritoneal" />
+                <el-option label="Trasplante" value="Trasplante" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Fecha de Creación del Acceso de Inicio">
+              <el-date-picker v-model="form.fechaCreacionAcceso" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" />
+            </el-form-item>
+            <el-form-item label="Fecha de Inicio de TRR">
+              <el-date-picker v-model="form.fechaInicioTRR" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" :disabled-date="minDateFechaInicioTRR" />
+            </el-form-item>
+            <el-form-item label="Subsistema de Salud">
+              <el-select v-model="form.subsistemaSalud" placeholder="Seleccione" class="w-full" clearable>
+                <el-option label="EsSalud" value="EsSalud" />
+                <el-option label="Minsa" value="Minsa" />
+                <el-option label="Privados / EPS" value="Privados / EPS" />
+                <el-option label="FFAA / FFPP" value="FFAA / FFPP" />
+                <el-option label="Otro país" value="Otro país" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Edad de Inicio de TRR">
+              <el-input v-model="form.edadInicioTRR" readonly />
+            </el-form-item>
+            <el-form-item label="Tipo de Acceso de Inicio" @mousedown.capture="validarOrden">
+              <el-select v-model="form.tipoAccesoInicio" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'">
+                <el-option v-for="tipo in tiposAccesoFiltrados" :key="tipo.id" :label="tipo.label" :value="tipo.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Fecha de Ingreso a Hospital EsSalud">
+              <el-date-picker v-model="form.fechaIngresoEsSalud" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" clearable />
+            </el-form-item>
+            <el-form-item label="Fecha de Primer Ingreso a Unidad">
+              <el-date-picker v-model="form.fechaPrimerIngreso" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" clearable />
+            </el-form-item>
+            <el-form-item label="Localización Acceso de Inicio">
+              <el-select v-model="form.localizacionAcceso" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'">
+                <el-option v-for="opcion in opcionesAccesoFiltradas" :key="opcion.id" :label="opcion.label" :value="opcion.id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Hospital Procedencia TRR en EsSalud">
+              <el-autocomplete v-model="form.hospitalProcedencia" :fetch-suggestions="querySearch" clearable placeholder="Buscar hospital..." @select="handleSelect" class="w-full" />
+            </el-form-item>
+          </div>
         </div>
-      </div>
 
-      <div class="grid grid-cols-4 gap-5">
-        <div class="col-span-2">
-          <label class="text-sm font-medium">Apellidos y Nombres*</label>
-          <input v-model="form.nombreCompleto" class="w-full border px-2 py-1 rounded bg-gray-50" readonly placeholder="Se completará al consultar" />
+        <div class="flex justify-end gap-3 pt-2">
+          <el-button @click="$emit('cancelar')">Cancelar</el-button>
+          <el-button type="primary" @click="registrarPaciente">Registrar paciente</el-button>
         </div>
-        
-        <div>
-          <label class="text-sm font-medium">Edad actual</label>
-          <input v-model="form.edad" class="w-full border px-2 py-1 rounded bg-gray-100" readonly />
-        </div>
-        
-        <div>
-          <label class="text-sm font-medium">Sexo*</label>
-          <select v-model="form.sexo" class="w-full border px-2 py-1 rounded">
-            <option disabled value="">Seleccione</option>
-            <option value="M">Masculino</option>
-            <option value="F">Femenino</option>
-          </select>
-        </div>
-        
-        <div>
-          <label class="text-sm font-medium">Grado de Instrucción*</label>
-          <select v-model="form.gradoInstruccion" class="w-full border px-2 py-1 rounded">
-            <option disabled value="">Seleccione</option>
-            <option>Primaria</option>
-            <option>Secundaria</option>
-            <option>Técnico</option>
-            <option>Superior</option>
-          </select>
-        </div>
-      </div>
+      </el-form>
     </div>
-
-    <div class="grid grid-cols-2 gap-4 mt-6">
-      <div class="space-y-2">
-        <span class="block font-semibold text-sm text-gray-700">Etiología general</span>
-        <select v-model="form.etiologiaGeneral" class="w-full border rounded p-2 text-sm">
-          <option value="">Seleccione una opción</option>
-          <option v-for="(item, key) in etologiasGenerales" :key="key" :value="key">
-            {{ item }}
-          </option>
-        </select>
-      </div>
-
-      <div class="space-y-2 relative">
-        <span class="block font-semibold text-sm text-gray-700">Etiología específica</span>
-        <div class="w-full">
-          <select v-model="form.etiologiaEspecifica" class="w-full border rounded p-2 text-sm">
-            <option value="">Seleccione una opción</option>
-            <option v-for="e in opcionesEtiologiaEspecificaFromApi" :key="e.id_etiologia" :value="e.id_etiologia">
-              {{ e.especifica || e.codigo || e.id_etiologia }}
-            </option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-6" :key="form.etiologiaGeneral">
-      <label class="text-xl font-medium block mb-2">Comorbilidad</label>
-      <div class="grid grid-cols-3 gap-4">
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Insuficiencia cardiaca" /> Insuficiencia cardiaca congestiva</label>
-
-        <label v-if="form.etiologiaGeneral != '1'">
-          <input type="checkbox" v-model="form.comorbilidades" value="Diabetes" /> Diabetes
-        </label>
-
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Aterosclerosis" /> Aterosclerosis cardíaca</label>
-
-        <label v-if="form.etiologiaGeneral != '5'">
-          <input type="checkbox" v-model="form.comorbilidades" value="Hipertensión" /> Hipertensión
-        </label>
-
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Vascular periférica" /> Enfermedad vascular periférica</label>
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Tuberculosis" /> Tuberculosis</label>
-        <label><input type="checkbox" v-model="form.comorbilidades" value="ACV" /> Accidente cerebrovascular</label>
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Cáncer" /> Cáncer</label>
-        <label><input type="checkbox" v-model="form.comorbilidades" value="Otra" /> Otra</label>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-4 gap-4 mt-6">
-      <div>
-        <label class="text-sm font-medium">Modalidad de Inicio de TRR</label>
-        <select v-model="form.modalidadTRR" class="w-full border px-2 py-1 rounded">
-          <option disabled value="">Seleccione</option>
-          <option>Hemodiálisis</option>
-          <option>Diálisis Peritoneal</option>
-          <option>Trasplante</option>
-        </select>
-      </div>
-      <div>
-        <label class="text-sm font-medium">Fecha de Creación del Acceso de Inicio</label>
-        <input type="date" v-model="form.fechaCreacionAcceso" class="w-full border px-2 py-1 rounded" />
-      </div>
-      <div>
-        <label class="text-sm font-medium">Fecha de Inicio de TRR</label>
-        <input type="date" v-model="form.fechaInicioTRR" :min="form.fechaCreacionAcceso || undefined"
-          class="w-full border px-2 py-1 rounded" />
-      </div>
-      <div>
-        <label class="text-sm font-medium">Subsistema de Salud</label>
-        <select v-model="form.subsistemaSalud" class="w-full border px-2 py-1 rounded">
-          <option disabled value="">Seleccione</option>
-          <option>EsSalud</option>
-          <option>Minsa</option>
-          <option>Privados / EPS</option>
-          <option>FFAA / FFPP</option>
-          <option>Otro país</option>
-        </select>
-      </div>
-      <div>
-        <label class="text-sm font-medium">Edad de Inicio de TRR</label>
-        <input v-model="form.edadInicioTRR" disabled class="w-full border px-2 py-1 rounded" />
-      </div>
-      <div>
-        <label class="text-sm font-medium">Tipo de Acceso de Inicio</label>
-        <select v-model="form.tipoAccesoInicio" class="w-full border px-2 py-1 rounded"
-          :disabled="form.modalidadTRR === 'Trasplante'" :class="{
-            'bg-gray-200 text-gray-500 cursor-not-allowed': form.modalidadTRR === 'Trasplante'
-          }">
-          <option disabled value="">Seleccione</option>
-          <option v-for="tipo in tiposAccesoFiltrados" :key="tipo.id" :value="tipo.id">
-            {{ tipo.label }}
-          </option>
-        </select>
-      </div>
-      <div>
-        <label class="text-sm font-medium">Fecha de Ingreso a Hospital EsSalud</label>
-        <input type="date" v-model="form.fechaIngresoEsSalud" class="w-full border px-2 py-1 rounded" />
-      </div>
-      <div>
-        <label class="text-sm font-medium">Fecha de Primer Ingreso a Unidad</label>
-        <input type="date" v-model="form.fechaPrimerIngreso" class="w-full border px-2 py-1 rounded" />
-      </div>
-      
-      <div @mousedown.capture="validarOrden">
-        <label class="text-sm font-medium">Localización Acceso de Inicio</label>
-        <select v-model="form.localizacionAcceso" class="w-full border px-2 py-1 rounded"
-          :disabled="form.modalidadTRR === 'Trasplante'" :class="{
-            'bg-gray-100 cursor-not-allowed': form.modalidadTRR === 'Trasplante'
-          }">
-          <option disabled value="">Seleccione</option>
-          <option v-for="opcion in opcionesAccesoFiltradas" :key="opcion.id" :value="opcion.id">
-            {{ opcion.label }}
-          </option>
-        </select>
-      </div>
-
-      <div>
-        <label class="text-sm font-medium">Hospital Procedencia TRR en EsSalud</label>
-        <div class="d-flex align-items-center">
-          <el-autocomplete v-model="form.hospitalProcedencia" :fetch-suggestions="querySearch" clearable
-            placeholder="Ingrese algo" @select="handleSelect" style="width: 400px;" />
-        </div>
-      </div>
-    </div>
-
-    <div class="flex justify-end gap-4 mt-6">
-      <button class="bg-gray-400 text-white px-4 py-2 rounded" @click="$emit('cancelar')">Cancelar</button>
-      <button class="bg-sky-600 text-white px-6 py-2 rounded font-semibold" @click="registrarPaciente">
-        Registrar
-      </button>
-    </div>
-
-  </div>
+  </el-config-provider>
 </template>
 
 <script setup>
-// AQUÍ ESTABA EL ERROR 2: Faltaba importar nextTick
-import { reactive, computed, watch, ref, onMounted, nextTick } from 'vue' 
+import { reactive, computed, watch, ref, onMounted, nextTick } from 'vue';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElConfigProvider, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElButton, ElCheckbox, ElCheckboxGroup, ElDatePicker, ElAutocomplete } from 'element-plus';
+import es from 'element-plus/dist/locale/es.mjs';
 
 const periodoSeleccionado = ref(null);
 const clinicaSeleccionada = ref('');
@@ -407,6 +341,13 @@ const validarFormulario = () => {
   return true;
 };
 
+
+const minDateFechaInicioTRR = (date) => {
+  if (!form.fechaCreacionAcceso) return false;
+  const d = new Date(date);
+  const min = new Date(form.fechaCreacionAcceso + 'T00:00:00');
+  return d < min;
+};
 
 watch(() => form.fechaInicioTRR, (nuevaFecha) => {
   if (!nuevaFecha) {
