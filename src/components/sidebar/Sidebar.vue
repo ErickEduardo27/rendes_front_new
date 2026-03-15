@@ -30,12 +30,13 @@
               { label: 'Eventos Infecciosos', to: '/eventos-infecciosos' },
               { label: 'Morbilidad Hospitalaria', to: '/morbilidad-hospitalaria' },
               { label: 'Resultados Clínicos', to: '/resultados-clinicos' },
-              { label: 'Vacunación', to: '/vacunacion' }
+              { label: 'Vacunación', to: '/vacunacion' },
+              { label: 'Prueba de Agua', to: '/calidad-agua' }
             ]"
         />
 
         <SidebarItem :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
-        <SidebarItem :icon="UserIcon" label="Prueba de Agua" to="/calidad-agua"/>
+        <SidebarItem :icon="ArrowsRightLeftIcon" label="Evaluación" to="/evaluacion"/>
         
         <SidebarItem 
             v-if="['Supervisor', 'Admin'].includes(perfil)"
@@ -48,11 +49,11 @@
               { label: 'Usuarios', to: '/usuarios' }
             ]"
         />
-
+<!-- 
         <div class="px-3 mt-6 mb-2 border-t border-blue-100 pt-4">
             <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Analítica</span>
         </div>
-        <SidebarItem :icon="ChartBarIcon" label="Estadística" to="/estadistica"/>
+        <SidebarItem :icon="ChartBarIcon" label="Estadística" to="/estadistica"/> -->
     </nav>
 
     <div class="p-4 border-t border-blue-100 bg-blue-50/50">

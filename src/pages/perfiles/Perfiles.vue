@@ -118,7 +118,7 @@ const filters = reactive({
 
 const fetchPerfiles = async (url = null) => {
   try {
-    let endpoint = url ?? "/indexPerfil/";
+    let endpoint = url ?? "/perfiles/";
     if (!url && search.value.trim()) {
       endpoint += `?search=${encodeURIComponent(search.value.trim())}`;
     }

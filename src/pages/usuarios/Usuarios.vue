@@ -242,6 +242,7 @@ const fetchUsuarios = async (url = null) => {
       endpoint += `?search=${encodeURIComponent(search.value.trim())}`;
     }
     const respuesta  = await getAllIpress(endpoint);
+    console.log("respuesta", respuesta);
     usuarios.results = respuesta.results ?? [];
     usuarios.count = respuesta.count ?? 0;
     usuarios.next = respuesta.next;
@@ -264,7 +265,7 @@ const fetchUsuarios = async (url = null) => {
 
 const fetchPerfiles = async (url = null) => {
   try {
-    let endpoint = url ?? '/perfiles/';
+    let endpoint = url ?? '/perfilesListar/';
     const respuesta  = await getAllIpress(endpoint);
     perfiles.value = respuesta;
   } catch (error) {
