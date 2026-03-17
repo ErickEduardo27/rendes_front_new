@@ -97,8 +97,7 @@ import { useAuthStore } from '@/store/auth'
 import { UserIcon, LockClosedIcon, EyeIcon, MoonIcon, SunIcon } from '@heroicons/vue/24/outline'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { toast } from 'vue3-toastify';
-import 'vue3-toastify/dist/index.css';
+import Swal from 'sweetalert2'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -139,34 +138,19 @@ const handleLogin = async (e) => {
         localStorage.setItem('perfil', userData.datosPerfil.perfil)
         await router.push('/')
 
-    toast.success('¡Inicio de sesión exitoso! Bienvenido al sistema', {
-        autoClose: 3000,
-        position: 'top-center',
-        theme: isDark.value ? 'dark' : 'colored',
-        style: {
-            background: 'linear-gradient(90deg, #a7f3d0 0%, #38bdf8 100%)',
-            color: '#0f172a',
-            fontWeight: 'bold',
-            fontSize: '1rem',
-            borderRadius: '12px',
-        },
-        icon: '✅',
+    Swal.fire({
+        icon: 'success',
+        title: '¡Inicio de sesión exitoso!',
+        text: 'Bienvenido al sistema',
+        timer: 3000,
+        showConfirmButton: false,
     });
     } catch (err) {
         console.error('Error durante el login:', err)
-                toast.error('¡Acceso denegado! Correo o contraseña incorrectos', {
-                    autoClose: 3500,
-                    position: 'top-center',
-                    theme: isDark.value ? 'dark' : 'colored',
-                    style: {
-                        background: 'linear-gradient(90deg, #fbc2eb 0%, #a6c1ee 100%)',
-                        color: '#7c2d12',
-                        fontWeight: 'bold',
-                        fontSize: '1rem',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)'
-                    },
-                    icon: '🔒',
+                Swal.fire({
+                    icon: 'error',
+                    title: '¡Acceso denegado!',
+                    text: 'Usuario o contraseña incorrectos',
                 });
     } finally {
         loading.value = false

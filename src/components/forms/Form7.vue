@@ -233,7 +233,7 @@ import { useRouter } from 'vue-router'
 import { ref, onMounted, computed, reactive, watch } from 'vue';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 // Importamos la librería de confeti
-import confetti from 'canvas-confetti';
+//import confetti from 'canvas-confetti';
 
 // 👇 defineProps debe estar fuera de cualquier función
 const props = defineProps({
