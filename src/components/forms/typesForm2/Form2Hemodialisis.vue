@@ -446,25 +446,25 @@ const listaTiposNuevo = [
 ];
 
 const listaLocalizacionesNuevo = [
-  { value: '1. FAV radial derecha', label: '1. FAV radial derecha', tipo: 'Fístula Arteriovenosa' },
-  { value: '2. FAV radial izquierda', label: '2. FAV radial izquierda', tipo: 'Fístula Arteriovenosa' },
-  { value: '3. FAV braquial o cubital derecha', label: '3. FAV braquial o cubital derecha', tipo: 'Fístula Arteriovenosa' },
-  { value: '4. FAV braquial o cubital izquierda', label: '4. FAV braquial o cubital izquierda', tipo: 'Fístula Arteriovenosa' },
-  { value: '5. CVCT yugular derecha', label: '5. CVCT yugular derecha', tipo: 'Catéter Venoso Central Temporal' },
-  { value: '6. CVCT yugular izquierdo', label: '6. CVCT yugular izquierdo', tipo: 'Catéter Venoso Central Temporal' },
-  { value: '7. CVCT subclavio derecho', label: '7. CVCT subclavio derecho', tipo: 'Catéter Venoso Central Temporal' },
-  { value: '8. CVCT subclavio izquierdo', label: '8. CVCT subclavio izquierdo', tipo: 'Catéter Venoso Central Temporal' },
-  { value: '9. CVCT femoral derecho', label: '9. CVCT femoral derecho', tipo: 'Catéter Venoso Central Temporal' },
-  { value: '10. CVCT femoral izquierdo', label: '10. CVCT femoral izquierdo', tipo: 'Catéter Venoso Central Temporal' },
-  { value: '11. CVCLP yugular derecha', label: '11. CVCLP yugular derecha', tipo: 'Catéter Venoso Central de Larga Permanencia' },
-  { value: '12. CVCLP yugular izquierdo', label: '12. CVCLP yugular izquierdo', tipo: 'Catéter Venoso Central de Larga Permanencia' },
-  { value: '13. CVCLP femoral derecho', label: '13. CVCLP femoral derecho', tipo: 'Catéter Venoso Central de Larga Permanencia' },
-  { value: '14. CVCLP femoral izquierdo', label: '14. CVCLP femoral izquierdo', tipo: 'Catéter Venoso Central de Larga Permanencia' },
-  { value: '15. CVCLP translumbar', label: '15. CVCLP translumbar', tipo: 'Catéter Venoso Central de Larga Permanencia' },
-  { value: '16. CVCLP transhepático', label: '16. CVCLP transhepático', tipo: 'Catéter Venoso Central de Larga Permanencia' },
-  { value: '17. Injerto autólogo', label: '17. Injerto autólogo', tipo: 'Injerto Autólogo' },
-  { value: '18. Injerto protésico', label: '18. Injerto protésico', tipo: 'Injerto Protésico' },
-  { value: '19. Catéter peritoneal', label: '19. Catéter peritoneal', tipo: 'Catéter peritoneal' }
+  { value: 'FAV radial derecha', label: 'FAV radial derecha', tipo: 'Fístula Arteriovenosa' },
+  { value: 'FAV radial izquierda', label: 'FAV radial izquierda', tipo: 'Fístula Arteriovenosa' },
+  { value: 'FAV braquial o cubital derecha', label: 'FAV braquial o cubital derecha', tipo: 'Fístula Arteriovenosa' },
+  { value: 'FAV braquial o cubital izquierda', label: 'FAV braquial o cubital izquierda', tipo: 'Fístula Arteriovenosa' },
+  { value: 'CVCT yugular derecha', label: 'CVCT yugular derecha', tipo: 'Catéter Venoso Central Temporal' },
+  { value: 'CVCT yugular izquierdo', label: 'CVCT yugular izquierdo', tipo: 'Catéter Venoso Central Temporal' },
+  { value: 'CVCT subclavio derecho', label: 'CVCT subclavio derecho', tipo: 'Catéter Venoso Central Temporal' },
+  { value: 'CVCT subclavio izquierdo', label: 'CVCT subclavio izquierdo', tipo: 'Catéter Venoso Central Temporal' },
+  { value: 'CVCT femoral derecho', label: 'CVCT femoral derecho', tipo: 'Catéter Venoso Central Temporal' },
+  { value: 'CVCT femoral izquierdo', label: 'CVCT femoral izquierdo', tipo: 'Catéter Venoso Central Temporal' },
+  { value: 'CVCLP yugular derecha', label: 'CVCLP yugular derecha', tipo: 'Catéter Venoso Central de Larga Permanencia' },
+  { value: 'CVCLP yugular izquierdo', label: 'CVCLP yugular izquierdo', tipo: 'Catéter Venoso Central de Larga Permanencia' },
+  { value: 'CVCLP femoral derecho', label: 'CVCLP femoral derecho', tipo: 'Catéter Venoso Central de Larga Permanencia' },
+  { value: 'CVCLP femoral izquierdo', label: 'CVCLP femoral izquierdo', tipo: 'Catéter Venoso Central de Larga Permanencia' },
+  { value: 'CVCLP translumbar', label: 'CVCLP translumbar', tipo: 'Catéter Venoso Central de Larga Permanencia' },
+  { value: 'CVCLP transhepático', label: 'CVCLP transhepático', tipo: 'Catéter Venoso Central de Larga Permanencia' },
+  { value: 'Injerto autólogo', label: 'Injerto autólogo', tipo: 'Injerto Autólogo' },
+  { value: 'Injerto protésico', label: 'Injerto protésico', tipo: 'Injerto Protésico' },
+  { value: 'Catéter peritoneal', label: 'Catéter peritoneal', tipo: 'Catéter peritoneal' }
 ];
 
 const tiposAccesoNuevoFiltrados = computed(() => {
