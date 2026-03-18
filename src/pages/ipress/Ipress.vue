@@ -72,15 +72,24 @@
                 <label class="block text-sm font-medium mb-1">Nombre Corto</label>
                 <input v-model="form.nombre_corto" required class="w-full border px-2 py-1 rounded" />
               </div>
-              <div class="mb-3">
+             <!--  <div class="mb-3">
                 <label class="block text-sm font-medium mb-1">Tipo de Unidad</label>
                 <input v-model="form.tipo_unidad" required class="w-full border px-2 py-1 rounded" />
-              </div>
+              </div> -->
               <div class="mb-3">
                 <label class="block text-sm font-medium mb-1">Estado</label>
                 <select v-model="form.estado" required class="w-full border px-2 py-1 rounded">
                   <option value="ACTIVO">ACTIVO</option>
                   <option value="INACTIVO">INACTIVO</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Modalidad</label>
+                <select v-model="form.id_modalidad" required class="w-full border px-2 py-1 rounded">
+                  <option value="" disabled>Seleccione una modalidad</option>
+                  <option v-for="m in modalidades" :key="m.id_modalidad" :value="m.id_modalidad">
+                    {{ m.modalidad }}
+                  </option>
                 </select>
               </div>
               <div class="mb-3">
@@ -176,6 +185,7 @@ const pacientes = reactive({
 });
 const redes = ref([]);
 const ubigeos = ref([]);
+const modalidades = ref([]);
 const currentPage = ref(1);
 const showModal = ref(false);
 const editingPaciente = ref(null);
@@ -185,7 +195,7 @@ const form = reactive({
   nombre_corto: '',
   tipo_unidad: '',
   estado: 'ACTIVO',
-  id_modalidad: 1,
+  id_modalidad: '',
   id_ubigeo: '',
   id_red: '',
 });
@@ -250,6 +260,15 @@ const fetchUbigeos = async () => {
   }
 };
 
+const fetchModalidades = async () => {
+  try {
+    const respuesta = await getAllIpress("/modalidades/");
+    modalidades.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || respuesta || []);
+  } catch (error) {
+    console.error('Error al obtener modalidades:', error);
+  }
+};
+
 const clearFilters = () => {
   filters.ipress = '';
   filters.red = '';
@@ -262,7 +281,7 @@ const showCreateModal = () => {
   form.nombre_corto = '';
   form.tipo_unidad = '';
   form.estado = 'ACTIVO';
-  form.id_modalidad = 1;
+  form.id_modalidad = modalidades.value.length ? modalidades.value[0].id_modalidad : '';
   form.id_ubigeo = '';
   form.id_red = '';
   showModal.value = true;
@@ -274,7 +293,7 @@ const showEditModal = (ipress) => {
   form.nombre_corto = ipress.nombre_corto;
   form.tipo_unidad = ipress.tipo_unidad;
   form.estado = ipress.estado;
-  form.id_modalidad = ipress.id_modalidad ?? 1;
+  form.id_modalidad = ipress.id_modalidad ?? (modalidades.value[0]?.id_modalidad ?? '');
   form.id_ubigeo = ipress.id_ubigeo ?? '';
   form.id_red = ipress.id_red ?? '';
   showModal.value = true;
@@ -285,7 +304,7 @@ const payloadFromForm = () => ({
   nombre_corto: form.nombre_corto,
   tipo_unidad: form.tipo_unidad,
   estado: form.estado,
-  id_modalidad: parseInt(form.id_modalidad, 10) || 1,
+  id_modalidad: form.id_modalidad != null && form.id_modalidad !== '' ? parseInt(form.id_modalidad, 10) : (modalidades.value[0]?.id_modalidad ?? null),
   id_ubigeo: parseInt(form.id_ubigeo, 10) || (ubigeos.value[0]?.id_ubigeo ?? 1),
   id_red: parseInt(form.id_red, 10) || (redes.value[0]?.id_red ?? 1),
 });
@@ -334,6 +353,7 @@ onMounted(() => {
   fetchIpress();
   fetchRedes();
   fetchUbigeos();
+  fetchModalidades();
 });
 </script>
 

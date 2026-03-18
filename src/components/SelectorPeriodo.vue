@@ -44,14 +44,13 @@
       <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide shrink-0">Modalidad:</h2>
       <el-select
         v-model="modalidadSeleccionada"
-        placeholder="Todas"
-        clearable
-        filterable
+        :placeholder="clinicaSeleccionada ? 'Modalidad de la IPRESS' : 'Seleccione una clínica'"
+        :disabled="!clinicaSeleccionada"
         style="width: 180px"
         @change="procesarCambioModalidad"
       >
         <el-option
-          v-for="m in listaModalidades"
+          v-for="m in modalidadDeLaIpress"
           :key="m.id_modalidad"
           :label="m.modalidad"
           :value="m.id_modalidad"
@@ -62,9 +61,10 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { getAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage, ElConfigProvider } from 'element-plus';
+import { useAuthStore } from '@/store/auth';
 
 // --- CONFIGURACIÓN DE IDIOMA ---
 import es from 'element-plus/dist/locale/es.mjs'; 
@@ -83,8 +83,18 @@ const fechaVisual = ref('');
 
 const listaClinicas = ref([]);
 const clinicaSeleccionada = ref(null);
-const listaModalidades = ref([]);
 const modalidadSeleccionada = ref(null);
+
+// Solo la modalidad de la IPRESS seleccionada (cada ipress tiene id_modalidad según el modelo)
+const modalidadDeLaIpress = computed(() => {
+  if (!clinicaSeleccionada.value) return [];
+  const ipress = listaClinicas.value.find((c) => c.id_ipress === clinicaSeleccionada.value);
+  if (!ipress) return [];
+  const idModalidad = ipress.id_modalidad ?? ipress.datosModalidad?.id_modalidad;
+  const nombreModalidad = ipress.datosModalidad?.modalidad ?? 'Modalidad';
+  if (idModalidad == null) return [];
+  return [{ id_modalidad: idModalidad, modalidad: nombreModalidad }];
+});
 
 // ==========================================
 // 1. LÓGICA DE PERIODO (Tu código original)
@@ -133,17 +143,39 @@ const sincronizarVisual = (id) => {
 };
 
 // ==========================================
-// 2. LÓGICA DE CLÍNICAS (Nuevo)
+// 2. LÓGICA DE CLÍNICAS
+// Si el usuario tiene perfil Clínicas u Hospitales, solo se listan las IPRESS asignadas (usuarioIpress).
 // ==========================================
+const authStore = useAuthStore();
+
+const esPerfilClinicasOHospitales = () => {
+  const u = authStore.user;
+  if (!u?.datosPerfil?.perfil) return false;
+  const nombre = String(u.datosPerfil.perfil).toLowerCase();
+  return nombre.includes('clínica') || nombre.includes('clinica') || nombre.includes('hospital');
+};
+
 const fetchClinicas = async () => {
   try {
     const respuesta = await getAllIpress("/ipress/");
-    listaClinicas.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+    let lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+
+    if (esPerfilClinicasOHospitales() && authStore.user?.id_usuario) {
+      const asignaciones = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${authStore.user.id_usuario}`);
+      const listaAsig = Array.isArray(asignaciones) ? asignaciones : (asignaciones?.results || []);
+      const idsAsignados = new Set(listaAsig.map((a) => a.id_ipress).filter(Boolean));
+      lista = lista.filter((ip) => idsAsignados.has(ip.id_ipress));
+    }
+
+    listaClinicas.value = lista;
     if (props.clinica != null && props.clinica !== '') {
       clinicaSeleccionada.value = props.clinica;
+      sincronizarModalidadDesdeClinica(props.clinica);
     } else if (listaClinicas.value.length > 0) {
-      clinicaSeleccionada.value = listaClinicas.value[0].id_ipress;
-      emit('update:clinica', listaClinicas.value[0].id_ipress);
+      const primera = listaClinicas.value[0];
+      clinicaSeleccionada.value = primera.id_ipress;
+      emit('update:clinica', primera.id_ipress);
+      sincronizarModalidadDesdeClinica(primera.id_ipress);
     }
   } catch (error) {
     console.error("Error cargando clínicas:", error);
@@ -151,25 +183,28 @@ const fetchClinicas = async () => {
   }
 };
 
+const sincronizarModalidadDesdeClinica = (idIpress) => {
+  if (idIpress == null || idIpress === '') {
+    modalidadSeleccionada.value = null;
+    emit('update:modalidad', null);
+    return;
+  }
+  const ipress = listaClinicas.value.find((c) => c.id_ipress === idIpress);
+  const idModalidad = ipress?.id_modalidad ?? ipress?.datosModalidad?.id_modalidad;
+  if (idModalidad != null) {
+    modalidadSeleccionada.value = idModalidad;
+    emit('update:modalidad', idModalidad);
+    emit('change', { tipo: 'modalidad', valor: idModalidad });
+  } else {
+    modalidadSeleccionada.value = null;
+    emit('update:modalidad', null);
+  }
+};
+
 const procesarCambioClinica = (valor) => {
   emit('update:clinica', valor);
   emit('change', { tipo: 'clinica', valor });
-};
-
-const fetchModalidades = async () => {
-  try {
-    const respuesta = await getAllIpress("/modalidades/");
-    listaModalidades.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
-    if (props.modalidad != null && props.modalidad !== '') {
-      modalidadSeleccionada.value = props.modalidad;
-    } else if (listaModalidades.value.length > 0) {
-      modalidadSeleccionada.value = listaModalidades.value[0].id_modalidad;
-      emit('update:modalidad', listaModalidades.value[0].id_modalidad);
-    }
-  } catch (error) {
-    console.error("Error cargando modalidades:", error);
-    listaModalidades.value = [];
-  }
+  sincronizarModalidadDesdeClinica(valor);
 };
 
 const procesarCambioModalidad = (valor) => {
@@ -184,6 +219,5 @@ watch(() => props.modalidad, (newVal) => modalidadSeleccionada.value = newVal);
 onMounted(() => {
   fetchPeriodos();
   fetchClinicas();
-  fetchModalidades();
 });
 </script>

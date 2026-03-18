@@ -102,54 +102,99 @@
     </div>
 
     <!-- Modal flotante para crear/editar usuario -->
-    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-lg relative">
-        <h3 class="text-lg font-bold mb-4">{{ editingUsuario ? 'Editar Usuario' : 'Registrar nuevo Usuario' }}</h3>
-        <form @submit.prevent="submitForm">
-          <div class="mb-3">
-            <label class="block text-sm font-medium mb-1">Usuario</label>
-            <input v-model="form.usuario" required class="w-full border px-2 py-1 rounded" />
-          </div>
-          <div class="mb-3">
-            <label class="block text-sm font-medium mb-1">Nombre</label>
-            <input v-model="form.nombre" required class="w-full border px-2 py-1 rounded" />
-          </div>
-          <div class="mb-3">
-            <label class="block text-sm font-medium mb-1">Documento</label>
-            <input v-model="form.documento" required class="w-full border px-2 py-1 rounded" />
-          </div>
-          <div class="mb-3">
-            <label class="block text-sm font-medium mb-1">Contraseña</label>
-            <input v-model="form.password" :required="!editingUsuario" type="password" class="w-full border px-2 py-1 rounded" />
-          </div>
-          <div class="mb-3">
-            <label class="block text-sm font-medium mb-1">Estado</label>
-            <select v-model="form.estado" required class="w-full border px-2 py-1 rounded">
-              <option value="Activo">Activo</option>
-              <option value="Inactivo">Inactivo</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="block text-sm font-medium mb-1">Perfil</label>
-            <select v-model="form.id_perfil" required class="w-full border px-2 py-1 rounded">
-                  <option value="" disabled>Seleccione un perfil</option>
-                  <option v-for="perfil in perfiles" :key="perfil.id_perfil" :value="perfil.id_perfil">
-                    {{ perfil.perfil }}
-                  </option>
+    <div v-if="showModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div class="px-6 py-4 border-b border-gray-100">
+          <h3 class="text-xl font-semibold text-gray-800">
+            {{ editingUsuario ? 'Editar Usuario' : 'Registrar nuevo Usuario' }}
+          </h3>
+          <p class="text-sm text-gray-500 mt-0.5">Complete los datos del usuario</p>
+        </div>
+        <form @submit.prevent="submitForm" class="flex flex-col min-h-0 overflow-hidden">
+          <div class="flex-1 overflow-y-auto px-6 py-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                <input v-model="form.usuario" required
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                <input v-model="form.nombre" required
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Documento</label>
+                <input v-model="form.documento" required
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                <input v-model="form.password" :required="!editingUsuario" type="password"
+                  :placeholder="editingUsuario ? 'Dejar en blanco para no cambiar' : ''"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                <select v-model="form.estado" required
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <option value="Activo">Activo</option>
+                  <option value="Inactivo">Inactivo</option>
                 </select>
-            <!-- <input v-model="form.id_perfil" required class="w-full border px-2 py-1 rounded" /> -->
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Perfil</label>
+                <select v-model="form.id_perfil" required
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <option value="" disabled>Seleccione un perfil</option>
+                  <option v-for="p in perfiles" :key="p.id_perfil" :value="p.id_perfil">{{ p.perfil }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- IPRESS: solo para perfiles Clínicas u Hospitales -->
+            <div v-if="muestraSelectIpress" class="mt-5 pt-4 border-t border-gray-100">
+              <label class="block text-sm font-medium text-gray-700 mb-2">IPRESS asignadas al usuario</label>
+              <p class="text-xs text-gray-500 mb-2">Busque y seleccione las IPRESS que tendrá asignadas este usuario.</p>
+              <input v-model="busquedaIpressModal" type="text" placeholder="Buscar por nombre o código..."
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              <div class="border border-gray-200 rounded-lg max-h-44 overflow-y-auto bg-gray-50/50">
+                <div v-for="ipress in ipressFiltradasModal" :key="ipress.id_ipress"
+                  class="flex items-center gap-2 px-3 py-2 hover:bg-white border-b border-gray-100 last:border-0">
+                  <input :id="'ipress-modal-' + ipress.id_ipress" type="checkbox" :value="ipress.id_ipress"
+                    v-model="form.ipress_ids" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                  <label :for="'ipress-modal-' + ipress.id_ipress" class="cursor-pointer select-none text-sm text-gray-700 flex-1">
+                    {{ ipress.nombre_corto || ipress.ipress }} <span class="text-gray-400">({{ ipress.ipress }})</span>
+                  </label>
+                </div>
+                <p v-if="ipressFiltradasModal.length === 0" class="px-3 py-4 text-sm text-gray-500 text-center">Sin resultados</p>
+              </div>
+            </div>
+
+            <div class="mt-4 flex flex-wrap items-center gap-6">
+              <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" v-model="form.is_active" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <span class="text-sm font-medium text-gray-700">Activo</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" v-model="form.is_staff" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <span class="text-sm font-medium text-gray-700">Staff</span>
+              </label>
+              <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" v-model="form.is_superuser" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <span class="text-sm font-medium text-gray-700">Superusuario</span>
+              </label>
+            </div>
           </div>
-          <div class="mb-3 flex gap-2">
-            <label class="block text-sm font-medium mb-1">Activo</label>
-            <input type="checkbox" v-model="form.is_active" />
-            <label class="block text-sm font-medium mb-1">Staff</label>
-            <input type="checkbox" v-model="form.is_staff" />
-            <label class="block text-sm font-medium mb-1">Superusuario</label>
-            <input type="checkbox" v-model="form.is_superuser" />
-          </div>
-          <div class="flex justify-end gap-2 mt-6">
-            <button type="button" @click="showModal = false" class="px-4 py-2 rounded bg-gray-300 text-gray-700">Cancelar</button>
-            <button type="submit" class="px-4 py-2 rounded bg-[#007BFF] text-white">{{ editingUsuario ? 'Guardar Cambios' : 'Registrar' }}</button>
+          <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
+            <button type="button" @click="showModal = false"
+              class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-100">
+              Cancelar
+            </button>
+            <button type="submit"
+              class="px-5 py-2 rounded-lg bg-[#007BFF] text-white text-sm font-medium hover:bg-[#0066cc]">
+              {{ editingUsuario ? 'Guardar Cambios' : 'Registrar' }}
+            </button>
           </div>
         </form>
       </div>
@@ -231,9 +276,33 @@ const form = reactive({
   is_staff: false,
   is_superuser: false,
   id_perfil: '',
+  ipress_ids: [],
 });
 const perfiles = ref([]);
 const search = ref('');
+const listaIpressModal = ref([]);
+const busquedaIpressModal = ref('');
+
+const perfilSeleccionado = computed(() => {
+  if (!form.id_perfil) return null;
+  return perfiles.value.find((p) => p.id_perfil === form.id_perfil) || null;
+});
+const muestraSelectIpress = computed(() => {
+  const p = perfilSeleccionado.value;
+  if (!p || !p.perfil) return false;
+  const nombre = String(p.perfil).toLowerCase();
+  return nombre.includes('clínica') || nombre.includes('clinica') || nombre.includes('hospital');
+});
+const ipressFiltradasModal = computed(() => {
+  const texto = busquedaIpressModal.value.trim().toLowerCase();
+  const lista = listaIpressModal.value;
+  if (!texto) return lista;
+  return lista.filter(
+    (i) =>
+      (i.nombre_corto && i.nombre_corto.toLowerCase().includes(texto)) ||
+      (i.ipress && i.ipress.toLowerCase().includes(texto))
+  );
+});
 
 const fetchUsuarios = async (url = null) => {
   try {
@@ -277,7 +346,16 @@ watch(search, () => {
   fetchUsuarios();
 });
 
-const showCreateModal = () => {
+const cargarIpressParaModal = async () => {
+  try {
+    const res = await getAllIpress('/ipress/');
+    listaIpressModal.value = Array.isArray(res) ? res : res.results || [];
+  } catch {
+    listaIpressModal.value = [];
+  }
+};
+
+const showCreateModal = async () => {
   editingUsuario.value = null;
   form.password = '';
   form.documento = '';
@@ -288,10 +366,13 @@ const showCreateModal = () => {
   form.is_staff = false;
   form.is_superuser = false;
   form.id_perfil = '';
+  form.ipress_ids = [];
+  busquedaIpressModal.value = '';
+  await cargarIpressParaModal();
   showModal.value = true;
 };
 
-const showEditModal = (usuario) => {
+const showEditModal = async (usuario) => {
   editingUsuario.value = usuario;
   form.password = '';
   form.documento = usuario.documento;
@@ -302,14 +383,48 @@ const showEditModal = (usuario) => {
   form.is_staff = usuario.is_staff;
   form.is_superuser = usuario.is_superuser;
   form.id_perfil = usuario.id_perfil;
+  form.ipress_ids = [];
+  busquedaIpressModal.value = '';
+  await cargarIpressParaModal();
+  if (usuario.id_usuario) {
+    try {
+      const asignaciones = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${usuario.id_usuario}`);
+      const lista = Array.isArray(asignaciones) ? asignaciones : asignaciones.results || [];
+      form.ipress_ids = lista.map((a) => a.id_ipress).filter(Boolean);
+    } catch {
+      form.ipress_ids = [];
+    }
+  }
   showModal.value = true;
+};
+
+const guardarAsignacionesIpress = async (idUsuario) => {
+  if (!idUsuario || !form.ipress_ids || form.ipress_ids.length === 0) return;
+  try {
+    const existentes = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${idUsuario}`);
+    const lista = Array.isArray(existentes) ? existentes : existentes.results || [];
+    for (const a of lista) {
+      if (a.id_usuario_ipress) {
+        await deleteAllIpress(`/usuarioIpress/${a.id_usuario_ipress}/`);
+      }
+    }
+    for (const idIpress of form.ipress_ids) {
+      await postAllIpress('/usuarioIpress/', {
+        id_usuario: idUsuario,
+        id_ipress: idIpress,
+        estado: true,
+      });
+    }
+  } catch (e) {
+    console.error('Error al guardar IPRESS:', e);
+    throw e;
+  }
 };
 
 const submitForm = async () => {
   try {
     if (editingUsuario.value) {
-      await putAllIpress(`/usuarios/${editingUsuario.value.id_usuario}/`, {
-        password: form.password,
+      const payload = {
         documento: form.documento,
         nombre: form.nombre,
         usuario: form.usuario,
@@ -318,9 +433,16 @@ const submitForm = async () => {
         is_staff: form.is_staff,
         is_superuser: form.is_superuser,
         id_perfil: form.id_perfil,
-      });
+      };
+      if (form.password && form.password.trim() !== '') {
+        payload.password = form.password;
+      }
+      await putAllIpress(`/usuarios/${editingUsuario.value.id_usuario}/`, payload);
+      if (muestraSelectIpress.value && Array.isArray(form.ipress_ids)) {
+        await guardarAsignacionesIpress(editingUsuario.value.id_usuario);
+      }
     } else {
-      await postAllIpress('/usuarios/', {
+      const res = await postAllIpress('/usuarios/', {
         password: form.password,
         documento: form.documento,
         nombre: form.nombre,
@@ -331,6 +453,10 @@ const submitForm = async () => {
         is_superuser: form.is_superuser,
         id_perfil: form.id_perfil,
       });
+      const idUsuario = res?.id_usuario ?? res?.id;
+      if (idUsuario && muestraSelectIpress.value && Array.isArray(form.ipress_ids) && form.ipress_ids.length > 0) {
+        await guardarAsignacionesIpress(idUsuario);
+      }
     }
     showModal.value = false;
     fetchUsuarios();

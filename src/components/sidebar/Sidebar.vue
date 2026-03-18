@@ -15,14 +15,10 @@
         <div class="px-3 mb-2">
             <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Menú Principal</span>
         </div>
-
         <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
-        
-        <!-- <template v-if="['Supervisor', 'Admin'].includes(perfil)">
-           <SidebarItem :icon="UserIcon" label="Registros" to="/tablas"/>
-        </template> -->
+
         <SidebarItem 
-            v-if="['Supervisor', 'Admin'].includes(perfil)"
+            v-if="['Supervisor', 'Admin','Clinicas','Hospitales'].includes(perfil)"
             :icon="DocumentMagnifyingGlassIcon" 
             label="Registros" 
             :submenu="[
@@ -35,8 +31,8 @@
             ]"
         />
 
-        <SidebarItem :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
-        <SidebarItem :icon="ArrowsRightLeftIcon" label="Evaluación" to="/evaluacion"/>
+        <SidebarItem v-if="['Supervisor', 'Admin','Clinicas','Hospitales'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
+        <SidebarItem v-if="['Supervisor', 'Admin'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Evaluación" to="/evaluacion"/>
         
         <SidebarItem 
             v-if="['Supervisor', 'Admin'].includes(perfil)"

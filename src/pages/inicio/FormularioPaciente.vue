@@ -998,7 +998,7 @@ const registrarPaciente = async (url = null) => {
 
   try {
     const respuesta = await postAllIpress("/pacientes/", payload);
-    registrarPacienteDialisis(respuesta);
+    await registrarPacienteDialisis(respuesta);
   } catch (error) {
     console.log('¿Error tiene response?', error);
     /* alert(error.error); */
@@ -1009,12 +1009,56 @@ const registrarPaciente = async (url = null) => {
     })
   }
 }
+
+/** Crea pacienteAtencion y luego unidadesActuales (Fecha creación acceso, Tipo acceso, Localización acceso). */
+const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
+  const idPeriodo = getIdPeriodoParaPayload();
+  if (idPeriodo == null || !idClinicaSeleccionada.value) return null;
+
+  const idModalidad = form.modalidadTRR === 'Hemodiálisis' ? 1 : form.modalidadTRR === 'Diálisis Peritoneal' ? 2 : 3;
+  const fechaAtencion = form.fechaInicioTRR || new Date().toISOString().slice(0, 10);
+
+  const payloadAtencion = {
+    id_paciente: idPaciente,
+    id_ipress: idClinicaSeleccionada.value,
+    id_periodo: idPeriodo,
+    id_modalidad: idModalidad,
+    fecha_atencion: fechaAtencion,
+    tipo_atencion: 'NUEVO',
+    estado: 'ACTIVO',
+    fecha_inicio: new Date().toISOString().slice(0, 10),
+  };
+
+  const resAtencion = await postAllIpress('/pacienteAtencion/', payloadAtencion);
+  const idPacienteAtencion = resAtencion?.id_paciente_atencion ?? resAtencion?.id;
+  if (!idPacienteAtencion) return null;
+
+  const tipoAcceso = form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : (form.tipoAccesoInicio || '');
+  const payloadUnidades = {
+    id_paciente_atencion: idPacienteAtencion,
+    fecha_creacion_acceso: form.fechaCreacionAcceso || '',
+    tipo_acceso: tipoAcceso,
+    localizacion_acceso: form.localizacionAcceso || '',
+  };
+
+  await postAllIpress('/unidadesActuales/', payloadUnidades);
+  return idPacienteAtencion;
+}
+
 const registrarPacienteDialisis = async (respuesta) => {
   const idEtiologia = form.etiologiaEspecifica != null && form.etiologiaEspecifica !== '' ? (Number(form.etiologiaEspecifica) || parseInt(form.etiologiaEspecifica, 10)) : null;
   if (idEtiologia == null || isNaN(idEtiologia)) {
     ElMessage({ message: 'Seleccione una etiología específica de la lista.', type: 'warning', plain: true });
     return;
   }
+
+  try {
+    await crearPacienteAtencionYUnidadesActuales(respuesta.id_paciente);
+  } catch (err) {
+    console.error('Error al crear atención/unidades actuales:', err);
+    ElMessage({ message: err?.error || 'Error al guardar datos de acceso a unidad.', type: 'warning', plain: true });
+  }
+
   const payload = {
     id_paciente: respuesta.id_paciente,
     id_etiologia: idEtiologia,
