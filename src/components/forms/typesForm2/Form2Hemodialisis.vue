@@ -4,12 +4,26 @@
         <div class="max-w-7xl mx-auto mb-6">
 
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <FiltroSuperior
-                    v-model:periodo="periodoSeleccionado"
-                    v-model:clinica="clinicaFiltro"
-                    v-model:modalidad="modalidadFiltro"
-                    @change="procesarCambioFiltro"
-                />
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Periodo</label>
+                        <div class="w-full bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-lg p-2.5 font-medium">
+                            {{ periodoTexto || '—' }}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Clinica</label>
+                        <div class="w-full bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-lg p-2.5 font-medium">
+                            {{ clinicaTexto || '—' }}
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Modalidad</label>
+                        <div class="w-full bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-lg p-2.5 font-medium">
+                            {{ modalidadTexto || '—' }}
+                        </div>
+                    </div>
+                </div>
                 <div v-if="paciente" class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-3">
                     <span class="text-sm font-bold text-slate-700">Paciente:</span>
                     <span class="text-slate-800 font-medium">{{ paciente.paciente || '—' }}</span>
@@ -74,80 +88,9 @@
                     </div>
                 </div>
 
-                <div v-if="tieneHistorialAcceso" class="bg-white rounded-xl shadow-lg border border-cyan-100 p-6 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-24 h-24 bg-cyan-50 rounded-bl-full -mr-4 -mt-4 z-0"></div>
-                    
-                    <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                        <div>
-                            <label class="block text-sm font-bold text-slate-800 mb-2">¿Se requiere cambiar el acceso?</label>
-                            <select v-model="form.cambio_acceso" 
-                                class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block p-2.5 bg-white shadow-sm transition-all"
-                                :class="form.cambio_acceso == 'true' ? 'border-cyan-500 ring-1 ring-cyan-500 bg-cyan-50/30' : ''">
-                                <option value="true">SÍ, Registrar cambio</option>
-                                <option value="false">NO, Mantener actual</option>
-                            </select>
-                        </div>
-
-                        <div v-if="form.cambio_acceso == 'true'" class="animate-fadeIn">
-                            <label class="block text-sm font-bold text-slate-800 mb-2">Motivo del Cambio</label>
-                            <select v-model="form.motivo_cambio" class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block p-2.5 shadow-sm">
-                                <option value="">-- Seleccione motivo --</option>
-                                <option value="Complicación mecánica">Complicación mecánica</option>
-                                <option value="Complicación infecciosa">Complicación infecciosa</option>
-                                <option value="Prescripción Médica">Prescripción Médica</option>
-                            </select>
-                        </div>
-                    </div>
+                <div class="bg-slate-50 rounded-xl border border-slate-200 p-4 text-sm text-slate-600">
+                    Esta vista es solo lectura. Los datos mostrados usan el mismo periodo, clinica y modalidad seleccionados en la barra superior principal.
                 </div>
-
-                <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0">
-                    <div v-if="mostrarRegistroNuevoAcceso" class="bg-white rounded-xl shadow-md border border-cyan-200 overflow-hidden">
-                        <div class="bg-cyan-600 px-6 py-3 flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                            <h3 class="font-bold text-white text-sm uppercase tracking-wide">Registro de Nuevo Acceso</h3>
-                        </div>
-
-                        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-cyan-50/10">
-                            <div>
-                                <label class="block text-xs font-bold text-cyan-800 uppercase mb-1">Tipo Nuevo Acceso</label>
-                                <select v-model="form.tipo_acceso_nuevo" class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 p-2.5 shadow-sm bg-white">
-                                    <option disabled value="">Seleccione tipo</option>
-                                    <option v-for="tipo in tiposAccesoNuevoFiltrados" :key="tipo.value" :value="tipo.value">{{ tipo.label }}</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-cyan-800 uppercase mb-1">Nueva Localización</label>
-                                <select v-model="form.localizacion_acceso_nuevo" 
-                                    class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 p-2.5 shadow-sm bg-white"
-                                    :disabled="!form.tipo_acceso_nuevo">
-                                    <option disabled value="">Seleccione localización</option>
-                                    <option v-for="op in opcionesLocalizacionNuevoFiltradas" :key="op.value" :value="op.label">{{ op.label }}</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-cyan-800 uppercase mb-1">Fecha de Creación</label>
-                                <input v-model="form.fecha_creacion_acceso_nuevo" type="date"
-                                    :min="rangoFechasPeriodo.min"
-                                    :max="rangoFechasPeriodo.max"
-                                    class="w-full border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 p-2.5 shadow-sm bg-white" />
-                                <p v-if="rangoFechasPeriodo.min" class="text-xs text-slate-500 mt-1">Debe estar dentro del periodo seleccionado ({{ rangoFechasPeriodo.min }} a {{ rangoFechasPeriodo.max }})</p>
-                            </div>
-                        </div>
-                        <div class="px-6 pb-6 pt-2 flex justify-end">
-                            <button
-                                type="button"
-                                class="px-5 py-2.5 bg-cyan-600 text-white font-semibold rounded-lg shadow-sm hover:bg-cyan-700 transition-colors flex items-center gap-2"
-                                :disabled="guardando"
-                                @click="guardarRegistro"
-                            >
-                                <span v-if="guardando" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                                {{ guardando ? 'Guardando...' : 'Guardar' }}
-                            </button>
-                        </div>
-                    </div>
-                </transition>
 
                 <div class="pt-4">
                     <h3 class="text-lg font-bold text-slate-700 mb-4 flex items-center gap-2">
@@ -362,10 +305,9 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { ref, onMounted, reactive, computed, watch } from 'vue'; 
+import { ref, onMounted, reactive, computed, watch, inject } from 'vue'; 
 import { getAllIpress, patchAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage } from 'element-plus';
-import FiltroSuperior from '@/components/FiltroSuperior.vue'; 
 
 const props = defineProps({
     paciente: { type: Object, required: true },
@@ -377,6 +319,9 @@ const { paciente, periodo, periodoIpress, idPacienteAtencion } = props
 const emit = defineEmits(['cancelar', 'guardado'])
 
 const router = useRouter()
+const periodoGlobal = inject('periodoGlobal', ref(null))
+const clinicaGlobal = inject('clinicaGlobal', ref(null))
+const modalidadGlobal = inject('modalidadGlobal', ref(null))
 
 const form = reactive({
     fecha_creacion_acceso_actual: null,
@@ -392,26 +337,18 @@ const form = reactive({
     id_paciente: paciente.id_paciente
 })
 
-const clinicaFiltro = ref(null);
-const modalidadFiltro = ref(null);
-
-const procesarCambioFiltro = (evento) => {
-    console.log("Filtro cambió:", evento);
-};
-
 const formInfeccion = reactive({ presentaInfecciones: '', tipoInfeccion: '', localizacion: '', fechaInicio: '', fechaResolucion: '', tratamiento: '', observaciones: '' })
 const formCaptar = reactive({ condicion: '', fecha: '', observaciones: '' })
 const formEgresar = reactive({ fecha: '', tipo_egreso: '', motivo_especifico: '', observaciones: '' })
 
 const pacienteSeleccionado = ref(null); 
-const periodoSeleccionado = periodo
 const idPeriodoIpress = periodoIpress
 const periodoActual = ref([])
 const historialAcceso = ref([])
 const tieneHistorialAcceso = computed(() => (historialAcceso.value && historialAcceso.value.length > 0))
-const mostrarRegistroNuevoAcceso = computed(() => !tieneHistorialAcceso.value || form.cambio_acceso === 'true')
 const guardando = ref(false)
 const periodos = ref([])
+const clinicas = ref([])
 const mostrarHistorico = ref(false);
 const historico = ref([]);
 const mostrarModuloInfeccion = ref(false);
@@ -491,6 +428,33 @@ const historicoOrdenado = computed(() => {
     return [...(historico.value || [])].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 });
 
+const periodoVisibleId = computed(() => periodoGlobal.value ?? periodo ?? null)
+const clinicaVisibleId = computed(() => clinicaGlobal.value ?? null)
+const modalidadVisibleId = computed(() => modalidadGlobal.value ?? null)
+
+const periodoTexto = computed(() => {
+    const idPeriodo = periodoVisibleId.value
+    if (idPeriodo == null) return ''
+    const item = periodos.value.find((per) => String(per.id_periodo) === String(idPeriodo))
+    return item?.periodo || ''
+})
+
+const clinicaTexto = computed(() => {
+    const idClinica = clinicaVisibleId.value
+    if (idClinica == null) return ''
+    const item = clinicas.value.find((ip) => String(ip.id_ipress) === String(idClinica))
+    return item?.nombre_corto || item?.ipress || ''
+})
+
+const modalidadTexto = computed(() => {
+    const equivalencias = {
+        1: 'Hemodialisis',
+        2: 'Dialisis Peritoneal',
+        3: 'Trasplante',
+    }
+    return equivalencias[Number(modalidadVisibleId.value)] || ''
+})
+
 const rangoFechasPeriodo = computed(() => {
     const lista = Array.isArray(periodos.value) ? periodos.value : [];
     const p = lista.find(per => per.id_periodo === periodo);
@@ -538,8 +502,8 @@ const guardarRegistro = async () => {
     try {
         const payload = {
             id_paciente_atencion: Number(idAtencion),
-            tipo_acceso: form.tipo_acceso_nuevo,
-            localizacion_acceso: form.localizacion_acceso_nuevo,
+            tipo_acceso: normalizarTipoAcceso(form.tipo_acceso_nuevo),
+            localizacion_acceso: describirLocalizacion(form.localizacion_acceso_nuevo),
             fecha_creacion_acceso: form.fecha_creacion_acceso_nuevo,
             motivo_cambio: form.motivo_cambio || null
         };
@@ -564,8 +528,8 @@ const postForm = async (url = null) => {
     if (!validarFormulario()) return;
     const formEnvio = {
         fecha_creacion_acceso_actual: form.fecha_creacion_acceso_nuevo,
-        tipo_acceso_actual: form.tipo_acceso_nuevo,
-        localizacion_acceso_actual: form.localizacion_acceso_nuevo,
+        tipo_acceso_actual: normalizarTipoAcceso(form.tipo_acceso_nuevo),
+        localizacion_acceso_actual: describirLocalizacion(form.localizacion_acceso_nuevo),
         cambio_acceso: null, motivo_cambio: null,
         fecha_creacion_acceso_nuevo: null, tipo_acceso_nuevo: null, localizacion_acceso_nuevo: null,
         id_periodo_ipress: periodoIpress, id_red: 1, id_paciente: paciente.id_paciente
@@ -584,13 +548,40 @@ const editForm = async (url = null) => {
     } catch (error) { console.error(error); }
 };
 
+const normalizarTipoAcceso = (valor) => {
+    if (!valor) return null;
+    const texto = String(valor).trim();
+    const equivalencias = {
+        '1': 'Catéter Venoso Central Temporal',
+        '2': 'Catéter Venoso Central de Larga Permanencia',
+        '3': 'Fístula Arteriovenosa',
+        '4': 'Injerto Autólogo',
+        '5': 'Injerto Protésico',
+        '6': 'Catéter peritoneal',
+    };
+    return equivalencias[texto] || texto;
+};
+
 const normalizarLocalizacion = (valor) => {
     if (!valor) return null;
     const str = String(valor).trim();
-    const op = opcionesLocalizacion.find(o => o.value === str || o.value === valor);
+    const op = opcionesLocalizacion.find(
+        (o) => o.value === str || o.label === str || o.label.replace(/^\d+\.\s*/, '') === str
+    );
     if (op) return op.value;
-    const porNumero = opcionesLocalizacion.find(o => o.value.startsWith(str + '.') || o.value.startsWith(str + ' '));
-    return porNumero?.value ?? valor;
+    const numero = str.match(/^(\d+)/)?.[1];
+    if (numero) {
+        const porNumero = opcionesLocalizacion.find((o) => o.value === numero);
+        if (porNumero) return porNumero.value;
+    }
+    return null;
+};
+
+const describirLocalizacion = (valor) => {
+    if (!valor) return null;
+    const idNormalizado = normalizarLocalizacion(valor);
+    const opcion = opcionesLocalizacion.find((o) => o.value === idNormalizado);
+    return opcion?.label ?? String(valor).trim();
 };
 
 const fetchUnidadesActualesPaciente = async () => {
@@ -614,14 +605,14 @@ const fetchUnidadesActualesPaciente = async () => {
         const ordenados = [...lista].sort((a, b) => (b.id_unidad_actual || 0) - (a.id_unidad_actual || 0));
         const actual = ordenados[0];
         form.fecha_creacion_acceso_actual = actual.fecha_creacion_acceso || actual.fecha_creacion_acceso_actual || null;
-        form.tipo_acceso_actual = actual.tipo_acceso || actual.tipo_acceso_actual || null;
+        form.tipo_acceso_actual = normalizarTipoAcceso(actual.tipo_acceso || actual.tipo_acceso_actual) || null;
         const locApi = actual.localizacion_acceso || actual.localizacion_acceso_actual;
-        form.localizacion_acceso_actual = normalizarLocalizacion(locApi) ?? locApi ?? null;
+        form.localizacion_acceso_actual = normalizarLocalizacion(locApi) ?? null;
         const motivoLabels = { '1': 'Complicación mecánica', '2': 'Complicación infecciosa', '3': 'Prescripción Médica' };
         historialAcceso.value = ordenados.map((r, i) => ({
             fecha: r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
-            tipo_acceso: r.tipo_acceso || r.tipo_acceso_actual || '—',
-            localizacion: r.localizacion_acceso || r.localizacion_acceso_actual || '—',
+            tipo_acceso: normalizarTipoAcceso(r.tipo_acceso || r.tipo_acceso_actual) || '—',
+            localizacion: describirLocalizacion(r.localizacion_acceso || r.localizacion_acceso_actual) || '—',
             motivo: motivoLabels[r.motivo_cambio] || r.motivo_cambio || '',
             estado: i === 0 ? 'Activo' : 'Anterior'
         }));
@@ -646,6 +637,16 @@ const fetchPeriodo = async (url = null) => {
     } catch (error) { console.error(error); }
 };
 
+const fetchClinicas = async () => {
+    try {
+        const respuesta = await getAllIpress("/ipress/");
+        clinicas.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+    } catch (error) {
+        console.error(error);
+        clinicas.value = [];
+    }
+};
+
 const abrirHistorico = async () => { mostrarHistorico.value = true; };
 const cerrarHistorico = () => { mostrarHistorico.value = false; };
 const abrirModuloInfeccion = () => { mostrarModuloInfeccion.value = true; fetchHistorialInfecciones(); };
@@ -666,6 +667,7 @@ const validarCierreMesAnterior = async () => ({ valido: true });
 onMounted(() => {
     fetchPaciente();
     fetchPeriodo();
+    fetchClinicas();
     fetchUnidadesActualesPaciente();
     fetchHistorialMovimientos();
 });

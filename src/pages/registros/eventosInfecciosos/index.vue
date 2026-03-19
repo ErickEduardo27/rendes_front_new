@@ -131,16 +131,31 @@
         </div>
         <div class="p-6 overflow-y-auto flex-1">
           <div v-if="!pacienteParaFormulario" class="space-y-4">
-            <label class="block text-sm font-bold text-slate-700">Seleccione el paciente</label>
-            <select
-              v-model="idPacienteSeleccionado"
+            <label class="block text-sm font-bold text-slate-700">Busque el paciente</label>
+            <input
+              v-model="busquedaPaciente"
+              type="text"
+              placeholder="Escriba nombre o DNI"
               class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-cyan-500 focus:border-cyan-500"
-            >
-              <option value="">— Elija un paciente —</option>
-              <option v-for="p in pacientesDisponibles" :key="p.id_paciente_atencion" :value="p.id_paciente_atencion">
-                {{ p.datosPaciente?.paciente || 'Sin nombre' }} — {{ p.datosPaciente?.documento || '' }}
-              </option>
-            </select>
+            />
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+              <div v-if="pacientesFiltrados.length === 0" class="px-4 py-3 text-sm text-slate-500 italic">
+                No se encontraron pacientes con ese criterio.
+              </div>
+              <div v-else class="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                <button
+                  v-for="p in pacientesFiltrados"
+                  :key="p.id_paciente_atencion"
+                  type="button"
+                  class="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                  :class="String(idPacienteSeleccionado) === String(p.id_paciente_atencion) ? 'bg-cyan-50 border-l-4 border-cyan-500' : ''"
+                  @click="idPacienteSeleccionado = p.id_paciente_atencion"
+                >
+                  <div class="text-sm font-medium text-slate-800">{{ p.datosPaciente?.paciente || 'Sin nombre' }}</div>
+                  <div class="text-xs text-slate-500">DNI: {{ p.datosPaciente?.documento || '—' }}</div>
+                </button>
+              </div>
+            </div>
             <p class="text-xs text-slate-500">Pacientes con atención en el periodo, IPRESS y modalidad actuales.</p>
             <div class="flex justify-end gap-2 pt-2">
               <button type="button" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalNuevo">Cancelar</button>
@@ -214,6 +229,7 @@ const mostrarModalNuevo = ref(false);
 const vistaActiva = ref('registros');
 const listadoAtenciones = ref([]);
 const idPacienteSeleccionado = ref('');
+const busquedaPaciente = ref('');
 const pacienteParaFormulario = ref(null);
 const idPacienteAtencionParaForm = ref(null);
 const mostrarModalImportar = ref(false);
@@ -233,6 +249,15 @@ function documentoPaciente(r) {
 }
 
 const pacientesDisponibles = computed(() => Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : []);
+const pacientesFiltrados = computed(() => {
+  const texto = busquedaPaciente.value.trim().toLowerCase();
+  if (!texto) return pacientesDisponibles.value;
+  return pacientesDisponibles.value.filter((paciente) => {
+    const nombre = String(paciente.datosPaciente?.paciente || '').toLowerCase();
+    const documento = String(paciente.datosPaciente?.documento || '').toLowerCase();
+    return nombre.includes(texto) || documento.includes(texto);
+  });
+});
 
 const todosPacientesLista = computed(() => {
   const atenciones = Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
@@ -322,6 +347,7 @@ function abrirModalNuevo() {
   pacienteParaFormulario.value = null;
   idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
+  busquedaPaciente.value = '';
   fetchPacientesAtencion();
   mostrarModalNuevo.value = true;
 }
@@ -340,6 +366,7 @@ function cerrarModalNuevo() {
   pacienteParaFormulario.value = null;
   idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
+  busquedaPaciente.value = '';
   fetchRegistros();
 }
 

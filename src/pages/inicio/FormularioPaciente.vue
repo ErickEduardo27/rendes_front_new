@@ -189,6 +189,8 @@ import { reactive, computed, watch, ref, onMounted, nextTick } from 'vue';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage, ElConfigProvider, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElButton, ElCheckbox, ElCheckboxGroup, ElDatePicker, ElAutocomplete } from 'element-plus';
 import es from 'element-plus/dist/locale/es.mjs';
+import Swal from 'sweetalert2';
+import router from '@/router/index';
 
 const periodoSeleccionado = ref(null);
 const clinicaSeleccionada = ref('');
@@ -545,6 +547,14 @@ const listaTiposAcceso = [
   { id: '6', label: 'Catéter peritoneal' }
 ];
 
+const resolverTipoAccesoTexto = (valor) => {
+  if (!valor) return '';
+  const encontrado = listaTiposAcceso.find(
+    (tipo) => String(tipo.id) === String(valor) || tipo.label === valor
+  );
+  return encontrado?.label ?? valor;
+};
+
 // Filtro A: Modalidad -> Tipos disponibles
 const tiposAccesoFiltrados = computed(() => {
   const modalidad = form.modalidadTRR;
@@ -594,36 +604,48 @@ const sincronizarVisual = (id) => {
 // 1. Lista maestra de opciones
 const listaOpcionesAcceso = [
   // Fístula (Corresponde al id '3')
-  { id: '1', label: '1. FAV radial derecha', idPadre: '3' },
-  { id: '2', label: '2. FAV radial izquierda', idPadre: '3' },
-  { id: '3', label: '3. FAV braquial o cubital derecha', idPadre: '3' },
-  { id: '4', label: '4. FAV braquial o cubital izquierda', idPadre: '3' },
+  { id: '1', label: 'FAV radial derecha', idPadre: '3' },
+  { id: '2', label: 'FAV radial izquierda', idPadre: '3' },
+  { id: '3', label: 'FAV braquial o cubital derecha', idPadre: '3' },
+  { id: '4', label: 'FAV braquial o cubital izquierda', idPadre: '3' },
 
   // Temporal (Corresponde al id '1')
-  { id: '5', label: '5. CVCT yugular derecha', idPadre: '1' },
-  { id: '6', label: '6. CVCT yugular izquierdo', idPadre: '1' },
-  { id: '7', label: '7. CVCT subclavio derecho', idPadre: '1' },
-  { id: '8', label: '8. CVCT subclavio izquierdo', idPadre: '1' },
-  { id: '9', label: '9. CVCT femoral derecho', idPadre: '1' },
-  { id: '10', label: '10. CVCT femoral izquierdo', idPadre: '1' },
+  { id: '5', label: 'CVCT yugular derecha', idPadre: '1' },
+  { id: '6', label: 'CVCT yugular izquierdo', idPadre: '1' },
+  { id: '7', label: 'CVCT subclavio derecho', idPadre: '1' },
+  { id: '8', label: 'CVCT subclavio izquierdo', idPadre: '1' },
+  { id: '9', label: 'CVCT femoral derecho', idPadre: '1' },
+  { id: '10', label: 'CVCT femoral izquierdo', idPadre: '1' },
 
   // Larga Permanencia (Corresponde al id '2')
-  { id: '11', label: '11. CVCLP yugular derecha', idPadre: '2' },
-  { id: '12', label: '12. CVCLP yugular izquierdo', idPadre: '2' },
-  { id: '13', label: '13. CVCLP femoral derecho', idPadre: '2' },
-  { id: '14', label: '14. CVCLP femoral izquierdo', idPadre: '2' },
-  { id: '15', label: '15. CVCLP translumbar', idPadre: '2' },
-  { id: '16', label: '16. CVCLP transhepático', idPadre: '2' },
+  { id: '11', label: 'CVCLP yugular derecha', idPadre: '2' },
+  { id: '12', label: 'CVCLP yugular izquierdo', idPadre: '2' },
+  { id: '13', label: 'CVCLP femoral derecho', idPadre: '2' },
+  { id: '14', label: 'CVCLP femoral izquierdo', idPadre: '2' },
+  { id: '15', label: 'CVCLP translumbar', idPadre: '2' },
+  { id: '16', label: 'CVCLP transhepático', idPadre: '2' },
 
   // Injerto Autólogo (Corresponde al id '4')
-  { id: '17', label: '17. Injerto autólogo', idPadre: '4' },
+  { id: '17', label: 'Injerto autólogo', idPadre: '4' },
 
   // Injerto Protésico (Corresponde al id '5')
-  { id: '18', label: '18. Injerto protésico', idPadre: '5' },
+  { id: '18', label: 'Injerto protésico', idPadre: '5' },
 
   // Catéter Peritoneal (Corresponde al id '6')
-  { id: '19', label: '19. Catéter peritoneal', idPadre: '6' }
+  { id: '19', label: 'Catéter peritoneal', idPadre: '6' }
 ];
+
+const resolverLocalizacionAccesoTexto = (valor) => {
+  if (!valor) return '';
+  const texto = String(valor).trim();
+  const encontrado = listaOpcionesAcceso.find(
+    (opcion) =>
+      String(opcion.id) === texto ||
+      opcion.label === texto ||
+      opcion.label.replace(/^\d+\.\s*/, '') === texto
+  );
+  return encontrado?.label ?? texto;
+};
 // Filtro B: Tipo de Acceso -> Localizaciones específicas (Validación Cruzada)
 const opcionesAccesoFiltradas = computed(() => {
   // CORRECCIÓN: Filtramos por el TIPO DE ACCESO, no solo la modalidad
@@ -991,14 +1013,14 @@ const registrarPaciente = async (url = null) => {
     genero: form.sexo,
     grado_instruccion: form.gradoInstruccion,
     id_modalidad: form.modalidadTRR == 'Hemodiálisis' ? 1 : form.modalidadTRR == 'Diálisis Peritoneal' ? 2 : 3,
-    // Nuevos campos para cumplir con el modelo de backend
-    id_ipress: idClinicaSeleccionada.value,
-    id_periodo: idPeriodo,
   };
 
   try {
     const respuesta = await postAllIpress("/pacientes/", payload);
-    await registrarPacienteDialisis(respuesta);
+    const registrado = await registrarPacienteDialisis(respuesta);
+    if (registrado) {
+      await preguntarCaptacion(respuesta);
+    }
   } catch (error) {
     console.log('¿Error tiene response?', error);
     /* alert(error.error); */
@@ -1013,14 +1035,14 @@ const registrarPaciente = async (url = null) => {
 /** Crea pacienteAtencion y luego unidadesActuales (Fecha creación acceso, Tipo acceso, Localización acceso). */
 const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
   const idPeriodo = getIdPeriodoParaPayload();
-  if (idPeriodo == null || !idClinicaSeleccionada.value) return null;
+  if (idPeriodo == null) return null;
 
   const idModalidad = form.modalidadTRR === 'Hemodiálisis' ? 1 : form.modalidadTRR === 'Diálisis Peritoneal' ? 2 : 3;
   const fechaAtencion = form.fechaInicioTRR || new Date().toISOString().slice(0, 10);
 
   const payloadAtencion = {
     id_paciente: idPaciente,
-    id_ipress: idClinicaSeleccionada.value,
+    id_ipress: null,
     id_periodo: idPeriodo,
     id_modalidad: idModalidad,
     fecha_atencion: fechaAtencion,
@@ -1033,23 +1055,51 @@ const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
   const idPacienteAtencion = resAtencion?.id_paciente_atencion ?? resAtencion?.id;
   if (!idPacienteAtencion) return null;
 
-  const tipoAcceso = form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : (form.tipoAccesoInicio || '');
+  const tipoAcceso = form.modalidadTRR === 'Trasplante'
+    ? 'NO HABIDO'
+    : resolverTipoAccesoTexto(form.tipoAccesoInicio);
   const payloadUnidades = {
     id_paciente_atencion: idPacienteAtencion,
     fecha_creacion_acceso: form.fechaCreacionAcceso || '',
     tipo_acceso: tipoAcceso,
-    localizacion_acceso: form.localizacionAcceso || '',
+    localizacion_acceso: resolverLocalizacionAccesoTexto(form.localizacionAcceso) || '',
   };
 
   await postAllIpress('/unidadesActuales/', payloadUnidades);
   return idPacienteAtencion;
 }
 
+const preguntarCaptacion = async (respuesta) => {
+  const documentoPaciente = respuesta?.documento || form.numeroDocumento || '';
+  const result = await Swal.fire({
+    title: 'Paciente registrado',
+    text: 'Desea captar al paciente ahora?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Si, captar',
+    cancelButtonText: 'No',
+    confirmButtonColor: '#16a34a',
+  });
+
+  if (result.isConfirmed) {
+    const destino = {
+      name: 'Movimientos',
+      query: { captarDni: documentoPaciente },
+    };
+    const href = router.resolve(destino).href;
+    window.location.assign(href);
+    return;
+  }
+
+  ElMessage({ message: 'Paciente registrado exitosamente', type: 'success', plain: true });
+  setTimeout(() => window.location.reload(), 1200);
+};
+
 const registrarPacienteDialisis = async (respuesta) => {
   const idEtiologia = form.etiologiaEspecifica != null && form.etiologiaEspecifica !== '' ? (Number(form.etiologiaEspecifica) || parseInt(form.etiologiaEspecifica, 10)) : null;
   if (idEtiologia == null || isNaN(idEtiologia)) {
     ElMessage({ message: 'Seleccione una etiología específica de la lista.', type: 'warning', plain: true });
-    return;
+    return false;
   }
 
   try {
@@ -1057,6 +1107,7 @@ const registrarPacienteDialisis = async (respuesta) => {
   } catch (err) {
     console.error('Error al crear atención/unidades actuales:', err);
     ElMessage({ message: err?.error || 'Error al guardar datos de acceso a unidad.', type: 'warning', plain: true });
+    return false;
   }
 
   const payload = {
@@ -1065,7 +1116,7 @@ const registrarPacienteDialisis = async (respuesta) => {
     modalidad_inicio_trr: form.modalidadTRR,
     fecha_inicio_trr: form.fechaInicioTRR,
     subsistema_salud: form.subsistemaSalud,
-    tipo_acceso: form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : form.tipoAccesoInicio,
+    tipo_acceso: form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : resolverTipoAccesoTexto(form.tipoAccesoInicio),
     fecha_creacion_acceso: form.fechaCreacionAcceso,
     fecha_primer_ingreso: form.fechaPrimerIngreso,
     enf_ateroesclerotica_cardiaca: form.comorbilidades.includes("Aterosclerosis") ? 'Sí' : 'NO',
@@ -1081,10 +1132,12 @@ const registrarPacienteDialisis = async (respuesta) => {
 
   try {
     await postAllIpress("/pacientesDialisis/", payload);
-    registroPacienteHistorial(respuesta);
+    await registroPacienteHistorial(respuesta);
+    return true;
   } catch (error) {
     console.error('Error al registrar diálisis:', error);
     ElMessage({ message: error?.error || 'Error al registrar datos de diálisis', type: 'error', plain: true });
+    return false;
   }
 }
 const fetchPeriodo = async (url = null) => {
@@ -1109,11 +1162,22 @@ const fetchEtiologias = async () => {
 /** Resuelve periodo (id numérico o string "YYYY-MM") al id_periodo que espera el backend. */
 const getIdPeriodoParaPayload = () => {
   const v = periodoSeleccionado.value;
-  console.log("imprimiendo valor de periodo seleccionado", v)
   if (v == null || v === '') return null;
-  if (typeof v === 'number') return v;
-  const p = periodos.value.find(periodo => periodo.periodo === v);
-  return p ? p.id_periodo : null;
+  const listaPeriodos = Array.isArray(periodos.value) ? periodos.value : [];
+
+  if (typeof v === 'number') {
+    const periodoPorId = listaPeriodos.find((periodo) => periodo.id_periodo === v);
+    return periodoPorId ? periodoPorId.id_periodo : null;
+  }
+
+  const numero = Number(v);
+  if (!Number.isNaN(numero)) {
+    const periodoPorNumero = listaPeriodos.find((periodo) => periodo.id_periodo === numero);
+    if (periodoPorNumero) return periodoPorNumero.id_periodo;
+  }
+
+  const periodoPorTexto = listaPeriodos.find((periodo) => periodo.periodo === v);
+  return periodoPorTexto ? periodoPorTexto.id_periodo : null;
 };
 
 const registroPacienteHistorial = async (respuesta) => {
@@ -1126,13 +1190,10 @@ const registroPacienteHistorial = async (respuesta) => {
 
   try {
     await postAllIpress("/PacienteRegistro/", payload);
-    ElMessage({ message: 'Paciente registrado exitosamente', type: 'success', plain: true });
-
-    // Recargar la página después de un momento
-    setTimeout(() => window.location.reload(), 1500);
-
+    return true;
   } catch (error) {
     console.error('Error al registrar historial:', error);
+    return false;
   }
 }
 

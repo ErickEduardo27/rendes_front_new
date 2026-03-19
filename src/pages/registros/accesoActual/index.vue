@@ -12,6 +12,16 @@
         <div class="flex items-center gap-2">
           <button
             type="button"
+            class="inline-flex items-center gap-2 px-4 py-2.5 border border-cyan-300 text-cyan-700 font-semibold rounded-lg shadow-sm hover:bg-cyan-50 transition-colors"
+            @click="descargarFormatoExcel"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Descargar formato
+          </button>
+          <button
+            type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
             @click="abrirModalImportar"
           >
@@ -51,6 +61,14 @@
         >
           Todos los pacientes
         </button>
+        <button
+          type="button"
+          class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
+          :class="vistaActiva === 'cargas' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
+          @click="vistaActiva = 'cargas'"
+        >
+          Cargas
+        </button>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -84,7 +102,7 @@
             </table>
           </div>
         </template>
-        <template v-else>
+        <template v-else-if="vistaActiva === 'todos'">
           <div v-if="todosPacientesLista.length === 0" class="p-12 text-center text-slate-500 italic">
             No hay pacientes en el periodo, IPRESS y modalidad seleccionados.
           </div>
@@ -113,6 +131,44 @@
             </table>
           </div>
         </template>
+        <template v-else>
+          <div v-if="historialCargas.length === 0" class="p-12 text-center text-slate-500 italic">
+            Aun no hay cargas de Excel registradas.
+          </div>
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Archivo</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Periodo</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Clinica</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Modalidad</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Filas</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Guardadas</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Errores</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr
+                  v-for="carga in historialCargas"
+                  :key="carga.id"
+                  class="hover:bg-slate-50 transition-colors cursor-pointer"
+                  @click="abrirDetalleCarga(carga)"
+                >
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.fecha }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.archivo }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.periodo || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.clinica || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.modalidad || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.totalFilas }}</td>
+                  <td class="px-4 py-3 text-sm text-green-700 font-semibold">{{ carga.guardadas }}</td>
+                  <td class="px-4 py-3 text-sm text-red-700 font-semibold">{{ carga.errores }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -125,16 +181,31 @@
         </div>
         <div class="p-6 overflow-y-auto flex-1">
           <div v-if="!pacienteParaFormulario" class="space-y-4">
-            <label class="block text-sm font-bold text-slate-700">Seleccione el paciente</label>
-            <select
-              v-model="idPacienteSeleccionado"
+            <label class="block text-sm font-bold text-slate-700">Busque el paciente</label>
+            <input
+              v-model="busquedaPaciente"
+              type="text"
+              placeholder="Escriba nombre o DNI"
               class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-cyan-500 focus:border-cyan-500"
-            >
-              <option value="">— Elija un paciente —</option>
-              <option v-for="p in pacientesDisponibles" :key="p.id_paciente_atencion" :value="p.id_paciente_atencion">
-                {{ p.datosPaciente?.paciente || 'Sin nombre' }} — {{ p.datosPaciente?.documento || '' }}
-              </option>
-            </select>
+            />
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+              <div v-if="pacientesFiltrados.length === 0" class="px-4 py-3 text-sm text-slate-500 italic">
+                No se encontraron pacientes con ese criterio.
+              </div>
+              <div v-else class="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                <button
+                  v-for="p in pacientesFiltrados"
+                  :key="p.id_paciente_atencion"
+                  type="button"
+                  class="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                  :class="String(idPacienteSeleccionado) === String(p.id_paciente_atencion) ? 'bg-cyan-50 border-l-4 border-cyan-500' : ''"
+                  @click="idPacienteSeleccionado = p.id_paciente_atencion"
+                >
+                  <div class="text-sm font-medium text-slate-800">{{ p.datosPaciente?.paciente || 'Sin nombre' }}</div>
+                  <div class="text-xs text-slate-500">DNI: {{ p.datosPaciente?.documento || '—' }}</div>
+                </button>
+              </div>
+            </div>
             <p class="text-xs text-slate-500">Pacientes con atención en el periodo, IPRESS y modalidad actuales.</p>
             <div class="flex justify-end gap-2 pt-2">
               <button type="button" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalNuevo">Cancelar</button>
@@ -174,20 +245,8 @@
         </div>
         <div class="p-6 space-y-6">
           <p class="text-sm text-slate-600">
-            Descargue el formato en Excel, complételo con los datos y luego cárguelo aquí.
+            Cargue el Excel completado. La importacion valida el tipo de acceso, la localizacion, la fecha dentro del periodo y el DNI contra los pacientes visibles.
           </p>
-          <div>
-            <button
-              type="button"
-              class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-cyan-200 text-cyan-700 font-semibold rounded-xl hover:bg-cyan-50 transition-colors"
-              @click="descargarFormatoExcel"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Descargar formato Excel
-            </button>
-          </div>
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-2">Cargar archivo Excel</label>
             <div
@@ -235,6 +294,66 @@
         </div>
       </div>
     </div>
+
+    <div v-if="mostrarDetalleCarga && cargaSeleccionada" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h3 class="font-bold text-white">Detalle de carga</h3>
+            <p class="text-cyan-100 text-sm">{{ cargaSeleccionada.archivo }} | {{ cargaSeleccionada.fecha }}</p>
+          </div>
+          <button type="button" class="text-white/80 hover:text-white" @click="cerrarDetalleCarga">✕</button>
+        </div>
+        <div class="p-6 overflow-auto">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div class="text-xs uppercase font-bold text-slate-500">Periodo</div>
+              <div class="text-sm font-semibold text-slate-800 mt-1">{{ cargaSeleccionada.periodo || '—' }}</div>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div class="text-xs uppercase font-bold text-slate-500">Clinica</div>
+              <div class="text-sm font-semibold text-slate-800 mt-1">{{ cargaSeleccionada.clinica || '—' }}</div>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div class="text-xs uppercase font-bold text-slate-500">Modalidad</div>
+              <div class="text-sm font-semibold text-slate-800 mt-1">{{ cargaSeleccionada.modalidad || '—' }}</div>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div class="text-xs uppercase font-bold text-slate-500">Resultado</div>
+              <div class="text-sm font-semibold text-slate-800 mt-1">{{ cargaSeleccionada.guardadas }} guardadas / {{ cargaSeleccionada.errores }} errores</div>
+            </div>
+          </div>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="min-w-full divide-y divide-slate-200">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localizacion</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="(detalle, index) in cargaSeleccionada.detalles" :key="`${cargaSeleccionada.id}-${index}`">
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.dni || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.paciente || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.tipo_acceso || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.localizacion_acceso || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.fecha_creacion_acceso || '—' }}</td>
+                  <td class="px-4 py-3 text-sm font-semibold" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
+                    {{ detalle.guardado ? 'Guardado' : 'Error' }}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.mensaje }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -247,13 +366,15 @@ import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.v
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const HISTORIAL_CARGAS_KEY = 'acceso_vascular_historial_cargas';
 
 const registros = ref([]);
 const cargando = ref(false);
 const mostrarModalNuevo = ref(false);
-const vistaActiva = ref('registros');
+const vistaActiva = ref('todos');
 const listadoAtenciones = ref([]);
 const idPacienteSeleccionado = ref('');
+const busquedaPaciente = ref('');
 const pacienteParaFormulario = ref(null);
 const idPacienteAtencionParaForm = ref(null);
 const periodoIpressLista = ref([]);
@@ -264,11 +385,67 @@ const archivoSeleccionado = ref(null);
 const inputArchivoImportar = ref(null);
 const importando = ref(false);
 const resultadoImportacion = ref(null);
+const periodos = ref([]);
+const historialCargas = ref([]);
+const mostrarDetalleCarga = ref(false);
+const cargaSeleccionada = ref(null);
+
+const TIPOS_ACCESO = [
+  'Catéter Venoso Central Temporal',
+  'Catéter Venoso Central de Larga Permanencia',
+  'Fístula Arteriovenosa',
+  'Injerto Autólogo',
+  'Injerto Protésico',
+  'Catéter peritoneal',
+];
+
+const LOCALIZACIONES_POR_TIPO = {
+  'Fístula Arteriovenosa': ['1. FAV radial derecha', '2. FAV radial izquierda', '3. FAV braquial o cubital derecha', '4. FAV braquial o cubital izquierda'],
+  'Catéter Venoso Central Temporal': ['5. CVCT yugular derecha', '6. CVCT yugular izquierdo', '7. CVCT subclavio derecho', '8. CVCT subclavio izquierdo', '9. CVCT femoral derecho', '10. CVCT femoral izquierdo'],
+  'Catéter Venoso Central de Larga Permanencia': ['11. CVCLP yugular derecha', '12. CVCLP yugular izquierdo', '13. CVCLP femoral derecho', '14. CVCLP femoral izquierdo', '15. CVCLP translumbar', '16. CVCLP transhepático'],
+  'Injerto Autólogo': ['17. Injerto autólogo'],
+  'Injerto Protésico': ['18. Injerto protésico'],
+  'Catéter peritoneal': ['19. Catéter peritoneal'],
+};
 
 const periodoNumero = computed(() => {
   const v = periodoGlobal.value;
   if (v == null || v === '') return null;
   return Number(v);
+});
+
+const clinicaActualTexto = computed(() => {
+  const atencion = listadoAtenciones.value[0];
+  return atencion?.datosIpress?.nombre_corto || atencion?.datosIpress?.ipress || '—';
+});
+
+const modalidadActualTexto = computed(() => {
+  const equivalencias = {
+    1: 'Hemodialisis',
+    2: 'Dialisis Peritoneal',
+    3: 'Trasplante',
+  };
+  return equivalencias[Number(modalidadGlobal.value)] || '—';
+});
+
+const periodoActualTexto = computed(() => {
+  const item = periodos.value.find((periodo) => String(periodo.id_periodo) === String(periodoNumero.value));
+  return item?.periodo || '—';
+});
+
+const rangoFechasPeriodo = computed(() => {
+  const periodo = periodos.value.find((item) => String(item.id_periodo) === String(periodoNumero.value));
+  if (!periodo?.periodo) return { min: null, max: null };
+  const [yearStr, monthStr] = String(periodo.periodo).split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  if (!year || !month) return { min: null, max: null };
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  return {
+    min: firstDay.toISOString().split('T')[0],
+    max: lastDay.toISOString().split('T')[0],
+  };
 });
 
 function nombrePaciente(r) {
@@ -282,6 +459,100 @@ function documentoPaciente(r) {
 const pacientesDisponibles = computed(() => {
   return Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
 });
+
+const pacientesFiltrados = computed(() => {
+  const texto = busquedaPaciente.value.trim().toLowerCase();
+  if (!texto) return pacientesDisponibles.value;
+  return pacientesDisponibles.value.filter((paciente) => {
+    const nombre = String(paciente.datosPaciente?.paciente || '').toLowerCase();
+    const documento = String(paciente.datosPaciente?.documento || '').toLowerCase();
+    return nombre.includes(texto) || documento.includes(texto);
+  });
+});
+
+const cargarHistorialCargas = () => {
+  try {
+    const data = localStorage.getItem(HISTORIAL_CARGAS_KEY);
+    historialCargas.value = data ? JSON.parse(data) : [];
+  } catch (error) {
+    historialCargas.value = [];
+  }
+};
+
+const guardarHistorialCargas = () => {
+  localStorage.setItem(HISTORIAL_CARGAS_KEY, JSON.stringify(historialCargas.value));
+};
+
+const abrirDetalleCarga = (carga) => {
+  cargaSeleccionada.value = carga;
+  mostrarDetalleCarga.value = true;
+};
+
+const cerrarDetalleCarga = () => {
+  mostrarDetalleCarga.value = false;
+  cargaSeleccionada.value = null;
+};
+
+const normalizarTexto = (valor) => String(valor || '').trim().toLowerCase();
+
+const normalizarTipoAcceso = (valor) => {
+  const texto = String(valor || '').trim();
+  if (!texto) return '';
+  const match = TIPOS_ACCESO.find((tipo) => normalizarTexto(tipo) === normalizarTexto(texto));
+  return match || '';
+};
+
+const normalizarLocalizacion = (valor, tipoAcceso) => {
+  const texto = String(valor || '').trim();
+  if (!texto || !tipoAcceso) return '';
+  const opciones = LOCALIZACIONES_POR_TIPO[tipoAcceso] || [];
+  const match = opciones.find((opcion) => {
+    const sinPrefijo = opcion.replace(/^\d+\.\s*/, '');
+    return normalizarTexto(opcion) === normalizarTexto(texto) || normalizarTexto(sinPrefijo) === normalizarTexto(texto);
+  });
+  return match || '';
+};
+
+const validarFilaImportacion = (obj) => {
+  const dni = String(obj.dni || '').trim();
+  const paciente = String(obj.paciente || '').trim();
+  const tipoAcceso = normalizarTipoAcceso(obj.tipo_acceso);
+  const localizacion = normalizarLocalizacion(obj.localizacion_acceso, tipoAcceso);
+  const fechaCreacion = String(obj.fecha_creacion_acceso || '').trim();
+  const motivoCambio = String(obj.motivo_cambio || '').trim();
+
+  if (!dni) return { ok: false, mensaje: 'Falta el DNI del paciente.' };
+  const atencion = listadoAtenciones.value.find((item) => String(item.datosPaciente?.documento || '').trim() === dni);
+  if (!atencion) return { ok: false, mensaje: 'El DNI no pertenece a un paciente visible en el filtro actual.' };
+
+  if (paciente && normalizarTexto(atencion.datosPaciente?.paciente) !== normalizarTexto(paciente)) {
+    return { ok: false, mensaje: 'El nombre no coincide con el DNI indicado.' };
+  }
+  if (!tipoAcceso) return { ok: false, mensaje: 'Tipo de acceso invalido.' };
+  if (!localizacion) return { ok: false, mensaje: 'Localizacion invalida para el tipo de acceso.' };
+  if (!fechaCreacion) return { ok: false, mensaje: 'Falta la fecha de creacion.' };
+  if (rangoFechasPeriodo.value.min && (fechaCreacion < rangoFechasPeriodo.value.min || fechaCreacion > rangoFechasPeriodo.value.max)) {
+    return { ok: false, mensaje: `La fecha debe estar entre ${rangoFechasPeriodo.value.min} y ${rangoFechasPeriodo.value.max}.` };
+  }
+
+  return {
+    ok: true,
+    payload: {
+      id_paciente_atencion: Number(atencion.id_paciente_atencion),
+      tipo_acceso: tipoAcceso,
+      localizacion_acceso: localizacion,
+      fecha_creacion_acceso: fechaCreacion,
+      motivo_cambio: motivoCambio || null,
+    },
+    detalle: {
+      dni,
+      paciente: atencion.datosPaciente?.paciente || paciente || '—',
+      tipo_acceso: tipoAcceso,
+      localizacion_acceso: localizacion,
+      fecha_creacion_acceso: fechaCreacion,
+    },
+  };
+};
 
 const todosPacientesLista = computed(() => {
   const atenciones = Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
@@ -393,6 +664,7 @@ async function fetchPeriodoIpress() {
 function abrirModalNuevo() {
   pacienteParaFormulario.value = null;
   idPacienteSeleccionado.value = '';
+  busquedaPaciente.value = '';
   fetchPacientesAtencion();
   fetchPeriodoIpress();
   mostrarModalNuevo.value = true;
@@ -414,6 +686,7 @@ function cerrarModalNuevo() {
   pacienteParaFormulario.value = null;
   idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
+  busquedaPaciente.value = '';
   fetchRegistros();
 }
 
@@ -432,7 +705,8 @@ function cerrarModalImportar() {
 }
 
 const COLUMNAS_FORMATO = [
-  'id_paciente_atencion',
+  'dni',
+  'paciente',
   'tipo_acceso',
   'localizacion_acceso',
   'fecha_creacion_acceso',
@@ -442,7 +716,14 @@ const COLUMNAS_FORMATO = [
 function descargarFormatoExcel() {
   const wsData = [
     COLUMNAS_FORMATO,
-    ['', '', '', '', ''],
+    ...todosPacientesLista.value.map((fila) => [
+      fila.documento || '',
+      fila.paciente || '',
+      '',
+      '',
+      '',
+      '',
+    ]),
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   const wb = XLSX.utils.book_new();
@@ -490,6 +771,14 @@ function leerFilasExcel(file) {
 async function ejecutarImportacion() {
   const file = archivoSeleccionado.value;
   if (!file) return;
+  if (!periodoNumero.value || !clinicaGlobal.value || !modalidadGlobal.value) {
+    resultadoImportacion.value = { ok: false, mensaje: 'Seleccione periodo, clinica y modalidad antes de importar.' };
+    return;
+  }
+  if (!rangoFechasPeriodo.value.min || !rangoFechasPeriodo.value.max) {
+    resultadoImportacion.value = { ok: false, mensaje: 'No se pudo determinar el rango del periodo seleccionado.' };
+    return;
+  }
   importando.value = true;
   resultadoImportacion.value = null;
   try {
@@ -503,27 +792,55 @@ async function ejecutarImportacion() {
     const dataRows = rows.slice(1).filter(r => r.some(c => c != null && String(c).trim() !== ''));
     let creados = 0;
     let errores = 0;
+    const detalles = [];
     for (const row of dataRows) {
       const obj = {};
       headers.forEach((h, i) => { obj[h] = row[i] != null ? String(row[i]).trim() : ''; });
-      const idAtencion = obj.id_paciente_atencion ? Number(obj.id_paciente_atencion) : null;
-      if (!idAtencion) {
+      const validacion = validarFilaImportacion(obj);
+      if (!validacion.ok) {
+        detalles.push({
+          dni: obj.dni || '',
+          paciente: obj.paciente || '',
+          tipo_acceso: obj.tipo_acceso || '',
+          localizacion_acceso: obj.localizacion_acceso || '',
+          fecha_creacion_acceso: obj.fecha_creacion_acceso || '',
+          guardado: false,
+          mensaje: validacion.mensaje,
+        });
         errores++;
         continue;
       }
       try {
-        await postAllIpress('/unidadesActuales/', {
-          id_paciente_atencion: idAtencion,
-          tipo_acceso: obj.tipo_acceso || null,
-          localizacion_acceso: obj.localizacion_acceso || null,
-          fecha_creacion_acceso: obj.fecha_creacion_acceso || null,
-          motivo_cambio: obj.motivo_cambio || null,
+        await postAllIpress('/unidadesActuales/', validacion.payload);
+        detalles.push({
+          ...validacion.detalle,
+          guardado: true,
+          mensaje: 'Registro guardado correctamente.',
         });
         creados++;
       } catch (e) {
+        detalles.push({
+          ...validacion.detalle,
+          guardado: false,
+          mensaje: e?.error || 'Error al guardar el registro.',
+        });
         errores++;
       }
     }
+    const nuevaCarga = {
+      id: Date.now(),
+      fecha: new Date().toLocaleString(),
+      archivo: file.name,
+      periodo: periodoActualTexto.value,
+      clinica: clinicaActualTexto.value,
+      modalidad: modalidadActualTexto.value,
+      totalFilas: dataRows.length,
+      guardadas: creados,
+      errores,
+      detalles,
+    };
+    historialCargas.value = [nuevaCarga, ...historialCargas.value];
+    guardarHistorialCargas();
     resultadoImportacion.value = {
       ok: true,
       mensaje: `Importación completada: ${creados} registro(s) creado(s).` + (errores ? ` ${errores} fila(s) con error o sin id_paciente_atencion.` : ''),
@@ -537,11 +854,22 @@ async function ejecutarImportacion() {
   }
 }
 
+async function fetchPeriodos() {
+  try {
+    const respuesta = await getAllIpress('/periodos/');
+    periodos.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+  } catch (e) {
+    periodos.value = [];
+  }
+}
+
 watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   fetchRegistros();
 }, { deep: true });
 
 onMounted(() => {
+  cargarHistorialCargas();
+  fetchPeriodos();
   fetchRegistros();
 });
 </script>

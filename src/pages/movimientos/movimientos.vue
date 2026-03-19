@@ -377,11 +377,14 @@
 import { ref, computed, onMounted, reactive, inject, watch } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage } from 'element-plus';
+import { useRoute, useRouter } from 'vue-router';
 
 // Estados globales del sistema (NavBar: periodo, clínica, modalidad)
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const route = useRoute();
+const router = useRouter();
 
 const nombrePeriodoGlobal = computed(() => {
   const id = periodoGlobal.value;
@@ -521,6 +524,7 @@ const handleSelectClinicaEgresar = (item) => {
 const handleSelectPaciente = async (item) => {
     pacienteSeleccionado.value = item;
     formCaptar.paciente = item.id_paciente;
+    formCaptar.pacienteBusqueda = `${item.paciente || ''}`.trim();
     await determinarCondicionPaciente(item.id_paciente);
 };
 
@@ -544,6 +548,25 @@ const abrirModalCaptar = async () => {
     condicionAutomatica.value = '';
     mensajeCondicion.value = '';
     mostrarModalCaptar.value = true;
+};
+
+const abrirCaptacionConDni = async (dni) => {
+    if (!dni) return;
+    await abrirModalCaptar();
+    formCaptar.pacienteBusqueda = String(dni);
+    const paciente = pacientes.value.find((item) => String(item.documento || '') === String(dni));
+    if (paciente) {
+        await handleSelectPaciente(paciente);
+    }
+};
+
+const procesarCaptacionDesdeRuta = async () => {
+    const dni = route.query?.captarDni;
+    if (!dni) return;
+    await abrirCaptacionConDni(dni);
+    const query = { ...route.query };
+    delete query.captarDni;
+    router.replace({ name: 'Movimientos', query });
 };
 
 const cerrarModalCaptar = () => {
@@ -655,6 +678,9 @@ const captarPaciente = async () => {
     try {
         const tipoAtencion = condicionAutomatica.value === 'REINGRESO' ? 'REINGRESO' : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR');
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const atencionesExistentes = await getAllIpress(`/pacienteAtencion/?id_paciente=${formCaptar.paciente}&id_periodo=${idPeriodo}&id_modalidad=${idModalidad}`);
+        const listaAtenciones = Array.isArray(atencionesExistentes) ? atencionesExistentes : (atencionesExistentes?.results || []);
+        const atencionPendiente = listaAtenciones.find((item) => item.id_ipress == null);
 
         const payload = {
             id_paciente: formCaptar.paciente,
@@ -670,7 +696,11 @@ const captarPaciente = async () => {
             created_at: now
         };
 
-        await postAllIpress("/pacienteAtencion/", payload);
+        if (atencionPendiente?.id_paciente_atencion) {
+            await patchAllIpress(`/pacienteAtencion/${atencionPendiente.id_paciente_atencion}/`, payload);
+        } else {
+            await postAllIpress("/pacienteAtencion/", payload);
+        }
 
         const estadoPaciente = pacienteSeleccionado.value?.estado === 'REGISTRADO' ? 'NUEVO' : 'REINGRESO';
         await patchPacienteEstado(formCaptar.paciente, estadoPaciente);
@@ -999,6 +1029,11 @@ onMounted(() => {
     fetchMovimientos();
     fetchPeriodos();
     fetchIpress();
+    procesarCaptacionDesdeRuta();
+});
+
+watch(() => route.query?.captarDni, () => {
+    procesarCaptacionDesdeRuta();
 });
 </script>
 

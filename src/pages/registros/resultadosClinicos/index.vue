@@ -12,6 +12,16 @@
         <div class="flex items-center gap-2">
           <button
             type="button"
+            class="inline-flex items-center gap-2 px-4 py-2.5 border border-cyan-300 text-cyan-700 font-semibold rounded-lg shadow-sm hover:bg-cyan-50 transition-colors"
+            @click="descargarFormatoExcel"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Descargar formato
+          </button>
+          <button
+            type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
             @click="abrirModalImportar"
           >
@@ -49,6 +59,14 @@
           @click="vistaActiva = 'todos'"
         >
           Todos los pacientes
+        </button>
+        <button
+          type="button"
+          class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
+          :class="vistaActiva === 'cargas' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
+          @click="vistaActiva = 'cargas'"
+        >
+          Cargas
         </button>
       </div>
 
@@ -95,7 +113,7 @@
             </table>
           </div>
         </template>
-        <template v-else>
+        <template v-else-if="vistaActiva === 'todos'">
           <div v-if="todosPacientesLista.length === 0" class="p-12 text-center text-slate-500 italic">
             No hay pacientes en el periodo, IPRESS y modalidad seleccionados.
           </div>
@@ -136,6 +154,44 @@
             </table>
           </div>
         </template>
+        <template v-else>
+          <div v-if="historialCargas.length === 0" class="p-12 text-center text-slate-500 italic">
+            Aun no hay cargas de Excel registradas.
+          </div>
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Archivo</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Periodo</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Clinica</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Modalidad</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Filas</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Guardadas</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Errores</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr
+                  v-for="carga in historialCargas"
+                  :key="carga.id"
+                  class="hover:bg-slate-50 transition-colors cursor-pointer"
+                  @click="abrirDetalleCarga(carga)"
+                >
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.fecha }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.archivo }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.periodo || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.clinica || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.modalidad || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.totalFilas }}</td>
+                  <td class="px-4 py-3 text-sm text-green-700 font-semibold">{{ carga.guardadas }}</td>
+                  <td class="px-4 py-3 text-sm text-red-700 font-semibold">{{ carga.errores }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -147,16 +203,31 @@
         </div>
         <div class="p-6 overflow-y-auto flex-1">
           <div v-if="!pacienteParaFormulario" class="space-y-4">
-            <label class="block text-sm font-bold text-slate-700">Seleccione el paciente</label>
-            <select
-              v-model="idPacienteSeleccionado"
+            <label class="block text-sm font-bold text-slate-700">Busque el paciente</label>
+            <input
+              v-model="busquedaPaciente"
+              type="text"
+              placeholder="Escriba nombre o DNI"
               class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-cyan-500 focus:border-cyan-500"
-            >
-              <option value="">— Elija un paciente —</option>
-              <option v-for="p in pacientesDisponibles" :key="p.id_paciente_atencion" :value="p.id_paciente_atencion">
-                {{ p.datosPaciente?.paciente || 'Sin nombre' }} — {{ p.datosPaciente?.documento || '' }}
-              </option>
-            </select>
+            />
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+              <div v-if="pacientesFiltrados.length === 0" class="px-4 py-3 text-sm text-slate-500 italic">
+                No se encontraron pacientes con ese criterio.
+              </div>
+              <div v-else class="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                <button
+                  v-for="p in pacientesFiltrados"
+                  :key="p.id_paciente_atencion"
+                  type="button"
+                  class="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                  :class="String(idPacienteSeleccionado) === String(p.id_paciente_atencion) ? 'bg-cyan-50 border-l-4 border-cyan-500' : ''"
+                  @click="idPacienteSeleccionado = p.id_paciente_atencion"
+                >
+                  <div class="text-sm font-medium text-slate-800">{{ p.datosPaciente?.paciente || 'Sin nombre' }}</div>
+                  <div class="text-xs text-slate-500">DNI: {{ p.datosPaciente?.documento || '—' }}</div>
+                </button>
+              </div>
+            </div>
             <p class="text-xs text-slate-500">Pacientes con atención en el periodo, IPRESS y modalidad actuales.</p>
             <div class="flex justify-end gap-2 pt-2">
               <button type="button" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalNuevo">Cancelar</button>
@@ -190,8 +261,7 @@
           <button type="button" class="text-white/80 hover:text-white" @click="cerrarModalImportar">✕</button>
         </div>
         <div class="p-6 space-y-6">
-          <p class="text-sm text-slate-600">Descargue el formato en Excel, complételo (Sí/No o 1/0 para eritropoyetina, hierro, calcitriol) y cárguelo aquí.</p>
-          <button type="button" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-cyan-200 text-cyan-700 font-semibold rounded-xl hover:bg-cyan-50" @click="descargarFormatoExcel">Descargar formato Excel</button>
+          <p class="text-sm text-slate-600">Cargue el Excel completado. La importacion valida rangos clinicos y el DNI del paciente segun el filtro actual.</p>
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-2">Cargar archivo Excel</label>
             <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center" @dragover.prevent="arrastrando = true" @dragleave.prevent="arrastrando = false" @drop.prevent="onDropArchivo" :class="arrastrando ? 'border-cyan-400 bg-cyan-50/50' : ''">
@@ -210,6 +280,72 @@
         </div>
       </div>
     </div>
+
+    <div v-if="mostrarDetalleCarga && cargaSeleccionada" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h3 class="font-bold text-white">Detalle de carga</h3>
+            <p class="text-cyan-100 text-sm">{{ cargaSeleccionada.archivo }} | {{ cargaSeleccionada.fecha }}</p>
+          </div>
+          <button type="button" class="text-white/80 hover:text-white" @click="cerrarDetalleCarga">✕</button>
+        </div>
+        <div class="p-6 overflow-auto">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div class="text-xs uppercase font-bold text-slate-500">Periodo</div>
+              <div class="text-sm font-semibold text-slate-800 mt-1">{{ cargaSeleccionada.periodo || '—' }}</div>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div class="text-xs uppercase font-bold text-slate-500">Clinica</div>
+              <div class="text-sm font-semibold text-slate-800 mt-1">{{ cargaSeleccionada.clinica || '—' }}</div>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div class="text-xs uppercase font-bold text-slate-500">Modalidad</div>
+              <div class="text-sm font-semibold text-slate-800 mt-1">{{ cargaSeleccionada.modalidad || '—' }}</div>
+            </div>
+            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div class="text-xs uppercase font-bold text-slate-500">Resultado</div>
+              <div class="text-sm font-semibold text-slate-800 mt-1">{{ cargaSeleccionada.guardadas }} guardadas / {{ cargaSeleccionada.errores }} errores</div>
+            </div>
+          </div>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="min-w-full divide-y divide-slate-200">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hb</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Calcio</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fosforo</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">PTHi</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Alb</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Kt/V</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="(detalle, index) in cargaSeleccionada.detalles" :key="`${cargaSeleccionada.id}-${index}`">
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.dni || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.paciente || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.Hb || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.calcio || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.fosforo || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.PTHi || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.Alb || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.ktv || '—' }}</td>
+                  <td class="px-4 py-3 text-sm font-semibold" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
+                    {{ detalle.guardado ? 'Guardado' : 'Error' }}
+                  </td>
+                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.mensaje }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -219,6 +355,8 @@ import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import Form5 from '@/components/forms/Form5.vue';
 
+const HISTORIAL_CARGAS_KEY = 'resultados_clinicos_historial_cargas';
+
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
@@ -226,9 +364,11 @@ const modalidadGlobal = inject('modalidadGlobal', ref(null));
 const registros = ref([]);
 const cargando = ref(false);
 const mostrarModalNuevo = ref(false);
-const vistaActiva = ref('registros');
+const vistaActiva = ref('todos');
 const listadoAtenciones = ref([]);
+const periodos = ref([]);
 const idPacienteSeleccionado = ref('');
+const busquedaPaciente = ref('');
 const pacienteParaFormulario = ref(null);
 const idPacienteAtencionParaForm = ref(null);
 const mostrarModalImportar = ref(false);
@@ -237,13 +377,44 @@ const archivoSeleccionado = ref(null);
 const inputArchivoImportar = ref(null);
 const importando = ref(false);
 const resultadoImportacion = ref(null);
+const historialCargas = ref([]);
+const mostrarDetalleCarga = ref(false);
+const cargaSeleccionada = ref(null);
 
-const COLUMNAS_FORMATO = ['id_paciente_atencion', 'Hb', 'calcio', 'fosforo', 'PTHi', 'Alb', 'ktv', 'tiempo_dialisis', 'eritoproyetina', 'hierro', 'calcitriol'];
+const COLUMNAS_FORMATO = ['dni', 'paciente', 'Hb', 'calcio', 'fosforo', 'PTHi', 'Alb', 'ktv', 'tiempo_dialisis', 'eritropoyetina', 'hierro', 'calcitriol'];
+const tiempoDialisisPermitidos = ['2.00', '2.25', '2.50', '2.75', '3.00', '3.25', '3.50', '3.75', '4.00', '4.25', '4.50'];
+const camposResultados = [
+  { key: 'Hb', min: 1, max: 18 },
+  { key: 'calcio', min: 1, max: 15 },
+  { key: 'fosforo', min: 1, max: 12 },
+  { key: 'PTHi', min: 1, max: 5000 },
+  { key: 'Alb', min: 1, max: 6 },
+  { key: 'ktv', min: 0.1, max: 3.0 },
+];
 
 const periodoNumero = computed(() => {
   const v = periodoGlobal.value;
   if (v == null || v === '') return null;
   return Number(v);
+});
+
+const periodoActualTexto = computed(() => {
+  const item = periodos.value.find((periodo) => String(periodo.id_periodo) === String(periodoNumero.value));
+  return item?.periodo || '—';
+});
+
+const clinicaActualTexto = computed(() => {
+  const atencion = listadoAtenciones.value[0];
+  return atencion?.datosIpress?.nombre_corto || atencion?.datosIpress?.ipress || '—';
+});
+
+const modalidadActualTexto = computed(() => {
+  const equivalencias = {
+    1: 'Hemodialisis',
+    2: 'Dialisis Peritoneal',
+    3: 'Trasplante',
+  };
+  return equivalencias[Number(modalidadGlobal.value)] || '—';
 });
 
 function nombrePaciente(r) {
@@ -264,6 +435,56 @@ function toBool(val) {
 }
 
 const pacientesDisponibles = computed(() => Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : []);
+const pacientesFiltrados = computed(() => {
+  const texto = busquedaPaciente.value.trim().toLowerCase();
+  if (!texto) return pacientesDisponibles.value;
+  return pacientesDisponibles.value.filter((paciente) => {
+    const nombre = String(paciente.datosPaciente?.paciente || '').toLowerCase();
+    const documento = String(paciente.datosPaciente?.documento || '').toLowerCase();
+    return nombre.includes(texto) || documento.includes(texto);
+  });
+});
+
+const cargarHistorialCargas = () => {
+  try {
+    const data = localStorage.getItem(HISTORIAL_CARGAS_KEY);
+    historialCargas.value = data ? JSON.parse(data) : [];
+  } catch {
+    historialCargas.value = [];
+  }
+};
+
+const guardarHistorialCargas = () => {
+  localStorage.setItem(HISTORIAL_CARGAS_KEY, JSON.stringify(historialCargas.value));
+};
+
+const abrirDetalleCarga = (carga) => {
+  cargaSeleccionada.value = carga;
+  mostrarDetalleCarga.value = true;
+};
+
+const cerrarDetalleCarga = () => {
+  mostrarDetalleCarga.value = false;
+  cargaSeleccionada.value = null;
+};
+
+const esBooleanoValido = (valor) => ['', '1', '0', 'si', 'sí', 'no', 'true', 'false'].includes(String(valor || '').trim().toLowerCase());
+
+const normalizarNumero = (valor) => {
+  const texto = String(valor ?? '').trim().replace(',', '.');
+  if (!texto) return null;
+  const numero = Number(texto);
+  return Number.isNaN(numero) ? null : numero;
+};
+
+async function fetchPeriodos() {
+  try {
+    const respuesta = await getAllIpress('/periodos/');
+    periodos.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+  } catch {
+    periodos.value = [];
+  }
+}
 
 const todosPacientesLista = computed(() => {
   const atenciones = Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
@@ -300,6 +521,74 @@ const todosPacientesLista = computed(() => {
   });
 });
 
+const validarFilaImportacion = (obj) => {
+  const dni = String(obj.dni || '').trim();
+  const pacienteTexto = String(obj.paciente || '').trim();
+
+  if (!dni) return { ok: false, mensaje: 'Falta el DNI del paciente.' };
+
+  const atencion = listadoAtenciones.value.find((item) => String(item.datosPaciente?.documento || '').trim() === dni);
+  if (!atencion) {
+    return { ok: false, mensaje: 'El DNI no pertenece a un paciente visible en el filtro actual.' };
+  }
+
+  if (pacienteTexto && String(atencion.datosPaciente?.paciente || '').trim().toLowerCase() !== pacienteTexto.toLowerCase()) {
+    return { ok: false, mensaje: 'El nombre no coincide con el DNI indicado.' };
+  }
+
+  const payload = {
+    id_paciente_atencion: Number(atencion.id_paciente_atencion),
+    Hb: '',
+    calcio: '',
+    fosforo: '',
+    PTHi: '',
+    Alb: '',
+    ktv: '',
+    tiempo_dialisis: '',
+    eritropoyetina: false,
+    hierro: false,
+    calcitriol: false,
+  };
+
+  for (const campo of camposResultados) {
+    const valor = normalizarNumero(obj[campo.key.toLowerCase()] ?? obj[campo.key]);
+    if (valor === null) continue;
+    if (valor < campo.min || valor > campo.max) {
+      return { ok: false, mensaje: `${campo.key} debe estar entre ${campo.min} y ${campo.max}.` };
+    }
+    payload[campo.key] = String(valor);
+  }
+
+  const tiempoDialisis = String(obj.tiempo_dialisis || '').trim();
+  if (tiempoDialisis && !tiempoDialisisPermitidos.includes(tiempoDialisis)) {
+    return { ok: false, mensaje: 'Tiempo de dialisis invalido.' };
+  }
+  payload.tiempo_dialisis = tiempoDialisis;
+
+  if (!esBooleanoValido(obj.eritropoyetina) || !esBooleanoValido(obj.hierro) || !esBooleanoValido(obj.calcitriol)) {
+    return { ok: false, mensaje: 'Eritropoyetina, hierro y calcitriol deben ser Si/No o 1/0.' };
+  }
+
+  payload.eritropoyetina = toBool(obj.eritropoyetina);
+  payload.hierro = toBool(obj.hierro);
+  payload.calcitriol = toBool(obj.calcitriol);
+
+  return {
+    ok: true,
+    payload,
+    detalle: {
+      dni,
+      paciente: atencion.datosPaciente?.paciente || pacienteTexto || '—',
+      Hb: payload.Hb,
+      calcio: payload.calcio,
+      fosforo: payload.fosforo,
+      PTHi: payload.PTHi,
+      Alb: payload.Alb,
+      ktv: payload.ktv,
+    },
+  };
+};
+
 async function fetchRegistros() {
   const idPeriodo = periodoGlobal.value;
   const idIpress = clinicaGlobal.value;
@@ -311,6 +600,7 @@ async function fetchRegistros() {
   const qs = params.toString();
   if (!qs) {
     registros.value = [];
+    listadoAtenciones.value = [];
     return;
   }
   cargando.value = true;
@@ -355,6 +645,7 @@ async function fetchPacientesAtencion() {
 function abrirModalNuevo() {
   pacienteParaFormulario.value = null;
   idPacienteSeleccionado.value = '';
+  busquedaPaciente.value = '';
   fetchPacientesAtencion();
   mostrarModalNuevo.value = true;
 }
@@ -373,6 +664,7 @@ function cerrarModalNuevo() {
   pacienteParaFormulario.value = null;
   idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
+  busquedaPaciente.value = '';
   fetchRegistros();
 }
 
@@ -393,7 +685,21 @@ function cerrarModalImportar() {
   fetchRegistros();
 }
 function descargarFormatoExcel() {
-  const ws = XLSX.utils.aoa_to_sheet([COLUMNAS_FORMATO, ['', '', '', '', '', '', '', '', 'Sí/No', 'Sí/No', 'Sí/No']]);
+  const filasBase = todosPacientesLista.value.map((fila) => [
+    fila.documento || '',
+    fila.paciente || '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    'Sí/No',
+    'Sí/No',
+    'Sí/No',
+  ]);
+  const ws = XLSX.utils.aoa_to_sheet([COLUMNAS_FORMATO, ...filasBase]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Resultados clínicos');
   XLSX.writeFile(wb, 'formato_resultados_clinicos.xlsx');
@@ -433,6 +739,10 @@ function leerFilasExcel(file) {
 async function ejecutarImportacion() {
   const file = archivoSeleccionado.value;
   if (!file) return;
+  if (!periodoNumero.value || !clinicaGlobal.value || !modalidadGlobal.value) {
+    resultadoImportacion.value = { ok: false, mensaje: 'Seleccione periodo, clinica y modalidad antes de importar.' };
+    return;
+  }
   importando.value = true;
   resultadoImportacion.value = null;
   try {
@@ -446,33 +756,60 @@ async function ejecutarImportacion() {
     const dataRows = rows.slice(1).filter((r) => r.some((c) => c != null && String(c).trim() !== ''));
     let creados = 0,
       errores = 0;
+    const detalles = [];
     for (const row of dataRows) {
       const obj = {};
       headers.forEach((h, i) => (obj[h] = row[i] != null ? String(row[i]).trim() : ''));
-      const idAtencion = obj.id_paciente_atencion ? Number(obj.id_paciente_atencion) : null;
-      if (!idAtencion) {
-        errores++;
-        continue;
-      }
-      try {
-        await postAllIpress('/resultadosClinicos/', {
-          id_paciente_atencion: idAtencion,
+      const validacion = validarFilaImportacion(obj);
+      if (!validacion.ok) {
+        detalles.push({
+          dni: obj.dni || '',
+          paciente: obj.paciente || '',
           Hb: obj.hb || obj.Hb || '',
           calcio: obj.calcio || '',
           fosforo: obj.fosforo || '',
           PTHi: obj.pthi || obj.PTHi || '',
           Alb: obj.alb || obj.Alb || '',
           ktv: obj.ktv || '',
-          tiempo_dialisis: obj.tiempo_dialisis || '',
-          eritoproyetina: toBool(obj.eritoproyetina),
-          hierro: toBool(obj.hierro),
-          calcitriol: toBool(obj.calcitriol),
+          guardado: false,
+          mensaje: validacion.mensaje,
+        });
+        errores++;
+        continue;
+      }
+      try {
+        await postAllIpress('/resultadosClinicos/', validacion.payload);
+        detalles.push({
+          ...validacion.detalle,
+          guardado: true,
+          mensaje: 'Registro guardado correctamente.',
         });
         creados++;
       } catch (e) {
+        detalles.push({
+          ...validacion.detalle,
+          guardado: false,
+          mensaje: e?.error || 'Error al guardar el registro.',
+        });
         errores++;
       }
     }
+    historialCargas.value = [
+      {
+        id: Date.now(),
+        fecha: new Date().toLocaleString(),
+        archivo: file.name,
+        periodo: periodoActualTexto.value,
+        clinica: clinicaActualTexto.value,
+        modalidad: modalidadActualTexto.value,
+        totalFilas: dataRows.length,
+        guardadas: creados,
+        errores,
+        detalles,
+      },
+      ...historialCargas.value,
+    ];
+    guardarHistorialCargas();
     resultadoImportacion.value = { ok: true, mensaje: `Importación completada: ${creados} registro(s) creado(s).` + (errores ? ` ${errores} fila(s) con error.` : '') };
     fetchRegistros();
   } catch (e) {
@@ -484,7 +821,11 @@ async function ejecutarImportacion() {
 }
 
 watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => fetchRegistros(), { deep: true });
-onMounted(() => fetchRegistros());
+onMounted(() => {
+  cargarHistorialCargas();
+  fetchPeriodos();
+  fetchRegistros();
+});
 </script>
 
 <style scoped>

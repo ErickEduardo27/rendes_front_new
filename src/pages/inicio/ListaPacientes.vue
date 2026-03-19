@@ -277,11 +277,11 @@ const aplicaTodos = ref(true)
 
 // Variables conectadas al FiltroSuperior
 const modalidadSeleccionada = ref(null) 
-const clinicaSeleccionada = ref('CENTRO NACIONAL DE SALUD RENAL') 
-const idClinicaSeleccionada = ref('') 
-const periodoSeleccionado = ref(94) 
+const clinicaSeleccionada = ref('') 
+const idClinicaSeleccionada = ref(null) 
+const periodoSeleccionado = ref(null) 
 
-const idPeriodoIpress = ref(17)
+const idPeriodoIpress = ref(null)
 const mostrarFormulario = ref(false)
 const componenteFormulario = ref(null)
 const emit = defineEmits(['form2', 'form3', 'form4', 'form5', 'form7', 'captar-paciente', 'nuevo-registro', 'egresar-paciente'])
@@ -317,22 +317,43 @@ const ipress = ref([])
 const ipressAsignadas = ref([])
 const periodoIpress = ref([])
 const periodos = ref([])
-const idPerido = ref(94)
-const idIpress = ref('')
+const idPerido = ref(null)
+const idIpress = ref(null)
 
-function searchPeriodoIpress() {
-  const resultado = periodoIpress.value.find(
-    item => item.id_ipress === idClinicaSeleccionada.value && item.periodo ===  periodoSeleccionado.value
-  );
-  if (resultado) {
-    idPeriodoIpress.value = resultado.id_periodo_ipress;
+async function searchPeriodoIpress() {
+  idIpress.value = clinicaGlobal.value ?? null
+  idPerido.value = periodoGlobal.value ?? null
+  idClinicaSeleccionada.value = idIpress.value
+  periodoSeleccionado.value = idPerido.value
+  modalidadSeleccionada.value = modalidadGlobal.value ?? null
+
+  const clinicaActual = ipress.value.find((item) => String(item.id_ipress) === String(idClinicaSeleccionada.value))
+  clinicaSeleccionada.value = clinicaActual?.nombre_corto || clinicaActual?.ipress || ''
+
+  if (idPerido.value != null && idIpress.value != null) {
+    try {
+      const respuesta = await postAllIpress('/consulta_periodo_ipress/', {
+        id_periodo: Number(idPerido.value),
+        id_ipress: Number(idIpress.value),
+        id_estado: 1,
+      });
+      const lista = Array.isArray(respuesta) ? respuesta : [];
+      idPeriodoIpress.value = lista.length ? lista[0].id_periodo_ipress : null;
+    } catch (error) {
+      idPeriodoIpress.value = null;
+    }
+  } else {
+    idPeriodoIpress.value = null;
   }
-  idIpress.value = idClinicaSeleccionada.value
-  idPerido.value = periodoSeleccionado.value
+
   fetchPacientes()
 }
 
 const fetchPacientes = async (url = null) => {
+  if (idIpress.value == null || idPerido.value == null) {
+    pacientes.value = []
+    return;
+  }
   try {
     const respuesta = await getAllIpress(url ?? "/resumen_registros/" + idIpress.value + "/" + idPerido.value+"/");
     pacientes.value = respuesta;
@@ -387,16 +408,17 @@ const emitNuevoRegistro = () => {
   mostrarModalNuevo.value = true;
 };
 
-watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
+watch([periodoGlobal, clinicaGlobal, modalidadGlobal], async () => {
+  await searchPeriodoIpress();
   fetchEstadisticasAtencion();
   fetchEstadisticasRegistros();
 }, { deep: true });
 
-onMounted(() => {
-  fetchPeriodoIpress();
-  fetchPacientes();
-  fetchIpress();
+onMounted(async () => {
+  await fetchPeriodoIpress();
+  await fetchIpress();
   fetchPeriodo();
+  await searchPeriodoIpress();
   fetchEstadisticasAtencion();
   fetchEstadisticasRegistros();
 });

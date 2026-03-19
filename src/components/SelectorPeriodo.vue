@@ -80,6 +80,7 @@ const emit = defineEmits(['update:periodo', 'update:clinica', 'update:modalidad'
 const locale = ref(es);
 const periodos = ref([]);
 const fechaVisual = ref('');
+const ultimoIdPeriodoEmitido = ref(null);
 
 const listaClinicas = ref([]);
 const clinicaSeleccionada = ref(null);
@@ -104,6 +105,7 @@ const fetchPeriodos = async () => {
     const respuesta = await getAllIpress("/periodos/");
     periodos.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
     sincronizarVisual(props.periodo);
+    asegurarPeriodoValido();
   } catch (error) {
     console.error("Error cargando periodos:", error);
   }
@@ -123,22 +125,44 @@ const procesarCambioPeriodo = (fecha) => {
   const encontrado = periodos.value.find(p => p.periodo === fecha);
   
   if (encontrado) {
+    ultimoIdPeriodoEmitido.value = encontrado.id_periodo;
     emit('update:periodo', encontrado.id_periodo);
     // Emitimos evento general por si quieres guardar al instante
     emit('change', { tipo: 'periodo', valor: encontrado.id_periodo });
   } else {
     ElMessage.warning('El periodo seleccionado no está habilitado');
     setTimeout(() => {
-        if(props.periodo) sincronizarVisual(props.periodo);
-        else fechaVisual.value = '';
+      asegurarPeriodoValido();
     }, 100);
   }
+};
+
+const asegurarPeriodoValido = () => {
+  if (periodos.value.length === 0) return;
+
+  const periodoActual = props.periodo ?? ultimoIdPeriodoEmitido.value;
+  const periodoValido = periodos.value.find((item) => item.id_periodo === periodoActual);
+
+  if (periodoValido) {
+    fechaVisual.value = periodoValido.periodo;
+    ultimoIdPeriodoEmitido.value = periodoValido.id_periodo;
+    return;
+  }
+
+  const primerPeriodo = periodos.value[0];
+  fechaVisual.value = primerPeriodo.periodo;
+  ultimoIdPeriodoEmitido.value = primerPeriodo.id_periodo;
+  emit('update:periodo', primerPeriodo.id_periodo);
+  emit('change', { tipo: 'periodo', valor: primerPeriodo.id_periodo });
 };
 
 const sincronizarVisual = (id) => {
   if (id && periodos.value.length > 0) {
     const p = periodos.value.find(item => item.id_periodo === id);
-    if (p) fechaVisual.value = p.periodo;
+    if (p) {
+      fechaVisual.value = p.periodo;
+      ultimoIdPeriodoEmitido.value = p.id_periodo;
+    }
   }
 };
 
@@ -212,7 +236,12 @@ const procesarCambioModalidad = (valor) => {
   emit('change', { tipo: 'modalidad', valor });
 };
 
-watch(() => props.periodo, (newVal) => sincronizarVisual(newVal));
+watch(() => props.periodo, (newVal) => {
+  sincronizarVisual(newVal);
+  if (newVal == null || newVal === '') {
+    asegurarPeriodoValido();
+  }
+});
 watch(() => props.clinica, (newVal) => clinicaSeleccionada.value = newVal);
 watch(() => props.modalidad, (newVal) => modalidadSeleccionada.value = newVal);
 
