@@ -55,11 +55,26 @@ pipeline {
             }
         }
 
-        stage('Run Container') {
+       /*  stage('Run Container') {
             agent any
             options { skipDefaultCheckout(true) }
             steps { 
                 script { dockerLib.runContainer() } 
+            }
+        } */
+        stage('Run Container') {
+            agent any
+            options { skipDefaultCheckout(true) }
+            steps {
+                sh '''
+                docker rm -f rendes-web || true
+
+                docker run -p 9574:80 \
+                --env-file ./.env.production \
+                --restart=unless-stopped \
+                --name rendes-web \
+                -d jenkins/rendes-web:dev
+                '''
             }
         }
     }
