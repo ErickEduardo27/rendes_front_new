@@ -1,40 +1,28 @@
-# Etapa 1: Build de la aplicación
-FROM node:21-alpine AS builder
+FROM node:16-alpine AS builder
 
-# Variables build-arg
+ARG BUILD
 ARG BASE_HREF=/
-ARG BUILD=prod
 
-# Directorio de trabajo
 WORKDIR /app
 
-# Copiamos los archivos necesarios para instalar dependencias
-COPY package*.json ./
-
-# Instalamos dependencias
-RUN npm install
-
-# Copiamos todo el proyecto
+COPY package.json package-lock.json ./
+RUN npm install #--legacy-peer-deps
 COPY . .
 
-# Construimos la app con Vite, configurando la base
-# Usa una variable de entorno para definir la base pública
-ENV BASE=${BASE_HREF}
-RUN npm run build
+RUN if [ -z "$BUILD" ]; then \
+        npm run build -- --base-href=${BASE_HREF}; \
+    else \
+        npm run build -- --configuration ${BUILD} --base-href=${BASE_HREF}; \
+    fi
 
-# Etapa 2: Imagen de producción usando Nginx
 FROM nginx:alpine AS deploy
 
-# Variable ARG para cambiar el path del build
 ARG DIST_PATH=dist
 
-# Eliminamos configuración default de Nginx
-RUN rm -rf /usr/share/nginx/html/*
+WORKDIR /usr/share/nginx/html
 
-# Copiamos el build generado
-COPY --from=builder /app/${DIST_PATH} /usr/share/nginx/html
-
+RUN rm -rf *
+COPY --from=builder /app/${DIST_PATH} .
 COPY default.conf /etc/nginx/conf.d/
 
 CMD ["nginx", "-g", "daemon off;"]
-
