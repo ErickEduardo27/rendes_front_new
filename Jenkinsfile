@@ -66,15 +66,17 @@ pipeline {
             agent any
             options { skipDefaultCheckout(true) }
             steps {
-                sh '''
-                docker rm -f rendes-web || true
+                unstash 'source'   // 🔥 ESTO FALTABA
+
+                sh """
+                docker rm -f ${APP_NAME} || true
 
                 docker run -p 9574:80 \
                 --env-file ./.env.production \
                 --restart=unless-stopped \
-                --name rendes-web \
-                -d jenkins/rendes-web:dev
-                '''
+                --name ${APP_NAME} \
+                -d jenkins/${APP_NAME}:dev
+                """
             }
         }
     }
