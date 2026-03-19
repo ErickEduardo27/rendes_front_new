@@ -5,51 +5,68 @@ def dockerLib = new docker_lib()
 
 pipeline {
 
-    agent { label 'master' }
+    agent any   // 🔥 CAMBIO CLAVE (no depender de master)
 
-    environment { APP_NAME = 'rendes-web' }
+    environment { 
+        APP_NAME = 'rendes-web' 
+    }
 
     options {
         skipStagesAfterUnstable()
-        disableConcurrentBuilds abortPrevious: true
-        buildDiscarder(logRotator(numToKeepStr: "${JOB_MAX_DAYS}", daysToKeepStr: "${JOB_MAX_BUILDS}"))
+        disableConcurrentBuilds(abortPrevious: true)
+        buildDiscarder(logRotator(
+            numToKeepStr: "${JOB_MAX_BUILDS}", 
+            daysToKeepStr: "${JOB_MAX_DAYS}"
+        ))
     }
 
     stages {
 
         stage('Initialize') {
             steps {
-                script { gitLib.loadJenkinsConfig() }
+                script { 
+                    gitLib.loadJenkinsConfig() 
+                }
                 stash name: 'source', includes: '**'
             }
         }
 
         stage('Check Agent') {
-            agent { label "${env.agent}" }
-            options { skipDefaultCheckout true }
-            steps { script { dockerLib.showVersion() } }
+            agent any
+            options { skipDefaultCheckout(true) }
+            steps { 
+                script { dockerLib.showVersion() } 
+            }
         }
 
         stage('Copy Source') {
-            agent { label "${env.agent}" }
-            options { skipDefaultCheckout true }
-            steps { unstash 'source' }
+            agent any
+            options { skipDefaultCheckout(true) }
+            steps { 
+                unstash 'source' 
+            }
         }
 
         stage('Build Image') {
-            agent { label "${env.agent}" }
-            options { skipDefaultCheckout true }
-            steps { script { dockerLib.buildImage() } }
+            agent any
+            options { skipDefaultCheckout(true) }
+            steps { 
+                script { dockerLib.buildImage() } 
+            }
         }
 
         stage('Run Container') {
-            agent { label "${env.agent}" }
-            options { skipDefaultCheckout true }
-            steps { script { dockerLib.runContainer() } }
-            post { always { cleanWs() } }
+            agent any
+            options { skipDefaultCheckout(true) }
+            steps { 
+                script { dockerLib.runContainer() } 
+            }
         }
     }
 
-    post { always { cleanWs() } }
-
+    post {
+        always {
+            cleanWs()   // ✅ ahora sí funciona porque hay agent global
+        }
+    }
 }
