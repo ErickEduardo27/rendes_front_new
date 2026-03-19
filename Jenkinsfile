@@ -22,15 +22,26 @@ pipeline {
 
     stages {
 
-        stage('Initialize') {
+        /* stage('Initialize') {
             steps {
                 script { 
                     gitLib.loadJenkinsConfig() 
                 }
                 stash name: 'source', includes: '**'
             }
-        }
+        } */
+        stage('Initialize') {
+            steps {
+                checkout scm   // 🔥 ASEGURA traer código actualizado
 
+                script { 
+                    gitLib.loadJenkinsConfig() 
+                }
+
+                stash name: 'source', includes: '**'
+            }
+        }
+        
         stage('Check Agent') {
             agent any
             options { skipDefaultCheckout(true) }
