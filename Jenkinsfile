@@ -61,8 +61,12 @@ pipeline {
         stage('Build Image') {
             agent any
             options { skipDefaultCheckout(true) }
-            steps { 
-                script { dockerLib.buildImage() } 
+            steps {
+                unstash 'source'
+
+                sh """
+                docker build --no-cache -t jenkins/${APP_NAME}:dev .
+                """
             }
         }
 
