@@ -8,9 +8,18 @@
             Acceso Vascular
           </h1>
           <p class="text-slate-500 mt-1 text-sm">Registros de acceso vascular por periodo, IPRESS y modalidad.</p>
+          <div class="mt-3 flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado del formulario</span>
+            <span
+              class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+              :class="formularioAbierto ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+            >
+              {{ cargandoEstadoFormulario ? 'Consultando...' : estadoFormularioTexto }}
+            </span>
+          </div>
         </div>
         <div class="flex items-center gap-2">
-          <button
+          <!-- <button
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 border border-cyan-300 text-cyan-700 font-semibold rounded-lg shadow-sm hover:bg-cyan-50 transition-colors"
             @click="descargarFormatoExcel"
@@ -29,8 +38,9 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
             Importar
-          </button>
+          </button> -->
           <button
+            v-if="mostrarBotonNuevo"
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white font-semibold rounded-lg shadow-sm hover:bg-cyan-700 transition-colors"
             @click="abrirModalNuevo"
@@ -62,13 +72,22 @@
           Todos los pacientes
         </button>
         <button
+          v-if="esEvaluador"
+          type="button"
+          class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
+          :class="vistaActiva === 'evaluacion' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
+          @click="vistaActiva = 'evaluacion'"
+        >
+          Evaluación
+        </button>
+        <!-- <button
           type="button"
           class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
           :class="vistaActiva === 'cargas' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
           @click="vistaActiva = 'cargas'"
         >
           Cargas
-        </button>
+        </button> -->
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -87,6 +106,7 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localización</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -97,6 +117,11 @@
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.localizacion_acceso || r.localizacion_acceso_actual || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.motivo_cambio || '—' }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(r.estado_aprobacion)">
+                      {{ r.estado_aprobacion || 'PENDIENTE' }}
+                    </span>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -116,6 +141,7 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localización</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -126,6 +152,57 @@
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.localizacion_acceso || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.fecha_creacion_acceso || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.motivo_cambio || '—' }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(fila.estado_aprobacion)">
+                      {{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+        <template v-else-if="vistaActiva === 'evaluacion'">
+          <div v-if="registros.length === 0" class="p-12 text-center text-slate-500 italic">
+            No hay registros por evaluar para el periodo, IPRESS y modalidad seleccionados.
+          </div>
+          <div v-else class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo acceso</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localización</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Evaluado por</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr v-for="r in registros" :key="`eval-${r.id_unidad_actual}`" class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_acceso || r.tipo_acceso_actual || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.localizacion_acceso || r.localizacion_acceso_actual || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '—' }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(r.estado_aprobacion)">
+                      {{ r.estado_aprobacion || 'PENDIENTE' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <div class="flex items-center gap-2">
+                      <button type="button" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50" :disabled="evaluandoRegistroId === r.id_unidad_actual" @click="evaluarRegistro(r, 'APROBADO')">
+                        Aprobar
+                      </button>
+                      <button type="button" class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50" :disabled="evaluandoRegistroId === r.id_unidad_actual" @click="evaluarRegistro(r, 'DESAPROBADO')">
+                        Desaprobar
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -362,11 +439,17 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
+import { ElMessage } from 'element-plus';
+import { useRoute } from 'vue-router';
+import { useAuthStore } from '@/store/auth';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
 const HISTORIAL_CARGAS_KEY = 'acceso_vascular_historial_cargas';
+const route = useRoute();
+const authStore = useAuthStore();
+const NUMERO_FORMULARIO_ACCESO_VASCULAR = 1;
 
 const registros = ref([]);
 const cargando = ref(false);
@@ -389,6 +472,9 @@ const periodos = ref([]);
 const historialCargas = ref([]);
 const mostrarDetalleCarga = ref(false);
 const cargaSeleccionada = ref(null);
+const estadoFormulario = ref('CERRADO');
+const cargandoEstadoFormulario = ref(false);
+const evaluandoRegistroId = ref(null);
 
 const TIPOS_ACCESO = [
   'Catéter Venoso Central Temporal',
@@ -428,6 +514,24 @@ const modalidadActualTexto = computed(() => {
   return equivalencias[Number(modalidadGlobal.value)] || '—';
 });
 
+const perfilActual = computed(() => {
+  return authStore.user?.datosPerfil?.perfil || localStorage.getItem('perfil') || '';
+});
+
+const esEvaluador = computed(() => {
+  return ['supervisor', 'admin'].includes(String(perfilActual.value).trim().toLowerCase());
+});
+
+const mostrarBotonNuevo = computed(() => {
+  return formularioAbierto.value && vistaActiva.value !== 'evaluacion';
+});
+
+const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
+
+const estadoFormularioTexto = computed(() => {
+  return formularioAbierto.value ? 'Abierto' : 'Cerrado';
+});
+
 const periodoActualTexto = computed(() => {
   const item = periodos.value.find((periodo) => String(periodo.id_periodo) === String(periodoNumero.value));
   return item?.periodo || '—';
@@ -454,6 +558,24 @@ function nombrePaciente(r) {
 
 function documentoPaciente(r) {
   return r.datosPacienteAtencion?.datosPaciente?.documento || r.datosPaciente?.documento || '—';
+}
+
+function estadoAprobacionClase(estado) {
+  const valor = String(estado || '').toUpperCase();
+  if (valor === 'APROBADO') return 'bg-emerald-100 text-emerald-700';
+  if (valor === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
+  if (valor === 'SIN REGISTRO') return 'bg-slate-100 text-slate-500';
+  return 'bg-amber-100 text-amber-700';
+}
+
+function sincronizarVistaConRuta() {
+  if (route.name === 'Evaluacion' && esEvaluador.value) {
+    vistaActiva.value = 'evaluacion';
+    return;
+  }
+  if (vistaActiva.value === 'evaluacion' && !esEvaluador.value) {
+    vistaActiva.value = 'todos';
+  }
 }
 
 const pacientesDisponibles = computed(() => {
@@ -578,6 +700,7 @@ const todosPacientesLista = computed(() => {
         localizacion_acceso: r.localizacion_acceso || r.localizacion_acceso_actual || '',
         fecha_creacion_acceso: r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
         motivo_cambio: r.motivo_cambio || '',
+        estado_aprobacion: r.estado_aprobacion || 'PENDIENTE',
       };
     }
     return {
@@ -589,6 +712,7 @@ const todosPacientesLista = computed(() => {
       localizacion_acceso: '',
       fecha_creacion_acceso: '',
       motivo_cambio: '',
+      estado_aprobacion: 'SIN REGISTRO',
     };
   });
 });
@@ -653,7 +777,11 @@ async function fetchPeriodoIpress() {
     return;
   }
   try {
-    const res = await getAllIpress(`/periodoIpress/?periodo=${idPeriodo}&ipress=${idIpress}`);
+    const res = await postAllIpress('/consulta_periodo_ipress/', {
+      id_ipress: idIpress,
+      id_periodo: idPeriodo,
+      id_estado: null,
+    });
     const lista = Array.isArray(res) ? res : (res?.results || []);
     idPeriodoIpress.value = lista.length ? lista[0].id_periodo_ipress : null;
   } catch (e) {
@@ -661,7 +789,61 @@ async function fetchPeriodoIpress() {
   }
 }
 
+async function fetchEstadoFormulario() {
+  const idPeriodo = periodoGlobal.value;
+  const idIpress = clinicaGlobal.value;
+  if (idPeriodo == null || idIpress == null) {
+    estadoFormulario.value = 'CERRADO';
+    return;
+  }
+  cargandoEstadoFormulario.value = true;
+  try {
+    await fetchPeriodoIpress();
+    if (!idPeriodoIpress.value) {
+      estadoFormulario.value = 'CERRADO';
+      return;
+    }
+    const res = await postAllIpress('/consulta_periodo_estado/', {
+      id_periodo_ipress: idPeriodoIpress.value,
+    });
+    const lista = Array.isArray(res) ? res : (res?.results || []);
+    const abierto = lista.some((item) => Number(item.numero) === NUMERO_FORMULARIO_ACCESO_VASCULAR);
+    estadoFormulario.value = abierto ? 'ABIERTO' : 'CERRADO';
+  } catch (e) {
+    console.error('Error al consultar estado del formulario:', e);
+    estadoFormulario.value = 'CERRADO';
+  } finally {
+    cargandoEstadoFormulario.value = false;
+  }
+}
+
+async function evaluarRegistro(registro, estadoAprobacion) {
+  if (!esEvaluador.value || !registro?.id_unidad_actual) return;
+  evaluandoRegistroId.value = registro.id_unidad_actual;
+  try {
+    await postAllIpress(`/unidadesActuales/${registro.id_unidad_actual}/evaluar/`, {
+      estado_aprobacion: estadoAprobacion,
+    });
+    ElMessage({
+      message: `Registro ${estadoAprobacion === 'APROBADO' ? 'aprobado' : 'desaprobado'} correctamente.`,
+      type: 'success',
+      plain: true,
+    });
+    await fetchRegistros();
+  } catch (e) {
+    console.error('Error al evaluar registro:', e);
+    ElMessage({
+      message: e?.detail || e?.error || 'No se pudo actualizar el estado del registro.',
+      type: 'error',
+      plain: true,
+    });
+  } finally {
+    evaluandoRegistroId.value = null;
+  }
+}
+
 function abrirModalNuevo() {
+  if (!formularioAbierto.value) return;
   pacienteParaFormulario.value = null;
   idPacienteSeleccionado.value = '';
   busquedaPaciente.value = '';
@@ -865,12 +1047,23 @@ async function fetchPeriodos() {
 
 watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   fetchRegistros();
+  fetchEstadoFormulario();
 }, { deep: true });
 
+watch(() => route.name, () => {
+  sincronizarVistaConRuta();
+});
+
+watch(esEvaluador, () => {
+  sincronizarVistaConRuta();
+});
+
 onMounted(() => {
+  sincronizarVistaConRuta();
   cargarHistorialCargas();
   fetchPeriodos();
   fetchRegistros();
+  fetchEstadoFormulario();
 });
 </script>
 

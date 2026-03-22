@@ -10,7 +10,7 @@
           <p class="text-slate-500 mt-1 text-sm">Registros de morbilidad hospitalaria por periodo, IPRESS y modalidad.</p>
         </div>
         <div class="flex items-center gap-2">
-          <button
+          <!-- <button
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
             @click="abrirModalImportar"
@@ -19,7 +19,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
             Importar
-          </button>
+          </button> -->
           <button
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white font-semibold rounded-lg shadow-sm hover:bg-cyan-700 transition-colors"

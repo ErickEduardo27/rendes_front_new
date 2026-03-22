@@ -72,6 +72,11 @@ const routes = [
         component: () => import('@/pages/registros/accesoActual/index.vue'),
       },
       {
+        path: 'evaluacion',
+        name: 'Evaluacion',
+        component: () => import('@/pages/registros/accesoActual/index.vue'),
+      },
+      {
         path: 'eventos-infecciosos',
         name: 'EventosInfecciosos',
         component: () => import('@/pages/registros/eventosInfecciosos/index.vue'),
