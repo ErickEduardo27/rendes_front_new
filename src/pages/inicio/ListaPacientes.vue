@@ -67,9 +67,112 @@
       </div>
 
     </div>
+
+    <!-- Lista: rf_pacientes_dialisis filtrada por IPRESS + periodo (+ modalidad global), con búsqueda por nombre y documento -->
+    <div class="bg-white border rounded-xl shadow-sm p-4 mb-4">
+      <h3 class="text-sm font-semibold text-slate-700 mb-3">Pacientes en atención (clínica y periodo) — incluye sin ficha de diálisis aún</h3>
+      <div class="flex flex-wrap gap-3 mb-4">
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Filtrar por nombre</label>
+          <input
+            v-model="filtroNombre"
+            type="text"
+            placeholder="Apellidos y nombres..."
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+        <div class="flex-1 min-w-[160px]">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Filtrar por documento</label>
+          <input
+            v-model="filtroDni"
+            type="text"
+            placeholder="DNI / CE / pasaporte..."
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+          />
+        </div>
+      </div>
+      <p v-if="idIpress == null || idPerido == null" class="text-sm text-amber-600">
+        Seleccione clínica (IPRESS) y periodo en el encabezado para cargar la lista.
+      </p>
+      <div v-else class="overflow-x-auto border rounded-lg">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="text-left px-3 py-2 font-semibold">Documento</th>
+              <th class="text-left px-3 py-2 font-semibold">Paciente</th>
+              <th class="text-left px-3 py-2 font-semibold">Modalidad inicio TRR</th>
+              <th class="text-left px-3 py-2 font-semibold">F. inicio TRR</th>
+              <th class="text-left px-3 py-2 font-semibold">Subsistema</th>
+              <th class="text-left px-3 py-2 font-semibold">Tipo acceso</th>
+              <th class="text-left px-3 py-2 font-semibold">Etiología</th>
+              <th class="text-left px-3 py-2 font-semibold">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in pacientesPaginados"
+              :key="row.id_paciente_dialisis ?? `at-${row.id_paciente_atencion}`"
+              class="border-t border-slate-100 hover:bg-slate-50"
+            >
+              <td class="px-3 py-2 font-mono">{{ row.datosPaciente?.documento ?? '—' }}</td>
+              <td class="px-3 py-2">
+                {{ row.datosPaciente?.paciente ?? '—' }}
+                <span
+                  v-if="row.sin_registro_dialisis"
+                  class="ml-2 text-[10px] font-semibold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded"
+                  title="Tiene atención en el periodo pero aún no tiene ficha en diálisis"
+                >Sin ficha diálisis</span>
+              </td>
+              <td class="px-3 py-2">{{ row.modalidad_inicio_trr || '—' }}</td>
+              <td class="px-3 py-2 whitespace-nowrap">{{ row.fecha_inicio_trr || '—' }}</td>
+              <td class="px-3 py-2">{{ row.subsistema_salud || '—' }}</td>
+              <td class="px-3 py-2 max-w-[140px] truncate" :title="row.tipo_acceso">{{ row.tipo_acceso || '—' }}</td>
+              <td class="px-3 py-2 max-w-[160px] truncate" :title="etiologiaTexto(row)">{{ etiologiaTexto(row) }}</td>
+              <td class="px-3 py-2">
+                <div class="flex flex-wrap gap-1">
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-sky-100 text-sky-800 hover:bg-sky-200" @click="abrirFormulario(row, 1)">Acceso</button>
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-rose-100 text-rose-800 hover:bg-rose-200" @click="abrirFormulario(row, 2)">Infecc.</button>
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 hover:bg-amber-200" @click="abrirFormulario(row, 3)">Morb.</button>
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 hover:bg-indigo-200" @click="abrirFormulario(row, 4)">Result.</button>
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200" @click="abrirFormulario(row, 5)">Vacun.</button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!pacientes.length">
+              <td colspan="8" class="px-3 py-8 text-center text-gray-500">
+                No hay pacientes con atención en esta clínica y periodo
+                <span v-if="filtroNombre.trim() || filtroDni.trim()"> (pruebe otro filtro)</span>.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-if="pacientes.length && totalPaginas > 1" class="flex justify-between items-center mt-3 text-sm">
+        <span class="text-gray-600">Página {{ paginaActual }} de {{ totalPaginas }}</span>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class="px-3 py-1 rounded border border-gray-300 disabled:opacity-40"
+            :disabled="paginaActual <= 1"
+            @click="paginaActual--"
+          >
+            Anterior
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1 rounded border border-gray-300 disabled:opacity-40"
+            :disabled="paginaActual >= totalPaginas"
+            @click="paginaActual++"
+          >
+            Siguiente
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="flex items-center gap-4 my-4 border-t pt-4">
       <button class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition" @click="emitNuevoRegistro">
-        + Nuevo Registro
+        Consultar Paciente
       </button>
     </div>
 
@@ -97,7 +200,6 @@
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
-import FiltroSuperior from '@/components/FiltroSuperior.vue';
 import FormularioPaciente from './FormularioPaciente.vue';
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
@@ -114,23 +216,14 @@ const pacientes = ref([])
 const paginaActual = ref(1)
 const pacientesPorPagina = 5
 
-// --- LÓGICA DE BÚSQUEDA ---
-const pacientesFiltrados = computed(() => {
-  const nombre = filtroNombre.value.trim().toLowerCase();
-  const dni = filtroDni.value.trim().toLowerCase();
-  return pacientes.value.filter(p => {
-    const coincideNombre = !nombre || (p.paciente && p.paciente.toLowerCase().includes(nombre));
-    const coincideDni = !dni || (p.documento && p.documento.toLowerCase().includes(dni));
-    
-    let coincideModalidad = true;
-    if (modalidadSeleccionada.value && modalidadSeleccionada.value !== 'todos') {
-        const modNum = modalidadSeleccionada.value === 'HEMO' ? 1 : 2; 
-        if (p.modalidad != modNum) coincideModalidad = false;
-    }
+// Lista desde API (filtros nombre/documento en servidor con debounce)
+const pacientesFiltrados = computed(() => pacientes.value);
 
-    return coincideNombre && coincideDni && coincideModalidad;
-  });
-});
+const etiologiaTexto = (row) => {
+  const e = row?.datosEti;
+  if (!e) return '—';
+  return e.especifica || e.codigo || e.general || '—';
+};
 
 // Estadísticas de pacientes desde tabla paciente_atencion (por periodo, ipress, modalidad)
 const estadisticasAtencion = ref({ total: 0, egresados: 0, reingresos: 0 });
@@ -198,7 +291,7 @@ const fetchEstadisticasRegistros = async () => {
       getAllIpress(`/eventosAccesosVasculares/?${qs}`),
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
-      (idPeriodo != null && idIpress != null) ? postAllIpress('/consulta_periodo_ipress/', { id_periodo: Number(idPeriodo), id_ipress: Number(idIpress), id_estado: 1 }) : Promise.resolve([]),
+      //(idPeriodo != null && idIpress != null) ? postAllIpress('/consulta_periodo_ipress/', { id_periodo: Number(idPeriodo), id_ipress: Number(idIpress), id_estado: 1 }) : Promise.resolve([]),
     ]);
 
     const arrPeriodoIpress = Array.isArray(resPeriodoIpress) ? resPeriodoIpress : (resPeriodoIpress?.length ? resPeriodoIpress : []);
@@ -286,21 +379,39 @@ const mostrarFormulario = ref(false)
 const componenteFormulario = ref(null)
 const emit = defineEmits(['form2', 'form3', 'form4', 'form5', 'form7', 'captar-paciente', 'nuevo-registro', 'egresar-paciente'])
 
-const handleFiltroChange = (evento) => {
-    if (evento.tipo === 'clinica' || evento.tipo === 'periodo') {
-        searchPeriodoIpress();
-    }
+/** Convierte fila del listado (listado_pacientes_dialisis_por_ipress_periodo) al objeto paciente que esperan los formularios. */
+const filaDialisisAPaciente = (row) => {
+  const p = row?.datosPaciente || {};
+  return {
+    ...p,
+    id_paciente: p.id_paciente,
+    paciente: p.paciente,
+    documento: p.documento,
+    fecha_nacimiento: p.fecha_nacimiento,
+    tipo_documento: p.tipo_documento,
+    genero: p.genero,
+    grado_instruccion: p.grado_instruccion,
+    modalidad: row.modalidad,
+    id_paciente_atencion: row.id_paciente_atencion,
+    ipress: clinicaSeleccionada.value,
+    cantidad_de_registros_unidades_actuales: 0,
+    cantidad_de_eventos_accesos_vasculares: 0,
+    cantidad_de_morbilidades: 0,
+    cantidad_de_resultados_clinicos: 0,
+    cantidad_de_vacunaciones: 0,
+  };
 };
 
-const abrirFormulario = (paciente, numeroFormulario) => {
+const abrirFormulario = (filaDialisis, numeroFormulario) => {
+  const paciente = filaDialisisAPaciente(filaDialisis);
   switch (numeroFormulario) {
-    case 1: emit('form2', { paciente, numeroFormulario, periodo: periodoSeleccionado.value,periodoIpress: idPeriodoIpress.value}); break
-    case 2: emit('form3', { paciente, numeroFormulario, periodo: periodoSeleccionado.value,periodoIpress: idPeriodoIpress.value }); break
-    case 3: emit('form4', { paciente, numeroFormulario, periodo: periodoSeleccionado.value,periodoIpress: idPeriodoIpress.value }); break
-    case 4: emit('form5', { paciente, numeroFormulario, periodo: periodoSeleccionado.value,periodoIpress: idPeriodoIpress.value }); break
-    case 5: emit('form7', { paciente, numeroFormulario, periodo: periodoSeleccionado.value,periodoIpress: idPeriodoIpress.value }); break
+    case 1: emit('form2', { paciente, numeroFormulario, periodo: periodoSeleccionado.value, periodoIpress: idPeriodoIpress.value }); break;
+    case 2: emit('form3', { paciente, numeroFormulario, periodo: periodoSeleccionado.value, periodoIpress: idPeriodoIpress.value }); break;
+    case 3: emit('form4', { paciente, numeroFormulario, periodo: periodoSeleccionado.value, periodoIpress: idPeriodoIpress.value }); break;
+    case 4: emit('form5', { paciente, numeroFormulario, periodo: periodoSeleccionado.value, periodoIpress: idPeriodoIpress.value }); break;
+    case 5: emit('form7', { paciente, numeroFormulario, periodo: periodoSeleccionado.value, periodoIpress: idPeriodoIpress.value }); break;
   }
-}
+};
 
 const cerrarFormulario = () => { mostrarFormulario.value = false }
 
@@ -349,23 +460,37 @@ async function searchPeriodoIpress() {
   fetchPacientes()
 }
 
-const fetchPacientes = async (url = null) => {
+const fetchPacientes = async () => {
   if (idIpress.value == null || idPerido.value == null) {
-    pacientes.value = []
+    pacientes.value = [];
     return;
   }
   try {
-    const respuesta = await getAllIpress(url ?? "/resumen_registros/" + idIpress.value + "/" + idPerido.value+"/");
-    pacientes.value = respuesta;
+    const params = new URLSearchParams({
+      id_ipress: String(idIpress.value),
+      id_periodo: String(idPerido.value),
+    });
+    const mod = modalidadGlobal.value;
+    if (mod != null && mod !== '') {
+      params.set('id_modalidad', String(mod));
+    }
+    const n = filtroNombre.value.trim();
+    const d = filtroDni.value.trim();
+    if (n) params.set('nombre', n);
+    if (d) params.set('documento', d);
+    // URL plana: evita 404 en algunos despliegues donde `pacientesDialisis/<pk>/` captura `por_ipress_periodo` como id
+    const respuesta = await getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${params.toString()}`);
+    pacientes.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
   } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+    console.error('Error al obtener lista de pacientes diálisis:', error);
+    pacientes.value = [];
   }
 };
 
 const fetchPeriodoIpress = async (url = null) => {
   try {
-    const respuesta = await getAllIpress(url ?? "/periodoIpress/");
-    periodoIpress.value = respuesta;
+    /* const respuesta = await getAllIpress(url ?? "/periodoIpress/");
+    periodoIpress.value = respuesta; */
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }
@@ -378,7 +503,7 @@ const fetchIpress = async (url = null) => {
       ipress.value = [];
       return;
     }
-    const asignaciones = await getAllIpress(/asignaciones/);
+    const asignaciones = await getAllIpress(`/asignaciones/?usuario=${usuario.id_usuario}`);
     const idsAsignados = asignaciones.map(a => a.ipress);
     ipressAsignadas.value = idsAsignados;
     const todasIpress = await getAllIpress(url ?? "/ipress/");
@@ -413,6 +538,16 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], async () => {
   fetchEstadisticasAtencion();
   fetchEstadisticasRegistros();
 }, { deep: true });
+
+/** Refetch lista al escribir filtros (misma consulta al backend con nombre/documento). */
+let debounceFiltrosTimer = null;
+watch([filtroNombre, filtroDni], () => {
+  if (idIpress.value == null || idPerido.value == null) return;
+  clearTimeout(debounceFiltrosTimer);
+  debounceFiltrosTimer = setTimeout(() => {
+    fetchPacientes();
+  }, 400);
+});
 
 onMounted(async () => {
   await fetchPeriodoIpress();

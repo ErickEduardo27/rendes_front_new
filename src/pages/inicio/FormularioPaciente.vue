@@ -35,17 +35,17 @@
                 placeholder="Seleccione fecha"
                 value-format="YYYY-MM-DD"
                 format="DD/MM/YYYY"
-                :editable="false"
+                :editable="true"
                 :clearable="false"
                 class="w-full"
                 :disabled-date="(d) => d > new Date()"
               />
             </el-form-item>
             <el-form-item label=" " class="flex items-end">
-              <el-button v-if="puedeConsultar" type="primary" :loading="consultandoDNI" @click="consultarDNI" class="w-full">
-                Consultar DNI
+              <el-button v-if="form.tipoDocumento" type="primary" :loading="consultandoDNI" :disabled="!puedeConsultar" @click="consultarDNI" class="w-full">
+                Consultar documento
               </el-button>
-              <span v-else-if="form.tipoDocumento === 'DNI'" class="text-xs text-slate-400">Ingrese DNI y F. Nac. para consultar</span>
+              <span v-else class="text-xs text-slate-400">Seleccione tipo, número de documento y fecha de nacimiento para consultar</span>
             </el-form-item>
           </div>
 
@@ -136,7 +136,7 @@
               </el-select>
             </el-form-item>
             <el-form-item label="Fecha de Creación del Acceso de Inicio">
-              <el-date-picker v-model="form.fechaCreacionAcceso" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" />
+              <el-date-picker v-model="form.fechaCreacionAcceso" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" :disabled-date="deshabilitarFechaSegunPeriodo" />
             </el-form-item>
             <el-form-item label="Fecha de Inicio de TRR">
               <el-date-picker v-model="form.fechaInicioTRR" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" :disabled-date="minDateFechaInicioTRR" />
@@ -159,10 +159,10 @@
               </el-select>
             </el-form-item>
             <el-form-item label="Fecha de Ingreso a Hospital EsSalud">
-              <el-date-picker v-model="form.fechaIngresoEsSalud" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" clearable />
+              <el-date-picker v-model="form.fechaIngresoEsSalud" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" clearable :disabled-date="deshabilitarFechaSegunPeriodo" />
             </el-form-item>
             <el-form-item label="Fecha de Primer Ingreso a Unidad">
-              <el-date-picker v-model="form.fechaPrimerIngreso" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" clearable />
+              <el-date-picker v-model="form.fechaPrimerIngreso" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" clearable :disabled-date="deshabilitarFechaSegunPeriodo" />
             </el-form-item>
             <el-form-item label="Localización Acceso de Inicio">
               <el-select v-model="form.localizacionAcceso" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'">
@@ -340,14 +340,105 @@ const validarFormulario = () => {
     }
   }
 
+  if (!validarFechasDentroDelPeriodo()) {
+    return false;
+  }
+
+  return true;
+};
+
+const normalizarFecha = (valor) => {
+  const fecha = valor instanceof Date ? new Date(valor) : new Date(`${valor}T00:00:00`);
+
+  if (Number.isNaN(fecha.getTime())) {
+    return null;
+  }
+
+  fecha.setHours(0, 0, 0, 0);
+  return fecha;
+};
+
+const periodoActivo = computed(() => {
+  const valor = periodoSeleccionado.value;
+  const listaPeriodos = Array.isArray(periodos.value) ? periodos.value : [];
+
+  if (valor == null || valor === '') {
+    return null;
+  }
+
+  return listaPeriodos.find((periodo) =>
+    periodo.id_periodo === valor ||
+    String(periodo.id_periodo) === String(valor) ||
+    periodo.periodo === valor
+  ) ?? null;
+});
+
+const rangoPeriodoSeleccionado = computed(() => {
+  const periodo = periodoActivo.value?.periodo;
+  if (!periodo || !/^\d{4}-\d{2}$/.test(periodo)) {
+    return null;
+  }
+
+  const inicio = normalizarFecha(`${periodo}-01`);
+  if (!inicio) {
+    return null;
+  }
+
+  const fin = new Date(inicio.getFullYear(), inicio.getMonth() + 1, 0);
+  fin.setHours(0, 0, 0, 0);
+
+  return { inicio, fin, etiqueta: periodo };
+});
+
+const estaFueraDelPeriodoSeleccionado = (valor) => {
+  const rango = rangoPeriodoSeleccionado.value;
+  const fecha = normalizarFecha(valor);
+
+  if (!rango || !fecha) {
+    return false;
+  }
+
+  return fecha < rango.inicio || fecha > rango.fin;
+};
+
+const deshabilitarFechaSegunPeriodo = (date) => {
+  return estaFueraDelPeriodoSeleccionado(date);
+};
+
+const validarFechasDentroDelPeriodo = () => {
+  const rango = rangoPeriodoSeleccionado.value;
+  if (!rango) {
+    return true;
+  }
+
+  const camposFecha = [
+    { key: 'fechaCreacionAcceso', label: 'Fecha de Creación del Acceso de Inicio' },
+    { key: 'fechaInicioTRR', label: 'Fecha de Inicio de TRR' },
+    { key: 'fechaIngresoEsSalud', label: 'Fecha de Ingreso a Hospital EsSalud' },
+    { key: 'fechaPrimerIngreso', label: 'Fecha de Primer Ingreso a Unidad' },
+  ];
+
+  for (const campo of camposFecha) {
+    if (form[campo.key] && estaFueraDelPeriodoSeleccionado(form[campo.key])) {
+      ElMessage({
+        message: `${campo.label} debe estar dentro del periodo ${rango.etiqueta}.`,
+        type: 'warning',
+        plain: true,
+      });
+      return false;
+    }
+  }
+
   return true;
 };
 
 
 const minDateFechaInicioTRR = (date) => {
+  if (estaFueraDelPeriodoSeleccionado(date)) return true;
   if (!form.fechaCreacionAcceso) return false;
-  const d = new Date(date);
-  const min = new Date(form.fechaCreacionAcceso + 'T00:00:00');
+  const d = normalizarFecha(date);
+  const min = normalizarFecha(form.fechaCreacionAcceso);
+  if (!d || !min) return false;
   return d < min;
 };
 
@@ -694,33 +785,33 @@ const hospitalesProcedencia = [
   { value: 'Hospital Base III Chimbote' },
   { value: 'Hospital Base III Juliaca' },
   { value: 'Hospital Base III Puno' },
-  { value: 'Hospital de Alta Complejidad de La Libertad "Virgen de la Puerta"' },
-  { value: 'Hospital I "El Buen Samaritano"' },
-  { value: 'Hospital I "Higos Urco" Chachapoyas' },
-  { value: 'Hospital I "Víctor Alfredo Lazo Peralta"' },
+  { value: 'Hospital de Alta Complejidad de La Libertad Virgen de la Puerta' },
+  { value: 'Hospital I El Buen Samaritano' },
+  { value: 'Hospital I Higos Urco Chachapoyas' },
+  { value: 'Hospital I Víctor Alfredo Lazo Peralta' },
   { value: 'Hospital I Alto Mayo' },
-  { value: 'Hospital I Tumbes "Carlos Alberto Cortez Jimenez"' },
-  { value: 'Hospital II "Jorge Reátegui delgado"' },
+  { value: 'Hospital I Tumbes Carlos Alberto Cortez Jimenez' },
+  { value: 'Hospital II Jorge Reátegui delgado' },
   { value: 'Hospital II Abancay' },
   { value: 'Hospital II Cajamarca' },
   { value: 'Hospital II Gustavo Lanatta Luján - Huacho' },
-  { value: 'Hospital II Huamanga "Carlos Tuppia García Godos"' },
+  { value: 'Hospital II Huamanga Carlos Tuppia García Godos' },
   { value: 'Hospital II Huancavelica' },
   { value: 'Hospital II Huánuco' },
   { value: 'Hospital II Huaraz' },
   { value: 'Hospital II Integrado Ilo' },
   { value: 'Hospital II Pucallpa' },
   { value: 'Hospital II Tarapoto' },
-  { value: 'Hospital III "Daniel Alcides Carrión"' },
+  { value: 'Hospital III Daniel Alcides Carrión' },
   { value: 'Hospital III Alberto L. Barton Thompson' },
   { value: 'Hospital III Guillermo Kaelin de la Fuente' },
   { value: 'Hospital III Iquitos' },
-  { value: 'Hospital IV "Augusto Hernández Mendoza"' },
-  { value: 'Hospital IV "Víctor Lazarte Echegaray"' },
-  { value: 'Hospital Nacional "Adolfo Guevara Velasco"' },
-  { value: 'Hospital Nacional "Almanzor Aguinaga Asenjo"' },
-  { value: 'Hospital Nacional "Carlos Alberto Seguin Escobedo"' },
-  { value: 'Hospital Nacional "Ramiro Prialé Prialé"' },
+  { value: 'Hospital IV Augusto Hernández Mendoza' },
+  { value: 'Hospital IV Víctor Lazarte Echegaray' },
+  { value: 'Hospital Nacional Adolfo Guevara Velasco' },
+  { value: 'Hospital Nacional Almanzor Aguinaga Asenjo' },
+  { value: 'Hospital Nacional Carlos Alberto Seguin Escobedo' },
+  { value: 'Hospital Nacional Ramiro Prialé Prialé' },
   { value: 'Hospital Nacional Alberto Sabogal Sologuren' },
   { value: 'Hospital Nacional Edgardo Rebagliati Martins' },
   { value: 'Hospital Nacional Guillermo Almenara Irigoyen' }
@@ -750,14 +841,48 @@ const handleSelect = (val) => {
   console.log('Hospital seleccionado:', val);
 };
 
+const etiquetaTipoDocumento = computed(() => {
+  if (form.tipoDocumento === 'DNI') return 'DNI';
+  if (form.tipoDocumento === 'CE') return 'CE';
+  if (form.tipoDocumento === 'PASAPORTE') return 'pasaporte';
+  return 'documento';
+});
+
+const documentoValidoParaConsulta = computed(() => {
+  const numero = String(form.numeroDocumento || '').trim();
+
+  if (!form.tipoDocumento || !numero) {
+    return false;
+  }
+
+  if (form.tipoDocumento === 'DNI') {
+    return /^\d{8}$/.test(numero);
+  }
+
+  if (form.tipoDocumento === 'CE') {
+    return /^\d{1,10}$/.test(numero);
+  }
+
+  if (form.tipoDocumento === 'PASAPORTE') {
+    return numero.length >= 1 && numero.length <= 15;
+  }
+
+  return false;
+});
+
 const consultarDNI = async () => {
   // 1. Validaciones (Sin .value en form)
-  if (!form.numeroDocumento || form.numeroDocumento.length !== 8) {
-    errorDNI.value = 'El DNI debe tener 8 dígitos';
+  if (!documentoValidoParaConsulta.value) {
+    errorDNI.value =
+      form.tipoDocumento === 'DNI'
+        ? 'El DNI debe tener 8 dígitos'
+        : form.tipoDocumento === 'CE'
+          ? 'El CE debe tener entre 1 y 10 dígitos'
+          : 'El pasaporte debe tener entre 1 y 15 caracteres';
     return;
   }
   if (!form.fechaNacimiento) {
-    errorDNI.value = 'Debe seleccionar una fecha de nacimiento';
+    errorDNI.value = `Debe seleccionar una fecha de nacimiento para consultar ${etiquetaTipoDocumento.value}`;
     return;
   }
 
@@ -882,8 +1007,7 @@ const consultarDNI = async () => {
 };
 
 const puedeConsultar = computed(() => {
-  return form.tipoDocumento === 'DNI' && 
-         /^\d{8}$/.test(form.numeroDocumento) && 
+  return documentoValidoParaConsulta.value && 
          form.fechaNacimiento && 
          !consultandoDNI.value;
 });
@@ -992,7 +1116,7 @@ const soloNumeros = computed(() => {
 });
 
 const onDocumentoInput = (event) => {
-  if (soloNumeros) {
+  if (soloNumeros.value) {
     // Eliminar todo lo que no sea número
     form.numeroDocumento = event.target.value.replace(/\D/g, '');
   }

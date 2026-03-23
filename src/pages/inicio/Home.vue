@@ -13,12 +13,19 @@
       @captar-paciente="mostrarFormulario = 2" @egresar-paciente="mostrarFormulario = 3" />
 
     <Form2Hemodialisis v-if="mostrarFormulario == 5 && modalidad==1" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress"
+      :id-paciente-atencion="pacienteSeleccionado?.id_paciente_atencion"
       @cancelar="mostrarFormulario = 4" />
     <Form2Peritoneal v-if="mostrarFormulario == 5 && modalidad==2" :paciente="pacienteSeleccionado"  :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress"
       @cancelar="mostrarFormulario = 4" />
-    <Form3Hemodialisis v-if="mostrarFormulario == 6"  :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress" @cancelar="mostrarFormulario = 4" />
-    <Form4 v-if="mostrarFormulario == 7" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado"  :periodoIpress="idPeriodoIpress" @cancelar="mostrarFormulario = 4" />
-    <Form5 v-if="mostrarFormulario == 8" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress" @cancelar="mostrarFormulario = 4" />
+    <Form3Hemodialisis v-if="mostrarFormulario == 6"  :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress"
+      :id-paciente-atencion="pacienteSeleccionado?.id_paciente_atencion"
+      @cancelar="mostrarFormulario = 4" />
+    <Form4 v-if="mostrarFormulario == 7" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado"  :periodoIpress="idPeriodoIpress"
+      :id-paciente-atencion="pacienteSeleccionado?.id_paciente_atencion"
+      @cancelar="mostrarFormulario = 4" />
+    <Form5 v-if="mostrarFormulario == 8" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress"
+      :id-paciente-atencion="pacienteSeleccionado?.id_paciente_atencion"
+      @cancelar="mostrarFormulario = 4" />
     <Form7 v-if="mostrarFormulario == 9" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress" @cancelar="mostrarFormulario = 4" />
 
   </div>
