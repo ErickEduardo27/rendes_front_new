@@ -11,9 +11,19 @@
     </div>
 
     <div class="flex items-center gap-2 shrink-0">
-      <button class="relative" type="button" aria-label="Notificaciones">
-        <BellIcon class="w-6 h-6 text-cyan-600 dark:text-cyan-300 cursor-pointer" />
-      </button>
+      <router-link
+        to="/notificaciones"
+        class="relative inline-flex p-1 rounded-lg hover:bg-cyan-50 transition-colors"
+        aria-label="Notificaciones"
+      >
+        <BellIcon class="w-6 h-6 text-cyan-600 dark:text-cyan-300" />
+        <span
+          v-if="noLeidas > 0"
+          class="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] px-1 flex items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white"
+        >
+          {{ noLeidas > 99 ? '99+' : noLeidas }}
+        </span>
+      </router-link>
       <div class="relative">
         <div
           class="w-10 h-10 rounded-full bg-gray-200 cursor-pointer"
@@ -42,10 +52,13 @@
 
 <script setup>
 import { BellIcon, Bars3Icon } from '@heroicons/vue/24/outline'
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { getAllIpress } from '@/services/ipress/Ipress.service'
 import { useAuthStore } from "@/store/auth";
 import router from "@/router/index";
 import { toast } from 'vue-sonner'
+import { TokenService } from '@/services/api/token.service'
 import SelectorPeriodo from '@/components/SelectorPeriodo.vue'
 
 const props = defineProps({
@@ -74,6 +87,44 @@ const onSelectorChange = (payload) => {
 
 const authStore = useAuthStore()
 const showMenu = ref(false)
+const route = useRoute()
+const noLeidas = ref(0)
+let pollTimer = null
+
+async function fetchNoLeidas() {
+  if (!TokenService.getToken()) {
+    noLeidas.value = 0
+    return
+  }
+  try {
+    const r = await getAllIpress('/notificaciones/no-leidas/')
+    noLeidas.value = Number(r?.count) || 0
+  } catch {
+    noLeidas.value = 0
+  }
+}
+
+function onNotifEvent() {
+  fetchNoLeidas()
+}
+
+onMounted(() => {
+  fetchNoLeidas()
+  pollTimer = setInterval(fetchNoLeidas, 60000)
+  window.addEventListener('focus', fetchNoLeidas)
+  window.addEventListener('notificaciones:actualizar', onNotifEvent)
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
+  window.removeEventListener('focus', fetchNoLeidas)
+  window.removeEventListener('notificaciones:actualizar', onNotifEvent)
+})
+
+watch(
+  () => route.path,
+  () => fetchNoLeidas()
+)
 
 const logout = () => {
   authStore.logout()

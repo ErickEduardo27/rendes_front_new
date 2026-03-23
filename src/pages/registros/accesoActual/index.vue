@@ -71,15 +71,6 @@
         >
           Todos los pacientes
         </button>
-        <button
-          v-if="esEvaluador"
-          type="button"
-          class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
-          :class="vistaActiva === 'evaluacion' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
-          @click="vistaActiva = 'evaluacion'"
-        >
-          Evaluación
-        </button>
         <!-- <button
           type="button"
           class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
@@ -156,52 +147,6 @@
                     <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(fila.estado_aprobacion)">
                       {{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}
                     </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </template>
-        <template v-else-if="vistaActiva === 'evaluacion'">
-          <div v-if="registros.length === 0" class="p-12 text-center text-slate-500 italic">
-            No hay registros por evaluar para el periodo, IPRESS y modalidad seleccionados.
-          </div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo acceso</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localización</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Evaluado por</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Acciones</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr v-for="r in registros" :key="`eval-${r.id_unidad_actual}`" class="hover:bg-slate-50 transition-colors">
-                  <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_acceso || r.tipo_acceso_actual || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.localizacion_acceso || r.localizacion_acceso_actual || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '—' }}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(r.estado_aprobacion)">
-                      {{ r.estado_aprobacion || 'PENDIENTE' }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <div class="flex items-center gap-2">
-                      <button type="button" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50" :disabled="evaluandoRegistroId === r.id_unidad_actual" @click="evaluarRegistro(r, 'APROBADO')">
-                        Aprobar
-                      </button>
-                      <button type="button" class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50" :disabled="evaluandoRegistroId === r.id_unidad_actual" @click="evaluarRegistro(r, 'DESAPROBADO')">
-                        Desaprobar
-                      </button>
-                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -440,15 +385,11 @@ import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
 import { ElMessage } from 'element-plus';
-import { useRoute } from 'vue-router';
-import { useAuthStore } from '@/store/auth';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
 const HISTORIAL_CARGAS_KEY = 'acceso_vascular_historial_cargas';
-const route = useRoute();
-const authStore = useAuthStore();
 const NUMERO_FORMULARIO_ACCESO_VASCULAR = 1;
 
 const registros = ref([]);
@@ -474,7 +415,6 @@ const mostrarDetalleCarga = ref(false);
 const cargaSeleccionada = ref(null);
 const estadoFormulario = ref('CERRADO');
 const cargandoEstadoFormulario = ref(false);
-const evaluandoRegistroId = ref(null);
 
 const TIPOS_ACCESO = [
   'Catéter Venoso Central Temporal',
@@ -514,16 +454,8 @@ const modalidadActualTexto = computed(() => {
   return equivalencias[Number(modalidadGlobal.value)] || '—';
 });
 
-const perfilActual = computed(() => {
-  return authStore.user?.datosPerfil?.perfil || localStorage.getItem('perfil') || '';
-});
-
-const esEvaluador = computed(() => {
-  return ['supervisor', 'admin'].includes(String(perfilActual.value).trim().toLowerCase());
-});
-
 const mostrarBotonNuevo = computed(() => {
-  return formularioAbierto.value && vistaActiva.value !== 'evaluacion';
+  return formularioAbierto.value;
 });
 
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
@@ -566,16 +498,6 @@ function estadoAprobacionClase(estado) {
   if (valor === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
   if (valor === 'SIN REGISTRO') return 'bg-slate-100 text-slate-500';
   return 'bg-amber-100 text-amber-700';
-}
-
-function sincronizarVistaConRuta() {
-  if (route.name === 'Evaluacion' && esEvaluador.value) {
-    vistaActiva.value = 'evaluacion';
-    return;
-  }
-  if (vistaActiva.value === 'evaluacion' && !esEvaluador.value) {
-    vistaActiva.value = 'todos';
-  }
 }
 
 const pacientesDisponibles = computed(() => {
@@ -792,53 +714,26 @@ async function fetchPeriodoIpress() {
 async function fetchEstadoFormulario() {
   const idPeriodo = periodoGlobal.value;
   const idIpress = clinicaGlobal.value;
-  if (idPeriodo == null || idIpress == null) {
+  const idModalidad = modalidadGlobal.value;
+  if (idPeriodo == null || idIpress == null || idModalidad == null || idModalidad === '') {
     estadoFormulario.value = 'CERRADO';
     return;
   }
   cargandoEstadoFormulario.value = true;
   try {
-    await fetchPeriodoIpress();
-    if (!idPeriodoIpress.value) {
-      estadoFormulario.value = 'CERRADO';
-      return;
-    }
-    const res = await postAllIpress('/consulta_periodo_estado/', {
-      id_periodo_ipress: idPeriodoIpress.value,
+    const res = await postAllIpress('/consulta_estado_formulario_moderno/', {
+      id_periodo: idPeriodo,
+      id_ipress: idIpress,
+      id_modalidad: idModalidad,
+      numero_formulario: NUMERO_FORMULARIO_ACCESO_VASCULAR,
     });
-    const lista = Array.isArray(res) ? res : (res?.results || []);
-    const abierto = lista.some((item) => Number(item.numero) === NUMERO_FORMULARIO_ACCESO_VASCULAR);
+    const abierto = res?.abierto !== false;
     estadoFormulario.value = abierto ? 'ABIERTO' : 'CERRADO';
   } catch (e) {
     console.error('Error al consultar estado del formulario:', e);
     estadoFormulario.value = 'CERRADO';
   } finally {
     cargandoEstadoFormulario.value = false;
-  }
-}
-
-async function evaluarRegistro(registro, estadoAprobacion) {
-  if (!esEvaluador.value || !registro?.id_unidad_actual) return;
-  evaluandoRegistroId.value = registro.id_unidad_actual;
-  try {
-    await postAllIpress(`/unidadesActuales/${registro.id_unidad_actual}/evaluar/`, {
-      estado_aprobacion: estadoAprobacion,
-    });
-    ElMessage({
-      message: `Registro ${estadoAprobacion === 'APROBADO' ? 'aprobado' : 'desaprobado'} correctamente.`,
-      type: 'success',
-      plain: true,
-    });
-    await fetchRegistros();
-  } catch (e) {
-    console.error('Error al evaluar registro:', e);
-    ElMessage({
-      message: e?.detail || e?.error || 'No se pudo actualizar el estado del registro.',
-      type: 'error',
-      plain: true,
-    });
-  } finally {
-    evaluandoRegistroId.value = null;
   }
 }
 
@@ -1050,16 +945,7 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   fetchEstadoFormulario();
 }, { deep: true });
 
-watch(() => route.name, () => {
-  sincronizarVistaConRuta();
-});
-
-watch(esEvaluador, () => {
-  sincronizarVistaConRuta();
-});
-
 onMounted(() => {
-  sincronizarVistaConRuta();
   cargarHistorialCargas();
   fetchPeriodos();
   fetchRegistros();

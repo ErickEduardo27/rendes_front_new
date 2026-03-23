@@ -16,6 +16,7 @@
             <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Menú Principal</span>
         </div>
         <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
+        <SidebarItem :icon="BellAlertIcon" label="Notificaciones" to="/notificaciones" />
 
         <SidebarItem 
             v-if="['Supervisor', 'Admin','Clinicas','Hospitales'].includes(perfil)"
@@ -72,7 +73,7 @@ import SidebarItem from './SidebarItem.vue';
 import { useAuthStore } from "@/store/auth";
 import { 
   HomeIcon, UserIcon, DocumentMagnifyingGlassIcon, 
-  ChartBarIcon, ArrowsRightLeftIcon 
+  ChartBarIcon, ArrowsRightLeftIcon, BellAlertIcon
 } from '@heroicons/vue/24/outline';
 
 const authStore = useAuthStore();

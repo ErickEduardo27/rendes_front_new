@@ -8,6 +8,15 @@
             Eventos Infecciosos
           </h1>
           <p class="text-slate-500 mt-1 text-sm">Registros de eventos infecciosos asociados al acceso por periodo, IPRESS y modalidad.</p>
+          <div class="mt-3 flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado del formulario</span>
+            <span
+              class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+              :class="formularioAbierto ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+            >
+              {{ cargandoEstadoFormulario ? 'Consultando...' : estadoFormularioTexto }}
+            </span>
+          </div>
         </div>
         <div class="flex items-center gap-2">
           <!-- <button
@@ -21,6 +30,7 @@
             Importar
           </button> -->
           <button
+            v-if="mostrarBotonNuevo"
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-600 text-white font-semibold rounded-lg shadow-sm hover:bg-slate-700 transition-colors"
             @click="abrirModalNuevo"
@@ -223,6 +233,9 @@ const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
 
+/** Mismo número que EvaluacionRegistros (eventos infecciosos). */
+const NUMERO_FORMULARIO_EVENTOS = 2;
+
 const registros = ref([]);
 const cargando = ref(false);
 const mostrarModalNuevo = ref(false);
@@ -238,6 +251,12 @@ const archivoSeleccionado = ref(null);
 const inputArchivoImportar = ref(null);
 const importando = ref(false);
 const resultadoImportacion = ref(null);
+const estadoFormulario = ref('CERRADO');
+const cargandoEstadoFormulario = ref(false);
+
+const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
+const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto' : 'Cerrado'));
+const mostrarBotonNuevo = computed(() => formularioAbierto.value);
 
 const COLUMNAS_FORMATO = ['id_paciente_atencion', 'tipo_infeccion', 'fecha_evento', 'antmicrobial', 'vancomicina', 'hemocultivo_positivo', 'germen'];
 
@@ -290,6 +309,31 @@ const todosPacientesLista = computed(() => {
     return { id_paciente_atencion: id, tieneRegistro: false, paciente, documento, fecha_evento: '', tipo_infeccion: '', antmicrobial: '', vancomicina: '', hemocultivo_positivo: '', germen: '' };
   });
 });
+
+async function fetchEstadoFormulario() {
+  const idPeriodo = periodoGlobal.value;
+  const idIpress = clinicaGlobal.value;
+  const idModalidad = modalidadGlobal.value;
+  if (idPeriodo == null || idIpress == null || idModalidad == null || idModalidad === '') {
+    estadoFormulario.value = 'CERRADO';
+    return;
+  }
+  cargandoEstadoFormulario.value = true;
+  try {
+    const res = await postAllIpress('/consulta_estado_formulario_moderno/', {
+      id_periodo: idPeriodo,
+      id_ipress: idIpress,
+      id_modalidad: idModalidad,
+      numero_formulario: NUMERO_FORMULARIO_EVENTOS,
+    });
+    estadoFormulario.value = res?.abierto !== false ? 'ABIERTO' : 'CERRADO';
+  } catch (e) {
+    console.error('Error al consultar estado del formulario:', e);
+    estadoFormulario.value = 'CERRADO';
+  } finally {
+    cargandoEstadoFormulario.value = false;
+  }
+}
 
 async function fetchRegistros() {
   const idPeriodo = periodoGlobal.value;
@@ -344,6 +388,7 @@ async function fetchPacientesAtencion() {
 }
 
 function abrirModalNuevo() {
+  if (!formularioAbierto.value) return;
   pacienteParaFormulario.value = null;
   idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
@@ -473,8 +518,14 @@ async function ejecutarImportacion() {
   }
 }
 
-watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => fetchRegistros(), { deep: true });
-onMounted(() => fetchRegistros());
+watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
+  fetchRegistros();
+  fetchEstadoFormulario();
+}, { deep: true });
+onMounted(() => {
+  fetchRegistros();
+  fetchEstadoFormulario();
+});
 </script>
 
 <style scoped>

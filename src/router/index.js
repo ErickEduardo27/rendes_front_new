@@ -74,7 +74,14 @@ const routes = [
       {
         path: 'evaluacion',
         name: 'Evaluacion',
-        component: () => import('@/pages/registros/accesoActual/index.vue'),
+        component: () => import('@/pages/evaluacion/EvaluacionRegistros.vue'),
+        meta: { requiresAuth: true, requiresEvaluador: true },
+      },
+      {
+        path: 'notificaciones',
+        name: 'Notificaciones',
+        component: () => import('@/pages/notificaciones/Notificaciones.vue'),
+        meta: { requiresAuth: true },
       },
       {
         path: 'eventos-infecciosos',
@@ -116,12 +123,21 @@ const router = createRouter({
 })
 
 
+function perfilEsEvaluador(user) {
+  const p = user?.datosPerfil?.perfil || (typeof localStorage !== 'undefined' ? localStorage.getItem('perfil') : '') || ''
+  return ['supervisor', 'admin'].includes(String(p).trim().toLowerCase())
+}
+
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   const { isAuthenticated } = storeToRefs(authStore) // 👈 REACTIVO
 
   if (to.meta.requiresAuth && !isAuthenticated.value) {
     return next({ name: 'Login' })
+  }
+
+  if (to.meta.requiresEvaluador && !perfilEsEvaluador(authStore.user)) {
+    return next({ name: 'Inicio' })
   }
 
   if (to.name === 'Login' && isAuthenticated.value) {
