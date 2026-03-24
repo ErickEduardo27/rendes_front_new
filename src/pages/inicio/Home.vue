@@ -10,7 +10,9 @@
     <EgresoPacientes v-if="mostrarFormulario == 3" @cancelar="mostrarFormulario = 4" />
     <ListaPacientes v-if="mostrarFormulario == 4" @form2="abrirFormulario" @form3="abrirFormulario"
       @form4="abrirFormulario" @form5="abrirFormulario" @form7="abrirFormulario" @nuevo-registro="abrirNuevoRegistro"
-      @captar-paciente="mostrarFormulario = 2" @egresar-paciente="mostrarFormulario = 3" />
+      @captar-paciente="mostrarFormulario = 2"
+      @egresar-paciente="mostrarFormulario = 3"
+    />
 
     <Form2Hemodialisis v-if="mostrarFormulario == 5 && modalidad==1" :paciente="pacienteSeleccionado" :periodo="periodoSeleccionado" :periodoIpress="idPeriodoIpress"
       :id-paciente-atencion="pacienteSeleccionado?.id_paciente_atencion"
@@ -68,4 +70,5 @@ const abrirNuevoRegistro = (datos) => {
   nombreClinicaSeleccionada.value = datos.nombreClinica
   mostrarFormulario.value = 1
 }
+
 </script>

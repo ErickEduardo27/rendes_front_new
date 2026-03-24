@@ -141,9 +141,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 const emit = defineEmits(['cancelar'])
-import Home from './Home.vue'
+
 import { useRouter } from 'vue-router'
 import { getAllIpress, patchAllIpress, postAllIpress, putAllIpress } from '@/services/ipress/Ipress.service'
 const pacienteSeleccionado = ref(null)
@@ -283,12 +283,11 @@ const fetchPacientes = async (url = null) => {
     console.error('Error al obtener IPRESS:', error);
   }
 };
-import { watch } from 'vue'
-
 // Filtro automático por documento y nombre
 watch([numeroDocumento, nombrePaciente], () => {
   fetchPacientes();
 });
+
 const fetchIpress = async (url = null) => {
   try {
     const respuesta = await getAllIpress(url ?? "/ipress/");

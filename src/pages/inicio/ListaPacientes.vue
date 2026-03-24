@@ -220,9 +220,53 @@
           </div>
           <p v-if="errorConsultaDoc" class="text-sm text-red-600 mt-2">{{ errorConsultaDoc }}</p>
 
-          <!-- Encontrado -->
-          <div v-if="pacienteConsultaResultado" class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 text-sm">
+          <div
+            v-if="verificandoClinicaPaciente"
+            class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600"
+          >
+            Verificando asignación de clínica…
+          </div>
+
+          <!-- Encontrado sin clínica activa: confirmar antes de ir a Captar paciente -->
+          <div
+            v-else-if="pacienteSinClinicaCaptar"
+            class="mt-5 rounded-lg border border-sky-200 bg-sky-50/90 p-4 text-sm"
+          >
+            <p class="text-xs font-bold uppercase text-sky-900 mb-2">Paciente encontrado</p>
+            <p class="text-slate-700 mb-2">
+              No tiene una atención <strong>activa</strong> con clínica (IPRESS) asignada en el sistema.
+            </p>
+            <dl class="grid grid-cols-1 gap-1 text-slate-700 mb-4 text-sm">
+              <div><span class="font-medium text-slate-500">Nombre:</span> {{ pacienteSinClinicaCaptar.paciente || '—' }}</div>
+              <div><span class="font-medium text-slate-500">Documento:</span> {{ pacienteSinClinicaCaptar.documento || '—' }}</div>
+            </dl>
+            <p class="text-slate-800 font-medium mb-3">
+              ¿Desea abrir <strong>Captar paciente</strong> en Movimientos? Se usará la misma clínica y periodo del selector superior.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                class="flex-1 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-white"
+                @click="cancelarIrACaptar"
+              >
+                No, cerrar
+              </button>
+              <button
+                type="button"
+                class="flex-1 py-2 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700"
+                @click="confirmarIrACaptar"
+              >
+                Sí, captar paciente
+              </button>
+            </div>
+          </div>
+
+          <!-- Encontrado con clínica activa -->
+          <div v-else-if="pacienteConsultaResultado" class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 text-sm">
             <p class="text-xs font-bold uppercase text-emerald-800 mb-2">Paciente encontrado</p>
+            <p class="text-xs text-emerald-900/90 mb-3">
+              Tiene una atención activa con clínica (IPRESS) asignada.
+            </p>
             <dl class="grid grid-cols-1 gap-1 text-slate-700">
               <div><span class="font-medium text-slate-500">Nombre:</span> {{ pacienteConsultaResultado.paciente || '—' }}</div>
               <div><span class="font-medium text-slate-500">Documento:</span> {{ pacienteConsultaResultado.documento || '—' }}</div>
@@ -241,7 +285,7 @@
 
           <!-- No encontrado: solo entonces se ofrece ir al formulario completo -->
           <div
-            v-else-if="busquedaDocumentoEjecutada && !consultandoPaciente && !errorConsultaDoc"
+            v-else-if="busquedaDocumentoEjecutada && !consultandoPaciente && !errorConsultaDoc && !verificandoClinicaPaciente && !pacienteSinClinicaCaptar"
             class="mt-5 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm"
           >
             <p class="text-amber-900 font-medium">No hay ningún paciente registrado con ese documento.</p>
@@ -291,10 +335,12 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
+import { useRouter } from 'vue-router';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import FormularioPaciente from './FormularioPaciente.vue';
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
+const router = useRouter();
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
@@ -469,7 +515,7 @@ const periodoSeleccionado = ref(null)
 const idPeriodoIpress = ref(null)
 const mostrarFormulario = ref(false)
 const componenteFormulario = ref(null)
-const emit = defineEmits(['form2', 'form3', 'form4', 'form5', 'form7', 'captar-paciente', 'nuevo-registro', 'egresar-paciente'])
+const emit = defineEmits(['form2', 'form3', 'form4', 'form5', 'form7', 'nuevo-registro', 'egresar-paciente'])
 
 /** Convierte fila del listado (listado_pacientes_dialisis_por_ipress_periodo) al objeto paciente que esperan los formularios. */
 const filaDialisisAPaciente = (row) => {
@@ -625,6 +671,26 @@ const consultandoPaciente = ref(false);
 const errorConsultaDoc = ref('');
 const pacienteConsultaResultado = ref(null);
 const busquedaDocumentoEjecutada = ref(false);
+const verificandoClinicaPaciente = ref(false);
+/** Paciente encontrado sin IPRESS en atención ACTIVA: se muestra la pregunta antes de ir a Captar. */
+const pacienteSinClinicaCaptar = ref(null);
+
+const pacienteTieneAtencionActivaConIpress = async (idPaciente) => {
+  if (idPaciente == null || idPaciente === '') return false;
+  try {
+    const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(idPaciente)}`);
+    const list = Array.isArray(res) ? res : (res?.results || []);
+    return list.some((a) => {
+      const activo = String(a.estado || '').toUpperCase() === 'ACTIVO';
+      const ip = a.id_ipress;
+      const tieneIpress = ip != null && ip !== '';
+      return activo && tieneIpress;
+    });
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+};
 
 const cerrarModalNuevo = () => {
   mostrarModalNuevo.value = false;
@@ -637,6 +703,8 @@ const cerrarModalConsultaDocumento = () => {
   errorConsultaDoc.value = '';
   pacienteConsultaResultado.value = null;
   busquedaDocumentoEjecutada.value = false;
+  verificandoClinicaPaciente.value = false;
+  pacienteSinClinicaCaptar.value = null;
 };
 
 const abrirModalConsultaDocumento = () => {
@@ -644,13 +712,30 @@ const abrirModalConsultaDocumento = () => {
   errorConsultaDoc.value = '';
   pacienteConsultaResultado.value = null;
   busquedaDocumentoEjecutada.value = false;
+  verificandoClinicaPaciente.value = false;
+  pacienteSinClinicaCaptar.value = null;
   mostrarModalConsultaDocumento.value = true;
+};
+
+const confirmarIrACaptar = () => {
+  const p = pacienteSinClinicaCaptar.value;
+  if (!p) return;
+  const documento = String(p.documento || docConsulta.value || '').trim();
+  if (!documento) return;
+  cerrarModalConsultaDocumento();
+  router.push({ name: 'Movimientos', query: { captarDni: documento } });
+};
+
+const cancelarIrACaptar = () => {
+  cerrarModalConsultaDocumento();
 };
 
 const consultarPacientePorDocumento = async () => {
   errorConsultaDoc.value = '';
   pacienteConsultaResultado.value = null;
+  pacienteSinClinicaCaptar.value = null;
   busquedaDocumentoEjecutada.value = false;
+  verificandoClinicaPaciente.value = false;
   const doc = docConsulta.value.trim();
   if (!doc) {
     errorConsultaDoc.value = 'Ingrese el número de documento.';
@@ -661,16 +746,25 @@ const consultarPacientePorDocumento = async () => {
     const res = await getAllIpress(`/pacientes/?documento=${encodeURIComponent(doc)}`);
     const list = Array.isArray(res) ? res : (res?.results || []);
     busquedaDocumentoEjecutada.value = true;
-    if (list.length > 0) {
-      pacienteConsultaResultado.value = list[0];
-    } else {
+    if (list.length === 0) {
       pacienteConsultaResultado.value = null;
+      return;
     }
+    const encontrado = list[0];
+    verificandoClinicaPaciente.value = true;
+    const tieneClinica = await pacienteTieneAtencionActivaConIpress(encontrado.id_paciente);
+    verificandoClinicaPaciente.value = false;
+    if (!tieneClinica) {
+      pacienteSinClinicaCaptar.value = encontrado;
+      return;
+    }
+    pacienteConsultaResultado.value = encontrado;
   } catch (e) {
     errorConsultaDoc.value = e?.error || e?.message || 'Error al buscar en el sistema.';
     busquedaDocumentoEjecutada.value = false;
   } finally {
     consultandoPaciente.value = false;
+    verificandoClinicaPaciente.value = false;
   }
 };
 

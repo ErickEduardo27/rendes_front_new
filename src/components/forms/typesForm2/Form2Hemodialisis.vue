@@ -89,7 +89,85 @@
                 </div>
 
                 <div class="bg-slate-50 rounded-xl border border-slate-200 p-4 text-sm text-slate-600">
-                    Esta vista es solo lectura. Los datos mostrados usan el mismo periodo, clinica y modalidad seleccionados en la barra superior principal.
+                    El acceso vigente e historial son solo lectura. Use la sección siguiente para <strong>registrar un acceso vascular</strong> en el periodo actual (misma clínica y modalidad del selector superior).
+                </div>
+
+                <!-- Registro de nuevo acceso (POST /unidadesActuales/) -->
+                <div v-if="puedeRegistrarAcceso" class="bg-white rounded-xl shadow-sm border border-cyan-200 overflow-hidden ring-1 ring-cyan-100/80">
+                    <div class="bg-cyan-50 px-6 py-4 border-b border-cyan-100">
+                        <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wide">Registrar acceso vascular</h3>
+                        <p class="text-xs text-slate-600 mt-1">Indique si desea registrar un <strong>cambio de acceso</strong> en este periodo. Solo si responde afirmativo se mostrarán los campos.</p>
+                    </div>
+                    <div class="px-6 pt-5 pb-2">
+                        <p class="text-sm font-semibold text-slate-800 mb-3">¿Desea registrar un cambio de acceso vascular?</p>
+                        <div class="flex flex-wrap gap-6">
+                            <label class="inline-flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                                <input v-model="deseaRegistrarCambioAcceso" type="radio" value="no" class="h-4 w-4 border-slate-300 text-cyan-600 focus:ring-cyan-500" />
+                                <span>No</span>
+                            </label>
+                            <label class="inline-flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                                <input v-model="deseaRegistrarCambioAcceso" type="radio" value="si" class="h-4 w-4 border-slate-300 text-cyan-600 focus:ring-cyan-500" />
+                                <span>Sí</span>
+                            </label>
+                        </div>
+                    </div>
+                    <template v-if="deseaRegistrarCambioAcceso === 'si'">
+                    <div class="p-6 pt-2 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de creación *</label>
+                            <input
+                                v-model="form.fecha_creacion_acceso_nuevo"
+                                type="date"
+                                class="w-full border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5"
+                                :min="rangoFechasPeriodo.min || undefined"
+                                :max="rangoFechasPeriodo.max || undefined"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de acceso *</label>
+                            <select
+                                v-model="form.tipo_acceso_nuevo"
+                                class="w-full border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 bg-white"
+                            >
+                                <option value="">Seleccione…</option>
+                                <option v-for="t in tiposAccesoNuevoFiltrados" :key="t.value" :value="t.value">{{ t.label }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Localización *</label>
+                            <select
+                                v-model="form.localizacion_acceso_nuevo"
+                                class="w-full border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 bg-white"
+                                :disabled="!form.tipo_acceso_nuevo"
+                            >
+                                <option value="">Seleccione…</option>
+                                <option v-for="op in opcionesLocalizacionNuevoFiltradas" :key="op.value" :value="op.value">{{ op.label }}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div v-if="tieneHistorialAcceso" class="px-6 pb-4">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Motivo del cambio</label>
+                        <select v-model="form.motivo_cambio" class="w-full max-w-md border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 bg-white">
+                            <option :value="null">— Opcional —</option>
+                            <option value="1">Complicación mecánica</option>
+                            <option value="2">Complicación infecciosa</option>
+                            <option value="3">Prescripción médica</option>
+                        </select>
+                    </div>
+                    <div class="px-6 pb-6 flex flex-wrap gap-2 justify-end border-t border-slate-100 pt-4">
+                        <button
+                            type="button"
+                            class="px-4 py-2.5 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg shadow-sm disabled:opacity-50 disabled:pointer-events-none"
+                            :disabled="guardando"
+                            @click="guardarRegistro"
+                        >
+                            {{ guardando ? 'Guardando…' : 'Guardar registro' }}
+                        </button>
+                    </div>
+                    </template>
+                </div>
+                <div v-else class="rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-900">
+                    Para registrar un acceso vascular se requiere la atención del paciente (<code class="text-xs bg-amber-100 px-1 rounded">id_paciente_atencion</code>). Abra este formulario desde <strong>Acceso Vascular</strong> o desde la lista de pacientes con un paciente que tenga atención en el periodo.
                 </div>
 
                 <div class="pt-4">
@@ -347,6 +425,8 @@ const periodoActual = ref([])
 const historialAcceso = ref([])
 const tieneHistorialAcceso = computed(() => (historialAcceso.value && historialAcceso.value.length > 0))
 const guardando = ref(false)
+/** 'no' por defecto: los campos de nuevo acceso solo si el usuario elige Sí */
+const deseaRegistrarCambioAcceso = ref('no')
 const periodos = ref([])
 const clinicas = ref([])
 const mostrarHistorico = ref(false);
@@ -405,12 +485,17 @@ const listaLocalizacionesNuevo = [
 ];
 
 const tiposAccesoNuevoFiltrados = computed(() => {
-  const idModalidad = pacienteSeleccionado.value?.id_modalidad || 1;
-  if (idModalidad == 1) { 
+  const idModalidad = Number(pacienteSeleccionado.value?.id_modalidad ?? paciente?.id_modalidad ?? 1);
+  if (idModalidad === 1) {
     return listaTiposNuevo.filter(t => t.value !== 'Catéter peritoneal');
-  } else { 
-    return listaTiposNuevo.filter(t => t.value === 'Catéter peritoneal');
   }
+  return listaTiposNuevo.filter(t => t.value === 'Catéter peritoneal');
+});
+
+/** Requiere id de atención para el POST a /unidadesActuales/ */
+const puedeRegistrarAcceso = computed(() => {
+  const id = idPacienteAtencion;
+  return id != null && id !== '' && String(id).trim() !== '';
 });
 
 const opcionesLocalizacionNuevoFiltradas = computed(() => {
@@ -422,6 +507,17 @@ const opcionesLocalizacionNuevoFiltradas = computed(() => {
 watch(() => form.tipo_acceso_nuevo, (val) => {
     form.localizacion_acceso_nuevo = '';
     if (val === 'Catéter peritoneal') form.localizacion_acceso_nuevo = '19. Catéter peritoneal';
+});
+
+const limpiarCamposNuevoAcceso = () => {
+    form.fecha_creacion_acceso_nuevo = null;
+    form.tipo_acceso_nuevo = null;
+    form.localizacion_acceso_nuevo = null;
+    form.motivo_cambio = null;
+};
+
+watch(deseaRegistrarCambioAcceso, (v) => {
+    if (v !== 'si') limpiarCamposNuevoAcceso();
 });
 
 const historicoOrdenado = computed(() => {
@@ -457,7 +553,9 @@ const modalidadTexto = computed(() => {
 
 const rangoFechasPeriodo = computed(() => {
     const lista = Array.isArray(periodos.value) ? periodos.value : [];
-    const p = lista.find(per => per.id_periodo === periodo);
+    const idPeriodo = periodoVisibleId.value ?? periodo;
+    if (idPeriodo == null || idPeriodo === '') return { min: null, max: null };
+    const p = lista.find(per => String(per.id_periodo) === String(idPeriodo));
     if (!p || !p.periodo) return { min: null, max: null };
     const parts = String(p.periodo).trim().split('-');
     if (parts.length < 2) return { min: null, max: null };
@@ -511,10 +609,8 @@ const guardarRegistro = async () => {
         ElMessage({ message: 'Registro guardado correctamente.', type: 'success', plain: true });
         emit('guardado');
         await fetchUnidadesActualesPaciente();
-        form.fecha_creacion_acceso_nuevo = null;
-        form.tipo_acceso_nuevo = null;
-        form.localizacion_acceso_nuevo = null;
-        form.motivo_cambio = null;
+        limpiarCamposNuevoAcceso();
+        deseaRegistrarCambioAcceso.value = 'no';
         if (!tieneHistorialAcceso.value) form.cambio_acceso = 'false';
     } catch (error) {
         console.error(error);

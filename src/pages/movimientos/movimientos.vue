@@ -199,8 +199,18 @@
                     </div>
                     <p v-if="errorConsultaDoc" class="text-sm text-red-600 mt-2">{{ errorConsultaDoc }}</p>
 
-                    <div v-if="pacienteConsultaResultado" class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 text-sm">
+                    <div
+                        v-if="verificandoClinicaPaciente"
+                        class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600"
+                    >
+                        Verificando asignación de clínica…
+                    </div>
+
+                    <div v-else-if="pacienteConsultaResultado" class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 text-sm">
                         <p class="text-xs font-bold uppercase text-emerald-800 mb-2">Paciente encontrado</p>
+                        <p class="text-xs text-emerald-900/90 mb-3">
+                            Tiene una atención activa con clínica (IPRESS) asignada. Si debe ingresar en otra unidad, use el flujo habitual desde su equipo.
+                        </p>
                         <dl class="grid grid-cols-1 gap-1 text-slate-700">
                             <div><span class="font-medium text-slate-500">Nombre:</span> {{ pacienteConsultaResultado.paciente || '—' }}</div>
                             <div><span class="font-medium text-slate-500">Documento:</span> {{ pacienteConsultaResultado.documento || '—' }}</div>
@@ -344,7 +354,17 @@
                     <!-- Fecha de Ingreso/Reingreso -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Ingreso/Reingreso*</label>
-                        <input v-model="formCaptar.fecha" type="date" class="w-full border rounded p-2 text-sm" />
+                        <input
+                            v-model="formCaptar.fecha"
+                            type="date"
+                            class="w-full border rounded p-2 text-sm"
+                            :min="rangoFechaCaptura.min"
+                            :max="rangoFechaCaptura.max"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            Debe estar en el mes del periodo seleccionado en la barra superior (incluido el día 1).
+                            <span v-if="rangoFechaCaptura.placeholder" class="block text-amber-700 mt-0.5">{{ rangoFechaCaptura.placeholder }}</span>
+                        </p>
                     </div>
 
                     <!-- Observaciones -->
@@ -511,13 +531,15 @@ const nombreClinicaGlobal = computed(() => {
   return c ? (c.nombre_corto || c.ipress || '') : '';
 });
 
-// Rango de fechas permitidas para Fecha de Egreso (solo dentro del periodo global)
+// Rango de fechas del periodo global (día 1 … último día del mes; mismo criterio para egreso y captación)
 const rangoFechaEgreso = computed(() => {
   const periodoId = periodoGlobal.value;
   if (periodoId == null || periodoId === '') {
     return { min: undefined, max: undefined, placeholder: 'Seleccione periodo en la barra superior para habilitar fechas.' };
   }
-  const periodo = (Array.isArray(periodos.value) ? periodos.value : []).find(p => p.id_periodo === periodoId);
+  const periodo = (Array.isArray(periodos.value) ? periodos.value : []).find(
+    (p) => String(p.id_periodo) === String(periodoId)
+  );
   if (!periodo || !periodo.periodo) {
     return { min: undefined, max: undefined, placeholder: '' };
   }
@@ -530,6 +552,8 @@ const rangoFechaEgreso = computed(() => {
   const max = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
   return { min, max, placeholder: '' };
 });
+
+const rangoFechaCaptura = computed(() => rangoFechaEgreso.value);
 
 // Estados
 const movimientos = ref([]);
@@ -548,6 +572,7 @@ const consultandoPaciente = ref(false);
 const errorConsultaDoc = ref('');
 const pacienteConsultaResultado = ref(null);
 const busquedaDocumentoEjecutada = ref(false);
+const verificandoClinicaPaciente = ref(false);
 const idPeriodoIpress = ref(null);
 const idClinicaSeleccionada = ref(null);
 const clinicaSeleccionada = ref('');
@@ -696,6 +721,7 @@ const cerrarModalConsultaDocumento = () => {
     errorConsultaDoc.value = '';
     pacienteConsultaResultado.value = null;
     busquedaDocumentoEjecutada.value = false;
+    verificandoClinicaPaciente.value = false;
 };
 
 const abrirModalConsultaDocumento = () => {
@@ -703,13 +729,33 @@ const abrirModalConsultaDocumento = () => {
     errorConsultaDoc.value = '';
     pacienteConsultaResultado.value = null;
     busquedaDocumentoEjecutada.value = false;
+    verificandoClinicaPaciente.value = false;
     mostrarModalConsultaDocumento.value = true;
+};
+
+/** Atención ACTIVA con IPRESS asignada = “tiene clínica actualmente”. */
+const pacienteTieneAtencionActivaConIpress = async (idPaciente) => {
+    if (idPaciente == null || idPaciente === '') return false;
+    try {
+        const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(idPaciente)}`);
+        const list = Array.isArray(res) ? res : (res?.results || []);
+        return list.some((a) => {
+            const activo = String(a.estado || '').toUpperCase() === 'ACTIVO';
+            const ip = a.id_ipress;
+            const tieneIpress = ip != null && ip !== '';
+            return activo && tieneIpress;
+        });
+    } catch (e) {
+        console.error(e);
+        return false;
+    }
 };
 
 const consultarPacientePorDocumento = async () => {
     errorConsultaDoc.value = '';
     pacienteConsultaResultado.value = null;
     busquedaDocumentoEjecutada.value = false;
+    verificandoClinicaPaciente.value = false;
     const doc = docConsulta.value.trim();
     if (!doc) {
         errorConsultaDoc.value = 'Ingrese el número de documento.';
@@ -720,12 +766,25 @@ const consultarPacientePorDocumento = async () => {
         const res = await getAllIpress(`/pacientes/?documento=${encodeURIComponent(doc)}`);
         const list = Array.isArray(res) ? res : (res?.results || []);
         busquedaDocumentoEjecutada.value = true;
-        pacienteConsultaResultado.value = list.length > 0 ? list[0] : null;
+        if (list.length === 0) {
+            pacienteConsultaResultado.value = null;
+            return;
+        }
+        const encontrado = list[0];
+        verificandoClinicaPaciente.value = true;
+        const tieneClinica = await pacienteTieneAtencionActivaConIpress(encontrado.id_paciente);
+        verificandoClinicaPaciente.value = false;
+        if (!tieneClinica) {
+            await abrirCaptarPacienteDesdeConsulta(encontrado);
+            return;
+        }
+        pacienteConsultaResultado.value = encontrado;
     } catch (e) {
         errorConsultaDoc.value = e?.error || e?.message || 'Error al buscar en el sistema.';
         busquedaDocumentoEjecutada.value = false;
     } finally {
         consultandoPaciente.value = false;
+        verificandoClinicaPaciente.value = false;
     }
 };
 
@@ -747,7 +806,7 @@ const onCerrarFormularioPacienteMovimientos = () => {
 };
 
 // Funciones de Modal Captar (ingreso en periodo; también deep-link captarDni)
-const abrirModalCaptarFormulario = async () => {
+const abrirModalCaptarFormulario = async (precargaPaciente = null) => {
     await fetchPacientes();
     formCaptar.paciente = null;
     formCaptar.pacienteBusqueda = '';
@@ -756,7 +815,29 @@ const abrirModalCaptarFormulario = async () => {
     pacienteSeleccionado.value = null;
     condicionAutomatica.value = '';
     mensajeCondicion.value = '';
+    ultimoEgreso.value = null;
     mostrarModalCaptar.value = true;
+
+    if (precargaPaciente && precargaPaciente.id_paciente != null) {
+        const id = precargaPaciente.id_paciente;
+        let item = pacientes.value.find(
+            (x) => String(x.id_paciente) === String(id)
+        );
+        if (!item) {
+            item = { ...precargaPaciente };
+        }
+        await handleSelectPaciente(item);
+        const r = rangoFechaCaptura.value;
+        if (r.min) {
+            formCaptar.fecha = r.min;
+        }
+    }
+};
+
+/** Tras consulta por documento: sin clínica activa → abrir captación con paciente y fecha = día 1 del periodo. */
+const abrirCaptarPacienteDesdeConsulta = async (pacienteRow) => {
+    cerrarModalConsultaDocumento();
+    await abrirModalCaptarFormulario(pacienteRow);
 };
 
 const abrirCaptacionConDni = async (dni) => {
@@ -766,6 +847,10 @@ const abrirCaptacionConDni = async (dni) => {
     const paciente = pacientes.value.find((item) => String(item.documento || '') === String(dni));
     if (paciente) {
         await handleSelectPaciente(paciente);
+        const r = rangoFechaCaptura.value;
+        if (r.min) {
+            formCaptar.fecha = r.min;
+        }
     }
 };
 
@@ -1097,7 +1182,7 @@ const fetchPacientes = async () => {
 // Funciones de Validación
 const validarFechaPeriodo = (fecha, periodoId) => {
     try {
-        const periodo = periodos.value.find(p => p.id_periodo === periodoId);
+        const periodo = periodos.value.find((p) => String(p.id_periodo) === String(periodoId));
         if (!periodo) {
             return {
                 valido: false,
@@ -1105,15 +1190,22 @@ const validarFechaPeriodo = (fecha, periodoId) => {
             };
         }
 
-        const [year, month] = periodo.periodo.split('-');
-        const fechaIngresada = new Date(fecha);
-        const yearFecha = fechaIngresada.getFullYear();
-        const monthFecha = fechaIngresada.getMonth() + 1;
-
-        if (yearFecha.toString() !== year || monthFecha.toString().padStart(2, '0') !== month) {
+        const partsP = String(periodo.periodo).split('-');
+        const yearP = parseInt(partsP[0], 10);
+        const monthP = parseInt(partsP[1], 10);
+        const partsF = String(fecha).trim().split('-');
+        if (partsF.length < 2) {
+            return { valido: false, mensaje: 'Fecha no válida' };
+        }
+        const yearF = parseInt(partsF[0], 10);
+        const monthF = parseInt(partsF[1], 10);
+        if (Number.isNaN(yearP) || Number.isNaN(monthP) || Number.isNaN(yearF) || Number.isNaN(monthF)) {
+            return { valido: false, mensaje: 'No se pudo validar la fecha respecto al periodo' };
+        }
+        if (yearF !== yearP || monthF !== monthP) {
             return {
                 valido: false,
-                mensaje: `La fecha debe estar dentro del periodo ${periodo.periodo}`
+                mensaje: `La fecha debe estar dentro del periodo ${periodo.periodo} (incluido el día 1).`
             };
         }
 

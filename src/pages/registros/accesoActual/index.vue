@@ -237,7 +237,7 @@
                 :disabled="!idPacienteSeleccionado"
                 @click="confirmarPacienteYMostrarFormulario"
               >
-                Continuar al formular
+                Continuar al formulario
               </button>
             </div>
           </div>
