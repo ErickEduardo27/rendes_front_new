@@ -7,9 +7,13 @@
                 <p class="text-sm text-gray-600 mt-1">Registre ingresos, reingresos y egresos de pacientes</p>
             </div>
             <div class="flex gap-2">
-                <button @click="abrirModalCaptar" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 flex items-center gap-2">
+                <button
+                    type="button"
+                    class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition flex items-center gap-2"
+                    @click="abrirModalConsultaDocumento"
+                >
                     <span>➕</span>
-                    <span>Captar Paciente</span>
+                    <span>Consultar Paciente</span>
                 </button>
                 <button @click="abrirModalEgresar" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 flex items-center gap-2">
                     <span>➖</span>
@@ -155,7 +159,113 @@
             </div>
         </div>
 
-        <!-- Modal para Captar Paciente -->
+        <!-- Modal: consultar documento (mismo flujo que Lista de pacientes) -->
+        <div
+            v-if="mostrarModalConsultaDocumento"
+            class="fixed inset-0 z-[55] flex items-center justify-center bg-black/50 p-4"
+            @click.self="cerrarModalConsultaDocumento"
+        >
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg relative border border-slate-200">
+                <button
+                    type="button"
+                    class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full w-8 h-8 shadow text-sm"
+                    aria-label="Cerrar"
+                    @click="cerrarModalConsultaDocumento"
+                >
+                    ✕
+                </button>
+                <div class="p-6 pt-10">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-1">Buscar paciente</h3>
+                    <p class="text-sm text-slate-500 mb-4">Ingrese el documento para ver si ya está registrado en el sistema.</p>
+
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Número de documento</label>
+                    <div class="flex gap-2">
+                        <input
+                            v-model="docConsulta"
+                            type="text"
+                            class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                            placeholder="Ej. DNI"
+                            maxlength="20"
+                            @keyup.enter="consultarPacientePorDocumento"
+                        />
+                        <button
+                            type="button"
+                            class="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 disabled:opacity-50"
+                            :disabled="consultandoPaciente"
+                            @click="consultarPacientePorDocumento"
+                        >
+                            {{ consultandoPaciente ? 'Buscando…' : 'Buscar' }}
+                        </button>
+                    </div>
+                    <p v-if="errorConsultaDoc" class="text-sm text-red-600 mt-2">{{ errorConsultaDoc }}</p>
+
+                    <div v-if="pacienteConsultaResultado" class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 text-sm">
+                        <p class="text-xs font-bold uppercase text-emerald-800 mb-2">Paciente encontrado</p>
+                        <dl class="grid grid-cols-1 gap-1 text-slate-700">
+                            <div><span class="font-medium text-slate-500">Nombre:</span> {{ pacienteConsultaResultado.paciente || '—' }}</div>
+                            <div><span class="font-medium text-slate-500">Documento:</span> {{ pacienteConsultaResultado.documento || '—' }}</div>
+                            <div><span class="font-medium text-slate-500">Tipo doc.:</span> {{ pacienteConsultaResultado.tipo_documento || '—' }}</div>
+                            <div><span class="font-medium text-slate-500">F. nacimiento:</span> {{ pacienteConsultaResultado.fecha_nacimiento || '—' }}</div>
+                            <div><span class="font-medium text-slate-500">Género:</span> {{ pacienteConsultaResultado.genero || '—' }}</div>
+                        </dl>
+                        <button
+                            type="button"
+                            class="mt-4 w-full py-2 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-white"
+                            @click="cerrarModalConsultaDocumento"
+                        >
+                            Cerrar
+                        </button>
+                    </div>
+
+                    <div
+                        v-else-if="busquedaDocumentoEjecutada && !consultandoPaciente && !errorConsultaDoc"
+                        class="mt-5 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm"
+                    >
+                        <p class="text-amber-900 font-medium">No hay ningún paciente registrado con ese documento.</p>
+                        <p class="text-amber-800/90 text-xs mt-1">Puede cerrar o registrar un paciente nuevo con el formulario completo.</p>
+                        <div class="flex flex-col sm:flex-row gap-2 mt-4">
+                            <button
+                                type="button"
+                                class="flex-1 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-white"
+                                @click="cerrarModalConsultaDocumento"
+                            >
+                                Cerrar
+                            </button>
+                            <button
+                                type="button"
+                                class="flex-1 py-2 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700"
+                                @click="abrirFormularioRegistroNuevo"
+                            >
+                                Registrar nuevo paciente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: formulario completo de registro (tras no encontrado) -->
+        <div v-if="mostrarModalNuevo" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4 relative">
+                <button
+                    type="button"
+                    class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full p-1 shadow"
+                    @click="cerrarModalNuevo"
+                >
+                    ✕
+                </button>
+                <FormularioPaciente
+                    :periodo-inicial="periodoSeleccionado"
+                    :id-periodo-ipress-inicial="idPeriodoIpress"
+                    :id-clinica-inicial="idClinicaSeleccionada"
+                    :nombre-clinica-inicial="clinicaSeleccionada"
+                    :numero-documento-inicial="documentoPrefillRegistro"
+                    @cancelar="onCerrarFormularioPacienteMovimientos"
+                />
+            </div>
+        </div>
+
+        <!-- Modal para Captar Paciente (ingreso / reingreso en periodo) -->
         <div v-if="mostrarModalCaptar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg shadow-xl p-6 w-[700px] max-h-[90vh] overflow-y-auto relative">
                 <button class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl" @click="cerrarModalCaptar">&times;</button>
@@ -378,6 +488,7 @@ import { ref, computed, onMounted, reactive, inject, watch } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
+import FormularioPaciente from '../inicio/FormularioPaciente.vue';
 
 // Estados globales del sistema (NavBar: periodo, clínica, modalidad)
 const periodoGlobal = inject('periodoGlobal', ref(null));
@@ -427,6 +538,20 @@ const ipress = ref([]);
 const pacientes = ref([]);
 const mostrarModalCaptar = ref(false);
 const mostrarModalEgresar = ref(false);
+
+/** Misma consulta por documento + formulario que Lista de pacientes */
+const mostrarModalConsultaDocumento = ref(false);
+const mostrarModalNuevo = ref(false);
+const documentoPrefillRegistro = ref('');
+const docConsulta = ref('');
+const consultandoPaciente = ref(false);
+const errorConsultaDoc = ref('');
+const pacienteConsultaResultado = ref(null);
+const busquedaDocumentoEjecutada = ref(false);
+const idPeriodoIpress = ref(null);
+const idClinicaSeleccionada = ref(null);
+const clinicaSeleccionada = ref('');
+const periodoSeleccionado = ref(null);
 const pacienteSeleccionado = ref(null);
 const pacienteSeleccionadoEgresar = ref(null);
 const condicionAutomatica = ref('');
@@ -537,8 +662,92 @@ const filtrarMovimientos = () => {
     paginaActual.value = 1;
 };
 
-// Funciones de Modal Captar
-const abrirModalCaptar = async () => {
+const syncPeriodoIpressParaFormulario = async () => {
+    idClinicaSeleccionada.value = clinicaGlobal.value ?? null;
+    periodoSeleccionado.value = periodoGlobal.value ?? null;
+    const clinicaActual = (Array.isArray(ipress.value) ? ipress.value : []).find(
+        (item) => String(item.id_ipress) === String(idClinicaSeleccionada.value)
+    );
+    clinicaSeleccionada.value = clinicaActual?.nombre_corto || clinicaActual?.ipress || '';
+    idPeriodoIpress.value = null;
+    if (periodoSeleccionado.value != null && idClinicaSeleccionada.value != null) {
+        try {
+            const respuesta = await postAllIpress('/consulta_periodo_ipress/', {
+                id_periodo: Number(periodoSeleccionado.value),
+                id_ipress: Number(idClinicaSeleccionada.value),
+                id_estado: 1,
+            });
+            const lista = Array.isArray(respuesta) ? respuesta : [];
+            idPeriodoIpress.value = lista.length ? lista[0].id_periodo_ipress : null;
+        } catch {
+            idPeriodoIpress.value = null;
+        }
+    }
+};
+
+const cerrarModalNuevo = () => {
+    mostrarModalNuevo.value = false;
+    documentoPrefillRegistro.value = '';
+};
+
+const cerrarModalConsultaDocumento = () => {
+    mostrarModalConsultaDocumento.value = false;
+    docConsulta.value = '';
+    errorConsultaDoc.value = '';
+    pacienteConsultaResultado.value = null;
+    busquedaDocumentoEjecutada.value = false;
+};
+
+const abrirModalConsultaDocumento = () => {
+    docConsulta.value = '';
+    errorConsultaDoc.value = '';
+    pacienteConsultaResultado.value = null;
+    busquedaDocumentoEjecutada.value = false;
+    mostrarModalConsultaDocumento.value = true;
+};
+
+const consultarPacientePorDocumento = async () => {
+    errorConsultaDoc.value = '';
+    pacienteConsultaResultado.value = null;
+    busquedaDocumentoEjecutada.value = false;
+    const doc = docConsulta.value.trim();
+    if (!doc) {
+        errorConsultaDoc.value = 'Ingrese el número de documento.';
+        return;
+    }
+    consultandoPaciente.value = true;
+    try {
+        const res = await getAllIpress(`/pacientes/?documento=${encodeURIComponent(doc)}`);
+        const list = Array.isArray(res) ? res : (res?.results || []);
+        busquedaDocumentoEjecutada.value = true;
+        pacienteConsultaResultado.value = list.length > 0 ? list[0] : null;
+    } catch (e) {
+        errorConsultaDoc.value = e?.error || e?.message || 'Error al buscar en el sistema.';
+        busquedaDocumentoEjecutada.value = false;
+    } finally {
+        consultandoPaciente.value = false;
+    }
+};
+
+const abrirFormularioRegistroNuevo = async () => {
+    documentoPrefillRegistro.value = docConsulta.value.trim();
+    mostrarModalConsultaDocumento.value = false;
+    docConsulta.value = '';
+    errorConsultaDoc.value = '';
+    pacienteConsultaResultado.value = null;
+    busquedaDocumentoEjecutada.value = false;
+    await syncPeriodoIpressParaFormulario();
+    mostrarModalNuevo.value = true;
+};
+
+const onCerrarFormularioPacienteMovimientos = () => {
+    cerrarModalNuevo();
+    fetchMovimientos();
+    fetchPacientes();
+};
+
+// Funciones de Modal Captar (ingreso en periodo; también deep-link captarDni)
+const abrirModalCaptarFormulario = async () => {
     await fetchPacientes();
     formCaptar.paciente = null;
     formCaptar.pacienteBusqueda = '';
@@ -552,7 +761,7 @@ const abrirModalCaptar = async () => {
 
 const abrirCaptacionConDni = async (dni) => {
     if (!dni) return;
-    await abrirModalCaptar();
+    await abrirModalCaptarFormulario();
     formCaptar.pacienteBusqueda = String(dni);
     const paciente = pacientes.value.find((item) => String(item.documento || '') === String(dni));
     if (paciente) {

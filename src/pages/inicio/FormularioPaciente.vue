@@ -215,6 +215,11 @@ const props = defineProps({
   nombreClinicaInicial: {
     type: String,
     default: ''
+  },
+  /** Precarga número de documento (p. ej. tras “no encontrado” en lista de pacientes). */
+  numeroDocumentoInicial: {
+    type: String,
+    default: ''
   }
 })
 
@@ -1422,6 +1427,15 @@ watch(() => props.idClinicaInicial, (newVal) => {
 
 watch(() => props.nombreClinicaInicial, (newVal) => {
   if (newVal) clinicaSeleccionada.value = newVal;
+}, { immediate: true });
+
+watch(() => props.numeroDocumentoInicial, (v) => {
+  const s = (v || '').trim();
+  if (!s) return;
+  form.numeroDocumento = s;
+  if (/^\d{8}$/.test(s)) {
+    form.tipoDocumento = 'DNI';
+  }
 }, { immediate: true });
 
 onMounted(() => {

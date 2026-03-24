@@ -171,13 +171,104 @@
     </div>
 
     <div class="flex items-center gap-4 my-4 border-t pt-4">
-      <button class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition" @click="emitNuevoRegistro">
+      <button
+        type="button"
+        class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition"
+        @click="abrirModalConsultaDocumento"
+      >
         Consultar Paciente
       </button>
     </div>
 
-    <!-- Modal flotante: Nuevo registro de paciente -->
-    <div v-if="mostrarModalNuevo" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <!-- Modal 1: consultar por documento en el sistema -->
+    <div
+      v-if="mostrarModalConsultaDocumento"
+      class="fixed inset-0 z-[55] flex items-center justify-center bg-black/50 p-4"
+      @click.self="cerrarModalConsultaDocumento"
+    >
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg relative border border-slate-200">
+        <button
+          type="button"
+          class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full w-8 h-8 shadow text-sm"
+          aria-label="Cerrar"
+          @click="cerrarModalConsultaDocumento"
+        >
+          ✕
+        </button>
+        <div class="p-6 pt-10">
+          <h3 class="text-lg font-semibold text-slate-800 mb-1">Buscar paciente</h3>
+          <p class="text-sm text-slate-500 mb-4">Ingrese el documento para ver si ya está registrado en el sistema.</p>
+
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Número de documento</label>
+          <div class="flex gap-2">
+            <input
+              v-model="docConsulta"
+              type="text"
+              class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="Ej. DNI"
+              maxlength="20"
+              @keyup.enter="consultarPacientePorDocumento"
+            />
+            <button
+              type="button"
+              class="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 disabled:opacity-50"
+              :disabled="consultandoPaciente"
+              @click="consultarPacientePorDocumento"
+            >
+              {{ consultandoPaciente ? 'Buscando…' : 'Buscar' }}
+            </button>
+          </div>
+          <p v-if="errorConsultaDoc" class="text-sm text-red-600 mt-2">{{ errorConsultaDoc }}</p>
+
+          <!-- Encontrado -->
+          <div v-if="pacienteConsultaResultado" class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 text-sm">
+            <p class="text-xs font-bold uppercase text-emerald-800 mb-2">Paciente encontrado</p>
+            <dl class="grid grid-cols-1 gap-1 text-slate-700">
+              <div><span class="font-medium text-slate-500">Nombre:</span> {{ pacienteConsultaResultado.paciente || '—' }}</div>
+              <div><span class="font-medium text-slate-500">Documento:</span> {{ pacienteConsultaResultado.documento || '—' }}</div>
+              <div><span class="font-medium text-slate-500">Tipo doc.:</span> {{ pacienteConsultaResultado.tipo_documento || '—' }}</div>
+              <div><span class="font-medium text-slate-500">F. nacimiento:</span> {{ pacienteConsultaResultado.fecha_nacimiento || '—' }}</div>
+              <div><span class="font-medium text-slate-500">Género:</span> {{ pacienteConsultaResultado.genero || '—' }}</div>
+            </dl>
+            <button
+              type="button"
+              class="mt-4 w-full py-2 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-white"
+              @click="cerrarModalConsultaDocumento"
+            >
+              Cerrar
+            </button>
+          </div>
+
+          <!-- No encontrado: solo entonces se ofrece ir al formulario completo -->
+          <div
+            v-else-if="busquedaDocumentoEjecutada && !consultandoPaciente && !errorConsultaDoc"
+            class="mt-5 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm"
+          >
+            <p class="text-amber-900 font-medium">No hay ningún paciente registrado con ese documento.</p>
+            <p class="text-amber-800/90 text-xs mt-1">Puede cerrar o registrar un paciente nuevo con el formulario completo.</p>
+            <div class="flex flex-col sm:flex-row gap-2 mt-4">
+              <button
+                type="button"
+                class="flex-1 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-white"
+                @click="cerrarModalConsultaDocumento"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                class="flex-1 py-2 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700"
+                @click="abrirFormularioRegistroNuevo"
+              >
+                Registrar nuevo paciente
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal 2: formulario completo (solo tras “no encontrado” o si se reabre desde otro flujo) -->
+    <div v-if="mostrarModalNuevo" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4 relative">
         <button
           class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full p-1 shadow"
@@ -190,6 +281,7 @@
           :id-periodo-ipress-inicial="idPeriodoIpress"
           :id-clinica-inicial="idClinicaSeleccionada"
           :nombre-clinica-inicial="clinicaSeleccionada"
+          :numero-documento-inicial="documentoPrefillRegistro"
           @cancelar="cerrarModalNuevo"
         />
       </div>
@@ -524,12 +616,72 @@ const fetchPeriodo = async (url = null) => {
 };
 
 const mostrarModalNuevo = ref(false);
+/** Precarga documento en FormularioPaciente al abrir tras “no encontrado”. */
+const documentoPrefillRegistro = ref('');
+
+const mostrarModalConsultaDocumento = ref(false);
+const docConsulta = ref('');
+const consultandoPaciente = ref(false);
+const errorConsultaDoc = ref('');
+const pacienteConsultaResultado = ref(null);
+const busquedaDocumentoEjecutada = ref(false);
 
 const cerrarModalNuevo = () => {
   mostrarModalNuevo.value = false;
+  documentoPrefillRegistro.value = '';
 };
 
-const emitNuevoRegistro = () => {
+const cerrarModalConsultaDocumento = () => {
+  mostrarModalConsultaDocumento.value = false;
+  docConsulta.value = '';
+  errorConsultaDoc.value = '';
+  pacienteConsultaResultado.value = null;
+  busquedaDocumentoEjecutada.value = false;
+};
+
+const abrirModalConsultaDocumento = () => {
+  docConsulta.value = '';
+  errorConsultaDoc.value = '';
+  pacienteConsultaResultado.value = null;
+  busquedaDocumentoEjecutada.value = false;
+  mostrarModalConsultaDocumento.value = true;
+};
+
+const consultarPacientePorDocumento = async () => {
+  errorConsultaDoc.value = '';
+  pacienteConsultaResultado.value = null;
+  busquedaDocumentoEjecutada.value = false;
+  const doc = docConsulta.value.trim();
+  if (!doc) {
+    errorConsultaDoc.value = 'Ingrese el número de documento.';
+    return;
+  }
+  consultandoPaciente.value = true;
+  try {
+    const res = await getAllIpress(`/pacientes/?documento=${encodeURIComponent(doc)}`);
+    const list = Array.isArray(res) ? res : (res?.results || []);
+    busquedaDocumentoEjecutada.value = true;
+    if (list.length > 0) {
+      pacienteConsultaResultado.value = list[0];
+    } else {
+      pacienteConsultaResultado.value = null;
+    }
+  } catch (e) {
+    errorConsultaDoc.value = e?.error || e?.message || 'Error al buscar en el sistema.';
+    busquedaDocumentoEjecutada.value = false;
+  } finally {
+    consultandoPaciente.value = false;
+  }
+};
+
+/** Cierra consulta y abre el formulario completo con documento precargado. */
+const abrirFormularioRegistroNuevo = () => {
+  documentoPrefillRegistro.value = docConsulta.value.trim();
+  mostrarModalConsultaDocumento.value = false;
+  docConsulta.value = '';
+  errorConsultaDoc.value = '';
+  pacienteConsultaResultado.value = null;
+  busquedaDocumentoEjecutada.value = false;
   mostrarModalNuevo.value = true;
 };
 
