@@ -129,12 +129,27 @@
               <td class="px-3 py-2 max-w-[140px] truncate" :title="row.tipo_acceso">{{ row.tipo_acceso || '—' }}</td>
               <td class="px-3 py-2 max-w-[160px] truncate" :title="etiologiaTexto(row)">{{ etiologiaTexto(row) }}</td>
               <td class="px-3 py-2">
-                <div class="flex flex-wrap gap-1">
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-sky-100 text-sky-800 hover:bg-sky-200" @click="abrirFormulario(row, 1)">Acceso</button>
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-rose-100 text-rose-800 hover:bg-rose-200" @click="abrirFormulario(row, 2)">Infecc.</button>
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 hover:bg-amber-200" @click="abrirFormulario(row, 3)">Morb.</button>
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 hover:bg-indigo-200" @click="abrirFormulario(row, 4)">Result.</button>
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200" @click="abrirFormulario(row, 5)">Vacun.</button>
+                <div class="flex flex-wrap gap-1 items-center">
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-sky-100 text-sky-800 hover:bg-sky-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 1)" @click="abrirFormulario(row, 1)">
+                    Acceso
+                    <span v-if="metaFormulario(row, 1)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
+                  </button>
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-rose-100 text-rose-800 hover:bg-rose-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 2)" @click="abrirFormulario(row, 2)">
+                    Infecc.
+                    <span v-if="metaFormulario(row, 2)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
+                  </button>
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 3)" @click="abrirFormulario(row, 3)">
+                    Morb.
+                    <span v-if="metaFormulario(row, 3)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
+                  </button>
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 hover:bg-indigo-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 4)" @click="abrirFormulario(row, 4)">
+                    Result.
+                    <span v-if="metaFormulario(row, 4)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
+                  </button>
+                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 5)" @click="abrirFormulario(row, 5)">
+                    Vacun.
+                    <span v-if="metaFormulario(row, 5)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
+                  </button>
                 </div>
               </td>
             </tr>
@@ -476,6 +491,85 @@ const estadisticas = computed(() => {
 });
 // -----------------------------------
 
+/** Último registro por id_paciente_atencion: indicador de edición del supervisor y comentario (vista por formulario). */
+const metaFormularioPorAtencion = ref({});
+
+function ultimoMetaPorAtencion(rows, idKey) {
+  const out = {};
+  const list = Array.isArray(rows) ? rows : [];
+  const sorted = [...list].sort((a, b) => (Number(b[idKey]) || 0) - (Number(a[idKey]) || 0));
+  for (const r of sorted) {
+    const aid = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
+    if (aid == null) continue;
+    const k = String(aid);
+    if (out[k] != null) continue;
+    out[k] = {
+      supervisor_edito_registro: !!r.supervisor_edito_registro,
+      comentario_evaluacion: r.comentario_evaluacion || '',
+    };
+  }
+  return out;
+}
+
+async function fetchMetaFormulariosPorAtencion() {
+  const idPeriodo = periodoGlobal.value;
+  const idIpress = clinicaGlobal.value;
+  const idModalidad = modalidadGlobal.value;
+  if (
+    idPeriodo == null || idPeriodo === '' ||
+    idIpress == null || idIpress === '' ||
+    idModalidad == null || idModalidad === ''
+  ) {
+    metaFormularioPorAtencion.value = {};
+    return;
+  }
+  const qs = new URLSearchParams({
+    id_periodo: String(idPeriodo),
+    id_ipress: String(idIpress),
+    id_modalidad: String(idModalidad),
+  }).toString();
+  try {
+    const [resU, resE, resM, resR, resV] = await Promise.all([
+      getAllIpress(`/unidadesActuales/?${qs}`),
+      getAllIpress(`/eventosAccesosVasculares/?${qs}`),
+      getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
+      getAllIpress(`/resultadosClinicos/?${qs}`),
+      getAllIpress(`/vacunaciones/?${qs}`),
+    ]);
+    const arr = (x) => (Array.isArray(x) ? x : (x?.results || []));
+    const merged = {};
+    const mergeNum = (num, mapObj) => {
+      Object.keys(mapObj).forEach((aid) => {
+        if (!merged[aid]) merged[aid] = {};
+        merged[aid][num] = mapObj[aid];
+      });
+    };
+    mergeNum(1, ultimoMetaPorAtencion(arr(resU), 'id_unidad_actual'));
+    mergeNum(2, ultimoMetaPorAtencion(arr(resE), 'id_evento_acceso_vascular'));
+    mergeNum(3, ultimoMetaPorAtencion(arr(resM), 'id_morbilidad_hospitalaria'));
+    mergeNum(4, ultimoMetaPorAtencion(arr(resR), 'id_resultado_clinico'));
+    mergeNum(5, ultimoMetaPorAtencion(arr(resV), 'id_vacunacion'));
+    metaFormularioPorAtencion.value = merged;
+  } catch (e) {
+    console.error('Error al cargar metadatos de formularios:', e);
+    metaFormularioPorAtencion.value = {};
+  }
+}
+
+function metaFormulario(row, numForm) {
+  const id = row?.id_paciente_atencion;
+  if (id == null) return null;
+  return metaFormularioPorAtencion.value[String(id)]?.[numForm] ?? null;
+}
+
+function tooltipFormulario(row, numForm) {
+  const m = metaFormulario(row, numForm);
+  const c = String(m?.comentario_evaluacion || '').trim();
+  if (c) return `Supervisor: ${c}`;
+  if (m?.supervisor_edito_registro) return 'Registro editado por supervisor';
+  return '';
+}
+
 // Paleta de colores para cada tipo de formulario
 const obtenerColor = (n) => {
   const estilos = {
@@ -595,7 +689,8 @@ async function searchPeriodoIpress() {
     idPeriodoIpress.value = null;
   }
 
-  fetchPacientes()
+  fetchPacientes();
+  fetchMetaFormulariosPorAtencion();
 }
 
 const fetchPacientes = async () => {

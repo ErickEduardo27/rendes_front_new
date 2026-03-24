@@ -70,6 +70,7 @@ const routes = [
         path: 'acceso-vascular',
         name: 'AccesoVascular',
         component: () => import('@/pages/registros/accesoActual/index.vue'),
+        meta: { mostrarNotificarRegistros: true },
       },
       {
         path: 'evaluacion',
@@ -87,21 +88,25 @@ const routes = [
         path: 'eventos-infecciosos',
         name: 'EventosInfecciosos',
         component: () => import('@/pages/registros/eventosInfecciosos/index.vue'),
+        meta: { mostrarNotificarRegistros: true },
       },
       {
         path: 'morbilidad-hospitalaria',
         name: 'MorbilidadHospitalaria',
         component: () => import('@/pages/registros/morbilidadHospitalaria/index.vue'),
+        meta: { mostrarNotificarRegistros: true },
       },
       {
         path: 'resultados-clinicos',
         name: 'ResultadosClinicos',
         component: () => import('@/pages/registros/resultadosClinicos/index.vue'),
+        meta: { mostrarNotificarRegistros: true },
       },
       {
         path: 'vacunacion',
         name: 'Vacunacion',
         component: () => import('@/pages/registros/vacunacion/index.vue'),
+        meta: { mostrarNotificarRegistros: true },
       }
     ]
   },

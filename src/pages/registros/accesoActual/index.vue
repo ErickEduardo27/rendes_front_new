@@ -98,6 +98,8 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -113,6 +115,11 @@
                       {{ r.estado_aprobacion || 'PENDIENTE' }}
                     </span>
                   </td>
+                  <td class="px-4 py-3 text-sm">
+                    <span v-if="r.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                    <span v-else class="text-slate-400">—</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[220px] truncate align-top" :title="r.comentario_evaluacion || ''">{{ textoComentarioSupervisor(r.comentario_evaluacion) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -133,6 +140,8 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -148,6 +157,11 @@
                       {{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}
                     </span>
                   </td>
+                  <td class="px-4 py-3 text-sm">
+                    <span v-if="fila.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                    <span v-else class="text-slate-400">—</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[220px] truncate align-top" :title="fila.comentario_evaluacion || ''">{{ textoComentarioSupervisor(fila.comentario_evaluacion) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -500,6 +514,12 @@ function estadoAprobacionClase(estado) {
   return 'bg-amber-100 text-amber-700';
 }
 
+function textoComentarioSupervisor(text) {
+  const s = String(text || '').trim();
+  if (!s) return '—';
+  return s.length > 64 ? `${s.slice(0, 64)}…` : s;
+}
+
 const pacientesDisponibles = computed(() => {
   return Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
 });
@@ -623,6 +643,8 @@ const todosPacientesLista = computed(() => {
         fecha_creacion_acceso: r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
         motivo_cambio: r.motivo_cambio || '',
         estado_aprobacion: r.estado_aprobacion || 'PENDIENTE',
+        supervisor_edito_registro: !!r.supervisor_edito_registro,
+        comentario_evaluacion: r.comentario_evaluacion || '',
       };
     }
     return {
@@ -635,6 +657,8 @@ const todosPacientesLista = computed(() => {
       fecha_creacion_acceso: '',
       motivo_cambio: '',
       estado_aprobacion: 'SIN REGISTRO',
+      supervisor_edito_registro: false,
+      comentario_evaluacion: '',
     };
   });
 });

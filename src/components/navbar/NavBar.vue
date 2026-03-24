@@ -11,6 +11,14 @@
     </div>
 
     <div class="flex items-center gap-2 shrink-0">
+      <button
+        v-if="mostrarBotonNotificar"
+        type="button"
+        class="inline-flex items-center gap-1.5 rounded-lg border border-cyan-600 bg-cyan-50 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-cyan-800 hover:bg-cyan-100 shrink-0"
+        @click="abrirModalNotificar"
+      >
+        Notificar
+      </button>
       <router-link
         to="/notificaciones"
         class="relative inline-flex p-1 rounded-lg hover:bg-cyan-50 transition-colors"
@@ -47,14 +55,56 @@
         </div>
       </div>
     </div>
+
+    <div
+      v-if="modalNotificarAbierto"
+      class="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4"
+      @click.self="cerrarModalNotificar"
+    >
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-md border border-slate-200 overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-cyan-50/80">
+          <h2 class="text-base font-bold text-slate-800">Notificar envío a revisión</h2>
+          <button type="button" class="text-slate-500 hover:text-slate-800 text-lg leading-none" aria-label="Cerrar" @click="cerrarModalNotificar">✕</button>
+        </div>
+        <div class="p-5 space-y-4">
+          <p v-if="!filtroSelectorListo" class="text-sm text-amber-700">Seleccione periodo, clínica y modalidad en la barra superior.</p>
+          <template v-else>
+            <p class="text-sm text-slate-600">Registros cargados según el filtro actual:</p>
+            <div v-if="cargandoStats" class="text-sm text-slate-500 py-4 text-center">Cargando conteos…</div>
+            <div v-else class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 border border-slate-100 rounded-lg p-3 bg-slate-50/80">
+              <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1">Registros por formulario</div>
+              <div class="flex justify-between"><span>Acceso Vascular</span><span class="font-semibold text-sky-700">{{ statsModal.totalUnidades }}</span></div>
+              <div class="flex justify-between"><span>Infecciones</span><span class="font-semibold text-rose-700">{{ statsModal.totalEventos }}</span></div>
+              <div class="flex justify-between"><span>Morbilidad Hosp.</span><span class="font-semibold text-amber-700">{{ statsModal.totalMorbilidades }}</span></div>
+              <div class="flex justify-between"><span>Resultados Clínicos</span><span class="font-semibold text-indigo-700">{{ statsModal.totalResultados }}</span></div>
+              <div class="flex justify-between col-span-2"><span>Vacunación</span><span class="font-semibold text-emerald-700">{{ statsModal.totalVacunaciones }}</span></div>
+            </div>
+            <p class="text-sm text-slate-700">
+              ¿Desea <strong>notificar al equipo de revisión</strong> que estos datos están listos para ser evaluados?
+            </p>
+          </template>
+        </div>
+        <div class="px-5 py-3 border-t border-slate-100 flex flex-wrap justify-end gap-2 bg-slate-50">
+          <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalNotificar">Cancelar</button>
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 disabled:opacity-50"
+            :disabled="!filtroSelectorListo || enviandoNotificacion"
+            @click="confirmarNotificacion"
+          >{{ enviandoNotificacion ? 'Enviando…' : 'Sí, notificar' }}</button>
+        </div>
+      </div>
+    </div>
   </header>
 </template>
 
 <script setup>
 import { BellIcon, Bars3Icon } from '@heroicons/vue/24/outline'
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getAllIpress } from '@/services/ipress/Ipress.service'
+import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service'
+import { obtenerEstadisticasRegistrosFormularios } from '@/utils/estadisticasRegistrosFormularios'
+import { ElMessage } from 'element-plus'
 import { useAuthStore } from "@/store/auth";
 import router from "@/router/index";
 import { toast } from 'vue-sonner'
@@ -90,6 +140,89 @@ const showMenu = ref(false)
 const route = useRoute()
 const noLeidas = ref(0)
 let pollTimer = null
+
+const modalNotificarAbierto = ref(false)
+const cargandoStats = ref(false)
+const enviandoNotificacion = ref(false)
+const statsModal = ref({
+  totalUnidades: 0,
+  totalEventos: 0,
+  totalMorbilidades: 0,
+  totalResultados: 0,
+  totalVacunaciones: 0,
+})
+
+/** Mismo criterio que router/index.js (perfilEsEvaluador). */
+function perfilEsEvaluadorNavbar() {
+  const p =
+    authStore.user?.datosPerfil?.perfil ??
+    (typeof localStorage !== 'undefined' ? localStorage.getItem('perfil') : '') ??
+    ''
+  return ['supervisor', 'admin'].includes(String(p).trim().toLowerCase())
+}
+
+/** En rutas hijas de Principal, `route.meta` no siempre incluye el meta del hijo; usar matched o name. */
+const RUTAS_NOTIFICAR_REGISTROS = new Set([
+  'AccesoVascular',
+  'EventosInfecciosos',
+  'MorbilidadHospitalaria',
+  'ResultadosClinicos',
+  'Vacunacion',
+])
+
+const mostrarBotonNotificar = computed(() => {
+  if (perfilEsEvaluadorNavbar()) return false
+  if (RUTAS_NOTIFICAR_REGISTROS.has(route.name)) return true
+  return route.matched.some((r) => r.meta?.mostrarNotificarRegistros === true)
+})
+
+const filtroSelectorListo = computed(() => {
+  return (
+    periodo.value != null && periodo.value !== '' &&
+    clinica.value != null && clinica.value !== '' &&
+    modalidad.value != null && modalidad.value !== ''
+  )
+})
+
+async function abrirModalNotificar() {
+  modalNotificarAbierto.value = true
+  if (!filtroSelectorListo.value) return
+  cargandoStats.value = true
+  try {
+    statsModal.value = await obtenerEstadisticasRegistrosFormularios({
+      idPeriodo: periodo.value,
+      idIpress: clinica.value,
+      idModalidad: modalidad.value,
+    })
+  } finally {
+    cargandoStats.value = false
+  }
+}
+
+function cerrarModalNotificar() {
+  modalNotificarAbierto.value = false
+  enviandoNotificacion.value = false
+}
+
+async function confirmarNotificacion() {
+  if (!filtroSelectorListo.value) return
+  enviandoNotificacion.value = true
+  try {
+    await postAllIpress('/notificar_envio_revision/', {
+      id_periodo: Number(periodo.value),
+      id_ipress: Number(clinica.value),
+      id_modalidad: Number(modalidad.value),
+    })
+    ElMessage.success('Notificación enviada. El equipo de revisión verá el aviso en Evaluación de registros.')
+    window.dispatchEvent(new CustomEvent('notificacion-revision:actualizar'))
+    cerrarModalNotificar()
+  } catch (e) {
+    const msg = e?.detail || e?.error || e?.response?.data?.detail || e?.message || 'No se pudo enviar la notificación.'
+    ElMessage.error(typeof msg === 'string' ? msg : 'No se pudo enviar la notificación.')
+  } finally {
+    enviandoNotificacion.value = false
+  }
+}
 
 async function fetchNoLeidas() {
   if (!TokenService.getToken()) {

@@ -80,6 +80,9 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Vancomicina</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hemocultivo (+)</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Germen</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -92,6 +95,14 @@
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.vancomicina || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.hemocultivo_positivo || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.germen || '—' }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <span v-if="r.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                    <span v-else class="text-slate-400">—</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate" :title="r.comentario_evaluacion || ''">{{ textoComentarioSupervisor(r.comentario_evaluacion) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -113,6 +124,9 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Vancomicina</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hemocultivo (+)</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Germen</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -125,6 +139,14 @@
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.vancomicina || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.hemocultivo_positivo || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.germen || '—' }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(fila.estado_aprobacion)">{{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">
+                    <span v-if="fila.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                    <span v-else class="text-slate-400">—</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate" :title="fila.comentario_evaluacion || ''">{{ textoComentarioSupervisor(fila.comentario_evaluacion) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -267,6 +289,20 @@ function documentoPaciente(r) {
   return r.datosPacienteAtencion?.datosPaciente?.documento || r.datosPaciente?.documento || '—';
 }
 
+function estadoAprobacionClase(estado) {
+  const valor = String(estado || '').toUpperCase();
+  if (valor === 'APROBADO') return 'bg-emerald-100 text-emerald-700';
+  if (valor === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
+  if (valor === 'SIN REGISTRO') return 'bg-slate-100 text-slate-500';
+  return 'bg-amber-100 text-amber-700';
+}
+
+function textoComentarioSupervisor(text) {
+  const s = String(text || '').trim();
+  if (!s) return '—';
+  return s.length > 64 ? `${s.slice(0, 64)}…` : s;
+}
+
 const pacientesDisponibles = computed(() => Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : []);
 const pacientesFiltrados = computed(() => {
   const texto = busquedaPaciente.value.trim().toLowerCase();
@@ -284,7 +320,11 @@ const todosPacientesLista = computed(() => {
   const porAtencion = {};
   regs.forEach((r) => {
     const id = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
-    if (id != null && !porAtencion[String(id)]) porAtencion[String(id)] = r;
+    if (id == null) return;
+    const k = String(id);
+    const prev = porAtencion[k];
+    const rid = Number(r.id_evento_acceso_vascular) || 0;
+    if (!prev || rid > (Number(prev.id_evento_acceso_vascular) || 0)) porAtencion[k] = r;
   });
   return atenciones.map((a) => {
     const id = a.id_paciente_atencion;
@@ -304,9 +344,26 @@ const todosPacientesLista = computed(() => {
         vancomicina: r.vancomicina || '',
         hemocultivo_positivo: r.hemocultivo_positivo || '',
         germen: r.germen || '',
+        estado_aprobacion: r.estado_aprobacion || 'PENDIENTE',
+        supervisor_edito_registro: !!r.supervisor_edito_registro,
+        comentario_evaluacion: r.comentario_evaluacion || '',
       };
     }
-    return { id_paciente_atencion: id, tieneRegistro: false, paciente, documento, fecha_evento: '', tipo_infeccion: '', antmicrobial: '', vancomicina: '', hemocultivo_positivo: '', germen: '' };
+    return {
+      id_paciente_atencion: id,
+      tieneRegistro: false,
+      paciente,
+      documento,
+      fecha_evento: '',
+      tipo_infeccion: '',
+      antmicrobial: '',
+      vancomicina: '',
+      hemocultivo_positivo: '',
+      germen: '',
+      estado_aprobacion: 'SIN REGISTRO',
+      supervisor_edito_registro: false,
+      comentario_evaluacion: '',
+    };
   });
 });
 
