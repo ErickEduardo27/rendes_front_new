@@ -98,7 +98,8 @@
           <div v-if="registros.length === 0" class="p-12 text-center text-slate-500 italic">
             No hay registros de resultados clínicos para el periodo, IPRESS y modalidad seleccionados.
           </div>
-          <div v-else class="overflow-x-auto">
+          <template v-else>
+            <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
@@ -110,7 +111,7 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">PTHi</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Alb</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Kt/V</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">T. diálisis</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">T. diálisis (h)</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Eritropoyetina</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hierro</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Calcitriol</th>
@@ -120,8 +121,8 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr v-for="r in registros" :key="r.id_resultado_clinico" class="hover:bg-slate-50 transition-colors">
-                  <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                <tr v-for="r in registrosPaginados" :key="r.id_resultado_clinico" class="hover:bg-slate-50 transition-colors">
+                  <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.Hb ?? r.hb ?? '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.calcio ?? '—' }}</td>
@@ -129,7 +130,7 @@
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.PTHi ?? r.pthi ?? '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.Alb ?? r.alb ?? '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.ktv ?? r.kt ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.tiempo_dialisis ?? '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-600 tabular-nums">{{ formatearTiempoDialisisTabla(r.tiempo_dialisis) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(r.eritoproyetina) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(r.hierro) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(r.calcitriol) }}</td>
@@ -144,13 +145,22 @@
                 </tr>
               </tbody>
             </table>
-          </div>
+            </div>
+            <TablaPaginacion
+              v-model:page="paginaRegistros"
+              v-model:page-size="pageSizeTablas"
+              :page-size-options="[PAGE_SIZE_TABLAS]"
+              hide-page-size-selector
+              :total="registros.length"
+            />
+          </template>
         </template>
         <template v-else-if="vistaActiva === 'todos'">
           <div v-if="todosPacientesLista.length === 0" class="p-12 text-center text-slate-500 italic">
             No hay pacientes en el periodo, IPRESS y modalidad seleccionados.
           </div>
-          <div v-else class="overflow-x-auto">
+          <template v-else>
+            <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
@@ -162,7 +172,7 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">PTHi</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Alb</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Kt/V</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">T. diálisis</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">T. diálisis (h)</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Eritropoyetina</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hierro</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Calcitriol</th>
@@ -172,7 +182,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr v-for="fila in todosPacientesLista" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
+                <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
                   <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.documento || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.Hb ?? fila.hb ?? '—' }}</td>
@@ -181,7 +191,7 @@
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.PTHi ?? fila.pthi ?? '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.Alb ?? fila.alb ?? '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.ktv ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.tiempo_dialisis ?? '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-600 tabular-nums">{{ formatearTiempoDialisisTabla(fila.tiempo_dialisis) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(fila.eritoproyetina) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(fila.hierro) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(fila.calcitriol) }}</td>
@@ -196,13 +206,22 @@
                 </tr>
               </tbody>
             </table>
-          </div>
+            </div>
+            <TablaPaginacion
+              v-model:page="paginaTodos"
+              v-model:page-size="pageSizeTablas"
+              :page-size-options="[PAGE_SIZE_TABLAS]"
+              hide-page-size-selector
+              :total="todosPacientesLista.length"
+            />
+          </template>
         </template>
         <template v-else>
           <div v-if="historialCargas.length === 0" class="p-12 text-center text-slate-500 italic">
             Aun no hay cargas de Excel registradas.
           </div>
-          <div v-else class="overflow-x-auto">
+          <template v-else>
+            <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
@@ -218,7 +237,7 @@
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr
-                  v-for="carga in historialCargas"
+                  v-for="carga in historialCargasPaginados"
                   :key="carga.id"
                   class="hover:bg-slate-50 transition-colors cursor-pointer"
                   @click="abrirDetalleCarga(carga)"
@@ -234,7 +253,15 @@
                 </tr>
               </tbody>
             </table>
-          </div>
+            </div>
+            <TablaPaginacion
+              v-model:page="paginaHistorialCargas"
+              v-model:page-size="pageSizeTablas"
+              :page-size-options="[PAGE_SIZE_TABLAS]"
+              hide-page-size-selector
+              :total="historialCargas.length"
+            />
+          </template>
         </template>
       </div>
     </div>
@@ -305,7 +332,7 @@
           <button type="button" class="text-white/80 hover:text-white" @click="cerrarModalImportar">✕</button>
         </div>
         <div class="p-6 space-y-6">
-          <p class="text-sm text-slate-600">Cargue el Excel completado. La importacion valida rangos clinicos y el DNI del paciente segun el filtro actual.</p>
+          <p class="text-sm text-slate-600">Cargue el Excel completado. La importación valida rangos clínicos, el DNI del paciente según el filtro actual y el tiempo de diálisis en <strong>horas</strong> (número entero o decimal, p. ej. 2, 2.5, 3.25) entre 0,25 y 8.</p>
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-2">Cargar archivo Excel</label>
             <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center" @dragover.prevent="arrastrando = true" @dragleave.prevent="arrastrando = false" @drop.prevent="onDropArchivo" :class="arrastrando ? 'border-cyan-400 bg-cyan-50/50' : ''">
@@ -370,7 +397,10 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr v-for="(detalle, index) in cargaSeleccionada.detalles" :key="`${cargaSeleccionada.id}-${index}`">
+                <tr
+                  v-for="(detalle, index) in detallesCargaPaginados"
+                  :key="`${cargaSeleccionada.id}-${(paginaDetalleCarga - 1) * PAGE_SIZE_TABLAS + index}`"
+                >
                   <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.dni || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.paciente || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.Hb || '—' }}</td>
@@ -386,6 +416,13 @@
                 </tr>
               </tbody>
             </table>
+            <TablaPaginacion
+              v-model:page="paginaDetalleCarga"
+              v-model:page-size="pageSizeTablas"
+              :page-size-options="[PAGE_SIZE_TABLAS]"
+              hide-page-size-selector
+              :total="totalDetallesCargaSeleccionada"
+            />
           </div>
         </div>
       </div>
@@ -396,9 +433,11 @@
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
+import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import Form5 from '@/components/forms/Form5.vue';
+import TablaPaginacion from '@/components/TablaPaginacion.vue';
 
 const HISTORIAL_CARGAS_KEY = 'resultados_clinicos_historial_cargas';
 
@@ -430,18 +469,51 @@ const cargaSeleccionada = ref(null);
 const estadoFormulario = ref('CERRADO');
 const cargandoEstadoFormulario = ref(false);
 
+const PAGE_SIZE_TABLAS = 10;
+const pageSizeTablas = ref(PAGE_SIZE_TABLAS);
+const paginaRegistros = ref(1);
+const paginaTodos = ref(1);
+const paginaHistorialCargas = ref(1);
+const paginaDetalleCarga = ref(1);
+
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
 const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto' : 'Cerrado'));
 const mostrarBotonNuevo = computed(() => formularioAbierto.value);
 
-const COLUMNAS_FORMATO = ['dni', 'paciente', 'Hb', 'calcio', 'fosforo', 'PTHi', 'Alb', 'ktv', 'tiempo_dialisis', 'eritropoyetina', 'hierro', 'calcitriol'];
-const tiempoDialisisPermitidos = ['2.00', '2.25', '2.50', '2.75', '3.00', '3.25', '3.50', '3.75', '4.00', '4.25', '4.50'];
+const COLUMNAS_FORMATO = [
+  'dni',
+  'paciente',
+  'Hb',
+  'calcio',
+  'fosforo',
+  'PTHi',
+  'Alb',
+  'calcio_corregido',
+  'ktv',
+  'tiempo_dialisis',
+  'eritropoyetina',
+  'hierro',
+  'calcitriol',
+];
+/** Horas de sesión (entero o decimal); mismo criterio que Form5. */
+const TIEMPO_DIALISIS_MIN = 0.25;
+const TIEMPO_DIALISIS_MAX = 8;
+
+function esTiempoDialisisValorValido(raw) {
+  if (raw === null || raw === '') return false;
+  const texto = String(raw).trim().replace(',', '.');
+  if (!texto) return false;
+  const n = Number(texto);
+  if (Number.isNaN(n)) return false;
+  return n >= TIEMPO_DIALISIS_MIN && n <= TIEMPO_DIALISIS_MAX;
+}
 const camposResultados = [
   { key: 'Hb', min: 1, max: 18 },
   { key: 'calcio', min: 1, max: 15 },
   { key: 'fosforo', min: 1, max: 12 },
   { key: 'PTHi', min: 1, max: 5000 },
   { key: 'Alb', min: 1, max: 6 },
+  { key: 'calcio_corregido', min: 1, max: 15 },
   { key: 'ktv', min: 0.1, max: 3.0 },
 ];
 
@@ -501,6 +573,38 @@ function textoComentarioSupervisor(text) {
   return s.length > 64 ? `${s.slice(0, 64)}…` : s;
 }
 
+/** Muestra tiempo de diálisis como horas numéricas (2, 2.5), no como HH:MM:SS de la BD. */
+function formatearHorasDecimal(num) {
+  if (num == null || Number.isNaN(num)) return '—';
+  const x = Number(num);
+  if (Math.abs(x - Math.round(x)) < 1e-9) return String(Math.round(x));
+  const r = Math.round(x * 100) / 100;
+  return String(r);
+}
+
+function formatearTiempoDialisisTabla(val) {
+  if (val == null || val === '') return '—';
+  if (typeof val === 'object' && val !== null && ('hour' in val || 'hours' in val)) {
+    const h = val.hour ?? val.hours ?? 0;
+    const m = val.minute ?? val.minutes ?? 0;
+    const s = val.second ?? val.seconds ?? 0;
+    return formatearHorasDecimal(h + m / 60 + s / 3600);
+  }
+  const str = String(val).trim();
+  if (!str) return '—';
+  if (/^\d{1,2}:\d{2}(:\d{2})?(\.\d+)?$/.test(str)) {
+    const parts = str.split(':');
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    const secPart = parts[2] != null ? String(parts[2]) : '0';
+    const sec = parseFloat(secPart) || 0;
+    return formatearHorasDecimal(h + m / 60 + sec / 3600);
+  }
+  const n = Number(str.replace(',', '.'));
+  if (!Number.isNaN(n)) return formatearHorasDecimal(n);
+  return str;
+}
+
 const pacientesDisponibles = computed(() => Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : []);
 const pacientesFiltrados = computed(() => {
   const texto = busquedaPaciente.value.trim().toLowerCase();
@@ -527,13 +631,38 @@ const guardarHistorialCargas = () => {
 
 const abrirDetalleCarga = (carga) => {
   cargaSeleccionada.value = carga;
+  paginaDetalleCarga.value = 1;
   mostrarDetalleCarga.value = true;
 };
 
 const cerrarDetalleCarga = () => {
   mostrarDetalleCarga.value = false;
   cargaSeleccionada.value = null;
+  paginaDetalleCarga.value = 1;
 };
+
+/** Alineado con backend: columna TIME en BD; Excel puede mandar número 2 o texto "2"/"2.5". */
+function normalizarTiempoDialisisParaApi(raw) {
+  if (raw == null || raw === '') return '';
+  if (typeof raw === 'number' && !Number.isNaN(raw)) {
+    return normalizarTiempoDialisisParaApi(String(raw));
+  }
+  let s = String(raw).trim().replace(',', '.');
+  if (!s) return '';
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) {
+    const parts = s.split(':');
+    if (parts.length === 2) {
+      return `${String(Number(parts[0])).padStart(2, '0')}:${String(Number(parts[1])).padStart(2, '0')}:00`;
+    }
+    return `${String(Number(parts[0])).padStart(2, '0')}:${String(Number(parts[1])).padStart(2, '0')}:${String(Number(parts[2] || 0)).padStart(2, '0')}`;
+  }
+  const horas = parseFloat(s);
+  if (Number.isNaN(horas)) return s;
+  const totalMin = Math.round(horas * 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+}
 
 const esBooleanoValido = (valor) => ['', '1', '0', 'si', 'sí', 'no', 'true', 'false'].includes(String(valor || '').trim().toLowerCase());
 
@@ -613,6 +742,63 @@ const todosPacientesLista = computed(() => {
   });
 });
 
+const registrosPaginados = computed(() => {
+  const all = registros.value;
+  const start = (paginaRegistros.value - 1) * PAGE_SIZE_TABLAS;
+  return all.slice(start, start + PAGE_SIZE_TABLAS);
+});
+const todosPacientesPaginados = computed(() => {
+  const all = todosPacientesLista.value;
+  const start = (paginaTodos.value - 1) * PAGE_SIZE_TABLAS;
+  return all.slice(start, start + PAGE_SIZE_TABLAS);
+});
+const historialCargasPaginados = computed(() => {
+  const all = historialCargas.value;
+  const start = (paginaHistorialCargas.value - 1) * PAGE_SIZE_TABLAS;
+  return all.slice(start, start + PAGE_SIZE_TABLAS);
+});
+const detallesCargaPaginados = computed(() => {
+  const all = cargaSeleccionada.value?.detalles;
+  if (!Array.isArray(all)) return [];
+  const start = (paginaDetalleCarga.value - 1) * PAGE_SIZE_TABLAS;
+  return all.slice(start, start + PAGE_SIZE_TABLAS);
+});
+const totalDetallesCargaSeleccionada = computed(() => {
+  const all = cargaSeleccionada.value?.detalles;
+  return Array.isArray(all) ? all.length : 0;
+});
+
+function clampPaginaRegistros() {
+  const total = registros.value.length;
+  const maxP = Math.max(1, Math.ceil(total / PAGE_SIZE_TABLAS) || 1);
+  if (paginaRegistros.value > maxP) paginaRegistros.value = maxP;
+}
+function clampPaginaTodos() {
+  const total = todosPacientesLista.value.length;
+  const maxP = Math.max(1, Math.ceil(total / PAGE_SIZE_TABLAS) || 1);
+  if (paginaTodos.value > maxP) paginaTodos.value = maxP;
+}
+function clampPaginaHistorialCargas() {
+  const total = historialCargas.value.length;
+  const maxP = Math.max(1, Math.ceil(total / PAGE_SIZE_TABLAS) || 1);
+  if (paginaHistorialCargas.value > maxP) paginaHistorialCargas.value = maxP;
+}
+function clampPaginaDetalleCarga() {
+  const total = totalDetallesCargaSeleccionada.value;
+  const maxP = Math.max(1, Math.ceil(total / PAGE_SIZE_TABLAS) || 1);
+  if (paginaDetalleCarga.value > maxP) paginaDetalleCarga.value = maxP;
+}
+
+watch(registros, () => clampPaginaRegistros(), { deep: true });
+watch(todosPacientesLista, () => clampPaginaTodos());
+watch(historialCargas, () => clampPaginaHistorialCargas(), { deep: true });
+watch(totalDetallesCargaSeleccionada, () => clampPaginaDetalleCarga());
+watch(() => vistaActiva.value, () => {
+  paginaRegistros.value = 1;
+  paginaTodos.value = 1;
+  paginaHistorialCargas.value = 1;
+});
+
 const exportandoExcel = ref(false);
 
 const puedeExportarResultadosClinicosExcel = computed(() => {
@@ -623,7 +809,9 @@ const puedeExportarResultadosClinicosExcel = computed(() => {
 });
 
 function filasExcelResultadosVistaRegistros() {
-  return registros.value.map((r) => ({
+  return registros.value.map((r) => {
+    const tDial = formatearTiempoDialisisTabla(r.tiempo_dialisis);
+    return {
     Paciente: nombrePaciente(r),
     DNI: documentoPaciente(r),
     Hb: r.Hb ?? r.hb ?? '',
@@ -632,18 +820,21 @@ function filasExcelResultadosVistaRegistros() {
     PTHi: r.PTHi ?? r.pthi ?? '',
     Alb: r.Alb ?? r.alb ?? '',
     'Kt/V': r.ktv ?? r.kt ?? '',
-    'T. diálisis': r.tiempo_dialisis ?? '',
+    'T. diálisis (h)': tDial === '—' ? '' : tDial,
     Eritropoyetina: siNo(r.eritoproyetina),
     Hierro: siNo(r.hierro),
     Calcitriol: siNo(r.calcitriol),
     Estado: r.estado_aprobacion || 'PENDIENTE',
     'Editado supervisor': r.supervisor_edito_registro ? 'Sí' : 'No',
     'Comentario supervisor': r.comentario_evaluacion || '',
-  }));
+  };
+  });
 }
 
 function filasExcelResultadosVistaTodos() {
-  return todosPacientesLista.value.map((fila) => ({
+  return todosPacientesLista.value.map((fila) => {
+    const tDial = formatearTiempoDialisisTabla(fila.tiempo_dialisis);
+    return {
     Paciente: fila.paciente || '',
     DNI: fila.documento || '',
     'Tiene registro': fila.tieneRegistro ? 'Sí' : 'No',
@@ -653,14 +844,15 @@ function filasExcelResultadosVistaTodos() {
     PTHi: fila.PTHi ?? fila.pthi ?? '',
     Alb: fila.Alb ?? fila.alb ?? '',
     'Kt/V': fila.ktv ?? '',
-    'T. diálisis': fila.tiempo_dialisis ?? '',
+    'T. diálisis (h)': tDial === '—' ? '' : tDial,
     Eritropoyetina: siNo(fila.eritoproyetina),
     Hierro: siNo(fila.hierro),
     Calcitriol: siNo(fila.calcitriol),
     Estado: fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO'),
     'Editado supervisor': fila.supervisor_edito_registro ? 'Sí' : 'No',
     'Comentario supervisor': fila.comentario_evaluacion || '',
-  }));
+  };
+  });
 }
 
 async function exportarDatosResultadosClinicosExcel() {
@@ -714,9 +906,11 @@ const validarFilaImportacion = (obj) => {
     fosforo: '',
     PTHi: '',
     Alb: '',
+    calcio_corregido: '',
     ktv: '',
     tiempo_dialisis: '',
-    eritropoyetina: false,
+    /** Nombre del modelo Django / API (no «eritropoyetina»). */
+    eritoproyetina: false,
     hierro: false,
     calcitriol: false,
   };
@@ -730,17 +924,34 @@ const validarFilaImportacion = (obj) => {
     payload[campo.key] = String(valor);
   }
 
-  const tiempoDialisis = String(obj.tiempo_dialisis || '').trim();
-  if (tiempoDialisis && !tiempoDialisisPermitidos.includes(tiempoDialisis)) {
-    return { ok: false, mensaje: 'Tiempo de dialisis invalido.' };
+  /** Si no vino calcio_corregido en Excel pero sí calcio y Alb, misma fórmula que Form5. */
+  if (!String(payload.calcio_corregido || '').trim()) {
+    const c = normalizarNumero(obj.calcio ?? obj.Calcio);
+    const a = normalizarNumero(obj.alb ?? obj.Alb);
+    if (c != null && a != null && c > 0 && a > 0) {
+      payload.calcio_corregido = String(Math.round((c + 0.8 * (4 - a)) * 100) / 100);
+    }
   }
-  payload.tiempo_dialisis = tiempoDialisis;
 
-  if (!esBooleanoValido(obj.eritropoyetina) || !esBooleanoValido(obj.hierro) || !esBooleanoValido(obj.calcitriol)) {
+  const rawTiempo = obj.tiempo_dialisis;
+  const tiempoStrParaValidar =
+    rawTiempo != null && rawTiempo !== '' ? String(rawTiempo).trim().replace(',', '.') : '';
+  if (tiempoStrParaValidar && !esTiempoDialisisValorValido(rawTiempo)) {
+    return {
+      ok: false,
+      mensaje: `Tiempo de diálisis inválido. Use un número entre ${TIEMPO_DIALISIS_MIN} y ${TIEMPO_DIALISIS_MAX} horas (ej. 2, 2.5, 3.25).`,
+    };
+  }
+  payload.tiempo_dialisis = tiempoStrParaValidar
+    ? normalizarTiempoDialisisParaApi(rawTiempo)
+    : '';
+
+  const valErit = obj.eritropoyetina ?? obj.eritoproyetina;
+  if (!esBooleanoValido(valErit) || !esBooleanoValido(obj.hierro) || !esBooleanoValido(obj.calcitriol)) {
     return { ok: false, mensaje: 'Eritropoyetina, hierro y calcitriol deben ser Si/No o 1/0.' };
   }
 
-  payload.eritropoyetina = toBool(obj.eritropoyetina);
+  payload.eritoproyetina = toBool(valErit);
   payload.hierro = toBool(obj.hierro);
   payload.calcitriol = toBool(obj.calcitriol);
 
@@ -885,13 +1096,14 @@ function descargarFormatoExcel() {
   const filasBase = todosPacientesLista.value.map((fila) => [
     fila.documento || '',
     fila.paciente || '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
+    '', // Hb
+    '', // calcio
+    '', // fosforo
+    '', // PTHi
+    '', // Alb
+    '', // calcio_corregido (opcional; con calcio+Alb se calcula al importar)
+    '', // ktv
+    '', // tiempo_dialisis
     'Sí/No',
     'Sí/No',
     'Sí/No',
@@ -1007,8 +1219,23 @@ async function ejecutarImportacion() {
       ...historialCargas.value,
     ];
     guardarHistorialCargas();
-    resultadoImportacion.value = { ok: true, mensaje: `Importación completada: ${creados} registro(s) creado(s).` + (errores ? ` ${errores} fila(s) con error.` : '') };
-    fetchRegistros();
+    const msgExito = `Importación completada: ${creados} registro(s) creado(s).` + (errores ? ` ${errores} fila(s) con error.` : '');
+    await fetchRegistros();
+    if (creados > 0) {
+      mostrarModalImportar.value = false;
+      archivoSeleccionado.value = null;
+      resultadoImportacion.value = null;
+      arrastrando.value = false;
+      await Swal.fire({
+        icon: 'success',
+        title: 'Importación exitosa',
+        text: msgExito,
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#0891b2',
+      });
+    } else {
+      resultadoImportacion.value = { ok: true, mensaje: msgExito };
+    }
   } catch (e) {
     console.error(e);
     resultadoImportacion.value = { ok: false, mensaje: 'Error al procesar el archivo.' };

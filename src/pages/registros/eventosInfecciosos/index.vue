@@ -80,7 +80,8 @@
           <div v-if="registros.length === 0" class="p-12 text-center text-slate-500 italic">
             No hay registros de eventos infecciosos para el periodo, IPRESS y modalidad seleccionados.
           </div>
-          <div v-else class="overflow-x-auto">
+          <template v-else>
+            <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
@@ -98,8 +99,8 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr v-for="r in registros" :key="r.id_evento_acceso_vascular" class="hover:bg-slate-50 transition-colors">
-                  <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                <tr v-for="r in registrosPaginados" :key="r.id_evento_acceso_vascular" class="hover:bg-slate-50 transition-colors">
+                  <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_evento || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_infeccion || '—' }}</td>
@@ -118,13 +119,22 @@
                 </tr>
               </tbody>
             </table>
-          </div>
+            </div>
+            <TablaPaginacion
+              v-model:page="paginaRegistros"
+              v-model:page-size="pageSizeTablas"
+              :page-size-options="[PAGE_SIZE_TABLAS]"
+              hide-page-size-selector
+              :total="registros.length"
+            />
+          </template>
         </template>
         <template v-else>
           <div v-if="todosPacientesLista.length === 0" class="p-12 text-center text-slate-500 italic">
             No hay pacientes en el periodo, IPRESS y modalidad seleccionados.
           </div>
-          <div v-else class="overflow-x-auto">
+          <template v-else>
+            <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
@@ -142,7 +152,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr v-for="fila in todosPacientesLista" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
+                <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
                   <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.documento || '—' }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ fila.fecha_evento || '—' }}</td>
@@ -162,7 +172,15 @@
                 </tr>
               </tbody>
             </table>
-          </div>
+            </div>
+            <TablaPaginacion
+              v-model:page="paginaTodos"
+              v-model:page-size="pageSizeTablas"
+              :page-size-options="[PAGE_SIZE_TABLAS]"
+              hide-page-size-selector
+              :total="todosPacientesLista.length"
+            />
+          </template>
         </template>
       </div>
     </div>
@@ -263,6 +281,7 @@ import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue';
+import TablaPaginacion from '@/components/TablaPaginacion.vue';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
@@ -288,6 +307,11 @@ const importando = ref(false);
 const resultadoImportacion = ref(null);
 const estadoFormulario = ref('CERRADO');
 const cargandoEstadoFormulario = ref(false);
+
+const PAGE_SIZE_TABLAS = 10;
+const pageSizeTablas = ref(PAGE_SIZE_TABLAS);
+const paginaRegistros = ref(1);
+const paginaTodos = ref(1);
 
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
 const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto' : 'Cerrado'));
@@ -444,6 +468,35 @@ const todosPacientesLista = computed(() => {
       comentario_evaluacion: '',
     };
   });
+});
+
+const registrosPaginados = computed(() => {
+  const all = registros.value;
+  const start = (paginaRegistros.value - 1) * PAGE_SIZE_TABLAS;
+  return all.slice(start, start + PAGE_SIZE_TABLAS);
+});
+const todosPacientesPaginados = computed(() => {
+  const all = todosPacientesLista.value;
+  const start = (paginaTodos.value - 1) * PAGE_SIZE_TABLAS;
+  return all.slice(start, start + PAGE_SIZE_TABLAS);
+});
+
+function clampPaginaRegistros() {
+  const total = registros.value.length;
+  const maxP = Math.max(1, Math.ceil(total / PAGE_SIZE_TABLAS) || 1);
+  if (paginaRegistros.value > maxP) paginaRegistros.value = maxP;
+}
+function clampPaginaTodos() {
+  const total = todosPacientesLista.value.length;
+  const maxP = Math.max(1, Math.ceil(total / PAGE_SIZE_TABLAS) || 1);
+  if (paginaTodos.value > maxP) paginaTodos.value = maxP;
+}
+
+watch(registros, () => clampPaginaRegistros(), { deep: true });
+watch(todosPacientesLista, () => clampPaginaTodos());
+watch(() => vistaActiva.value, () => {
+  paginaRegistros.value = 1;
+  paginaTodos.value = 1;
 });
 
 async function fetchEstadoFormulario() {

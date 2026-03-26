@@ -19,26 +19,6 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <!-- <button
-            type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-cyan-300 text-cyan-700 font-semibold rounded-lg shadow-sm hover:bg-cyan-50 transition-colors"
-            @click="descargarFormatoExcel"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Descargar formato
-          </button>
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
-            @click="abrirModalImportar"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            Importar
-          </button> -->
           <button
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-45 disabled:pointer-events-none"
@@ -83,14 +63,6 @@
         >
           Todos los pacientes
         </button>
-        <!-- <button
-          type="button"
-          class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
-          :class="vistaActiva === 'cargas' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
-          @click="vistaActiva = 'cargas'"
-        >
-          Cargas
-        </button> -->
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -141,7 +113,7 @@
                   </thead>
                   <tbody class="divide-y divide-slate-100">
                     <tr v-for="r in registrosPaginados" :key="r.id_unidad_actual" class="hover:bg-slate-50 transition-colors">
-                      <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                      <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                       <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
                       <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_acceso || r.tipo_acceso_actual || '—' }}</td>
                       <td class="px-4 py-3 text-sm text-slate-600">{{ r.localizacion_acceso || r.localizacion_acceso_actual || '—' }}</td>
@@ -206,7 +178,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                   <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
-                    <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-slate-600">{{ fila.documento || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-slate-600">{{ fila.tipo_acceso || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-slate-600">{{ fila.localizacion_acceso || '—' }}</td>
@@ -482,7 +454,7 @@
                 <thead class="bg-slate-50">
                   <tr>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
+                    <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localizacion</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>

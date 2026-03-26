@@ -70,21 +70,18 @@
           <hr class="border-gray-100 my-4" />
 
           <div class="space-y-1 w-full md:w-1/2 pr-3">
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Tiempo de Diálisis</label>
-            <select v-model="form.tmpDialisis" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
-              <option value="">Seleccione una opción</option>
-              <option value="1">2.00</option>
-              <option value="2">2.25</option>
-              <option value="3">2.50</option>
-              <option value="4">2.75</option>
-              <option value="5">3.00</option>
-              <option value="6">3.25</option>
-              <option value="7">3.50</option>
-              <option value="8">3.75</option>
-              <option value="9">4.00</option>
-              <option value="10">4.25</option>
-              <option value="11">4.50</option>
-            </select>
+            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Tiempo de diálisis (horas)</label>
+            <input
+              v-model="form.tmpDialisis"
+              type="number"
+              min="0.25"
+              max="8"
+              step="any"
+              inputmode="decimal"
+              placeholder="Ej. 2, 2.5, 3.25"
+              class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white"
+            />
+            <p class="text-xs text-gray-400">Ingrese el valor en horas (número entero o decimal, entre 0,25 y 8).</p>
           </div>
 
           <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">Tratamiento Administrado</h3>
@@ -151,7 +148,7 @@ const periodoSeleccionado = ref(periodo)
 const periodos = ref([])
 
 const form = ref({
-  tmpDialisis: null,
+  tmpDialisis: '',
   eritropoyetina: null,
   hierro: null,
   hiperparatiroidismo: null,
@@ -288,7 +285,24 @@ const fetchPeriodo = async () => {
   periodos.value = await getAllIpress("/periodos/")
 }
 
-const tiempoDialisisMap = { 1: '2.00', 2: '2.25', 3: '2.50', 4: '2.75', 5: '3.00', 6: '3.25', 7: '3.50', 8: '3.75', 9: '4.00', 10: '4.25', 11: '4.50' }
+const TIEMPO_DIALISIS_MIN = 0.25
+const TIEMPO_DIALISIS_MAX = 8
+
+function tiempoDialisisHorasValido() {
+  const raw = form.value.tmpDialisis
+  if (raw === null || raw === '') return false
+  const n = Number(String(raw).replace(',', '.'))
+  if (Number.isNaN(n)) return false
+  return n >= TIEMPO_DIALISIS_MIN && n <= TIEMPO_DIALISIS_MAX
+}
+
+function tiempoDialisisPayloadString() {
+  const raw = form.value.tmpDialisis
+  if (raw === null || raw === '') return ''
+  const n = Number(String(raw).replace(',', '.'))
+  if (Number.isNaN(n)) return ''
+  return String(n)
+}
 
 const postForm = async () => {
   const camposInvalidos = camposResultados.filter(campo => {
@@ -299,6 +313,11 @@ const postForm = async () => {
   if (camposInvalidos.length > 0) {
     const nombresInvalidos = camposInvalidos.map(c => c.label).join(', ')
     alert(`Por favor corrija los siguientes campos que están fuera del rango válido:\n${nombresInvalidos}`)
+    return
+  }
+
+  if (!tiempoDialisisHorasValido()) {
+    alert(`Indique el tiempo de diálisis en horas (número entre ${TIEMPO_DIALISIS_MIN} y ${TIEMPO_DIALISIS_MAX}).`)
     return
   }
   
@@ -314,7 +333,7 @@ const postForm = async () => {
         Alb: form.value.alb != null && form.value.alb !== '' ? String(form.value.alb) : '',
         calcio_corregido: form.value.calcioCorregido != null && form.value.calcioCorregido !== '' ? String(form.value.calcioCorregido) : '',
         ktv: form.value.kt != null && form.value.kt !== '' ? String(form.value.kt) : '',
-        tiempo_dialisis: tiempoDialisisMap[form.value.tmpDialisis] || (form.value.tmpDialisis != null ? String(form.value.tmpDialisis) : ''),
+        tiempo_dialisis: tiempoDialisisPayloadString(),
         eritoproyetina: form.value.eritropoyetina === 1 || form.value.eritropoyetina === '1',
         hierro: form.value.hierro === 1 || form.value.hierro === '1',
         calcitriol: form.value.hiperparatiroidismo === 1 || form.value.hiperparatiroidismo === '1'

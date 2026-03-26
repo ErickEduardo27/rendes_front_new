@@ -34,6 +34,13 @@
 
         <SidebarItem v-if="['Supervisor', 'Admin','Clinicas','Hospitales'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
         <SidebarItem v-if="['Supervisor', 'Admin'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Evaluación" to="/evaluacion"/>
+
+        <SidebarItem
+            v-if="esAnalista"
+            :icon="ArrowDownTrayIcon"
+            label="Descarga de datos"
+            to="/descarga-datos-analista"
+        />
         
         <SidebarItem 
             v-if="['Supervisor', 'Admin'].includes(perfil)"
@@ -67,17 +74,23 @@
 </template>
 
 <script setup>
-import { ref, provide } from 'vue';
+import { ref, provide, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import SidebarItem from './SidebarItem.vue';
 import { useAuthStore } from "@/store/auth";
 import { 
   HomeIcon, UserIcon, DocumentMagnifyingGlassIcon, 
-  ChartBarIcon, ArrowsRightLeftIcon, BellAlertIcon
+  ChartBarIcon, ArrowsRightLeftIcon, BellAlertIcon, ArrowDownTrayIcon
 } from '@heroicons/vue/24/outline';
 
 const authStore = useAuthStore();
-const user = authStore.user; 
+const { user } = storeToRefs(authStore);
 const perfil = localStorage.getItem('perfil');
+
+const esAnalista = computed(() => {
+  const p = String(user.value?.datosPerfil?.perfil ?? localStorage.getItem('perfil') ?? '').trim();
+  return p.toLowerCase().includes('analista');
+});
 
 const openItem = ref(null);
 provide('openItem', openItem);

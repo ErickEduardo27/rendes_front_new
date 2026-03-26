@@ -8,7 +8,7 @@
       de <strong class="text-slate-800">{{ total }}</strong>
     </span>
     <div class="flex items-center gap-2">
-      <label class="flex items-center gap-1.5 text-xs text-slate-500">
+      <label v-if="!hidePageSizeSelector" class="flex items-center gap-1.5 text-xs text-slate-500">
         <span>Por página</span>
         <select
           :value="pageSize"
@@ -50,6 +50,7 @@ const props = defineProps({
     type: Array,
     default: () => [10, 15, 25, 50],
   },
+  hidePageSizeSelector: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:page', 'update:pageSize']);

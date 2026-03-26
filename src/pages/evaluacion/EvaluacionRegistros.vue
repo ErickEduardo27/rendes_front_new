@@ -110,7 +110,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-for="r in listaMostradaPaginada" :key="r.id_unidad_actual" class="hover:bg-slate-50">
-                <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_acceso || '—' }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ r.localizacion_acceso || '—' }}</td>
@@ -165,7 +165,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-for="r in listaMostradaPaginada" :key="r.id_evento_acceso_vascular" class="hover:bg-slate-50">
-                <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_infeccion || '—' }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_evento || '—' }}</td>
@@ -220,7 +220,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-for="r in listaMostradaPaginada" :key="r.id_morbilidad_hospitalaria" class="hover:bg-slate-50">
-                <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ r.diagnostico || '—' }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_hospitalizacion || '—' }}</td>
@@ -275,7 +275,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-for="r in listaMostradaPaginada" :key="r.id_resultado_clinico" class="hover:bg-slate-50">
-                <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ r.Hb ?? r.hb ?? '—' }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ r.ktv ?? '—' }}</td>
@@ -329,7 +329,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-for="r in listaMostradaPaginada" :key="r.id_vacunacion" class="hover:bg-slate-50">
-                <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
                 <td class="px-4 py-3 text-sm text-slate-600">{{ resumenVacuna(r) }}</td>
                 <td class="px-4 py-3 text-sm"><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="claseEstado(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span></td>

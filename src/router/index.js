@@ -107,7 +107,13 @@ const routes = [
         name: 'Vacunacion',
         component: () => import('@/pages/registros/vacunacion/index.vue'),
         meta: { mostrarNotificarRegistros: true },
-      }
+      },
+      {
+        path: 'descarga-datos-analista',
+        name: 'DescargaMasivaAnalista',
+        component: () => import('@/pages/analista/DescargaMasivaDatos.vue'),
+        meta: { requiresAnalista: true },
+      },
     ]
   },
   {
@@ -133,6 +139,11 @@ function perfilEsEvaluador(user) {
   return ['supervisor', 'admin'].includes(String(p).trim().toLowerCase())
 }
 
+function perfilEsAnalista(user) {
+  const p = user?.datosPerfil?.perfil || (typeof localStorage !== 'undefined' ? localStorage.getItem('perfil') : '') || ''
+  return String(p).trim().toLowerCase().includes('analista')
+}
+
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   const { isAuthenticated } = storeToRefs(authStore) // 👈 REACTIVO
@@ -142,6 +153,10 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.requiresEvaluador && !perfilEsEvaluador(authStore.user)) {
+    return next({ name: 'Inicio' })
+  }
+
+  if (to.meta.requiresAnalista && !perfilEsAnalista(authStore.user)) {
     return next({ name: 'Inicio' })
   }
 
