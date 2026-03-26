@@ -372,6 +372,9 @@
               <span v-if="resumenTotales.total_ipress > 0" class="block mt-2 font-semibold text-slate-800">
                 Notificaron {{ resumenTotales.total_notificados }} de {{ resumenTotales.total_ipress }} establecimientos.
               </span>
+              <p class="mt-2 text-xs text-slate-500 max-w-4xl">
+                La acción <strong>Pasar pacientes al periodo siguiente</strong> solo se habilita cuando la clínica ha usado <strong>Notificar</strong>, todos los formularios con datos están <strong>cerrados</strong> y no se está consultando el estado ni ejecutando el traslado.
+              </p>
             </div>
             <div v-if="listaIpressNotificaciones.length === 0" class="p-12 text-center text-slate-500 italic">No hay IPRESS registradas.</div>
             <template v-else>
@@ -383,6 +386,7 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Notificado</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Fecha / hora</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Usuario</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Siguiente periodo</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -406,6 +410,20 @@
                   </td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ formatoFechaNotifRow(row.notificado_en) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ row.usuario_nombre || '—' }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <button
+                      type="button"
+                      class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45"
+                      :class="puedeActivarBotonPasarPacientes(row)
+                        ? 'border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100'
+                        : 'border-slate-200 bg-slate-50 text-slate-500'"
+                      :disabled="pasandoPacientesIpress === Number(row.id_ipress) || !puedeActivarBotonPasarPacientes(row)"
+                      :title="tituloBotonPasarPacientes(row)"
+                      @click="confirmarPasarPacientesSiguientePeriodo(row)"
+                    >
+                      {{ pasandoPacientesIpress === Number(row.id_ipress) ? 'Procesando…' : 'Pasar pacientes' }}
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -490,6 +508,10 @@ const cargandoResumenNotif = ref(false);
 const listaIpressNotificaciones = ref([]);
 const errorResumenNotif = ref('');
 const resumenTotales = ref({ total_ipress: 0, total_notificados: 0 });
+/** id_ipress (string) -> { puede_pasar, motivo, id_periodo_destino, periodo_destino_label, formularios_con_datos_abiertos } */
+const estadoPasarPorIpress = ref({});
+const cargandoEstadoPasar = ref(false);
+const pasandoPacientesIpress = ref(null);
 const evaluando = ref(null);
 const cerrandoFormulario = ref(false);
 const abriendoFormulario = ref(false);
@@ -566,6 +588,7 @@ async function fetchListaNotificacionesClinicas() {
   if (!pOk || !mOk) {
     listaIpressNotificaciones.value = [];
     resumenTotales.value = { total_ipress: 0, total_notificados: 0 };
+    estadoPasarPorIpress.value = {};
     return;
   }
   cargandoResumenNotif.value = true;
@@ -579,14 +602,121 @@ async function fetchListaNotificacionesClinicas() {
       total_ipress: Number(r?.total_ipress) || listaIpressNotificaciones.value.length,
       total_notificados: Number(r?.total_notificados) || 0,
     };
+    await fetchEstadoPasarPacientesPeriodo();
   } catch (e) {
     console.error(e);
     listaIpressNotificaciones.value = [];
     resumenTotales.value = { total_ipress: 0, total_notificados: 0 };
+    estadoPasarPorIpress.value = {};
     const msg = e?.response?.data?.detail || e?.detail || e?.message || 'No se pudo cargar el resumen.';
     errorResumenNotif.value = typeof msg === 'string' ? msg : 'No se pudo cargar el resumen.';
   } finally {
     cargandoResumenNotif.value = false;
+  }
+}
+
+async function fetchEstadoPasarPacientesPeriodo() {
+  const pOk = periodoGlobal.value != null && periodoGlobal.value !== '';
+  const mOk = modalidadGlobal.value != null && modalidadGlobal.value !== '';
+  if (!pOk || !mOk) {
+    estadoPasarPorIpress.value = {};
+    return;
+  }
+  cargandoEstadoPasar.value = true;
+  try {
+    const params = new URLSearchParams();
+    params.set('id_periodo', String(periodoGlobal.value));
+    params.set('id_modalidad', String(modalidadGlobal.value));
+    const r = await getAllIpress(`/consulta_estado_pasar_pacientes_periodo/?${params.toString()}`);
+    estadoPasarPorIpress.value = r?.por_ipress && typeof r.por_ipress === 'object' ? { ...r.por_ipress } : {};
+  } catch (e) {
+    console.error(e);
+    estadoPasarPorIpress.value = {};
+    ElMessage.warning('No se pudo consultar si se pueden pasar pacientes al periodo siguiente.');
+  } finally {
+    cargandoEstadoPasar.value = false;
+  }
+}
+
+function infoPasarPacientes(idIpress) {
+  const key = String(idIpress);
+  const raw = estadoPasarPorIpress.value[key];
+  if (raw && typeof raw === 'object') {
+    return {
+      puede_pasar: !!raw.puede_pasar,
+      motivo: raw.motivo || '',
+      periodo_destino_label: raw.periodo_destino_label || '',
+      formularios_con_datos_abiertos: Array.isArray(raw.formularios_con_datos_abiertos) ? raw.formularios_con_datos_abiertos : [],
+    };
+  }
+  return {
+    puede_pasar: false,
+    motivo: cargandoEstadoPasar.value ? 'Consultando permisos…' : 'Sin información de estado.',
+    periodo_destino_label: '',
+    formularios_con_datos_abiertos: [],
+  };
+}
+
+/** Habilitar botón: notificación enviada + puede_pasar + no cargando estado (el POST se refleja en disabled aparte). */
+function puedeActivarBotonPasarPacientes(row) {
+  if (!row?.notificado) return false;
+  if (cargandoEstadoPasar.value) return false;
+  return !!infoPasarPacientes(row.id_ipress).puede_pasar;
+}
+
+function tituloBotonPasarPacientes(row) {
+  if (!row?.notificado) {
+    return 'La clínica debe usar «Notificar» en registros antes de poder pasar pacientes al periodo siguiente.';
+  }
+  if (cargandoEstadoPasar.value) return 'Consultando permisos y periodo destino…';
+  const info = infoPasarPacientes(row.id_ipress);
+  if (!info.puede_pasar) return info.motivo || 'No se puede pasar de periodo en este momento.';
+  if (info.periodo_destino_label) return `Trasladar al periodo ${info.periodo_destino_label} (confirmar en el diálogo).`;
+  return 'Pasar pacientes al periodo siguiente';
+}
+
+async function confirmarPasarPacientesSiguientePeriodo(row) {
+  const idIpress = row?.id_ipress;
+  if (idIpress == null) return;
+  if (!row?.notificado) return;
+  const info = infoPasarPacientes(idIpress);
+  if (!info.puede_pasar || cargandoEstadoPasar.value) return;
+  const nombre = row.nombre_corto || row.ipress || 'esta clínica';
+  const destino = info.periodo_destino_label || 'el periodo siguiente';
+  try {
+    await ElMessageBox.confirm(
+      `¿Está seguro de cargar los pacientes del periodo actual al periodo posterior (${destino}) para «${nombre}»? ` +
+        'Se crearán registros de atención en el nuevo periodo solo para pacientes que aún no existan allí.',
+      'Confirmar paso de pacientes',
+      {
+        type: 'warning',
+        confirmButtonText: 'Sí, pasar pacientes',
+        cancelButtonText: 'Cancelar',
+      },
+    );
+  } catch {
+    return;
+  }
+  pasandoPacientesIpress.value = Number(idIpress);
+  try {
+    await postAllIpress('/pasar_pacientes_siguiente_periodo/', {
+      id_periodo: Number(periodoGlobal.value),
+      id_ipress: Number(idIpress),
+      id_modalidad: Number(modalidadGlobal.value),
+    });
+    ElMessage.success('Pacientes actualizados en el periodo siguiente.');
+    await fetchEstadoPasarPacientesPeriodo();
+  } catch (e) {
+    console.error(e);
+    const msg =
+      e?.response?.data?.detail ||
+      e?.detail ||
+      e?.error ||
+      e?.message ||
+      'No se pudo completar el traslado de pacientes.';
+    ElMessage.error(typeof msg === 'string' ? msg : 'No se pudo completar el traslado de pacientes.');
+  } finally {
+    pasandoPacientesIpress.value = null;
   }
 }
 

@@ -152,16 +152,11 @@ const statsModal = ref({
   totalVacunaciones: 0,
 })
 
-/** Mismo criterio que router/index.js (perfilEsEvaluador). */
-function perfilEsEvaluadorNavbar() {
-  const p =
-    authStore.user?.datosPerfil?.perfil ??
-    (typeof localStorage !== 'undefined' ? localStorage.getItem('perfil') : '') ??
-    ''
-  return ['supervisor', 'admin'].includes(String(p).trim().toLowerCase())
-}
-
-/** En rutas hijas de Principal, `route.meta` no siempre incluye el meta del hijo; usar matched o name. */
+/**
+ * Botón "Notificar" en rutas de carga de registros (misma idea que meta `mostrarNotificarRegistros`).
+ * No ocultar por perfil Supervisor/Admin: en el menú lateral también entran a Registros y deben poder
+ * avisar a revisión. Solo ocultar en la pantalla de Evaluación (rol revisor).
+ */
 const RUTAS_NOTIFICAR_REGISTROS = new Set([
   'AccesoVascular',
   'EventosInfecciosos',
@@ -171,7 +166,7 @@ const RUTAS_NOTIFICAR_REGISTROS = new Set([
 ])
 
 const mostrarBotonNotificar = computed(() => {
-  if (perfilEsEvaluadorNavbar()) return false
+  if (route.name === 'Evaluacion') return false
   if (RUTAS_NOTIFICAR_REGISTROS.has(route.name)) return true
   return route.matched.some((r) => r.meta?.mostrarNotificarRegistros === true)
 })

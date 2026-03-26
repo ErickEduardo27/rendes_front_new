@@ -168,15 +168,19 @@ const sincronizarVisual = (id) => {
 
 // ==========================================
 // 2. LÓGICA DE CLÍNICAS
-// Si el usuario tiene perfil Clínicas u Hospitales, solo se listan las IPRESS asignadas (usuarioIpress).
+// Clínicas, Hospitales y Supervisor: solo IPRESS asignadas en rd_usuarios_ipress (usuarioIpress).
+// Admin u otros perfiles: listado completo.
 // ==========================================
 const authStore = useAuthStore();
 
-const esPerfilClinicasOHospitales = () => {
+const debeLimitarClinicasAlUsuario = () => {
   const u = authStore.user;
   if (!u?.datosPerfil?.perfil) return false;
   const nombre = String(u.datosPerfil.perfil).toLowerCase();
-  return nombre.includes('clínica') || nombre.includes('clinica') || nombre.includes('hospital');
+  const clinicaHosp =
+    nombre.includes('clínica') || nombre.includes('clinica') || nombre.includes('hospital');
+  const supervisor = nombre.includes('supervisor');
+  return clinicaHosp || supervisor;
 };
 
 const fetchClinicas = async () => {
@@ -184,7 +188,7 @@ const fetchClinicas = async () => {
     const respuesta = await getAllIpress("/ipress/");
     let lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
 
-    if (esPerfilClinicasOHospitales() && authStore.user?.id_usuario) {
+    if (debeLimitarClinicasAlUsuario() && authStore.user?.id_usuario) {
       const asignaciones = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${authStore.user.id_usuario}`);
       const listaAsig = Array.isArray(asignaciones) ? asignaciones : (asignaciones?.results || []);
       const idsAsignados = new Set(listaAsig.map((a) => a.id_ipress).filter(Boolean));
@@ -244,6 +248,15 @@ watch(() => props.periodo, (newVal) => {
 });
 watch(() => props.clinica, (newVal) => clinicaSeleccionada.value = newVal);
 watch(() => props.modalidad, (newVal) => modalidadSeleccionada.value = newVal);
+
+// Si cambia el usuario logueado (p. ej. tras /api/me/ o guardar IPRESS del mismo usuario), refrescar lista filtrada.
+watch(
+  () => authStore.user,
+  (u) => {
+    if (u) fetchClinicas();
+  },
+  { deep: true },
+);
 
 onMounted(() => {
   fetchPeriodos();

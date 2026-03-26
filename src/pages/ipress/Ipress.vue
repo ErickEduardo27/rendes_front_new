@@ -42,6 +42,7 @@
                         <th class="border p-3">ID</th>
                         <th class="border p-3">IPRESS</th>
                         <th class="border p-3">Red</th>
+                        <th class="border p-3 min-w-[200px]">Supervisores asignados</th>
                         <th class="border p-3">Acciones</th>
                     </tr>
                 </thead>
@@ -50,6 +51,20 @@
                         <td class="border p-3 font-medium">{{ ipress.id_ipress }}</td>
                         <td class="border p-3">{{ ipress.ipress }}</td>
                         <td class="border p-3">{{ ipress.datosRed?.red ?? '' }}</td>
+                        <td class="border p-3 text-gray-700 align-top">
+                            <template v-if="cargandoSupervisores && !supervisoresPorIdIpress[String(ipress.id_ipress)]?.length">
+                                <span class="text-gray-400 text-xs">…</span>
+                            </template>
+                            <template v-else-if="supervisoresPorIdIpress[String(ipress.id_ipress)]?.length">
+                                <ul class="list-disc list-inside space-y-0.5 text-xs">
+                                    <li v-for="(u, idx) in supervisoresPorIdIpress[String(ipress.id_ipress)]" :key="idx">
+                                        <span class="font-medium">{{ u.nombre }}</span>
+                                        <span v-if="u.usuario" class="text-gray-500"> ({{ u.usuario }})</span>
+                                    </li>
+                                </ul>
+                            </template>
+                            <span v-else class="text-gray-400 text-xs">—</span>
+                        </td>
                         <td class="flex border p-3 gap-5">
                             <button @click="showEditModal(ipress)" class="text-[#007BFF] hover:underline">Editar</button>
                             <button @click="deletePaciente(ipress.id_ipress)" class="text-[#007BFF] hover:underline">Eliminar</button>
@@ -142,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
 import * as XLSX from 'xlsx';
 const pageSize = 10;
 const totalPages = computed(() => Math.max(1, Math.ceil(pacientes.count / pageSize)));
@@ -152,30 +167,6 @@ const filteredIpress = computed(() => {
   return list.slice(start, start + pageSize);
 });
 import { getAllIpress, postAllIpress, putAllIpress, deleteAllIpress } from "@/services/ipress/Ipress.service";
-
-// Estado
-// Exportar todos los registros a Excel
-const exportToExcel = async () => {
-  try {
-    const respuesta = await getAllIpress('/ipress/');
-    const list = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
-    const data = (list || []).map(ipress => ({
-      ID: ipress.id_ipress,
-      IPRESS: ipress.ipress,
-      Red: ipress.datosRed?.red || '',
-      Estado: ipress.estado || '',
-      NombreCorto: ipress.nombre_corto || '',
-      TipoUnidad: ipress.tipo_unidad || ''
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'IPRESS');
-    XLSX.writeFile(wb, 'ipress_lista.xlsx');
-  } catch (error) {
-    alert('Error al exportar a Excel');
-    console.error(error);
-  }
-};
 
 const pacientes = reactive({
   results: [],
@@ -208,6 +199,72 @@ const filters = reactive({
 const search = ref('');
 const estadoFilter = ref('');
 
+/** id_ipress (string) -> { nombre, usuario }[] solo perfil supervisor */
+const supervisoresPorIdIpress = ref({});
+const cargandoSupervisores = ref(false);
+
+function esPerfilSupervisorNombre(perfilNombre) {
+  return String(perfilNombre || '').toLowerCase().includes('supervisor');
+}
+
+async function fetchAsignacionesSupervisores() {
+  cargandoSupervisores.value = true;
+  try {
+    const r = await getAllIpress('/usuarioIpressFilter/');
+    const list = Array.isArray(r) ? r : r?.results || [];
+    const map = {};
+    for (const row of list) {
+      const perfil = row.datosUsuario?.datosPerfil?.perfil;
+      if (!esPerfilSupervisorNombre(perfil)) continue;
+      const idI = row.id_ipress;
+      if (idI == null) continue;
+      const key = String(idI);
+      if (!map[key]) map[key] = [];
+      const nombre = row.datosUsuario?.nombre || row.datosUsuario?.usuario || '—';
+      const usuario = row.datosUsuario?.usuario || '';
+      map[key].push({ nombre, usuario });
+    }
+    for (const k of Object.keys(map)) {
+      map[k].sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), 'es'));
+    }
+    supervisoresPorIdIpress.value = map;
+  } catch (e) {
+    console.error('Error al cargar supervisores por IPRESS:', e);
+    supervisoresPorIdIpress.value = {};
+  } finally {
+    cargandoSupervisores.value = false;
+  }
+}
+
+function textoSupervisoresParaExport(idIpress) {
+  const arr = supervisoresPorIdIpress.value[String(idIpress)] || [];
+  if (!arr.length) return '';
+  return arr.map((u) => (u.usuario ? `${u.nombre} (${u.usuario})` : u.nombre)).join('; ');
+}
+
+const exportToExcel = async () => {
+  try {
+    await fetchAsignacionesSupervisores();
+    const respuesta = await getAllIpress('/ipress/');
+    const list = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+    const data = (list || []).map((ip) => ({
+      ID: ip.id_ipress,
+      IPRESS: ip.ipress,
+      Red: ip.datosRed?.red || '',
+      Supervisores: textoSupervisoresParaExport(ip.id_ipress),
+      Estado: ip.estado || '',
+      NombreCorto: ip.nombre_corto || '',
+      TipoUnidad: ip.tipo_unidad || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'IPRESS');
+    XLSX.writeFile(wb, 'ipress_lista.xlsx');
+  } catch (error) {
+    alert('Error al exportar a Excel');
+    console.error(error);
+  }
+};
 
 const fetchIpress = async (url = null) => {
   try {
@@ -231,11 +288,11 @@ const fetchIpress = async (url = null) => {
       const pageParam = nextUrl.searchParams.get("page");
       currentPage.value = pageParam ? parseInt(pageParam, 10) - (respuesta.next ? 1 : -1) : 1;
     }
+    await fetchAsignacionesSupervisores();
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
   }
 };
-import { watch } from 'vue';
 
 // Ejecutar búsqueda automáticamente al escribir
 watch([search, estadoFilter], () => {
@@ -318,7 +375,7 @@ const submitForm = async () => {
       await postAllIpress('/ipress/', payload);
     }
     showModal.value = false;
-    fetchIpress();
+    await fetchIpress();
   } catch (error) {
     alert('Error al guardar IPRESS');
     console.error(error);
@@ -349,8 +406,8 @@ const goToPreviousPage = () => {
 const hasNext = computed(() => pacientes.next || currentPage.value < totalPages.value);
 const hasPrevious = computed(() => pacientes.previous || currentPage.value > 1);
 
-onMounted(() => {
-  fetchIpress();
+onMounted(async () => {
+  await fetchIpress();
   fetchRedes();
   fetchUbigeos();
   fetchModalidades();

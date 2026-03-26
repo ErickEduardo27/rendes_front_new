@@ -130,6 +130,16 @@
               <td class="px-3 py-2 max-w-[160px] truncate" :title="etiologiaTexto(row)">{{ etiologiaTexto(row) }}</td>
               <td class="px-3 py-2">
                 <div class="flex flex-wrap gap-1 items-center">
+                  <button
+                    v-if="esSupervisor"
+                    type="button"
+                    class="text-xs px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                    :disabled="row.sin_registro_dialisis || !row.id_paciente_dialisis"
+                    :title="row.sin_registro_dialisis ? 'Sin ficha de diálisis: complete el registro antes de editar la ficha' : 'Editar datos del paciente y ficha de diálisis (supervisor)'"
+                    @click="abrirEdicionSupervisor(row)"
+                  >
+                    Editar
+                  </button>
                   <button type="button" class="text-xs px-2 py-0.5 rounded bg-sky-100 text-sky-800 hover:bg-sky-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 1)" @click="abrirFormulario(row, 1)">
                     Acceso
                     <span v-if="metaFormulario(row, 1)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
@@ -162,24 +172,54 @@
           </tbody>
         </table>
       </div>
-      <div v-if="pacientes.length && totalPaginas > 1" class="flex justify-between items-center mt-3 text-sm">
-        <span class="text-gray-600">Página {{ paginaActual }} de {{ totalPaginas }}</span>
-        <div class="flex gap-2">
+      <div v-if="pacientes.length" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 text-sm border-t border-slate-100 pt-3">
+        <div class="flex flex-wrap items-center gap-3 text-slate-600">
+          <span>{{ rangoPacientesLabel }}</span>
+          <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+            <span>Por página</span>
+            <select
+              v-model.number="pacientesPorPagina"
+              class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white"
+            >
+              <option :value="10">10</option>
+              <option :value="25">25</option>
+              <option :value="50">50</option>
+            </select>
+          </label>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            class="px-3 py-1 rounded border border-gray-300 disabled:opacity-40"
+            class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium"
+            :disabled="paginaActual <= 1"
+            @click="paginaActual = 1"
+          >
+            Primera
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium"
             :disabled="paginaActual <= 1"
             @click="paginaActual--"
           >
             Anterior
           </button>
+          <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaActual }} / {{ totalPaginas }}</span>
           <button
             type="button"
-            class="px-3 py-1 rounded border border-gray-300 disabled:opacity-40"
+            class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium"
             :disabled="paginaActual >= totalPaginas"
             @click="paginaActual++"
           >
             Siguiente
+          </button>
+          <button
+            type="button"
+            class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium"
+            :disabled="paginaActual >= totalPaginas"
+            @click="paginaActual = totalPaginas"
+          >
+            Última
           </button>
         </div>
       </div>
@@ -326,22 +366,26 @@
       </div>
     </div>
 
-    <!-- Modal 2: formulario completo (solo tras “no encontrado” o si se reabre desde otro flujo) -->
-    <div v-if="mostrarModalNuevo" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+    <!-- Modal: registro nuevo o edición supervisor (ficha diálisis) -->
+    <div v-if="mostrarModalNuevo || mostrarModalEdicionSupervisor" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4 relative">
         <button
           class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full p-1 shadow"
-          @click="cerrarModalNuevo"
+          @click="cerrarModalFormularioPaciente"
         >
           ✕
         </button>
         <FormularioPaciente
+          :key="claveModalFormularioPaciente"
           :periodo-inicial="periodoSeleccionado"
           :id-periodo-ipress-inicial="idPeriodoIpress"
           :id-clinica-inicial="idClinicaSeleccionada"
           :nombre-clinica-inicial="clinicaSeleccionada"
-          :numero-documento-inicial="documentoPrefillRegistro"
-          @cancelar="cerrarModalNuevo"
+          :numero-documento-inicial="mostrarModalEdicionSupervisor ? '' : documentoPrefillRegistro"
+          :id-paciente-edicion-supervisor="mostrarModalEdicionSupervisor ? (filaEdicionSupervisor?.datosPaciente?.id_paciente ?? null) : null"
+          :id-paciente-dialisis-edicion-supervisor="mostrarModalEdicionSupervisor ? (filaEdicionSupervisor?.id_paciente_dialisis ?? null) : null"
+          @cancelar="cerrarModalFormularioPaciente"
+          @guardado="onGuardadoFormularioPaciente"
         />
       </div>
     </div>
@@ -351,6 +395,8 @@
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
 import { useRouter } from 'vue-router';
+import { storeToRefs } from 'pinia';
+import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import FormularioPaciente from './FormularioPaciente.vue';
 
@@ -362,12 +408,20 @@ const modalidadGlobal = inject('modalidadGlobal', ref(null));
 
 const filtroNombre = ref("");
 const filtroDni = ref("");
-const perfil = localStorage.getItem('perfil')
+const authStore = useAuthStore();
+const { user } = storeToRefs(authStore);
+
+/** Solo perfil Supervisor (mismo criterio que menú lateral). */
+const esSupervisor = computed(() => {
+  const p = String(user.value?.datosPerfil?.perfil ?? localStorage.getItem('perfil') ?? '').trim();
+  return p === 'Supervisor';
+});
+
 const pacientes = ref([])
 
 // --- Paginación ---
 const paginaActual = ref(1)
-const pacientesPorPagina = 5
+const pacientesPorPagina = ref(10)
 
 // Lista desde API (filtros nombre/documento en servidor con debounce)
 const pacientesFiltrados = computed(() => pacientes.value);
@@ -587,15 +641,38 @@ const obtenerTitulo = (n) => {
   return titulos[n] || 'Formulario';
 }
 
-const totalPaginas = computed(() => Math.ceil(pacientesFiltrados.value.length / pacientesPorPagina))
+const totalPaginas = computed(() => {
+  const n = pacientesFiltrados.value.length;
+  const pp = Number(pacientesPorPagina.value) || 10;
+  return Math.max(1, Math.ceil(n / pp));
+});
+
 const pacientesPaginados = computed(() => {
-  const inicio = (paginaActual.value - 1) * pacientesPorPagina
-  return pacientesFiltrados.value.slice(inicio, inicio + pacientesPorPagina)
-})
+  const pp = Number(pacientesPorPagina.value) || 10;
+  const inicio = (paginaActual.value - 1) * pp;
+  return pacientesFiltrados.value.slice(inicio, inicio + pp);
+});
+
+const rangoPacientesLabel = computed(() => {
+  const total = pacientesFiltrados.value.length;
+  if (total === 0) return 'Sin registros';
+  const pp = Number(pacientesPorPagina.value) || 10;
+  const ini = (paginaActual.value - 1) * pp + 1;
+  const fin = Math.min(paginaActual.value * pp, total);
+  return `Mostrando ${ini}–${fin} de ${total}`;
+});
 
 watch(pacientes, () => {
-  paginaActual.value = 1
-})
+  paginaActual.value = 1;
+});
+
+watch(pacientesPorPagina, () => {
+  paginaActual.value = 1;
+});
+
+watch(totalPaginas, (tp) => {
+  if (paginaActual.value > tp) paginaActual.value = tp;
+});
 
 const state1 = ref('')
 const aplicaTodos = ref(true)
@@ -757,8 +834,20 @@ const fetchPeriodo = async (url = null) => {
 };
 
 const mostrarModalNuevo = ref(false);
+const mostrarModalEdicionSupervisor = ref(false);
+const filaEdicionSupervisor = ref(null);
+
 /** Precarga documento en FormularioPaciente al abrir tras “no encontrado”. */
 const documentoPrefillRegistro = ref('');
+
+const claveModalFormularioPaciente = computed(() => {
+  if (mostrarModalEdicionSupervisor.value && filaEdicionSupervisor.value) {
+    const idp = filaEdicionSupervisor.value?.datosPaciente?.id_paciente ?? 'x';
+    const idd = filaEdicionSupervisor.value?.id_paciente_dialisis ?? 'x';
+    return `ed-sup-${idp}-${idd}`;
+  }
+  return `nuevo-${documentoPrefillRegistro.value || 'vacío'}`;
+});
 
 const mostrarModalConsultaDocumento = ref(false);
 const docConsulta = ref('');
@@ -787,9 +876,29 @@ const pacienteTieneAtencionActivaConIpress = async (idPaciente) => {
   }
 };
 
-const cerrarModalNuevo = () => {
+const cerrarModalFormularioPaciente = () => {
   mostrarModalNuevo.value = false;
+  mostrarModalEdicionSupervisor.value = false;
+  filaEdicionSupervisor.value = null;
   documentoPrefillRegistro.value = '';
+};
+
+const cerrarModalNuevo = () => {
+  cerrarModalFormularioPaciente();
+};
+
+const abrirEdicionSupervisor = (row) => {
+  if (!esSupervisor.value || row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return;
+  documentoPrefillRegistro.value = '';
+  mostrarModalNuevo.value = false;
+  filaEdicionSupervisor.value = row;
+  mostrarModalEdicionSupervisor.value = true;
+};
+
+const onGuardadoFormularioPaciente = async () => {
+  cerrarModalFormularioPaciente();
+  await fetchPacientes();
+  await fetchMetaFormulariosPorAtencion();
 };
 
 const cerrarModalConsultaDocumento = () => {
@@ -871,6 +980,8 @@ const abrirFormularioRegistroNuevo = () => {
   errorConsultaDoc.value = '';
   pacienteConsultaResultado.value = null;
   busquedaDocumentoEjecutada.value = false;
+  mostrarModalEdicionSupervisor.value = false;
+  filaEdicionSupervisor.value = null;
   mostrarModalNuevo.value = true;
 };
 

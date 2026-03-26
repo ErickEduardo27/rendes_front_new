@@ -16,7 +16,7 @@
             <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Menú Principal</span>
         </div>
         <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
-        <SidebarItem :icon="BellAlertIcon" label="Notificaciones" to="/notificaciones" />
+       <!--  <SidebarItem :icon="BellAlertIcon" label="Notificaciones" to="/notificaciones" /> -->
 
         <SidebarItem 
             v-if="['Supervisor', 'Admin','Clinicas','Hospitales'].includes(perfil)"
@@ -41,7 +41,6 @@
             label="Administración" 
             :submenu="[
               { label: 'Ipress', to: '/ipress' },
-              { label: 'Pacientes', to: '/pacientes' },
               { label: 'Perfiles', to: '/perfiles' },
               { label: 'Usuarios', to: '/usuarios' }
             ]"

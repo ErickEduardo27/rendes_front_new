@@ -30,6 +30,18 @@
             Importar
           </button> -->
           <button
+            type="button"
+            class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-45 disabled:pointer-events-none"
+            :disabled="!puedeExportarMorbilidadExcel || exportandoExcel"
+            :title="puedeExportarMorbilidadExcel ? 'Exporta la vista actual (todos los registros del filtro)' : 'No hay datos para exportar con los filtros actuales'"
+            @click="exportarDatosMorbilidadExcel"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {{ exportandoExcel ? 'Exportando…' : 'Exportar Excel' }}
+          </button>
+          <button
             v-if="mostrarBotonNuevo"
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white font-semibold rounded-lg shadow-sm hover:bg-cyan-700 transition-colors"
@@ -242,6 +254,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
+import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import Form4 from '@/components/forms/Form4.vue';
@@ -273,6 +286,70 @@ const cargandoEstadoFormulario = ref(false);
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
 const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto' : 'Cerrado'));
 const mostrarBotonNuevo = computed(() => formularioAbierto.value);
+
+const exportandoExcel = ref(false);
+
+const puedeExportarMorbilidadExcel = computed(() => {
+  if (cargando.value) return false;
+  if (vistaActiva.value === 'registros') return registros.value.length > 0;
+  return todosPacientesLista.value.length > 0;
+});
+
+function filasExcelMorbilidadVistaRegistros() {
+  return registros.value.map((r) => ({
+    Paciente: nombrePaciente(r),
+    DNI: documentoPaciente(r),
+    Diagnóstico: r.diagnostico || '',
+    Código: r.codigo_diagnostico || '',
+    'F. hospitalización': r.fecha_hospitalizacion || '',
+    'F. alta': r.fecha_alta_hospitalizacion || '',
+    Fuente: r.fuente || '',
+    Estado: r.estado_aprobacion || 'PENDIENTE',
+    'Editado supervisor': r.supervisor_edito_registro ? 'Sí' : 'No',
+    'Comentario supervisor': r.comentario_evaluacion || '',
+  }));
+}
+
+function filasExcelMorbilidadVistaTodos() {
+  return todosPacientesLista.value.map((fila) => ({
+    Paciente: fila.paciente || '',
+    DNI: fila.documento || '',
+    'Tiene registro': fila.tieneRegistro ? 'Sí' : 'No',
+    Diagnóstico: fila.diagnostico || '',
+    Código: fila.codigo_diagnostico || '',
+    'F. hospitalización': fila.fecha_hospitalizacion || '',
+    'F. alta': fila.fecha_alta_hospitalizacion || '',
+    Fuente: fila.fuente || '',
+    Estado: fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO'),
+    'Editado supervisor': fila.supervisor_edito_registro ? 'Sí' : 'No',
+    'Comentario supervisor': fila.comentario_evaluacion || '',
+  }));
+}
+
+async function exportarDatosMorbilidadExcel() {
+  if (!puedeExportarMorbilidadExcel.value) {
+    ElMessage.warning('No hay datos para exportar con los filtros actuales.');
+    return;
+  }
+  exportandoExcel.value = true;
+  try {
+    const esRegistros = vistaActiva.value === 'registros';
+    const rows = esRegistros ? filasExcelMorbilidadVistaRegistros() : filasExcelMorbilidadVistaTodos();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Morbilidad hospitalaria');
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+    const sufijo = esRegistros ? 'solo_registros' : 'todos_pacientes';
+    XLSX.writeFile(wb, `morbilidad_hospitalaria_${sufijo}_${stamp}.xlsx`);
+    ElMessage.success(`Se exportaron ${rows.length} fila(s).`);
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('No se pudo generar el archivo Excel.');
+  } finally {
+    exportandoExcel.value = false;
+  }
+}
 
 const COLUMNAS_FORMATO = ['id_paciente_atencion', 'diagnostico', 'codigo_diagnostico', 'fecha_hospitalizacion', 'fecha_alta_hospitalizacion', 'fuente'];
 

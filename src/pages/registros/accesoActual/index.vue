@@ -40,6 +40,18 @@
             Importar
           </button> -->
           <button
+            type="button"
+            class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-45 disabled:pointer-events-none"
+            :disabled="!puedeExportarAccesoVascularExcel || exportandoExcel"
+            :title="puedeExportarAccesoVascularExcel ? 'Exporta la vista actual (todos los registros del filtro, no solo la página)' : 'No hay datos para exportar con los filtros actuales'"
+            @click="exportarDatosAccesoVascularExcel"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {{ exportandoExcel ? 'Exportando…' : 'Exportar Excel' }}
+          </button>
+          <button
             v-if="mostrarBotonNuevo"
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white font-semibold rounded-lg shadow-sm hover:bg-cyan-700 transition-colors"
@@ -87,122 +99,227 @@
           <div v-if="registros.length === 0" class="p-12 text-center text-slate-500 italic">
             No hay registros de acceso vascular para el periodo, IPRESS y modalidad seleccionados.
           </div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo acceso</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localización</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr v-for="r in registros" :key="r.id_unidad_actual" class="hover:bg-slate-50 transition-colors">
-                  <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_acceso || r.tipo_acceso_actual || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.localizacion_acceso || r.localizacion_acceso_actual || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.motivo_cambio || '—' }}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(r.estado_aprobacion)">
-                      {{ r.estado_aprobacion || 'PENDIENTE' }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-sm">
-                    <span v-if="r.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
-                    <span v-else class="text-slate-400">—</span>
-                  </td>
-                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[220px] truncate align-top" :title="r.comentario_evaluacion || ''">{{ textoComentarioSupervisor(r.comentario_evaluacion) }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-else class="p-4 space-y-4">
+            <div class="flex flex-wrap gap-3">
+              <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-medium text-slate-600 mb-1">Filtrar por nombre</label>
+                <input
+                  v-model="filtroRegistrosNombre"
+                  type="text"
+                  placeholder="Apellidos y nombres..."
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div class="flex-1 min-w-[160px]">
+                <label class="block text-xs font-medium text-slate-600 mb-1">Filtrar por documento</label>
+                <input
+                  v-model="filtroRegistrosDni"
+                  type="text"
+                  placeholder="DNI / CE..."
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div v-if="registrosFiltrados.length === 0" class="py-8 text-center text-slate-500 text-sm">
+              No hay resultados con el filtro actual<span v-if="filtroRegistrosNombre.trim() || filtroRegistrosDni.trim()">; pruebe otro nombre o documento</span>.
+            </div>
+            <template v-else>
+              <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                <table class="min-w-full divide-y divide-slate-200">
+                  <thead class="bg-slate-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo acceso</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localización</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    <tr v-for="r in registrosPaginados" :key="r.id_unidad_actual" class="hover:bg-slate-50 transition-colors">
+                      <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_acceso || r.tipo_acceso_actual || '—' }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-600">{{ r.localizacion_acceso || r.localizacion_acceso_actual || '—' }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '—' }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-600">{{ r.motivo_cambio || '—' }}</td>
+                      <td class="px-4 py-3 text-sm">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(r.estado_aprobacion)">
+                          {{ r.estado_aprobacion || 'PENDIENTE' }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-sm">
+                        <span v-if="r.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                        <span v-else class="text-slate-400">—</span>
+                      </td>
+                      <td class="px-4 py-3 text-sm text-slate-600 max-w-[220px] truncate align-top" :title="r.comentario_evaluacion || ''">{{ textoComentarioSupervisor(r.comentario_evaluacion) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm border-t border-slate-100 pt-3">
+                <div class="flex flex-wrap items-center gap-3 text-slate-600">
+                  <span>{{ rangoRegistrosLabel }}</span>
+                  <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+                    <span>Por página</span>
+                    <select v-model.number="tamPagina" class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white">
+                      <option :value="10">10</option>
+                      <option :value="25">25</option>
+                      <option :value="50">50</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaRegistros <= 1" @click="paginaRegistros = 1">Primera</button>
+                  <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaRegistros <= 1" @click="paginaRegistros--">Anterior</button>
+                  <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaRegistros }} / {{ totalPaginasRegistros }}</span>
+                  <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaRegistros >= totalPaginasRegistros" @click="paginaRegistros++">Siguiente</button>
+                  <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaRegistros >= totalPaginasRegistros" @click="paginaRegistros = totalPaginasRegistros">Última</button>
+                </div>
+              </div>
+            </template>
           </div>
         </template>
         <template v-else-if="vistaActiva === 'todos'">
           <div v-if="todosPacientesLista.length === 0" class="p-12 text-center text-slate-500 italic">
             No hay pacientes en el periodo, IPRESS y modalidad seleccionados.
           </div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo acceso</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localización</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr v-for="fila in todosPacientesLista" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
-                  <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.documento || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.tipo_acceso || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.localizacion_acceso || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.fecha_creacion_acceso || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.motivo_cambio || '—' }}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(fila.estado_aprobacion)">
-                      {{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-sm">
-                    <span v-if="fila.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
-                    <span v-else class="text-slate-400">—</span>
-                  </td>
-                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[220px] truncate align-top" :title="fila.comentario_evaluacion || ''">{{ textoComentarioSupervisor(fila.comentario_evaluacion) }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-else class="p-4 space-y-4">
+            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+              <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo acceso</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localización</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha creación</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
+                    <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600">{{ fila.documento || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600">{{ fila.tipo_acceso || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600">{{ fila.localizacion_acceso || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600">{{ fila.fecha_creacion_acceso || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-600">{{ fila.motivo_cambio || '—' }}</td>
+                    <td class="px-4 py-3 text-sm">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(fila.estado_aprobacion)">
+                        {{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                      <span v-if="fila.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                      <span v-else class="text-slate-400">—</span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-600 max-w-[220px] truncate align-top" :title="fila.comentario_evaluacion || ''">{{ textoComentarioSupervisor(fila.comentario_evaluacion) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm border-t border-slate-100 pt-3">
+              <div class="flex flex-wrap items-center gap-3 text-slate-600">
+                <span>{{ rangoTodosLabel }}</span>
+                <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+                  <span>Por página</span>
+                  <select v-model.number="tamPaginaTodos" class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white">
+                    <option :value="10">10</option>
+                    <option :value="25">25</option>
+                    <option :value="50">50</option>
+                  </select>
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaTodos <= 1" @click="paginaTodos = 1">Primera</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaTodos <= 1" @click="paginaTodos--">Anterior</button>
+                <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaTodos }} / {{ totalPaginasTodos }}</span>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaTodos >= totalPaginasTodos" @click="paginaTodos++">Siguiente</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaTodos >= totalPaginasTodos" @click="paginaTodos = totalPaginasTodos">Última</button>
+              </div>
+            </div>
           </div>
         </template>
         <template v-else>
           <div v-if="historialCargas.length === 0" class="p-12 text-center text-slate-500 italic">
             Aun no hay cargas de Excel registradas.
           </div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Archivo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Periodo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Clinica</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Modalidad</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Filas</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Guardadas</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Errores</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr
-                  v-for="carga in historialCargas"
-                  :key="carga.id"
-                  class="hover:bg-slate-50 transition-colors cursor-pointer"
-                  @click="abrirDetalleCarga(carga)"
-                >
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.fecha }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.archivo }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.periodo || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.clinica || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.modalidad || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.totalFilas }}</td>
-                  <td class="px-4 py-3 text-sm text-green-700 font-semibold">{{ carga.guardadas }}</td>
-                  <td class="px-4 py-3 text-sm text-red-700 font-semibold">{{ carga.errores }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-else class="p-4 space-y-4">
+            <div class="max-w-md">
+              <label class="block text-xs font-medium text-slate-600 mb-1">Filtrar cargas</label>
+              <input
+                v-model="filtroHistorialTexto"
+                type="text"
+                placeholder="Archivo, fecha, periodo, clínica o modalidad..."
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <div v-if="historialCargasFiltrado.length === 0" class="py-8 text-center text-slate-500 text-sm">
+              No hay cargas que coincidan con el filtro.
+            </div>
+            <template v-else>
+              <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                <table class="min-w-full divide-y divide-slate-200">
+                  <thead class="bg-slate-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Archivo</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Periodo</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Clinica</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Modalidad</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Filas</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Guardadas</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Errores</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    <tr
+                      v-for="carga in historialPaginado"
+                      :key="carga.id"
+                      class="hover:bg-slate-50 transition-colors cursor-pointer"
+                      @click="abrirDetalleCarga(carga)"
+                    >
+                      <td class="px-4 py-3 text-sm text-slate-700">{{ carga.fecha }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-700">{{ carga.archivo }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-700">{{ carga.periodo || '—' }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-700">{{ carga.clinica || '—' }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-700">{{ carga.modalidad || '—' }}</td>
+                      <td class="px-4 py-3 text-sm text-slate-700">{{ carga.totalFilas }}</td>
+                      <td class="px-4 py-3 text-sm text-green-700 font-semibold">{{ carga.guardadas }}</td>
+                      <td class="px-4 py-3 text-sm text-red-700 font-semibold">{{ carga.errores }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm border-t border-slate-100 pt-3">
+                <div class="flex flex-wrap items-center gap-3 text-slate-600">
+                  <span>{{ rangoHistorialLabel }}</span>
+                  <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+                    <span>Por página</span>
+                    <select v-model.number="tamPaginaHistorial" class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white">
+                      <option :value="10">10</option>
+                      <option :value="25">25</option>
+                      <option :value="50">50</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorial <= 1" @click="paginaHistorial = 1">Primera</button>
+                  <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorial <= 1" @click="paginaHistorial--">Anterior</button>
+                  <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaHistorial }} / {{ totalPaginasHistorial }}</span>
+                  <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorial >= totalPaginasHistorial" @click="paginaHistorial++">Siguiente</button>
+                  <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorial >= totalPaginasHistorial" @click="paginaHistorial = totalPaginasHistorial">Última</button>
+                </div>
+              </div>
+            </template>
           </div>
         </template>
       </div>
@@ -359,33 +476,55 @@
               <div class="text-sm font-semibold text-slate-800 mt-1">{{ cargaSeleccionada.guardadas }} guardadas / {{ cargaSeleccionada.errores }} errores</div>
             </div>
           </div>
-          <div class="overflow-x-auto border border-slate-200 rounded-xl">
-            <table class="min-w-full divide-y divide-slate-200">
-              <thead class="bg-slate-50">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localizacion</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                <tr v-for="(detalle, index) in cargaSeleccionada.detalles" :key="`${cargaSeleccionada.id}-${index}`">
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.dni || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.paciente || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.tipo_acceso || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.localizacion_acceso || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.fecha_creacion_acceso || '—' }}</td>
-                  <td class="px-4 py-3 text-sm font-semibold" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
-                    {{ detalle.guardado ? 'Guardado' : 'Error' }}
-                  </td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.mensaje }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="space-y-3">
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localizacion</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr v-for="(detalle, index) in detallesCargaPaginados" :key="`${cargaSeleccionada.id}-${(paginaDetalleCarga - 1) * tamPaginaDetalle + index}`">
+                    <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.dni || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.paciente || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.tipo_acceso || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.localizacion_acceso || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.fecha_creacion_acceso || '—' }}</td>
+                    <td class="px-4 py-3 text-sm font-semibold" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
+                      {{ detalle.guardado ? 'Guardado' : 'Error' }}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.mensaje }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-if="detallesCargaLista.length > 0" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
+              <div class="flex flex-wrap items-center gap-3 text-slate-600">
+                <span>{{ rangoDetalleCargaLabel }}</span>
+                <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+                  <span>Por página</span>
+                  <select v-model.number="tamPaginaDetalle" class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white">
+                    <option :value="10">10</option>
+                    <option :value="25">25</option>
+                    <option :value="50">50</option>
+                  </select>
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaDetalleCarga <= 1" @click="paginaDetalleCarga = 1">Primera</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaDetalleCarga <= 1" @click="paginaDetalleCarga--">Anterior</button>
+                <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaDetalleCarga }} / {{ totalPaginasDetalleCarga }}</span>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaDetalleCarga >= totalPaginasDetalleCarga" @click="paginaDetalleCarga++">Siguiente</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaDetalleCarga >= totalPaginasDetalleCarga" @click="paginaDetalleCarga = totalPaginasDetalleCarga">Última</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -429,6 +568,18 @@ const mostrarDetalleCarga = ref(false);
 const cargaSeleccionada = ref(null);
 const estadoFormulario = ref('CERRADO');
 const cargandoEstadoFormulario = ref(false);
+
+const filtroRegistrosNombre = ref('');
+const filtroRegistrosDni = ref('');
+const paginaRegistros = ref(1);
+const tamPagina = ref(10);
+const filtroHistorialTexto = ref('');
+const paginaHistorial = ref(1);
+const tamPaginaHistorial = ref(10);
+const paginaTodos = ref(1);
+const tamPaginaTodos = ref(10);
+const paginaDetalleCarga = ref(1);
+const tamPaginaDetalle = ref(10);
 
 const TIPOS_ACCESO = [
   'Catéter Venoso Central Temporal',
@@ -663,6 +814,190 @@ const todosPacientesLista = computed(() => {
   });
 });
 
+const registrosFiltrados = computed(() => {
+  let list = Array.isArray(registros.value) ? [...registros.value] : [];
+  const n = filtroRegistrosNombre.value.trim().toLowerCase();
+  const d = filtroRegistrosDni.value.trim().toLowerCase();
+  if (n) list = list.filter((r) => nombrePaciente(r).toLowerCase().includes(n));
+  if (d) list = list.filter((r) => String(documentoPaciente(r) || '').toLowerCase().includes(d));
+  return list;
+});
+
+const totalPaginasRegistros = computed(() => {
+  const n = registrosFiltrados.value.length;
+  if (n === 0) return 1;
+  return Math.ceil(n / tamPagina.value);
+});
+
+const registrosPaginados = computed(() => {
+  const list = registrosFiltrados.value;
+  const tam = tamPagina.value;
+  const p = Math.min(Math.max(1, paginaRegistros.value), totalPaginasRegistros.value);
+  const start = (p - 1) * tam;
+  return list.slice(start, start + tam);
+});
+
+const rangoRegistrosLabel = computed(() => {
+  const total = registrosFiltrados.value.length;
+  if (total === 0) return '0 resultados';
+  const tam = tamPagina.value;
+  const p = Math.min(Math.max(1, paginaRegistros.value), totalPaginasRegistros.value);
+  const start = (p - 1) * tam + 1;
+  const end = Math.min(p * tam, total);
+  return `Mostrando ${start}–${end} de ${total}`;
+});
+
+const historialCargasFiltrado = computed(() => {
+  const texto = filtroHistorialTexto.value.trim().toLowerCase();
+  const lista = Array.isArray(historialCargas.value) ? historialCargas.value : [];
+  if (!texto) return lista;
+  return lista.filter((c) => {
+    const blob = [
+      c.fecha,
+      c.archivo,
+      c.periodo,
+      c.clinica,
+      c.modalidad,
+      String(c.totalFilas),
+      String(c.guardadas),
+      String(c.errores),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return blob.includes(texto);
+  });
+});
+
+const totalPaginasHistorial = computed(() => {
+  const n = historialCargasFiltrado.value.length;
+  if (n === 0) return 1;
+  return Math.ceil(n / tamPaginaHistorial.value);
+});
+
+const historialPaginado = computed(() => {
+  const list = historialCargasFiltrado.value;
+  const tam = tamPaginaHistorial.value;
+  const p = Math.min(Math.max(1, paginaHistorial.value), totalPaginasHistorial.value);
+  const start = (p - 1) * tam;
+  return list.slice(start, start + tam);
+});
+
+const rangoHistorialLabel = computed(() => {
+  const total = historialCargasFiltrado.value.length;
+  if (total === 0) return '0 resultados';
+  const tam = tamPaginaHistorial.value;
+  const p = Math.min(Math.max(1, paginaHistorial.value), totalPaginasHistorial.value);
+  const start = (p - 1) * tam + 1;
+  const end = Math.min(p * tam, total);
+  return `Mostrando ${start}–${end} de ${total}`;
+});
+
+const totalPaginasTodos = computed(() => {
+  const n = todosPacientesLista.value.length;
+  if (n === 0) return 1;
+  return Math.ceil(n / tamPaginaTodos.value);
+});
+
+const todosPacientesPaginados = computed(() => {
+  const list = todosPacientesLista.value;
+  const tam = tamPaginaTodos.value;
+  const p = Math.min(Math.max(1, paginaTodos.value), totalPaginasTodos.value);
+  const start = (p - 1) * tam;
+  return list.slice(start, start + tam);
+});
+
+const rangoTodosLabel = computed(() => {
+  const total = todosPacientesLista.value.length;
+  if (total === 0) return '0 resultados';
+  const tam = tamPaginaTodos.value;
+  const p = Math.min(Math.max(1, paginaTodos.value), totalPaginasTodos.value);
+  const start = (p - 1) * tam + 1;
+  const end = Math.min(p * tam, total);
+  return `Mostrando ${start}–${end} de ${total}`;
+});
+
+const detallesCargaLista = computed(() => {
+  const d = cargaSeleccionada.value?.detalles;
+  return Array.isArray(d) ? d : [];
+});
+
+const totalPaginasDetalleCarga = computed(() => {
+  const n = detallesCargaLista.value.length;
+  if (n === 0) return 1;
+  return Math.ceil(n / tamPaginaDetalle.value);
+});
+
+const detallesCargaPaginados = computed(() => {
+  const list = detallesCargaLista.value;
+  const tam = tamPaginaDetalle.value;
+  const p = Math.min(Math.max(1, paginaDetalleCarga.value), totalPaginasDetalleCarga.value);
+  const start = (p - 1) * tam;
+  return list.slice(start, start + tam);
+});
+
+const rangoDetalleCargaLabel = computed(() => {
+  const total = detallesCargaLista.value.length;
+  if (total === 0) return '0 filas';
+  const tam = tamPaginaDetalle.value;
+  const p = Math.min(Math.max(1, paginaDetalleCarga.value), totalPaginasDetalleCarga.value);
+  const start = (p - 1) * tam + 1;
+  const end = Math.min(p * tam, total);
+  return `Mostrando ${start}–${end} de ${total}`;
+});
+
+watch([filtroRegistrosNombre, filtroRegistrosDni], () => {
+  paginaRegistros.value = 1;
+});
+
+watch(registrosFiltrados, (list) => {
+  const tp = Math.max(1, Math.ceil(list.length / tamPagina.value) || 1);
+  if (paginaRegistros.value > tp) paginaRegistros.value = tp;
+}, { deep: true });
+
+watch(filtroHistorialTexto, () => {
+  paginaHistorial.value = 1;
+});
+
+watch(historialCargasFiltrado, (list) => {
+  const tp = Math.max(1, Math.ceil(list.length / tamPaginaHistorial.value) || 1);
+  if (paginaHistorial.value > tp) paginaHistorial.value = tp;
+}, { deep: true });
+
+watch(todosPacientesLista, (list) => {
+  const tp = Math.max(1, Math.ceil(list.length / tamPaginaTodos.value) || 1);
+  if (paginaTodos.value > tp) paginaTodos.value = tp;
+}, { deep: true });
+
+watch(() => cargaSeleccionada.value?.id, () => {
+  paginaDetalleCarga.value = 1;
+});
+
+watch(detallesCargaLista, (list) => {
+  const tp = Math.max(1, Math.ceil(list.length / tamPaginaDetalle.value) || 1);
+  if (paginaDetalleCarga.value > tp) paginaDetalleCarga.value = tp;
+}, { deep: true });
+
+watch(tamPagina, () => {
+  const tp = Math.max(1, Math.ceil(registrosFiltrados.value.length / tamPagina.value) || 1);
+  if (paginaRegistros.value > tp) paginaRegistros.value = tp;
+});
+
+watch(tamPaginaHistorial, () => {
+  const tp = Math.max(1, Math.ceil(historialCargasFiltrado.value.length / tamPaginaHistorial.value) || 1);
+  if (paginaHistorial.value > tp) paginaHistorial.value = tp;
+});
+
+watch(tamPaginaTodos, () => {
+  const tp = Math.max(1, Math.ceil(todosPacientesLista.value.length / tamPaginaTodos.value) || 1);
+  if (paginaTodos.value > tp) paginaTodos.value = tp;
+});
+
+watch(tamPaginaDetalle, () => {
+  const tp = Math.max(1, Math.ceil(detallesCargaLista.value.length / tamPaginaDetalle.value) || 1);
+  if (paginaDetalleCarga.value > tp) paginaDetalleCarga.value = tp;
+});
+
 async function fetchRegistros() {
   const idPeriodo = periodoGlobal.value;
   const idIpress = clinicaGlobal.value;
@@ -813,6 +1148,70 @@ const COLUMNAS_FORMATO = [
   'fecha_creacion_acceso',
   'motivo_cambio',
 ];
+
+const exportandoExcel = ref(false);
+
+const puedeExportarAccesoVascularExcel = computed(() => {
+  if (cargando.value) return false;
+  if (vistaActiva.value === 'registros') {
+    return registrosFiltrados.value.length > 0;
+  }
+  return todosPacientesLista.value.length > 0;
+});
+
+function filasExcelVistaRegistros() {
+  return registrosFiltrados.value.map((r) => ({
+    Paciente: nombrePaciente(r),
+    DNI: documentoPaciente(r),
+    'Tipo acceso': r.tipo_acceso || r.tipo_acceso_actual || '',
+    Localización: r.localizacion_acceso || r.localizacion_acceso_actual || '',
+    'Fecha creación': r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
+    'Motivo cambio': r.motivo_cambio || '',
+    Estado: r.estado_aprobacion || 'PENDIENTE',
+    'Editado supervisor': r.supervisor_edito_registro ? 'Sí' : 'No',
+    'Comentario supervisor': r.comentario_evaluacion || '',
+  }));
+}
+
+function filasExcelVistaTodos() {
+  return todosPacientesLista.value.map((fila) => ({
+    Paciente: fila.paciente || '',
+    DNI: fila.documento || '',
+    'Tiene registro': fila.tieneRegistro ? 'Sí' : 'No',
+    'Tipo acceso': fila.tipo_acceso || '',
+    Localización: fila.localizacion_acceso || '',
+    'Fecha creación': fila.fecha_creacion_acceso || '',
+    'Motivo cambio': fila.motivo_cambio || '',
+    Estado: fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO'),
+    'Editado supervisor': fila.supervisor_edito_registro ? 'Sí' : 'No',
+    'Comentario supervisor': fila.comentario_evaluacion || '',
+  }));
+}
+
+async function exportarDatosAccesoVascularExcel() {
+  if (!puedeExportarAccesoVascularExcel.value) {
+    ElMessage.warning('No hay datos para exportar con los filtros actuales.');
+    return;
+  }
+  exportandoExcel.value = true;
+  try {
+    const esRegistros = vistaActiva.value === 'registros';
+    const rows = esRegistros ? filasExcelVistaRegistros() : filasExcelVistaTodos();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Acceso vascular');
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+    const sufijo = esRegistros ? 'solo_registros' : 'todos_pacientes';
+    XLSX.writeFile(wb, `acceso_vascular_${sufijo}_${stamp}.xlsx`);
+    ElMessage.success(`Se exportaron ${rows.length} fila(s).`);
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('No se pudo generar el archivo Excel.');
+  } finally {
+    exportandoExcel.value = false;
+  }
+}
 
 function descargarFormatoExcel() {
   const wsData = [

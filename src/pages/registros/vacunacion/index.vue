@@ -32,6 +32,18 @@
             Importar
           </button> -->
           <button
+            type="button"
+            class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-45 disabled:pointer-events-none"
+            :disabled="!puedeExportarVacunacionExcel || exportandoExcel"
+            :title="puedeExportarVacunacionExcel ? 'Exporta la vista actual (todos los registros del filtro)' : 'No hay datos para exportar con los filtros actuales'"
+            @click="exportarDatosVacunacionExcel"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {{ exportandoExcel ? 'Exportando…' : 'Exportar Excel' }}
+          </button>
+          <button
             v-if="mostrarBotonNuevo"
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#008f9c] text-white font-semibold rounded-lg shadow-sm hover:bg-[#007a85] transition-colors"
@@ -257,6 +269,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
+import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import Form7 from '@/components/forms/Form7.vue';
@@ -290,6 +303,81 @@ const cargandoEstadoFormulario = ref(false);
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
 const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto' : 'Cerrado'));
 const mostrarBotonNuevo = computed(() => formularioAbierto.value);
+
+const exportandoExcel = ref(false);
+
+const puedeExportarVacunacionExcel = computed(() => {
+  if (cargando.value) return false;
+  if (vistaActiva.value === 'registros') return registros.value.length > 0;
+  return todosPacientesLista.value.length > 0;
+});
+
+function valorVacExport(v) {
+  if (v === null || v === undefined || v === '') return '';
+  return v;
+}
+
+function filasExcelVacunacionVistaRegistros() {
+  return registros.value.map((r) => ({
+    Paciente: nombrePaciente(r),
+    DNI: documentoPaciente(r),
+    VHB: valorVacExport(r.vhb),
+    VHC: valorVacExport(r.vhc),
+    VIH: valorVacExport(r.vih),
+    'Título AcHBs': valorVacExport(r.titulo_acHbs),
+    'Dosis Hepatitis B': valorVacExport(r.dosis_hepatitis_b),
+    'Dosis Covid': valorVacExport(r.dosis_covid),
+    'Fecha Influenza': valorVacExport(r.fecha_influenza),
+    'Fecha Neumococo': valorVacExport(r.fecha_neumococo),
+    Estado: r.estado_aprobacion || 'PENDIENTE',
+    'Editado supervisor': r.supervisor_edito_registro ? 'Sí' : 'No',
+    'Comentario supervisor': r.comentario_evaluacion || '',
+  }));
+}
+
+function filasExcelVacunacionVistaTodos() {
+  return todosPacientesLista.value.map((fila) => ({
+    Paciente: fila.paciente || '',
+    DNI: fila.documento || '',
+    'Tiene registro': fila.tieneRegistro ? 'Sí' : 'No',
+    VHB: valorVacExport(fila.vhb),
+    VHC: valorVacExport(fila.vhc),
+    VIH: valorVacExport(fila.vih),
+    'Título AcHBs': valorVacExport(fila.titulo_acHbs),
+    'Dosis Hepatitis B': valorVacExport(fila.dosis_hepatitis_b),
+    'Dosis Covid': valorVacExport(fila.dosis_covid),
+    'Fecha Influenza': valorVacExport(fila.fecha_influenza),
+    'Fecha Neumococo': valorVacExport(fila.fecha_neumococo),
+    Estado: fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO'),
+    'Editado supervisor': fila.supervisor_edito_registro ? 'Sí' : 'No',
+    'Comentario supervisor': fila.comentario_evaluacion || '',
+  }));
+}
+
+async function exportarDatosVacunacionExcel() {
+  if (!puedeExportarVacunacionExcel.value) {
+    ElMessage.warning('No hay datos para exportar con los filtros actuales.');
+    return;
+  }
+  exportandoExcel.value = true;
+  try {
+    const esRegistros = vistaActiva.value === 'registros';
+    const rows = esRegistros ? filasExcelVacunacionVistaRegistros() : filasExcelVacunacionVistaTodos();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Vacunación');
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+    const sufijo = esRegistros ? 'solo_registros' : 'todos_pacientes';
+    XLSX.writeFile(wb, `vacunacion_${sufijo}_${stamp}.xlsx`);
+    ElMessage.success(`Se exportaron ${rows.length} fila(s).`);
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('No se pudo generar el archivo Excel.');
+  } finally {
+    exportandoExcel.value = false;
+  }
+}
 
 const COLUMNAS_FORMATO = ['id_paciente_atencion', 'vhb', 'vhc', 'vih', 'titulo_acHbs', 'dosis_hepatitis_b', 'dosis_covid', 'fecha_influenza', 'fecha_neumococo'];
 

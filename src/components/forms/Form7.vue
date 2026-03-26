@@ -88,7 +88,6 @@
         </div>
 
         <div>
-          <h3 class="font-medium text-gray-700 mb-3">Vacunación Contra Hepatitis B</h3>
           <div class="grid grid-cols-3 gap-4">
             <div>
               <label class="text-sm text-gray-600 font-medium">Título de AcHBs (mUI/mL)</label>
@@ -115,6 +114,7 @@
         </div>
 
         <div>
+          <h3 class="font-medium text-gray-700 mb-3">Vacunación Contra Hepatitis B</h3>
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="text-sm text-gray-600 font-medium">Última Dosis Administrada</label>

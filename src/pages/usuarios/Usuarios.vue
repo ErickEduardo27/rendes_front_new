@@ -152,10 +152,17 @@
               </div>
             </div>
 
-            <!-- IPRESS: solo para perfiles Clínicas u Hospitales -->
+            <!-- IPRESS: Clínicas, Hospitales (una o varias) y Supervisor (una o varias; es lo que verá en el selector del sistema) -->
             <div v-if="muestraSelectIpress" class="mt-5 pt-4 border-t border-gray-100">
               <label class="block text-sm font-medium text-gray-700 mb-2">IPRESS asignadas al usuario</label>
-              <p class="text-xs text-gray-500 mb-2">Busque y seleccione las IPRESS que tendrá asignadas este usuario.</p>
+              <p class="text-xs text-gray-500 mb-2">
+                <template v-if="esPerfilSupervisorForm">
+                  Seleccione al menos una IPRESS. El supervisor solo verá en la barra superior estas clínicas/hospitales.
+                </template>
+                <template v-else>
+                  Busque y seleccione las IPRESS que tendrá asignadas este usuario.
+                </template>
+              </p>
               <input v-model="busquedaIpressModal" type="text" placeholder="Buscar por nombre o código..."
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               <div class="border border-gray-200 rounded-lg max-h-44 overflow-y-auto bg-gray-50/50">
@@ -205,6 +212,9 @@
 <script setup>
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { deleteAllIpress, getAllIpress, postAllIpress, putAllIpress } from '@/services/ipress/Ipress.service';
+import { useAuthStore } from '@/store/auth';
+
+const authStore = useAuthStore();
 
 const filtroIpress = ref("");
 const listaIpressFiltrada = computed(() => {
@@ -291,7 +301,18 @@ const muestraSelectIpress = computed(() => {
   const p = perfilSeleccionado.value;
   if (!p || !p.perfil) return false;
   const nombre = String(p.perfil).toLowerCase();
-  return nombre.includes('clínica') || nombre.includes('clinica') || nombre.includes('hospital');
+  return (
+    nombre.includes('clínica') ||
+    nombre.includes('clinica') ||
+    nombre.includes('hospital') ||
+    nombre.includes('supervisor')
+  );
+});
+
+const esPerfilSupervisorForm = computed(() => {
+  const p = perfilSeleccionado.value;
+  if (!p?.perfil) return false;
+  return String(p.perfil).toLowerCase().includes('supervisor');
 });
 const ipressFiltradasModal = computed(() => {
   const texto = busquedaIpressModal.value.trim().toLowerCase();
@@ -399,7 +420,8 @@ const showEditModal = async (usuario) => {
 };
 
 const guardarAsignacionesIpress = async (idUsuario) => {
-  if (!idUsuario || !form.ipress_ids || form.ipress_ids.length === 0) return;
+  if (!idUsuario || !muestraSelectIpress.value) return;
+  const ids = Array.isArray(form.ipress_ids) ? [...form.ipress_ids] : [];
   try {
     const existentes = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${idUsuario}`);
     const lista = Array.isArray(existentes) ? existentes : existentes.results || [];
@@ -408,7 +430,7 @@ const guardarAsignacionesIpress = async (idUsuario) => {
         await deleteAllIpress(`/usuarioIpress/${a.id_usuario_ipress}/`);
       }
     }
-    for (const idIpress of form.ipress_ids) {
+    for (const idIpress of ids) {
       await postAllIpress('/usuarioIpress/', {
         id_usuario: idUsuario,
         id_ipress: idIpress,
@@ -423,7 +445,16 @@ const guardarAsignacionesIpress = async (idUsuario) => {
 
 const submitForm = async () => {
   try {
+    if (esPerfilSupervisorForm.value) {
+      const n = Array.isArray(form.ipress_ids) ? form.ipress_ids.length : 0;
+      if (n < 1) {
+        alert('El perfil supervisor debe tener al menos una IPRESS asignada.');
+        return;
+      }
+    }
+    let idUsuarioGuardado = null;
     if (editingUsuario.value) {
+      idUsuarioGuardado = editingUsuario.value.id_usuario;
       const payload = {
         documento: form.documento,
         nombre: form.nombre,
@@ -438,7 +469,7 @@ const submitForm = async () => {
         payload.password = form.password;
       }
       await putAllIpress(`/usuarios/${editingUsuario.value.id_usuario}/`, payload);
-      if (muestraSelectIpress.value && Array.isArray(form.ipress_ids)) {
+      if (muestraSelectIpress.value) {
         await guardarAsignacionesIpress(editingUsuario.value.id_usuario);
       }
     } else {
@@ -453,13 +484,16 @@ const submitForm = async () => {
         is_superuser: form.is_superuser,
         id_perfil: form.id_perfil,
       });
-      const idUsuario = res?.id_usuario ?? res?.id;
-      if (idUsuario && muestraSelectIpress.value && Array.isArray(form.ipress_ids) && form.ipress_ids.length > 0) {
-        await guardarAsignacionesIpress(idUsuario);
+      idUsuarioGuardado = res?.id_usuario ?? res?.id ?? null;
+      if (idUsuarioGuardado && muestraSelectIpress.value) {
+        await guardarAsignacionesIpress(idUsuarioGuardado);
       }
     }
     showModal.value = false;
     fetchUsuarios();
+    if (idUsuarioGuardado != null && authStore.user?.id_usuario === idUsuarioGuardado) {
+      await authStore.fetchUser();
+    }
   } catch (error) {
     alert('Error al guardar usuario');
     console.error(error);

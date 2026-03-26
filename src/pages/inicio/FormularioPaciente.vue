@@ -2,8 +2,10 @@
   <el-config-provider :locale="es">
     <div class="space-y-6 mx-6 max-w-6xl">
       <div>
-        <h2 class="text-2xl font-bold text-slate-800">Registro de Nuevo Paciente en Diálisis</h2>
-        <p class="text-sm text-slate-500 mt-1">Complete los datos del paciente para la creación del expediente médico.</p>
+        <h2 class="text-2xl font-bold text-slate-800">{{ modoEdicionSupervisor ? 'Edición de paciente (supervisor)' : 'Registro de Nuevo Paciente en Diálisis' }}</h2>
+        <p class="text-sm text-slate-500 mt-1">
+          {{ modoEdicionSupervisor ? 'Modifique los datos y guarde los cambios. El documento no debe duplicarse en el sistema.' : 'Complete los datos del paciente para la creación del expediente médico.' }}
+        </p>
       </div>
 
       <el-form label-position="top" class="space-y-6">
@@ -12,7 +14,7 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <el-form-item label="Tipo de Documento" required>
-              <el-select v-model="form.tipoDocumento" placeholder="Seleccione" class="w-full" clearable>
+              <el-select v-model="form.tipoDocumento" placeholder="Seleccione" class="w-full" clearable :disabled="modoEdicionSupervisor">
                 <el-option label="DNI" value="DNI" />
                 <el-option label="CE" value="CE" />
                 <el-option label="PASAPORTE" value="PASAPORTE" />
@@ -23,7 +25,7 @@
                 v-model="form.numeroDocumento"
                 :maxlength="maxLengthDocumento"
                 placeholder="Ingrese número"
-                :disabled="consultandoDNI"
+                :disabled="consultandoDNI || modoEdicionSupervisor"
                 @input="onDocumentoInput"
               />
               <div v-if="errorDNI" class="text-red-500 text-xs mt-1">{{ errorDNI }}</div>
@@ -42,44 +44,52 @@
               />
             </el-form-item>
             <el-form-item label=" " class="flex items-end">
-              <el-button v-if="form.tipoDocumento" type="primary" :loading="consultandoDNI" :disabled="!puedeConsultar" @click="consultarDNI" class="w-full">
+              <el-button v-if="form.tipoDocumento && !modoEdicionSupervisor" type="primary" :loading="consultandoDNI" :disabled="!puedeConsultar" @click="consultarDNI" class="w-full">
                 Consultar documento
               </el-button>
+              <span v-else-if="modoEdicionSupervisor" class="text-xs text-slate-500">Edición supervisor: la consulta por documento está desactivada.</span>
               <span v-else class="text-xs text-slate-400">Seleccione tipo, número de documento y fecha de nacimiento para consultar</span>
             </el-form-item>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 rounded-lg bg-slate-50 p-4 border border-slate-100">
-            <div class="col-span-full text-xs font-semibold text-slate-500 uppercase tracking-wide">Domicilio / Procedencia (Según Reniec/Asegurado)</div>
+            <div class="col-span-full flex flex-col gap-1">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Domicilio / Procedencia (Según Reniec/Asegurado)</span>
+              <span class="text-[11px] text-slate-400">Solo lectura: se completa con la consulta de documento; no es editable manualmente.</span>
+            </div>
             <el-form-item label="Departamento">
-              <el-select v-model="form.departamento" placeholder="Seleccione" class="w-full" clearable>
+              <el-select v-model="form.departamento" placeholder="—" class="w-full" disabled>
                 <el-option v-for="dep in listaDepartamentos" :key="dep" :label="dep" :value="dep" />
               </el-select>
             </el-form-item>
             <el-form-item label="Provincia">
-              <el-select v-model="form.provincia" placeholder="Seleccione" class="w-full" clearable :disabled="!form.departamento">
+              <el-select v-model="form.provincia" placeholder="—" class="w-full" disabled>
                 <el-option v-for="prov in listaProvincias" :key="prov" :label="prov" :value="prov" />
               </el-select>
             </el-form-item>
             <el-form-item label="Distrito">
-              <el-select v-model="form.distrito" placeholder="Seleccione" class="w-full" clearable :disabled="!form.provincia">
+              <el-select v-model="form.distrito" placeholder="—" class="w-full" disabled>
                 <el-option v-for="dist in listaDistritos" :key="dist" :label="dist" :value="dist" />
               </el-select>
             </el-form-item>
             <el-form-item label="Ubigeo (Auto)">
-              <el-input v-model="form.ubigeo" readonly class="font-mono text-center" />
+              <el-input v-model="form.ubigeo" readonly disabled class="font-mono text-center" />
             </el-form-item>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <el-form-item label="Apellidos y Nombres" required class="sm:col-span-2">
-              <el-input v-model="form.nombreCompleto" readonly placeholder="Se completará al consultar" />
+              <el-input
+                v-model="form.nombreCompleto"
+                :readonly="!modoEdicionSupervisor"
+                :placeholder="modoEdicionSupervisor ? 'Nombre del paciente' : 'Se completará al consultar'"
+              />
             </el-form-item>
             <el-form-item label="Edad actual">
               <el-input v-model="form.edad" readonly />
             </el-form-item>
             <el-form-item label="Sexo" required>
-              <el-select v-model="form.sexo" placeholder="Seleccione" class="w-full" clearable>
+              <el-select v-model="form.sexo" placeholder="—" class="w-full" disabled>
                 <el-option label="Masculino" value="M" />
                 <el-option label="Femenino" value="F" />
               </el-select>
@@ -177,7 +187,9 @@
 
         <div class="flex justify-end gap-3 pt-2">
           <el-button @click="$emit('cancelar')">Cancelar</el-button>
-          <el-button type="primary" @click="registrarPaciente">Registrar paciente</el-button>
+          <el-button type="primary" :loading="cargandoEdicionSupervisor" @click="registrarPaciente">
+            {{ modoEdicionSupervisor ? 'Guardar cambios' : 'Registrar paciente' }}
+          </el-button>
         </div>
       </el-form>
     </div>
@@ -186,7 +198,7 @@
 
 <script setup>
 import { reactive, computed, watch, ref, onMounted, nextTick } from 'vue';
-import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
+import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage, ElConfigProvider, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElButton, ElCheckbox, ElCheckboxGroup, ElDatePicker, ElAutocomplete } from 'element-plus';
 import es from 'element-plus/dist/locale/es.mjs';
 import Swal from 'sweetalert2';
@@ -220,8 +232,26 @@ const props = defineProps({
   numeroDocumentoInicial: {
     type: String,
     default: ''
+  },
+  /** Edición por supervisor desde lista de pacientes (requiere ficha diálisis). */
+  idPacienteEdicionSupervisor: {
+    type: [Number, String],
+    default: null
+  },
+  idPacienteDialisisEdicionSupervisor: {
+    type: [Number, String],
+    default: null
   }
 })
+
+const emit = defineEmits(['cancelar', 'guardado'])
+
+const modoEdicionSupervisor = ref(false)
+const cargandoEdicionSupervisor = ref(false)
+const idPacienteEdicionInterno = ref(null)
+const idPacienteDialisisEdicionInterno = ref(null)
+/** Evita que los watchers de modalidad/tipo borren datos al hidratar edición supervisor */
+const silenciarWatchsAccesoModalidad = ref(false)
 
 const seleccionadas = ref([])
 const periodos = ref([])
@@ -651,6 +681,81 @@ const resolverTipoAccesoTexto = (valor) => {
   return encontrado?.label ?? valor;
 };
 
+const tipoAccesoLabelAId = (tipoAccesoApi) => {
+  const t = String(tipoAccesoApi || '').trim();
+  if (!t) return '';
+  const found = listaTiposAcceso.find((x) => {
+    if (String(x.id) === t || x.label === t) return true;
+    try {
+      return String(x.label).localeCompare(t, undefined, { sensitivity: 'accent' }) === 0;
+    } catch {
+      return false;
+    }
+  });
+  if (found) return found.id;
+  const tl = t.toLowerCase();
+  if (tl.includes('no habido') || tl === '—' || tl === '-') return '';
+  if (tl.includes('peritoneal')) return '6';
+  if (tl.includes('fístula') || tl.includes('fistula') || tl.includes('fav')) return '3';
+  if (tl.includes('injerto') && tl.includes('autólogo')) return '4';
+  if (tl.includes('injerto') && tl.includes('prot')) return '5';
+  if (tl.includes('cvct') || tl.includes('temporal')) return '1';
+  if (tl.includes('cvclp') || tl.includes('larga permanencia')) return '2';
+  return '';
+};
+
+const valorPkOAnidado = (val) => {
+  if (val == null || val === '') return null;
+  if (typeof val === 'object') {
+    if (val.id_etiologia != null) return val.id_etiologia;
+    if (val.id != null) return val.id;
+  }
+  return val;
+};
+
+const apiGeneroAForm = (s) => {
+  const u = String(s || '').trim().toUpperCase();
+  if (u === 'M' || u.startsWith('MASC')) return 'M';
+  if (u === 'F' || u.startsWith('FEM')) return 'F';
+  return String(s || '').trim();
+};
+
+const normalizarFechaApi = (f) => {
+  if (f == null || f === '') return '';
+  const s = String(f).trim();
+  if (s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return s;
+};
+
+const esSiComorb = (v) => {
+  const s = String(v || '').trim().toLowerCase();
+  return s === 'sí' || s === 'si' || s === 's';
+};
+
+const mapComorbilidadesDesdeDialisis = (dia) => {
+  const cm = [];
+  if (esSiComorb(dia.enf_insuficiencia_cardiaca_congestiva)) cm.push('Insuficiencia cardiaca');
+  if (esSiComorb(dia.enf_diabetes)) cm.push('Diabetes');
+  if (esSiComorb(dia.enf_ateroesclerotica_cardiaca)) cm.push('Aterosclerosis');
+  if (esSiComorb(dia.enf_hipertension)) cm.push('Hipertensión');
+  if (esSiComorb(dia.enf_vascular_periferica)) cm.push('Vascular periférica');
+  if (esSiComorb(dia.enf_tuberculosis)) cm.push('Tuberculosis');
+  if (esSiComorb(dia.enf_cerebro_vascular)) cm.push('ACV');
+  if (esSiComorb(dia.enf_cancer)) cm.push('Cáncer');
+  if (esSiComorb(dia.enf_otra)) cm.push('Otra');
+  return cm;
+};
+
+const inferirCategoriaEtiologiaFromEt = (et) => {
+  if (!et || !et.general) return '';
+  const g = String(et.general).toUpperCase().trim();
+  for (const [key, label] of Object.entries(etologiasGenerales)) {
+    const L = String(label).toUpperCase().trim();
+    if (g === L || g.includes(L) || L.includes(g)) return key;
+  }
+  return '';
+};
+
 // Filtro A: Modalidad -> Tipos disponibles
 const tiposAccesoFiltrados = computed(() => {
   const modalidad = form.modalidadTRR;
@@ -1065,35 +1170,30 @@ watch(() => form.fechaNacimiento, (nuevaFecha) => {
 });
 
 // Watcher para validación cruzada entre modalidad TRR y tipo de acceso
-// Watcher para validación cruzada
 watch(() => form.modalidadTRR, (nuevaModalidad) => {
-  // Primero: Limpiamos siempre los hijos para evitar datos basura
+  if (silenciarWatchsAccesoModalidad.value) return;
+
   form.tipoAccesoInicio = '';
   form.localizacionAcceso = '';
 
-  // Lógica inteligente según el Acta:
   if (nuevaModalidad === 'Diálisis Peritoneal') {
-    // Si es Peritoneal, el único tipo posible es 'Catéter Peritoneal' (ID 6)
-    // Lo seleccionamos automáticamente por comodidad del usuario
     form.tipoAccesoInicio = '6';
-  }
-  // Si es 'Hemodiálisis', dejamos vacío para que el usuario elija (Fístula, Catéter, etc.)
-  else if (nuevaModalidad === 'Trasplante') {
-    // Trasplante no lleva accesos vasculares, se queda todo limpio
+  } else if (nuevaModalidad === 'Trasplante') {
+    // sin acceso vascular
   }
 });
 
-// Watcher para validación cruzada entre tipo de acceso y localización
+// Watcher: tipo de acceso → localización sugerida (ids '1'…'6')
 watch(() => form.tipoAccesoInicio, (nuevoTipoAcceso) => {
-  // Si se selecciona un tipo de acceso específico, sugerir localizaciones apropiadas
-  if (nuevoTipoAcceso === 'Catéter peritoneal') {
+  if (silenciarWatchsAccesoModalidad.value) return;
+  form.localizacionAcceso = '';
+  if (nuevoTipoAcceso === '6') {
     form.localizacionAcceso = '19';
-  } else if (nuevoTipoAcceso === 'Injerto Autólogo') {
+  } else if (nuevoTipoAcceso === '4') {
     form.localizacionAcceso = '17';
-  } else if (nuevoTipoAcceso === 'Injerto Protésico') {
+  } else if (nuevoTipoAcceso === '5') {
     form.localizacionAcceso = '18';
   }
-  // Para otros tipos de acceso, no se fuerza una localización específica
 });
 
 
@@ -1127,6 +1227,10 @@ const onDocumentoInput = (event) => {
   }
 };
 const registrarPaciente = async (url = null) => {
+  if (modoEdicionSupervisor.value) {
+    await guardarEdicionSupervisor();
+    return;
+  }
   if (!validarFormulario()) return;
   const idPeriodo = getIdPeriodoParaPayload();
   if (idPeriodo == null) {
@@ -1372,46 +1476,6 @@ const fetchPeriodoIpress = async (url = null) => {
   }
 };
 
-// --- PASO 3: WATCHERS DE LIMPIEZA Y AUTOSELECCIÓN ---
-
-// 1. Cuando cambia la MODALIDAD (Hemo vs Peritoneal)
-watch(() => form.modalidadTRR, (nuevaModalidad) => {
-  // Primero: Limpiamos siempre los hijos para evitar datos basura
-  form.tipoAccesoInicio = '';
-  form.localizacionAcceso = '';
-
-  // Lógica inteligente según el Acta:
-  if (nuevaModalidad === 'Diálisis Peritoneal') {
-    // Si es Peritoneal, el único tipo posible es 'Catéter Peritoneal' (ID 6)
-    // Lo seleccionamos automáticamente por comodidad del usuario
-    form.tipoAccesoInicio = '6';
-  }
-  // Si es 'Hemodiálisis', dejamos vacío para que el usuario elija (Fístula, Catéter, etc.)
-  else if (nuevaModalidad === 'Trasplante') {
-    // Trasplante no lleva accesos vasculares, se queda todo limpio
-  }
-});
-
-// 2. Cuando cambia el TIPO DE ACCESO
-watch(() => form.tipoAccesoInicio, (nuevoTipoId) => {
-  // Primero: Limpiamos la localización porque las opciones anteriores ya no son válidas
-  // (Ej: Si tenías "Brazo derecho" y cambias a "Catéter", esa localización ya no sirve)
-  form.localizacionAcceso = '';
-
-  // Autoselección para los casos que tienen una ÚNICA localización
-  if (nuevoTipoId === '6') {
-    form.localizacionAcceso = '19'; // Catéter peritoneal -> Loc 19
-  }
-  else if (nuevoTipoId === '4') {
-    form.localizacionAcceso = '17'; // Injerto Autólogo -> Loc 17
-  }
-  else if (nuevoTipoId === '5') {
-    form.localizacionAcceso = '18'; // Injerto Protésico -> Loc 18
-  }
-  // Para Fístulas (3) y Catéteres (1 y 2) NO seleccionamos nada automático
-  // porque el usuario debe elegir el lado (derecho/izquierdo, etc.)
-});
-
 // Watchers para actualizar cuando cambien los props
 watch(() => props.periodoInicial, (newVal) => {
   if (newVal) periodoSeleccionado.value = newVal;
@@ -1430,6 +1494,7 @@ watch(() => props.nombreClinicaInicial, (newVal) => {
 }, { immediate: true });
 
 watch(() => props.numeroDocumentoInicial, (v) => {
+  if (modoEdicionSupervisor.value) return;
   const s = (v || '').trim();
   if (!s) return;
   form.numeroDocumento = s;
@@ -1437,6 +1502,159 @@ watch(() => props.numeroDocumentoInicial, (v) => {
     form.tipoDocumento = 'DNI';
   }
 }, { immediate: true });
+
+async function guardarEdicionSupervisor() {
+  if (
+    !modoEdicionSupervisor.value ||
+    idPacienteEdicionInterno.value == null ||
+    idPacienteDialisisEdicionInterno.value == null
+  ) {
+    return;
+  }
+  if (!validarFormulario()) return;
+  const idPeriodo = getIdPeriodoParaPayload();
+  if (idPeriodo == null) {
+    ElMessage({ message: 'El periodo seleccionado no existe en el sistema. Elija un mes que ya esté registrado.', type: 'warning', plain: true });
+    return;
+  }
+  const idEtiologia =
+    form.etiologiaEspecifica != null && form.etiologiaEspecifica !== ''
+      ? Number(form.etiologiaEspecifica) || parseInt(form.etiologiaEspecifica, 10)
+      : null;
+  if (idEtiologia == null || Number.isNaN(idEtiologia)) {
+    ElMessage({ message: 'Seleccione una etiología específica de la lista.', type: 'warning', plain: true });
+    return;
+  }
+
+  cargandoEdicionSupervisor.value = true;
+  try {
+    const payloadPaciente = {
+      documento: form.numeroDocumento,
+      tipo_documento: form.tipoDocumento,
+      autogenerado: 'ASD',
+      paciente: form.nombreCompleto,
+      fecha_nacimiento: form.fechaNacimiento,
+      genero: form.sexo,
+      grado_instruccion: form.gradoInstruccion,
+      id_modalidad: form.modalidadTRR === 'Hemodiálisis' ? 1 : form.modalidadTRR === 'Diálisis Peritoneal' ? 2 : 3,
+    };
+    await patchAllIpress(`/pacientes/${idPacienteEdicionInterno.value}/`, payloadPaciente);
+
+    const payloadDialisis = {
+      id_paciente: idPacienteEdicionInterno.value,
+      id_etiologia: idEtiologia,
+      modalidad_inicio_trr: form.modalidadTRR,
+      fecha_inicio_trr: form.fechaInicioTRR,
+      subsistema_salud: form.subsistemaSalud,
+      tipo_acceso: form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : resolverTipoAccesoTexto(form.tipoAccesoInicio),
+      fecha_creacion_acceso: form.fechaCreacionAcceso,
+      fecha_primer_ingreso: form.fechaPrimerIngreso,
+      enf_ateroesclerotica_cardiaca: form.comorbilidades.includes('Aterosclerosis') ? 'Sí' : 'NO',
+      enf_insuficiencia_cardiaca_congestiva: form.comorbilidades.includes('Insuficiencia cardiaca') ? 'Sí' : 'NO',
+      enf_vascular_periferica: form.comorbilidades.includes('Vascular periférica') ? 'Sí' : 'NO',
+      enf_cerebro_vascular: form.comorbilidades.includes('ACV') ? 'Sí' : 'NO',
+      enf_cancer: form.comorbilidades.includes('Cáncer') ? 'Sí' : 'NO',
+      enf_diabetes: form.comorbilidades.includes('Diabetes') ? 'Sí' : 'NO',
+      enf_hipertension: form.comorbilidades.includes('Hipertensión') ? 'Sí' : 'NO',
+      enf_tuberculosis: form.comorbilidades.includes('Tuberculosis') ? 'Sí' : 'NO',
+      enf_otra: form.comorbilidades.includes('Otra') ? 'Sí' : 'NO',
+    };
+    await patchAllIpress(`/pacientesDialisis/${idPacienteDialisisEdicionInterno.value}/`, payloadDialisis);
+
+    ElMessage({ message: 'Cambios guardados correctamente.', type: 'success', plain: true });
+    emit('guardado');
+  } catch (error) {
+    console.error(error);
+    ElMessage({
+      message: error?.error || error?.message || 'No se pudieron guardar los cambios.',
+      type: 'error',
+      plain: true,
+    });
+  } finally {
+    cargandoEdicionSupervisor.value = false;
+  }
+}
+
+async function cargarEdicionSupervisor() {
+  const idP = props.idPacienteEdicionSupervisor;
+  const idDial = props.idPacienteDialisisEdicionSupervisor;
+  if (idP == null || idP === '' || idDial == null || idDial === '') {
+    modoEdicionSupervisor.value = false;
+    idPacienteEdicionInterno.value = null;
+    idPacienteDialisisEdicionInterno.value = null;
+    return;
+  }
+
+  modoEdicionSupervisor.value = true;
+  idPacienteEdicionInterno.value = Number(idP);
+  idPacienteDialisisEdicionInterno.value = Number(idDial);
+  cargandoEdicionSupervisor.value = true;
+  silenciarWatchsAccesoModalidad.value = true;
+
+  try {
+    await fetchPeriodo();
+    await fetchEtiologias();
+    const pac = await getAllIpress(`/pacientes/${idP}/`);
+    form.tipoDocumento = pac.tipo_documento || '';
+    form.numeroDocumento = pac.documento || '';
+    form.nombreCompleto = pac.paciente || '';
+    form.fechaNacimiento = normalizarFechaApi(pac.fecha_nacimiento);
+    form.sexo = apiGeneroAForm(pac.genero);
+    form.gradoInstruccion = pac.grado_instruccion || '';
+
+    const idModRaw = valorPkOAnidado(pac.id_modalidad);
+    const idMod = Number(idModRaw);
+    if (!Number.isNaN(idMod) && idModRaw != null) {
+      form.modalidadTRR = idMod === 1 ? 'Hemodiálisis' : idMod === 2 ? 'Diálisis Peritoneal' : idMod === 3 ? 'Trasplante' : '';
+    }
+
+    const dia = await getAllIpress(`/pacientesDialisis/${idDial}/`);
+    if (dia.modalidad_inicio_trr) {
+      form.modalidadTRR = dia.modalidad_inicio_trr;
+    }
+    form.fechaInicioTRR = normalizarFechaApi(dia.fecha_inicio_trr);
+    form.subsistemaSalud = dia.subsistema_salud || '';
+    form.fechaCreacionAcceso = normalizarFechaApi(dia.fecha_creacion_acceso);
+    form.fechaPrimerIngreso = normalizarFechaApi(dia.fecha_primer_ingreso);
+    form.comorbilidades = mapComorbilidadesDesdeDialisis(dia);
+
+    const tipoId = tipoAccesoLabelAId(dia.tipo_acceso);
+    form.tipoAccesoInicio = tipoId || (form.modalidadTRR === 'Diálisis Peritoneal' ? '6' : '');
+
+    let idEt = valorPkOAnidado(dia.id_etiologia);
+    if (idEt == null) idEt = dia.id_etiologia_id;
+    idEt = idEt != null ? Number(idEt) : null;
+    if (idEt != null && !Number.isNaN(idEt)) {
+      const lista = listaEtiologias.value || [];
+      const et = lista.find((e) => Number(e.id_etiologia) === idEt);
+      if (et) {
+        const cat = inferirCategoriaEtiologiaFromEt(et);
+        if (cat) form.etiologiaGeneral = cat;
+      }
+      await nextTick();
+      form.etiologiaEspecifica = idEt;
+    }
+
+    await nextTick();
+  } catch (e) {
+    console.error(e);
+    ElMessage({ message: e?.error || 'No se pudo cargar el paciente para edición.', type: 'error', plain: true });
+    modoEdicionSupervisor.value = false;
+    idPacienteEdicionInterno.value = null;
+    idPacienteDialisisEdicionInterno.value = null;
+  } finally {
+    silenciarWatchsAccesoModalidad.value = false;
+    cargandoEdicionSupervisor.value = false;
+  }
+}
+
+watch(
+  () => [props.idPacienteEdicionSupervisor, props.idPacienteDialisisEdicionSupervisor],
+  () => {
+    cargarEdicionSupervisor();
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   fetchPeriodo();

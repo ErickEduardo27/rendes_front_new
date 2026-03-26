@@ -75,7 +75,7 @@
                                 <select disabled v-model="form.localizacion_acceso_actual" 
                                     class="w-full bg-slate-100 border border-slate-300 text-slate-600 text-sm rounded-lg p-2.5 appearance-none cursor-not-allowed font-medium">
                                     <option disabled value="">Sin registro</option>
-                                    <option v-for="op in opcionesLocalizacion" :key="op.value" :value="op.label">{{ op.label }}</option>
+                                    <option v-for="op in opcionesLocalizacion" :key="op.value" :value="op.value">{{ op.label }}</option>
                                 </select>
                             </div>
                         </div>
@@ -119,9 +119,12 @@
                                 v-model="form.fecha_creacion_acceso_nuevo"
                                 type="date"
                                 class="w-full border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5"
-                                :min="rangoFechasPeriodo.min || undefined"
+                                :min="minFechaNuevoAccesoVascular || undefined"
                                 :max="rangoFechasPeriodo.max || undefined"
                             />
+                            <p v-if="fechaCreacionAccesoActualISO" class="text-[11px] text-slate-500 mt-1">
+                                No puede ser anterior al acceso vigente ({{ fechaCreacionAccesoActualISO }}).
+                            </p>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de acceso *</label>
@@ -149,9 +152,9 @@
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Motivo del cambio</label>
                         <select v-model="form.motivo_cambio" class="w-full max-w-md border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 bg-white">
                             <option :value="null">— Opcional —</option>
-                            <option value="1">Complicación mecánica</option>
-                            <option value="2">Complicación infecciosa</option>
-                            <option value="3">Prescripción médica</option>
+                            <option value="Complicación mecánica">Complicación mecánica</option>
+                            <option value="Complicación infecciosa">Complicación infecciosa</option>
+                            <option value="Prescripción médica">Prescripción médica</option>
                         </select>
                     </div>
                     <div class="px-6 pb-6 flex flex-wrap gap-2 justify-end border-t border-slate-100 pt-4">
@@ -570,6 +573,22 @@ const rangoFechasPeriodo = computed(() => {
     };
 });
 
+/** YYYY-MM-DD del acceso vigente (para min del nuevo y validación) */
+const fechaCreacionAccesoActualISO = computed(() => {
+    const v = form.fecha_creacion_acceso_actual;
+    if (!v) return null;
+    const s = String(v).trim().slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+});
+
+/** No antes del periodo ni antes del acceso vigente */
+const minFechaNuevoAccesoVascular = computed(() => {
+    const rMin = rangoFechasPeriodo.value.min;
+    const vig = fechaCreacionAccesoActualISO.value;
+    if (rMin && vig) return rMin > vig ? rMin : vig;
+    return rMin || vig || null;
+});
+
 const validarFormulario = () => {
     const camposObligatorios = ['fecha_creacion_acceso_nuevo', 'tipo_acceso_nuevo', 'localizacion_acceso_nuevo'];
     for (const campo of camposObligatorios) {
@@ -585,6 +604,11 @@ const validarFormulario = () => {
             ElMessage({ message: `La fecha debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max})`, type: 'warning', plain: true });
             return false;
         }
+    }
+    const vig = fechaCreacionAccesoActualISO.value;
+    if (vig && form.fecha_creacion_acceso_nuevo && form.fecha_creacion_acceso_nuevo < vig) {
+        ElMessage({ message: 'La fecha del nuevo acceso no puede ser anterior a la fecha del acceso vigente.', type: 'warning', plain: true });
+        return false;
     }
     return true;
 };
