@@ -1,9 +1,27 @@
-import { getAllIpress } from '@/services/ipress/Ipress.service';
+import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 
 export function countFromResponse(res) {
   if (Array.isArray(res)) return res.length;
   if (res?.results && Array.isArray(res.results)) return res.results.length;
   return 0;
+}
+
+export async function resolverIdPeriodoIpress(idPeriodo, idIpress) {
+  if (idPeriodo == null || idPeriodo === '' || idIpress == null || idIpress === '') {
+    return null;
+  }
+  try {
+    const res = await postAllIpress('/consulta_periodo_ipress/', {
+      id_periodo: Number(idPeriodo),
+      id_ipress: Number(idIpress),
+      id_estado: 1,
+    });
+    const lista = Array.isArray(res) ? res : [];
+    return lista.length ? lista[0].id_periodo_ipress : null;
+  } catch (e) {
+    console.error('Error al resolver id_periodo_ipress:', e);
+    return null;
+  }
 }
 
 /**
@@ -25,19 +43,30 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     };
   }
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, resVac] = await Promise.all([
+    const [resUnidades, resEventos, resMorb, resResultados, idPeriodoIpress] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${qs}`),
       getAllIpress(`/eventosAccesosVasculares/?${qs}`),
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
-      getAllIpress(`/vacunaciones/?${qs}`),
+      resolverIdPeriodoIpress(idPeriodo, idIpress),
     ]);
+
+    let totalVacunaciones = 0;
+    if (idPeriodoIpress != null) {
+      try {
+        const resVac = await getAllIpress(`/vacunaciones/?id_periodo_ipress=${idPeriodoIpress}`);
+        totalVacunaciones = countFromResponse(resVac);
+      } catch (e) {
+        console.error('Error al contar vacunaciones:', e);
+      }
+    }
+
     return {
       totalUnidades: countFromResponse(resUnidades),
       totalEventos: countFromResponse(resEventos),
       totalMorbilidades: countFromResponse(resMorb),
       totalResultados: countFromResponse(resResultados),
-      totalVacunaciones: countFromResponse(resVac),
+      totalVacunaciones,
     };
   } catch (e) {
     console.error(e);

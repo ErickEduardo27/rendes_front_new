@@ -146,7 +146,7 @@ const idMorbilidadCompletar = ref(null);
 
 const items = ref([
     { id: 1, codigo: 'J96.0', descripcion: 'Insuficiencia respiratoria aguda' },
-    { id: 2, codigo: 'N18.6', descripcion: 'Enfermedad Renal Terminal' },
+    /*{ id: 2, codigo: 'N18.6', descripcion: 'Enfermedad Renal Terminal' },*/
     { id: 3, codigo: 'A41.9', descripcion: 'Septicemia, no especificada' },
     { id: 4, codigo: 'K92.2', descripcion: 'Hemorragia gastrointestinal, no especificada' },
     { id: 5, codigo: 'J15.9', descripcion: 'Neumonía bacteriana, no especificada' },
@@ -171,7 +171,7 @@ const items = ref([
     { id: 24, codigo: 'S72.0', descripcion: 'Fractura del cuello de fémur' },
     { id: 25, codigo: 'J15.8', descripcion: 'Otras neumonías bacterianas' },
     { id: 26, codigo: 'K65.8', descripcion: 'Otras peritonitis' },
-    { id: 27, codigo: 'N18.5', descripcion: 'Insuficiencia Renal Crónica Estadio 4' },
+    /*{ id: 27, codigo: 'N18.5', descripcion: 'Insuficiencia Renal Crónica Estadio 4' },*/
     { id: 28, codigo: 'D50.0', descripcion: 'Anemia por deficiencia de hierro secundaria a pérdida de sangre (crónica)' },
     { id: 29, codigo: 'E11.7', descripcion: 'Diabetes mellitus no insulinodependiente, con complicaciones múltiples' },
     { id: 30, codigo: 'I50.9', descripcion: 'Insuficiencia cardíaca, no especificada' },
@@ -323,7 +323,7 @@ const items = ref([
     { id: 176, codigo: 'K80.5', descripcion: 'Cálculo de conducto biliar sin colangitis ni colecistitis' },
     { id: 177, codigo: 'M31.8', descripcion: 'Otras vasculopatías necrotizantes especificadas' },
     { id: 178, codigo: 'M80.9', descripcion: 'Osteoporosis no especificada, con fractura patológica' },
-    { id: 179, codigo: 'N18.0', descripcion: 'Insuficiencia renal terminal' },
+    /*{ id: 179, codigo: 'N18.0', descripcion: 'Insuficiencia renal terminal' },*/
     { id: 180, codigo: 'N93.9', descripcion: 'Hemorragia vaginal y uterina anormal, no especificada' },
     { id: 181, codigo: 'P71.1', descripcion: 'Otra hipocalcemia neonatal' },
     { id: 182, codigo: 'P74.3', descripcion: 'Alteraciones del equilibrio del potasio en el recién nacido' },
@@ -806,8 +806,8 @@ const items = ref([
     { id: 659, codigo: 'N08.3', descripcion: 'Trastornos glomerulares en diabetes mellitus (E10-E14+ con cuarto carácter común .2) (*)' },
     { id: 660, codigo: 'N13.3', descripcion: 'Otras hidronefrosis y las no especificadas' },
     { id: 661, codigo: 'N13.9', descripcion: 'Uropatía obstructiva y por reflujo, sin otra especificación' },
-    { id: 662, codigo: 'N18.8', descripcion: 'Otras insuficiencias renales crónicas' },
-    { id: 663, codigo: 'N18.9', descripcion: 'Insuficiencia renal crónica, no especificada' },
+    /*{ id: 662, codigo: 'N18.8', descripcion: 'Otras insuficiencias renales crónicas' },*/
+    /*{ id: 663, codigo: 'N18.9', descripcion: 'Insuficiencia renal crónica, no especificada' },*/
     { id: 664, codigo: 'N19.X', descripcion: 'Insuficiencia renal no especificada' },
     { id: 665, codigo: 'N20.0', descripcion: 'Cálculo del riñón' },
     { id: 666, codigo: 'N20.1', descripcion: 'Cálculo del uréter' },

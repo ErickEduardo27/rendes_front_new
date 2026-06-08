@@ -257,6 +257,7 @@ const totalRegistros = ref(0);
 const paginaActual = ref(1);
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
+import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
 
 // ==========================================
@@ -647,34 +648,25 @@ const goToPreviousPage = () => {
 
 onMounted(updateTabla);
 watch(formularioSeleccionado, updateTabla);
-function searchPeriodoIpress() {
-  const resultado = periodoIpress.value.find(
-    item => item.id_ipress === idClinicaSeleccionada.value && item.periodo ===  periodoSeleccionado.value
-  );
-  if (resultado) {
-    idPeriodoIpress.value = resultado.id_periodo_ipress;
-
+async function searchPeriodoIpress() {
+  idIpress.value = idClinicaSeleccionada.value;
+  idPerido.value = periodoSeleccionado.value;
+  if (idClinicaSeleccionada.value == null || periodoSeleccionado.value == null) {
+    idPeriodoIpress.value = null;
+    updateTabla();
+    return;
   }
-  console.log("imprimiendo valor de id periodo ipress",idPeriodoIpress.value)
-  idIpress.value = idClinicaSeleccionada.value
-  idPerido.value = periodoSeleccionado.value
-  updateTabla()
+  idPeriodoIpress.value = await resolverIdPeriodoIpress(
+    periodoSeleccionado.value,
+    idClinicaSeleccionada.value,
+  );
+  updateTabla();
 }
 
 const fetchPacientes = async (url = null) => {
   try {
     const respuesta = await getAllIpress(url ?? "/resumen_registros/" + idIpress.value + "/" + idPerido.value);
     pacientes.value = respuesta;
-
-  } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
-  }
-};
-
-const fetchPeriodoIpress = async (url = null) => {
-  try {
-    const respuesta = await getAllIpress(url ?? "/periodoIpress/");
-    periodoIpress.value = respuesta;
 
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
@@ -712,11 +704,11 @@ const fetchPeriodo = async (url = null) => {
   }
 };
 
-onMounted(() => {
-  fetchPeriodoIpress();
+onMounted(async () => {
+  await fetchPeriodo();
   fetchPacientes();
   fetchIpress();
-  fetchPeriodo();
+  await searchPeriodoIpress();
 });
 
 </script>

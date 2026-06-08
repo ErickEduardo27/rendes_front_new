@@ -146,6 +146,7 @@ const emit = defineEmits(['cancelar'])
 
 import { useRouter } from 'vue-router'
 import { getAllIpress, patchAllIpress, postAllIpress, putAllIpress } from '@/services/ipress/Ipress.service'
+import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios'
 const pacienteSeleccionado = ref(null)
 const router = useRouter()
 const idPeriodoIpress = ref(17)
@@ -233,30 +234,21 @@ const fetchPacienteDialisis = async () => {
     console.error('Error al obtener IPRESS:', error);
   }
 };
-const fetchPeriodoIpress = async (url = null) => {
-  try {
-    const respuesta = await getAllIpress(url ?? "/periodoIpress/");
-    periodoIpress.value = respuesta;
-
-  } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
-  }
-};
 const handleSelect = (item) => {
-  idClinicaSeleccionada.value = item.id_ipress; // ID u otros datos
+  idClinicaSeleccionada.value = item.id_ipress;
   searchPeriodoIpress();
 };
-function searchPeriodoIpress() {
-  const resultado = periodoIpress.value.find(
-    item => item.id_ipress === idClinicaSeleccionada.value && item.periodo === periodoSeleccionado.value
-  );
-  if (resultado) {
-    idPeriodoIpress.value = resultado.id_periodo_ipress;
-
+async function searchPeriodoIpress() {
+  idIpress.value = idClinicaSeleccionada.value;
+  idPerido.value = periodoSeleccionado.value;
+  if (idClinicaSeleccionada.value == null || periodoSeleccionado.value == null) {
+    idPeriodoIpress.value = null;
+    return;
   }
-  console.log("imprimiendo valor de id periodo ipress", idPeriodoIpress.value)
-  idIpress.value = idClinicaSeleccionada.value
-  idPerido.value = periodoSeleccionado.value
+  idPeriodoIpress.value = await resolverIdPeriodoIpress(
+    periodoSeleccionado.value,
+    idClinicaSeleccionada.value,
+  );
 }
 
 const querySearch = (queryString, cb) => {
@@ -307,11 +299,11 @@ const fetchPeriodo = async (url = null) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   fetchPacientes();
   fetchIpress();
-  fetchPeriodo();
-  fetchPeriodoIpress();
+  await fetchPeriodo();
+  await searchPeriodoIpress();
 });
 </script>
 

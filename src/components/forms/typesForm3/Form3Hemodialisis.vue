@@ -263,6 +263,7 @@ import { ref, reactive, onMounted, computed, watch, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElConfigProvider } from 'element-plus';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
+import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
 import es from 'element-plus/dist/locale/es.mjs';
 import dayjs from 'dayjs';
@@ -387,9 +388,7 @@ async function fetchPeriodoIpress() {
   const idIpress = clinicaGlobal?.value ?? clinicaGlobal;
   if (idPeriodo == null || idIpress == null) return;
   try {
-    const res = await getAllIpress(`/periodoIpress/?periodo=${idPeriodo}&ipress=${idIpress}`);
-    const lista = Array.isArray(res) ? res : (res?.results || []);
-    idPeriodoIpress.value = lista.length ? lista[0].id_periodo_ipress : null;
+    idPeriodoIpress.value = await resolverIdPeriodoIpress(idPeriodo, idIpress);
   } catch (e) {
     idPeriodoIpress.value = null;
   }

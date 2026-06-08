@@ -41,6 +41,7 @@
                         <option value="">Todos</option>
                         <option value="INGRESO">Ingresos</option>
                         <option value="EGRESO">Egresos</option>
+                        <option value="CAMBIO_MODALIDAD">Cambio de modalidad</option>
                     </select>
                 </div>
             </div>
@@ -76,11 +77,14 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Clínica
                             </th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Modalidad / detalle
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <tr v-if="movimientosFiltrados.length === 0">
-                            <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                            <td colspan="9" class="px-4 py-8 text-center text-gray-500">
                                 No hay movimientos registrados
                             </td>
                         </tr>
@@ -97,11 +101,12 @@
                             <td class="px-4 py-3 text-sm">
                                 <span :class="[
                                     'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
-                                    movimiento.tipo === 'INGRESO' ? 'bg-green-100 text-green-800' : 
-                                    movimiento.tipo === 'EGRESO' ? 'bg-red-100 text-red-800' : 
+                                    movimiento.tipo === 'INGRESO' ? 'bg-green-100 text-green-800' :
+                                    movimiento.tipo === 'EGRESO' ? 'bg-red-100 text-red-800' :
+                                    movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'bg-indigo-100 text-indigo-800' :
                                     'bg-blue-100 text-blue-800'
                                 ]">
-                                    {{ movimiento.tipo }}
+                                    {{ movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'CAMBIO MOD.' : movimiento.tipo }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-900">
@@ -111,6 +116,7 @@
                                     movimiento.condicion === 'REINGRESO' ? 'bg-yellow-100 text-yellow-800' : 
                                     movimiento.condicion === 'CONTINUADOR' ? 'bg-blue-100 text-blue-800' :
                                     movimiento.condicion === 'EGRESADO' ? 'bg-gray-100 text-gray-800' :
+                                    movimiento.condicion === 'CAMBIO_MODALIDAD' ? 'bg-indigo-100 text-indigo-800' :
                                     'bg-gray-100 text-gray-600'
                                 ]">
                                     {{ movimiento.condicion }}
@@ -124,6 +130,9 @@
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-600">
                                 {{ movimiento.clinica || '-' }}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-600 max-w-[220px] truncate" :title="movimiento.detalle_modalidad || ''">
+                                {{ movimiento.detalle_modalidad || movimiento.modalidad || '-' }}
                             </td>
                         </tr>
                     </tbody>
@@ -256,14 +265,7 @@
 
         <!-- Modal: formulario completo de registro (tras no encontrado) -->
         <div v-if="mostrarModalNuevo" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4 relative">
-                <button
-                    type="button"
-                    class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full p-1 shadow"
-                    @click="cerrarModalNuevo"
-                >
-                    ✕
-                </button>
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4">
                 <FormularioPaciente
                     :periodo-inicial="periodoSeleccionado"
                     :id-periodo-ipress-inicial="idPeriodoIpress"
@@ -315,7 +317,7 @@
                         <div class="grid grid-cols-2 gap-2 text-sm">
                             <div><strong>Nombre:</strong> {{ pacienteSeleccionado.paciente }}</div>
                             <div><strong>DNI:</strong> {{ pacienteSeleccionado.documento }}</div>
-                            <div><strong>Modalidad:</strong> {{ pacienteSeleccionado.id_modalidad == 1 ? 'Hemodiálisis' : 'Peritoneal' }}</div>
+                            <div><strong>Modalidad:</strong> {{ etiquetaModalidad(pacienteSeleccionado.id_modalidad) }}</div>
                         </div>
                     </div>
 
@@ -427,7 +429,7 @@
                             <div><strong>Nombre:</strong> {{ pacienteSeleccionadoEgresar.paciente }}</div>
                             <div><strong>DNI:</strong> {{ pacienteSeleccionadoEgresar.documento }}</div>
                             <div><strong>Estado:</strong> {{ pacienteSeleccionadoEgresar.estado }}</div>
-                            <div><strong>Modalidad:</strong> {{ pacienteSeleccionadoEgresar.id_modalidad == 1 ? 'Hemodiálisis' : 'Peritoneal' }}</div>
+                            <div><strong>Modalidad:</strong> {{ etiquetaModalidad(pacienteSeleccionadoEgresar.id_modalidad) }}</div>
                         </div>
                     </div>
 
@@ -506,6 +508,7 @@
 <script setup>
 import { ref, computed, onMounted, reactive, inject, watch } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
+import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 import { ElMessage } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import FormularioPaciente from '../inicio/FormularioPaciente.vue';
@@ -970,6 +973,24 @@ const captarPaciente = async () => {
     }
 
     try {
+        const modalidadAnterior = await obtenerModalidadActualPaciente(formCaptar.paciente);
+        if (
+            modalidadAnterior != null
+            && idModalidad != null
+            && String(modalidadAnterior) !== String(idModalidad)
+        ) {
+            await registrarCambioModalidadHistorial({
+                pacienteId: formCaptar.paciente,
+                modalidadAnteriorId: modalidadAnterior,
+                modalidadNuevaId: idModalidad,
+                fecha: formCaptar.fecha,
+                periodoId: idPeriodo,
+                ipressId: idIpress,
+                observacionesExtra: formCaptar.observaciones,
+                origen: 'CAPTACION',
+            });
+        }
+
         const tipoAtencion = condicionAutomatica.value === 'REINGRESO' ? 'REINGRESO' : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR');
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
         const atencionesExistentes = await getAllIpress(`/pacienteAtencion/?id_paciente=${formCaptar.paciente}&id_periodo=${idPeriodo}&id_modalidad=${idModalidad}`);
@@ -1079,20 +1100,35 @@ const egresarPaciente = async () => {
     }
 
     try {
-        // Registrar en historial de movimientos
+        const tipoEgresoTexto = formEgresar.tipo_egreso === 'Otros' ? formEgresar.motivo_especifico : formEgresar.tipo_egreso;
+        const modalidadActual = pacienteSeleccionadoEgresar.value?.id_modalidad
+            ?? await obtenerModalidadActualPaciente(formEgresar.paciente);
+
+        if (formEgresar.tipo_egreso === 'Cambio de Modalidad' && modalidadActual != null) {
+            await registrarCambioModalidadHistorial({
+                pacienteId: formEgresar.paciente,
+                modalidadAnteriorId: modalidadActual,
+                modalidadNuevaId: null,
+                fecha: formEgresar.fecha,
+                periodoId: formEgresar.periodo,
+                ipressId: formEgresar.clinica,
+                observacionesExtra: formEgresar.observaciones || `Egreso: ${tipoEgresoTexto}. Pendiente captación en nueva modalidad.`,
+                origen: 'EGRESO_CAMBIO_MODALIDAD',
+            });
+        }
+
         const payload = {
             paciente: formEgresar.paciente,
             periodo: formEgresar.periodo,
             ipress: formEgresar.clinica,
             condicion: 'EGRESADO',
-            tipo_egreso: formEgresar.tipo_egreso === 'Otros' ? formEgresar.motivo_especifico : formEgresar.tipo_egreso,
+            tipo_egreso: tipoEgresoTexto,
             fecha_egreso: formEgresar.fecha,
             observaciones: formEgresar.observaciones
         };
 
         await postAllIpress("/PacienteRegistro/", payload);
 
-        // Actualizar estado del paciente a EGRESADO
         await patchPacienteEstado(formEgresar.paciente, 'EGRESADO');
         
         ElMessage({
@@ -1130,19 +1166,29 @@ const fetchMovimientos = async () => {
         const respuesta = await getAllIpress(url);
         const lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
 
-        movimientos.value = lista.map(mov => {
+        movimientos.value = lista.map((mov) => {
             const fechaStr = mov.fecha_atencion || (mov.created_at ? new Date(mov.created_at).toLocaleDateString() : 'N/A');
+            const tipoAtencion = String(mov.tipo_atencion || '').toUpperCase();
+            let tipo = 'INGRESO';
+            if (tipoAtencion === 'CAMBIO_MODALIDAD') tipo = 'CAMBIO_MODALIDAD';
+            else if (tipoAtencion === 'EGRESO' || String(mov.estado || '').toUpperCase() === 'EGRESADO') tipo = 'EGRESO';
+
+            const modalidadLabel = mov.datosModalidad?.modalidad
+                || etiquetaModalidad(mov.id_modalidad ?? mov.datosModalidad?.id_modalidad);
+
             return {
                 id: mov.id_paciente_atencion,
-                tipo: 'INGRESO',
-                condicion: mov.tipo_atencion || 'N/A',
+                tipo,
+                condicion: tipoAtencion === 'CAMBIO_MODALIDAD' ? 'CAMBIO_MODALIDAD' : (mov.tipo_atencion || 'N/A'),
                 fecha: typeof mov.created_at === 'string' ? (mov.created_at.slice(0, 10) || fechaStr) : (mov.fecha_atencion || 'N/A'),
                 paciente_nombre: mov.datosPaciente?.paciente || 'N/A',
                 paciente_dni: mov.datosPaciente?.documento || 'N/A',
-                tipo_egreso: mov.tipo_egreso || null,
+                tipo_egreso: tipoAtencion === 'CAMBIO_MODALIDAD' ? null : (mov.tipo_egreso || null),
                 observaciones: mov.observaciones,
                 periodo: mov.datosPeriodo?.periodo || 'N/A',
-                clinica: mov.datosIpress?.nombre_corto || mov.datosIpress?.ipress || 'N/A'
+                clinica: mov.datosIpress?.nombre_corto || mov.datosIpress?.ipress || 'N/A',
+                modalidad: modalidadLabel,
+                detalle_modalidad: tipoAtencion === 'CAMBIO_MODALIDAD' ? (mov.observaciones || modalidadLabel) : modalidadLabel,
             };
         });
     } catch (error) {
@@ -1286,6 +1332,120 @@ const validarCierreMesAnterior = async (pacienteId, periodoActualId) => {
     }
 };
 
+function etiquetaModalidad(idModalidad) {
+    const id = Number(idModalidad);
+    if (id === 1) return 'Hemodiálisis';
+    if (id === 2) return 'Diálisis Peritoneal';
+    if (id === 3) return 'Trasplante';
+    return idModalidad != null && idModalidad !== '' ? `Modalidad ${idModalidad}` : '—';
+}
+
+function truncarObservaciones(texto, max = 100) {
+    const s = String(texto || '');
+    return s.length <= max ? s : `${s.slice(0, max - 3)}...`;
+}
+
+async function obtenerModalidadActualPaciente(pacienteId) {
+    const enLista = pacientes.value.find((p) => String(p.id_paciente) === String(pacienteId));
+    if (enLista?.id_modalidad != null && enLista.id_modalidad !== '') {
+        return Number(enLista.id_modalidad);
+    }
+    try {
+        const pac = await getAllIpress(`/pacientes/${pacienteId}/`);
+        const idModPac = pac?.id_modalidad ?? pac?.datosModalidad?.id_modalidad;
+        if (idModPac != null && idModPac !== '') {
+            return Number(idModPac);
+        }
+    } catch (e) {
+        console.warn('No se obtuvo modalidad desde pacientes:', e);
+    }
+    try {
+        const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${pacienteId}`);
+        const lista = Array.isArray(res) ? res : (res?.results || []);
+        const activa = lista.find((a) => String(a.estado || '').toUpperCase() === 'ACTIVO') || lista[0];
+        const idMod = activa?.id_modalidad ?? activa?.datosModalidad?.id_modalidad;
+        return idMod != null && idMod !== '' ? Number(idMod) : null;
+    } catch (e) {
+        console.error('Error al obtener modalidad actual del paciente:', e);
+        return null;
+    }
+}
+
+/**
+ * Registra automáticamente un cambio de modalidad en el historial de movimientos
+ * (pacienteAtencion tipo CAMBIO_MODALIDAD + PacienteRegistro) y actualiza rd_pacientes.
+ */
+async function registrarCambioModalidadHistorial({
+    pacienteId,
+    modalidadAnteriorId,
+    modalidadNuevaId,
+    fecha,
+    periodoId,
+    ipressId,
+    observacionesExtra = '',
+    origen = 'SISTEMA',
+}) {
+    const textoAnterior = etiquetaModalidad(modalidadAnteriorId);
+    const textoNueva = etiquetaModalidad(modalidadNuevaId);
+    const detalle = modalidadNuevaId != null && String(modalidadAnteriorId) !== String(modalidadNuevaId)
+        ? `${textoAnterior} → ${textoNueva}`
+        : `${textoAnterior} (egreso por cambio de modalidad)`;
+    const obsCompleta = `Cambio de modalidad: ${detalle}${observacionesExtra ? `. ${observacionesExtra}` : ''} [${origen}]`;
+    const obs = truncarObservaciones(obsCompleta);
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const fechaMov = fecha || now.slice(0, 10);
+    const idModRegistro = modalidadNuevaId != null ? modalidadNuevaId : modalidadAnteriorId;
+
+    await postAllIpress('/pacienteAtencion/', {
+        id_paciente: pacienteId,
+        id_ipress: ipressId,
+        id_periodo: periodoId,
+        id_modalidad: idModRegistro,
+        fecha_atencion: fechaMov,
+        tipo_atencion: 'CAMBIO_MODALIDAD',
+        fecha_inicio: fechaMov,
+        fecha_fin: '',
+        estado: 'HISTORICO',
+        observaciones: obs,
+        created_at: now,
+    });
+
+    try {
+        await postAllIpress('/PacienteRegistro/', {
+            paciente: pacienteId,
+            periodo: periodoId,
+            ipress: ipressId,
+            condicion: 'CAMBIO_MODALIDAD',
+            modalidad_anterior: modalidadAnteriorId,
+            modalidad_nueva: modalidadNuevaId,
+            observaciones: obs,
+        });
+    } catch (e) {
+        console.warn('PacienteRegistro (auditoría):', e);
+    }
+
+    if (modalidadNuevaId != null && String(modalidadAnteriorId) !== String(modalidadNuevaId)) {
+        await patchAllIpress(`/pacientes/${pacienteId}/`, { id_modalidad: modalidadNuevaId });
+        try {
+            const dialisis = await getAllIpress(`/pacientesDialisis/?id_paciente=${pacienteId}`);
+            const lista = Array.isArray(dialisis) ? dialisis : (dialisis?.results || []);
+            if (lista[0]?.id_paciente_dialisis) {
+                await patchAllIpress(`/pacientesDialisis/${lista[0].id_paciente_dialisis}/`, {
+                    modalidad_inicio_trr: textoNueva,
+                });
+            }
+        } catch (e) {
+            console.warn('No se actualizó modalidad en pacientesDialisis:', e);
+        }
+        if (pacienteSeleccionado.value?.id_paciente === pacienteId) {
+            pacienteSeleccionado.value = { ...pacienteSeleccionado.value, id_modalidad: modalidadNuevaId };
+        }
+        if (pacienteSeleccionadoEgresar.value?.id_paciente === pacienteId) {
+            pacienteSeleccionadoEgresar.value = { ...pacienteSeleccionadoEgresar.value, id_modalidad: modalidadNuevaId };
+        }
+    }
+}
+
 // Funciones auxiliares para actualizar paciente
 const patchPacienteEstado = async (pacienteId, nuevoEstado) => {
     try {
@@ -1303,12 +1463,8 @@ const actualizarPeriodoIpressPaciente = async (pacienteId, periodoId, ipressId) 
         if (respuesta && respuesta.length > 0) {
             const idPacienteDialisis = respuesta[0].id_paciente_dialisis;
             
-            // Buscar el id_periodo_ipress correspondiente
-            const periodoIpress = await getAllIpress(`/periodoIpress/?periodo=${periodoId}&ipress=${ipressId}`);
-            if (periodoIpress && periodoIpress.length > 0) {
-                const idPeriodoIpress = periodoIpress[0].id_periodo_ipress;
-                
-                // Actualizar el paciente con el periodo_ipress correcto
+            const idPeriodoIpress = await resolverIdPeriodoIpress(periodoId, ipressId);
+            if (idPeriodoIpress != null) {
                 await patchAllIpress(`/pacientesDialisis/${idPacienteDialisis}/`, {
                     id_periodo_ipress: idPeriodoIpress
                 });

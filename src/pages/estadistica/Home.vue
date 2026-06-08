@@ -99,6 +99,7 @@
 
 <script setup>
 import { getAllIpress } from '@/services/ipress/Ipress.service';
+import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 import { onMounted, ref } from 'vue';
 const periodoSeleccionado = ref(94)
 const idClinicaSeleccionada = ref(62877)
@@ -145,15 +146,19 @@ const resumen = ref({
   alertaHb: '0 pacientes tienen Hemoglobina (Hb) menor a 10 g/dL (0%). 11 pacientes tienen Kt/V menor a 1.3 (15%).'
 });
 
-const fetchPeriodoIpress = async (url = null) => {
-  try {
-    const respuesta = await getAllIpress(url ?? "/periodoIpress/");
-    periodoIpress.value = respuesta;
-
-  } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+async function searchPeriodoIpress() {
+  idIpress.value = idClinicaSeleccionada.value;
+  idPerido.value = periodoSeleccionado.value;
+  if (idClinicaSeleccionada.value == null || periodoSeleccionado.value == null) {
+    return;
   }
-};
+  const idPi = await resolverIdPeriodoIpress(periodoSeleccionado.value, idClinicaSeleccionada.value);
+  if (idPi != null) {
+    periodoIpress.value = [{ id_periodo_ipress: idPi, id_ipress: idClinicaSeleccionada.value, periodo: periodoSeleccionado.value }];
+  } else {
+    periodoIpress.value = [];
+  }
+}
 
 const handleSelect = (item) => {
   idClinicaSeleccionada.value = item.id_ipress; // ID u otros datos
@@ -203,11 +208,11 @@ const fetchPeriodo = async (url = null) => {
     console.error('Error al obtener IPRESS:', error);
   }
 };
-onMounted(() => {
-  fetchPeriodoIpress();
+onMounted(async () => {
+  await fetchPeriodo();
   fetchIpress();
-  fetchPeriodo();
   fetchReporte();
+  await searchPeriodoIpress();
 });
 </script>
 

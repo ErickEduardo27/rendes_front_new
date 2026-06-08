@@ -1,18 +1,36 @@
 <template>
   <el-config-provider :locale="es">
-    <div class="space-y-6 mx-6 max-w-6xl">
-      <div>
-        <h2 class="text-2xl font-bold text-slate-800">{{ modoEdicionSupervisor ? 'Edición de paciente (supervisor)' : 'Registro de Nuevo Paciente en Diálisis' }}</h2>
-        <p class="text-sm text-slate-500 mt-1">
-          {{ modoEdicionSupervisor ? 'Modifique los datos y guarde los cambios. El documento no debe duplicarse en el sistema.' : 'Complete los datos del paciente para la creación del expediente médico.' }}
-        </p>
-      </div>
+    <div class="mx-6 max-w-6xl pb-6">
+      <header
+        class="sticky top-0 z-30 -mx-6 px-6 py-4 mb-6 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm flex items-start justify-between gap-4"
+      >
+        <div class="min-w-0 flex-1 pr-2">
+          <h2 class="text-2xl font-bold text-slate-800">
+            {{ modoEdicionSupervisor ? 'Edición de paciente (supervisor)' : 'Registro de Nuevo Paciente en Diálisis' }}
+          </h2>
+          <p class="text-sm text-slate-500 mt-1">
+            {{
+              modoEdicionSupervisor
+                ? 'Modifique los datos y guarde los cambios. El documento no debe duplicarse en el sistema.'
+                : 'Complete los datos del paciente para la creación del expediente médico.'
+            }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="shrink-0 relative z-40 mt-0.5 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800"
+          aria-label="Cerrar"
+          @click="$emit('cancelar')"
+        >
+          ✕
+        </button>
+      </header>
 
-      <el-form label-position="top" class="space-y-6">
+      <el-form label-position="top" class="formulario-paciente space-y-8">
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 class="text-base font-semibold text-slate-700 mb-4 pb-2 border-b border-slate-200">Identificación y Ubicación</h3>
+          <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Identificación y Ubicación</h3>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div class="form-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-5">
             <el-form-item label="Tipo de Documento" required>
               <el-select v-model="form.tipoDocumento" placeholder="Seleccione" class="w-full" clearable :disabled="modoEdicionSupervisor">
                 <el-option label="DNI" value="DNI" />
@@ -30,17 +48,12 @@
               />
               <div v-if="errorDNI" class="text-red-500 text-xs mt-1">{{ errorDNI }}</div>
             </el-form-item>
-            <el-form-item label="Fecha de Nacimiento" required>
+            <el-form-item label="Fecha de Nacimiento" required :error="erroresFecha.fechaNacimiento">
               <el-date-picker
                 v-model="form.fechaNacimiento"
-                type="date"
-                placeholder="Seleccione fecha"
-                value-format="YYYY-MM-DD"
-                format="DD/MM/YYYY"
-                :editable="true"
+                v-bind="attrsFechaDDMMAAAA"
                 :clearable="false"
-                class="w-full"
-                :disabled-date="(d) => d > new Date()"
+                @change="onCambioFechasTRR"
               />
             </el-form-item>
             <el-form-item label=" " class="flex items-end">
@@ -52,8 +65,8 @@
             </el-form-item>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 rounded-lg bg-slate-50 p-4 border border-slate-100">
-            <div class="col-span-full flex flex-col gap-1">
+          <div class="form-grid mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-5 rounded-lg bg-slate-50 p-5 border border-slate-100">
+            <div class="col-span-full flex flex-col gap-1.5 mb-1">
               <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Domicilio / Procedencia (Según Reniec/Asegurado)</span>
               <span class="text-[11px] text-slate-400">Solo lectura: se completa con la consulta de documento; no es editable manualmente.</span>
             </div>
@@ -77,7 +90,7 @@
             </el-form-item>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="form-grid mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-5">
             <el-form-item label="Apellidos y Nombres" required class="sm:col-span-2">
               <el-input
                 v-model="form.nombreCompleto"
@@ -105,27 +118,30 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <el-form-item label="Etiología general">
-            <el-select v-model="form.etiologiaGeneral" placeholder="Seleccione una opción" class="w-full" clearable>
-              <el-option v-for="(item, key) in etologiasGenerales" :key="key" :label="item" :value="key" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="Etiología específica">
-            <el-select v-model="form.etiologiaEspecifica" placeholder="Seleccione una opción" class="w-full" clearable filterable>
-              <el-option v-for="e in opcionesEtiologiaEspecificaFromApi" :key="e.id_etiologia" :label="e.especifica || e.codigo || e.id_etiologia" :value="e.id_etiologia" />
-            </el-select>
-          </el-form-item>
+        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Etiología</h3>
+          <div class="form-grid grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5">
+            <el-form-item label="Etiología general">
+              <el-select v-model="form.etiologiaGeneral" placeholder="Seleccione una opción" class="w-full" clearable>
+                <el-option v-for="g in opcionesEtiologiaGeneralFromApi" :key="g" :label="g" :value="g" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="Etiología específica">
+              <el-select v-model="form.etiologiaEspecifica" placeholder="Seleccione una opción" class="w-full" clearable filterable>
+                <el-option v-for="e in opcionesEtiologiaEspecificaFromApi" :key="e.id_etiologia" :label="e.especifica || e.codigo || e.id_etiologia" :value="e.id_etiologia" />
+              </el-select>
+            </el-form-item>
+          </div>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" :key="form.etiologiaGeneral">
-          <h3 class="text-base font-semibold text-slate-700 mb-4">Comorbilidad</h3>
+          <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Comorbilidad</h3>
           <el-checkbox-group v-model="form.comorbilidades">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-4">
               <el-checkbox value="Insuficiencia cardiaca">Insuficiencia cardiaca congestiva</el-checkbox>
-              <el-checkbox v-if="form.etiologiaGeneral != '1'" value="Diabetes">Diabetes</el-checkbox>
+              <el-checkbox v-if="!etiologiaGeneralEsDiabetes" value="Diabetes">Diabetes</el-checkbox>
               <el-checkbox value="Aterosclerosis">Aterosclerosis cardíaca</el-checkbox>
-              <el-checkbox v-if="form.etiologiaGeneral != '5'" value="Hipertensión">Hipertensión</el-checkbox>
+              <el-checkbox v-if="!etiologiaGeneralEsHipertension" value="Hipertensión">Hipertensión</el-checkbox>
               <el-checkbox value="Vascular periférica">Enfermedad vascular periférica</el-checkbox>
               <el-checkbox value="Tuberculosis">Tuberculosis</el-checkbox>
               <el-checkbox value="ACV">Accidente cerebrovascular</el-checkbox>
@@ -136,8 +152,9 @@
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 class="text-base font-semibold text-slate-700 mb-4 pb-2 border-b border-slate-200">Datos de TRR y Acceso</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Datos de TRR y Acceso</h3>
+
+          <div class="form-grid trr-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-6">
             <el-form-item label="Modalidad de Inicio de TRR">
               <el-select v-model="form.modalidadTRR" placeholder="Seleccione" class="w-full" clearable>
                 <el-option label="Hemodiálisis" value="Hemodiálisis" />
@@ -145,11 +162,11 @@
                 <el-option label="Trasplante" value="Trasplante" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Fecha de Creación del Acceso de Inicio">
-              <el-date-picker v-model="form.fechaCreacionAcceso" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" :disabled-date="deshabilitarFechaSegunPeriodo" />
+            <el-form-item label="Fecha de Creación del Acceso de Inicio" :error="erroresFecha.fechaCreacionAcceso">
+              <el-date-picker v-model="form.fechaCreacionAcceso" v-bind="attrsFechaDDMMAAAA" @change="actualizarErroresFechas" />
             </el-form-item>
-            <el-form-item label="Fecha de Inicio de TRR">
-              <el-date-picker v-model="form.fechaInicioTRR" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" :disabled-date="minDateFechaInicioTRR" />
+            <el-form-item label="Fecha de Inicio de TRR" :error="erroresFecha.fechaInicioTRR">
+              <el-date-picker v-model="form.fechaInicioTRR" v-bind="attrsFechaDDMMAAAA" @change="onCambioFechasTRR" />
             </el-form-item>
             <el-form-item label="Subsistema de Salud">
               <el-select v-model="form.subsistemaSalud" placeholder="Seleccione" class="w-full" clearable>
@@ -160,32 +177,41 @@
                 <el-option label="Otro país" value="Otro país" />
               </el-select>
             </el-form-item>
+
             <el-form-item label="Edad de Inicio de TRR">
-              <el-input v-model="form.edadInicioTRR" readonly />
+              <el-input v-model="form.edadInicioTRR" readonly placeholder="—" />
             </el-form-item>
             <el-form-item label="Tipo de Acceso de Inicio" @mousedown.capture="validarOrden">
               <el-select v-model="form.tipoAccesoInicio" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'">
                 <el-option v-for="tipo in tiposAccesoFiltrados" :key="tipo.id" :label="tipo.label" :value="tipo.id" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Fecha de Ingreso a Hospital EsSalud">
-              <el-date-picker v-model="form.fechaIngresoEsSalud" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" clearable :disabled-date="deshabilitarFechaSegunPeriodo" />
+            <el-form-item label="Fecha de Ingreso a Hospital EsSalud" :error="erroresFecha.fechaIngresoEsSalud">
+              <el-date-picker v-model="form.fechaIngresoEsSalud" v-bind="attrsFechaDDMMAAAA" clearable @change="actualizarErroresFechas" />
             </el-form-item>
-            <el-form-item label="Fecha de Primer Ingreso a Unidad">
-              <el-date-picker v-model="form.fechaPrimerIngreso" type="date" placeholder="Seleccione" value-format="YYYY-MM-DD" format="DD/MM/YYYY" :editable="false" class="w-full" clearable :disabled-date="deshabilitarFechaSegunPeriodo" />
+            <el-form-item label="Fecha de Primer Ingreso a Unidad" :error="erroresFecha.fechaPrimerIngreso">
+              <el-date-picker v-model="form.fechaPrimerIngreso" v-bind="attrsFechaDDMMAAAA" clearable @change="actualizarErroresFechas" />
             </el-form-item>
+
             <el-form-item label="Localización Acceso de Inicio">
               <el-select v-model="form.localizacionAcceso" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'">
                 <el-option v-for="opcion in opcionesAccesoFiltradas" :key="opcion.id" :label="opcion.label" :value="opcion.id" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Hospital Procedencia TRR en EsSalud">
-              <el-autocomplete v-model="form.hospitalProcedencia" :fetch-suggestions="querySearch" clearable placeholder="Buscar hospital..." @select="handleSelect" class="w-full" />
+            <el-form-item label="Hospital Procedencia TRR en EsSalud" class="sm:col-span-2 xl:col-span-3">
+              <el-autocomplete
+                v-model="form.hospitalProcedencia"
+                :fetch-suggestions="querySearch"
+                clearable
+                placeholder="Buscar hospital..."
+                @select="handleSelect"
+                class="w-full"
+              />
             </el-form-item>
           </div>
         </div>
 
-        <div class="flex justify-end gap-3 pt-2">
+        <div class="flex justify-end gap-3 pt-4">
           <el-button @click="$emit('cancelar')">Cancelar</el-button>
           <el-button type="primary" :loading="cargandoEdicionSupervisor" @click="registrarPaciente">
             {{ modoEdicionSupervisor ? 'Guardar cambios' : 'Registrar paciente' }}
@@ -198,7 +224,12 @@
 
 <script setup>
 import { reactive, computed, watch, ref, onMounted, nextTick } from 'vue';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+dayjs.extend(customParseFormat);
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
+import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 import { ElMessage, ElConfigProvider, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElButton, ElCheckbox, ElCheckboxGroup, ElDatePicker, ElAutocomplete } from 'element-plus';
 import es from 'element-plus/dist/locale/es.mjs';
 import Swal from 'sweetalert2';
@@ -253,7 +284,6 @@ const idPacienteDialisisEdicionInterno = ref(null)
 /** Evita que los watchers de modalidad/tipo borren datos al hidratar edición supervisor */
 const silenciarWatchsAccesoModalidad = ref(false)
 
-const seleccionadas = ref([])
 const periodos = ref([])
 const listaEtiologias = ref([])
 const consultandoDNI = ref(false)
@@ -283,7 +313,8 @@ const form = reactive({
   provincia: '',    // <-- AGREGADO
   distrito: '',     // <-- AGREGADO
   ubigeo: '',       // <-- AGREGADO
-  estado: 'REGISTRADO'
+  estado: 'REGISTRADO',
+  idPeriodo: null,
 })
 
 // ==========================================
@@ -375,275 +406,276 @@ const validarFormulario = () => {
     }
   }
 
-  if (!validarFechasDentroDelPeriodo()) {
+  if (!validarFechasFormulario()) {
+    ElMessage({
+      message: 'Revise las fechas marcadas en rojo antes de continuar.',
+      type: 'warning',
+      plain: true,
+    });
     return false;
   }
 
   return true;
 };
 
-const normalizarFecha = (valor) => {
-  const fecha = valor instanceof Date ? new Date(valor) : new Date(`${valor}T00:00:00`);
+/** Mismo formato en pantalla y en v-model para que el texto escrito no se borre al salir del campo. */
+const attrsFechaDDMMAAAA = {
+  type: 'date',
+  placeholder: 'DD/MM/AAAA',
+  format: 'DD/MM/YYYY',
+  valueFormat: 'DD/MM/YYYY',
+  editable: true,
+  class: 'w-full',
+};
 
-  if (Number.isNaN(fecha.getTime())) {
-    return null;
+const FORMATOS_FECHA_ENTRADA = ['DD/MM/YYYY', 'D/M/YYYY', 'DD-MM-YYYY', 'D-M-YYYY', 'YYYY-MM-DD'];
+
+const fechaDisplayAISO = (valor) => {
+  if (valor == null || valor === '') return '';
+  const s = String(valor).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  for (const fmt of FORMATOS_FECHA_ENTRADA) {
+    const d = dayjs(s, fmt, true);
+    if (d.isValid()) return d.format('YYYY-MM-DD');
   }
+  return '';
+};
+
+const fechaIsoADDisplay = (valor) => {
+  if (valor == null || valor === '') return '';
+  const iso = fechaDisplayAISO(valor) || String(valor).slice(0, 10);
+  const d = dayjs(iso, 'YYYY-MM-DD', true);
+  return d.isValid() ? d.format('DD/MM/YYYY') : '';
+};
+
+const fechaFormularioParaApi = (valor) => fechaDisplayAISO(valor);
+
+const normalizarFecha = (valor) => {
+  if (valor == null || valor === '') return null;
+
+  if (valor instanceof Date) {
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return null;
+    fecha.setHours(0, 0, 0, 0);
+    return fecha;
+  }
+
+  const iso = fechaDisplayAISO(valor);
+  if (!iso) return null;
+
+  const fecha = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(fecha.getTime())) return null;
 
   fecha.setHours(0, 0, 0, 0);
   return fecha;
 };
 
-const periodoActivo = computed(() => {
-  const valor = periodoSeleccionado.value;
-  const listaPeriodos = Array.isArray(periodos.value) ? periodos.value : [];
-
-  if (valor == null || valor === '') {
-    return null;
-  }
-
-  return listaPeriodos.find((periodo) =>
-    periodo.id_periodo === valor ||
-    String(periodo.id_periodo) === String(valor) ||
-    periodo.periodo === valor
-  ) ?? null;
-});
-
+/** Rango del periodo elegido en pantalla (mes completo). */
 const rangoPeriodoSeleccionado = computed(() => {
-  const periodo = periodoActivo.value?.periodo;
-  if (!periodo || !/^\d{4}-\d{2}$/.test(periodo)) {
-    return null;
-  }
+  const v = periodoSeleccionado.value;
+  const listaPeriodos = Array.isArray(periodos.value) ? periodos.value : [];
+  if (v == null || v === '') return null;
 
-  const inicio = normalizarFecha(`${periodo}-01`);
-  if (!inicio) {
-    return null;
-  }
+  const encontrado = listaPeriodos.find(
+    (periodo) =>
+      periodo.id_periodo === v ||
+      String(periodo.id_periodo) === String(v) ||
+      periodo.periodo === v
+  );
+  const periodoTexto =
+    encontrado?.periodo ?? (typeof v === 'string' && /^\d{4}-\d{2}$/.test(v) ? v : null);
+  if (!periodoTexto) return null;
+
+  const inicio = normalizarFecha(`${periodoTexto}-01`);
+  if (!inicio) return null;
 
   const fin = new Date(inicio.getFullYear(), inicio.getMonth() + 1, 0);
   fin.setHours(0, 0, 0, 0);
-
-  return { inicio, fin, etiqueta: periodo };
+  return { inicio, fin, etiqueta: periodoTexto };
 });
 
-const estaFueraDelPeriodoSeleccionado = (valor) => {
+/** Fechas TRR: pueden ser anteriores al periodo, pero no después del último día del periodo seleccionado. */
+const CAMPOS_FECHA_TOPE_PERIODO = [
+  'fechaCreacionAcceso',
+  'fechaInicioTRR',
+  'fechaIngresoEsSalud',
+  'fechaPrimerIngreso',
+];
+
+const esDespuesDelPeriodoSeleccionado = (valor) => {
   const rango = rangoPeriodoSeleccionado.value;
   const fecha = normalizarFecha(valor);
-
-  if (!rango || !fecha) {
-    return false;
-  }
-
-  return fecha < rango.inicio || fecha > rango.fin;
+  if (!rango || !fecha) return false;
+  return fecha > rango.fin;
 };
 
-const deshabilitarFechaSegunPeriodo = (date) => {
-  return estaFueraDelPeriodoSeleccionado(date);
-};
+/** Mensajes en rojo bajo cada fecha; no usa disabled-date para no borrar lo escrito al salir del campo. */
+const erroresFecha = reactive({
+  fechaNacimiento: '',
+  fechaCreacionAcceso: '',
+  fechaInicioTRR: '',
+  fechaIngresoEsSalud: '',
+  fechaPrimerIngreso: '',
+});
 
-const validarFechasDentroDelPeriodo = () => {
-  const rango = rangoPeriodoSeleccionado.value;
-  if (!rango) {
-    return true;
+const CAMPOS_FECHA_VALIDACION = [
+  { key: 'fechaNacimiento', label: 'Fecha de Nacimiento' },
+  { key: 'fechaCreacionAcceso', label: 'Fecha de Creación del Acceso de Inicio' },
+  { key: 'fechaInicioTRR', label: 'Fecha de Inicio de TRR' },
+  { key: 'fechaIngresoEsSalud', label: 'Fecha de Ingreso a Hospital EsSalud' },
+  { key: 'fechaPrimerIngreso', label: 'Fecha de Primer Ingreso a Unidad' },
+];
+
+const validarCampoFecha = (key, label) => {
+  const valor = form[key];
+  if (!valor) {
+    erroresFecha[key] = '';
+    return;
   }
 
-  const camposFecha = [
-    { key: 'fechaCreacionAcceso', label: 'Fecha de Creación del Acceso de Inicio' },
-    { key: 'fechaInicioTRR', label: 'Fecha de Inicio de TRR' },
-    { key: 'fechaIngresoEsSalud', label: 'Fecha de Ingreso a Hospital EsSalud' },
-    { key: 'fechaPrimerIngreso', label: 'Fecha de Primer Ingreso a Unidad' },
-  ];
+  const fecha = normalizarFecha(valor);
+  if (!fecha) {
+    erroresFecha[key] = 'Fecha inválida. Use el formato DD/MM/AAAA.';
+    return;
+  }
 
-  for (const campo of camposFecha) {
-    if (form[campo.key] && estaFueraDelPeriodoSeleccionado(form[campo.key])) {
-      ElMessage({
-        message: `${campo.label} debe estar dentro del periodo ${rango.etiqueta}.`,
-        type: 'warning',
-        plain: true,
-      });
-      return false;
+  if (key === 'fechaNacimiento') {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    if (fecha > hoy) {
+      erroresFecha[key] = 'La fecha de nacimiento no puede ser futura.';
+      return;
+    }
+    erroresFecha[key] = '';
+    return;
+  }
+
+  if (CAMPOS_FECHA_TOPE_PERIODO.includes(key) && esDespuesDelPeriodoSeleccionado(valor)) {
+    const rango = rangoPeriodoSeleccionado.value;
+    erroresFecha[key] = rango
+      ? `${label} no puede ser posterior al periodo ${rango.etiqueta}.`
+      : `${label} no puede ser posterior al periodo seleccionado.`;
+    return;
+  }
+
+  if (key === 'fechaInicioTRR') {
+    const creacion = normalizarFecha(form.fechaCreacionAcceso);
+    if (creacion && fecha < creacion) {
+      erroresFecha[key] = 'No puede ser anterior a la Fecha de Creación del Acceso de Inicio.';
+      return;
     }
   }
 
-  return true;
+  erroresFecha[key] = '';
 };
 
-
-const minDateFechaInicioTRR = (date) => {
-  if (estaFueraDelPeriodoSeleccionado(date)) return true;
-  if (!form.fechaCreacionAcceso) return false;
-  const d = normalizarFecha(date);
-  const min = normalizarFecha(form.fechaCreacionAcceso);
-  if (!d || !min) return false;
-  return d < min;
+const actualizarErroresFechas = () => {
+  for (const campo of CAMPOS_FECHA_VALIDACION) {
+    validarCampoFecha(campo.key, campo.label);
+  }
 };
 
-watch(() => form.fechaInicioTRR, (nuevaFecha) => {
-  if (!nuevaFecha) {
+const validarFechasFormulario = () => {
+  actualizarErroresFechas();
+  return !Object.values(erroresFecha).some((msg) => msg && String(msg).trim());
+};
+
+watch(
+  () => [
+    form.fechaNacimiento,
+    form.fechaCreacionAcceso,
+    form.fechaInicioTRR,
+    form.fechaIngresoEsSalud,
+    form.fechaPrimerIngreso,
+    periodoSeleccionado.value,
+  ],
+  () => actualizarErroresFechas()
+);
+
+/** Edad al inicio de TRR = fecha inicio TRR − fecha de nacimiento; también resuelve idPeriodo. */
+const calcularEdadInicioTRR = () => {
+  if (!form.fechaInicioTRR) {
     form.edadInicioTRR = '';
     form.idPeriodo = null;
     return;
   }
 
-  // Calcular edad de inicio TRR usando fecha de inicio TRR - fecha de nacimiento
-  if (form.fechaNacimiento) {
-    const fechaInicioTRR = new Date(nuevaFecha);
-    const nacimiento = new Date(form.fechaNacimiento);
-    let edad = fechaInicioTRR.getFullYear() - nacimiento.getFullYear();
-    const m = fechaInicioTRR.getMonth() - nacimiento.getMonth();
-    if (m < 0 || (m === 0 && fechaInicioTRR.getDate() < nacimiento.getDate())) {
-      edad--;
-    }
-    form.edadInicioTRR = edad;
+  const fechaInicioTRR = normalizarFecha(form.fechaInicioTRR);
+  if (!fechaInicioTRR) {
+    form.edadInicioTRR = '';
+    form.idPeriodo = null;
+    return;
   }
 
-  // Buscar el periodo por año y mes (ej: "2025-09")
-  const fecha = new Date(nuevaFecha);
-  const periodoStr = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-  const periodoEncontrado = periodos.value.find(p => p.periodo === periodoStr);
+  const periodoStr = `${fechaInicioTRR.getFullYear()}-${String(fechaInicioTRR.getMonth() + 1).padStart(2, '0')}`;
+  const periodoEncontrado = periodos.value.find((p) => p.periodo === periodoStr);
   form.idPeriodo = periodoEncontrado ? periodoEncontrado.id_periodo : null;
-});
 
-const dropdownAbierto = ref(false)
+  if (!form.fechaNacimiento) {
+    form.edadInicioTRR = '';
+    return;
+  }
 
-const toggleDropdown = () => {
-  dropdownAbierto.value = !dropdownAbierto.value
-}
+  const nacimiento = normalizarFecha(form.fechaNacimiento);
+  if (!nacimiento) {
+    form.edadInicioTRR = '';
+    return;
+  }
 
-const etologiaGeneral = ref('')
-
-const etologiasGenerales = {
-  1: 'DIABETES',
-  2: 'GLOMERULONEFRITIS',
-  3: 'GLOMERULONEFRITIS SECUNDARIA/VASCULITIS',
-  4: 'NEFRITIS INTERSTICIAL/PIELONEFRITIS',
-  5: 'HIPERTENSION/ENFERMEDAD DE VASOS GRANDES',
-  6: 'ENFERMEDAD QUISTICA/HEREDITARIA CONGÉNITA',
-  7: 'NEOPLASIAS/TUMORES',
-  8: 'COMPLICACIONES DE ÓRGANO TRASPLANTADO',
-  9: 'OTRAS CONDICIONES'
-}
-
-
-const etiologiasEspecificas = {
-  1: [
-    { label: 'Diabetes con manifestaciones renales tipo II', value: 'A.1' },
-    { label: 'Diabetes con manifestaciones renales tipo I', value: 'A.2' }
-  ],
-  2: [
-    { label: 'Glomerulonefritis GN (Histológicamente no examinada)', value: 'B.1' },
-    { label: 'Glomeruloesclerosis focal, Esclerosante focal', value: 'B.2' },
-    { label: 'Nefropatía membranosa', value: 'B.3' },
-    { label: 'GN Membranoproliferativa tipo I, GN Membranoproliferativa Difusa', value: 'B.4' },
-    { label: 'Enfermedad por depósitos densos, GN membranoproliferativa tipo II', value: 'B.5' },
-    { label: 'Nefropatía IgA, Enfermedad de Berger', value: 'B.6' },
-    { label: 'Nefropatía IgM', value: 'B.7' },
-    { label: 'GN rápidamente progresiva', value: 'B.8' },
-    { label: 'Gn post infecciosa', value: 'B.9' },
-    { label: 'Otras GN proliferativas', value: 'B.10' }
-  ],
-  3: [
-    { label: 'Lupus eritematoso', value: 'C.1' },
-    { label: 'Síndrome de Henoch-Schonlein', value: 'C.2' },
-    { label: 'Esclerodermia', value: 'C.3' },
-    { label: 'Síndrome urémico hemolítico', value: 'C.4' },
-    { label: 'Poliarteritis', value: 'C.5' },
-    { label: 'Granulomatosis de Wegener', value: 'C.6' },
-    { label: 'Nefropatía por abuso de heroína', value: 'C.7' },
-    { label: 'Otras vasculitis y sus derivadas', value: 'C.8' },
-    { label: 'Síndrome de Goodpasture', value: 'C.9' },
-    { label: 'Otras GN secundarias', value: 'C.10' }
-  ],
-  4: [
-    { label: 'Abuso de analgésicos', value: 'D.1' },
-    { label: 'Nefritis por radiación', value: 'D.2' },
-    { label: 'Nefropatía por plomo', value: 'D.3' },
-    { label: 'Nefropatía causada por otros agentes', value: 'D.4' },
-    { label: 'Nefropatía por gota', value: 'D.5' },
-    { label: 'Nefrolitiasis', value: 'D.6' },
-    { label: 'Uropatía obstructiva adquirida', value: 'D.7' },
-    { label: 'Pielonefritis crónica, nefropatía por reflujo', value: 'D.8' },
-    { label: 'Nefritis intersticial crónica', value: 'D.9' },
-    { label: 'Nefritis intersticial aguda', value: 'D.10' },
-    { label: 'Urolitiasis', value: 'D.11' },
-    { label: 'Otros desórdenes del metabolismo de calcio', value: 'D.12' }
-  ],
-  5: [
-    { label: 'Hipertensión no especificada con falla renal', value: 'E.1' },
-    { label: 'Estenosis de la arteria renal', value: 'E.2' },
-    { label: 'Oclusión de la arteria renal', value: 'E.3' },
-    { label: 'Embolia causada por colesterol, embolia renal', value: 'E.4' }
-  ],
-  6: [
-    { label: 'Riñón poliquístico del adulto tipo dominante', value: 'F.1' },
-    { label: 'Riñón poliquístico infantil recesivo', value: 'F.2' },
-    { label: 'Enfermedad quística medular, incluye nefronoptisis', value: 'F.3' },
-    { label: 'Esclerosis tubular', value: 'F.4' },
-    { label: 'Nefritis hereditaria, síndrome de Alport', value: 'F.5' },
-    { label: 'Cistinosis', value: 'F.6' },
-    { label: 'Oxalosis primaria', value: 'F.7' },
-    { label: 'Enfermedad de Fabry', value: 'F.8' },
-    { label: 'Síndrome nefrótico congénito', value: 'F.9' },
-    { label: 'Síndrome Drash, esclerosis mesangial', value: 'F.10' },
-    { label: 'Obstrucción congénita de la unión ureteropélvica', value: 'F.11' },
-    { label: 'Obstrucción congénita de la unión ureterovesical', value: 'F.12' },
-    { label: 'Otras uropatías obstructivas congénitas', value: 'F.13' },
-    { label: 'Hipoplasia renal, displasia, oligonefronía', value: 'F.14' },
-    { label: 'Síndrome del abdomen en ciruela pasa', value: 'F.15' },
-    { label: 'Otros (Síndromes de malformaciones congénitas)', value: 'F.16' }
-  ],
-  7: [
-    { label: 'Tumor renal maligno', value: 'G.1' },
-    { label: 'Tumor maligno del tracto urinario', value: 'G.2' },
-    { label: 'Tumor renal benigno', value: 'G.3' },
-    { label: 'Tumor benigno del tracto urinario', value: 'G.4' },
-    { label: 'Tumor renal no especificado', value: 'G.5' },
-    { label: 'Tumor de tracto urinario no especificado', value: 'G.6' },
-    { label: 'Linfoma de riñón', value: 'G.7' },
-    { label: 'Mieloma múltiple', value: 'G.8' },
-    { label: 'Otras neoplasias inmunoproliferativas', value: 'G.9' },
-    { label: 'Amiloidosis', value: 'G.10' }
-  ],
-  8: [
-    { label: 'Complicaciones de órgano trasplantado no especificado', value: 'G.11' },
-    { label: 'Complicaciones por trasplante de riñón', value: 'G.12' },
-    { label: 'Complicaciones por trasplante de hígado', value: 'G.13' },
-    { label: 'Complicaciones por trasplante de corazón', value: 'G.14' },
-    { label: 'Complicaciones por trasplante de pulmón', value: 'G.15' },
-    { label: 'Complicaciones por trasplante de médula ósea', value: 'G.16' },
-    { label: 'Complicaciones por trasplante de páncreas', value: 'G.17' },
-    { label: 'Complicaciones por trasplante de intestino', value: 'G.18' },
-    { label: 'Complicaciones de otro órgano trasplantado especificado', value: 'G.19' }
-  ],
-  9: [
-    { label: 'Enfermedad de células falciformes/anemia', value: 'H.1' },
-    { label: 'Rasgo de células falciformes y otras células falciformes', value: 'H.2' },
-    { label: 'Falla renal post parto', value: 'H.3' },
-    { label: 'Nefropatía por SIDA', value: 'H.4' },
-    { label: 'Pérdida traumática o quirúrgica de riñón', value: 'H.5' },
-    { label: 'Síndrome hepatorenal', value: 'H.6' },
-    { label: 'Necrosis tubular (sin recuperación)', value: 'H.7' },
-    { label: 'Otros desórdenes renales', value: 'H.8' },
-    { label: 'Etiología incierta', value: 'H.9' }
-  ]
+  let edad = fechaInicioTRR.getFullYear() - nacimiento.getFullYear();
+  const m = fechaInicioTRR.getMonth() - nacimiento.getMonth();
+  if (m < 0 || (m === 0 && fechaInicioTRR.getDate() < nacimiento.getDate())) {
+    edad--;
+  }
+  form.edadInicioTRR = edad;
 };
-const localizacionesFiltradas = computed(() => {
-  const tipo = form.etiologiaGeneral;
-  const base = etiologiasEspecificas[tipo] || [];
-  return [...base];
+
+const onCambioFechasTRR = () => {
+  actualizarErroresFechas();
+  calcularEdadInicioTRR();
+};
+
+watch(() => [form.fechaInicioTRR, form.fechaNacimiento], calcularEdadInicioTRR);
+
+/** Normaliza texto de etiología para comparaciones (sin tildes, mayúsculas). */
+const normalizarGeneralEtiologia = (texto) =>
+  String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+
+/** Categorías generales únicas desde GET /etiologia/ (orden del servicio). */
+const opcionesEtiologiaGeneralFromApi = computed(() => {
+  const lista = listaEtiologias.value || [];
+  const seen = new Set();
+  const out = [];
+  for (const e of lista) {
+    const g = (e.general && String(e.general).trim()) || '';
+    if (g && !seen.has(g)) {
+      seen.add(g);
+      out.push(g);
+    }
+  }
+  return out;
 });
 
-/** Etiologías específicas desde la tabla del backend, filtradas por la categoría general seleccionada (1-9). */
+/** Etiologías específicas filtradas por la categoría general seleccionada (campo `general` del API). */
 const opcionesEtiologiaEspecificaFromApi = computed(() => {
-  const categoriaKey = form.etiologiaGeneral;
-  if (!categoriaKey) return [];
-  const labelCategoria = etologiasGenerales[categoriaKey];
-  if (!labelCategoria) return [];
-  const lista = listaEtiologias.value || [];
-  const labelNorm = String(labelCategoria).toUpperCase().trim();
-  return lista.filter((e) => {
-    const g = (e.general && String(e.general).toUpperCase().trim()) || '';
-    return g === labelNorm || g.includes(labelNorm) || labelNorm.includes(g);
-  });
+  const general = (form.etiologiaGeneral && String(form.etiologiaGeneral).trim()) || '';
+  if (!general) return [];
+  return (listaEtiologias.value || []).filter(
+    (e) => String(e.general || '').trim() === general
+  );
+});
+
+const etiologiaGeneralEsDiabetes = computed(
+  () => normalizarGeneralEtiologia(form.etiologiaGeneral) === 'DIABETES'
+);
+
+const etiologiaGeneralEsHipertension = computed(() => {
+  const g = normalizarGeneralEtiologia(form.etiologiaGeneral);
+  return g.includes('HIPERTENSION') && g.includes('VASOS GRANDES');
 });
 
 // --- LÓGICA DEL SELECTOR DE PERIODO (NUEVO) ---
@@ -748,12 +780,7 @@ const mapComorbilidadesDesdeDialisis = (dia) => {
 
 const inferirCategoriaEtiologiaFromEt = (et) => {
   if (!et || !et.general) return '';
-  const g = String(et.general).toUpperCase().trim();
-  for (const [key, label] of Object.entries(etologiasGenerales)) {
-    const L = String(label).toUpperCase().trim();
-    if (g === L || g.includes(L) || L.includes(g)) return key;
-  }
-  return '';
+  return String(et.general).trim();
 };
 
 // Filtro A: Modalidad -> Tipos disponibles
@@ -857,39 +884,6 @@ const opcionesAccesoFiltradas = computed(() => {
   // Solo mostramos las localizaciones que son "hijas" del tipo seleccionado
   return listaOpcionesAcceso.filter(op => op.idPadre === tipoSeleccionado);
 });
-const comorbilidadesLabels = [
-  "Enfermedades Ateroescleróticas Cardiacas",
-  "Insuficiencia Cardíaca Congestiva",
-  "Enfermedad Vascular Periférica",
-  "Accidente Cerebrovascular",
-  "Cáncer",
-  "Diabetes",
-  "Hipertensión",
-  "Tuberculosis",
-  "Otra"
-]
-const estadoComorbilidades = ref(
-  comorbilidadesLabels.map(() => false)
-);
-
-const diabetesComorbilidadIndex = comorbilidadesLabels.indexOf("Diabetes");
-const hipertensionComorbilidadIndex = comorbilidadesLabels.indexOf("Hipertensión");
-const otraComorbilidadIndex = comorbilidadesLabels.indexOf("Otra");
-
-watch(etologiaGeneral, (newValue) => {
-  seleccionadas.value = []
-  dropdownAbierto.value = false
-
-  if (newValue === '1') {
-    if (estadoComorbilidades.value[diabetesComorbilidadIndex]) {
-      estadoComorbilidades.value[diabetesComorbilidadIndex] = false;
-    }
-  } else if (newValue === '5') {
-    if (estadoComorbilidades.value[hipertensionComorbilidadIndex]) {
-      estadoComorbilidades.value[hipertensionComorbilidadIndex] = false;
-    }
-  }
-});
 const hospitalesProcedencia = [
   { value: 'Hospital Base II Moquegua' },
   { value: 'Hospital Base III Chimbote' },
@@ -958,6 +952,28 @@ const etiquetaTipoDocumento = computed(() => {
   return 'documento';
 });
 
+/**
+ * Asegurado vigente: flagIndicadorActivo "1", desEstadoConsulta vacío (codEstadoConsulta suele ser "0").
+ * No asegurado: desEstadoConsulta con mensaje (ej. afiliado a EPS) o flagIndicadorActivo distinto de "1".
+ */
+const evaluarEstadoSeguroPaciente = (persona) => {
+  const mensajeEstado = String(persona?.desEstadoConsulta ?? '').trim();
+  const flagActivo = String(persona?.flagIndicadorActivo ?? '').trim();
+
+  if (mensajeEstado) {
+    return { asegurado: false, mensaje: mensajeEstado };
+  }
+
+  if (flagActivo !== '1') {
+    return {
+      asegurado: false,
+      mensaje: 'El paciente no se encuentra asegurado activo en EsSalud.',
+    };
+  }
+
+  return { asegurado: true, mensaje: '' };
+};
+
 const documentoValidoParaConsulta = computed(() => {
   const numero = String(form.numeroDocumento || '').trim();
 
@@ -1001,7 +1017,13 @@ const consultarDNI = async () => {
 
   try {
     // 2. Formatear fecha (Sin .value en form)
-    const [anio, mes, dia] = form.fechaNacimiento.split('-');
+    const isoNac = fechaFormularioParaApi(form.fechaNacimiento);
+    if (!isoNac) {
+      errorDNI.value = 'Fecha de nacimiento inválida. Use el formato DD/MM/AAAA.';
+      consultandoDNI.value = false;
+      return;
+    }
+    const [anio, mes, dia] = isoNac.split('-');
     const fechaParaApi = `${dia}/${mes}/${anio}`;
 
     // Payload esperado por consulta_seguro en el backend
@@ -1028,6 +1050,7 @@ const consultarDNI = async () => {
     }
 
     const persona = data.vDataItem[0];
+    const estadoSeguro = evaluarEstadoSeguroPaciente(persona);
 
     // 5. Mapear nombre completo
     const apellidos = `${persona.apePaterno || ''} ${persona.apeMaterno || ''}`.trim();
@@ -1045,7 +1068,9 @@ const consultarDNI = async () => {
     if (persona.fecNac) {
       const [diaNac, mesNac, anioNac] = persona.fecNac.split('/');
       if (diaNac && mesNac && anioNac) {
-        form.fechaNacimiento = `${anioNac}-${mesNac.padStart(2, '0')}-${diaNac.padStart(2, '0')}`;
+        form.fechaNacimiento = fechaIsoADDisplay(
+          `${anioNac}-${mesNac.padStart(2, '0')}-${diaNac.padStart(2, '0')}`
+        );
       }
     }
 
@@ -1099,6 +1124,19 @@ const consultarDNI = async () => {
         form.distrito = nombreDistrito;
         form.ubigeo = ubigeoObtenido;
       }
+    }
+
+    calcularEdadInicioTRR();
+
+    if (!estadoSeguro.asegurado) {
+      await Swal.fire({
+        title: 'Paciente no asegurado',
+        text: estadoSeguro.mensaje,
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#d97706',
+      });
+      return;
     }
 
     ElMessage({ message: 'Datos encontrados y completados', type: 'success', plain: true });
@@ -1157,8 +1195,13 @@ watch(() => form.fechaNacimiento, (nuevaFecha) => {
     return;
   }
 
+  const nacimiento = normalizarFecha(nuevaFecha);
+  if (!nacimiento) {
+    form.edad = '';
+    return;
+  }
+
   const hoy = new Date();
-  const nacimiento = new Date(nuevaFecha);
   let edad = hoy.getFullYear() - nacimiento.getFullYear();
   const m = hoy.getMonth() - nacimiento.getMonth();
 
@@ -1199,16 +1242,13 @@ watch(() => form.tipoAccesoInicio, (nuevoTipoAcceso) => {
 
 // Watcher: Limpia las comorbilidades si coinciden con la etiología y resetea etiología específica
 watch(() => form.etiologiaGeneral, (nuevoValor) => {
-  const valor = String(nuevoValor);
-  form.etiologiaEspecifica = ''; // al cambiar categoría, limpiar específica
+  form.etiologiaEspecifica = '';
 
-  if (valor === '1') {
-    // Si la causa es Diabetes, no debe estar Diabetes en comorbilidades
-    form.comorbilidades = form.comorbilidades.filter(c => c !== 'Diabetes');
-  }
-  else if (valor === '5') {
-    // Si la causa es Hipertensión, no debe estar Hipertensión en comorbilidades
-    form.comorbilidades = form.comorbilidades.filter(c => c !== 'Hipertensión');
+  const g = normalizarGeneralEtiologia(nuevoValor);
+  if (g === 'DIABETES') {
+    form.comorbilidades = form.comorbilidades.filter((c) => c !== 'Diabetes');
+  } else if (g.includes('HIPERTENSION') && g.includes('VASOS GRANDES')) {
+    form.comorbilidades = form.comorbilidades.filter((c) => c !== 'Hipertensión');
   }
 });
 
@@ -1232,9 +1272,14 @@ const registrarPaciente = async (url = null) => {
     return;
   }
   if (!validarFormulario()) return;
+  calcularEdadInicioTRR();
   const idPeriodo = getIdPeriodoParaPayload();
   if (idPeriodo == null) {
-    ElMessage({ message: 'El periodo seleccionado no existe en el sistema. Elija un mes que ya esté registrado.', type: 'warning', plain: true });
+    ElMessage({
+      message: 'Indique la Fecha de Inicio de TRR (periodo válido) o seleccione un periodo registrado en el sistema.',
+      type: 'warning',
+      plain: true,
+    });
     return;
   }
   const payload = {
@@ -1242,7 +1287,7 @@ const registrarPaciente = async (url = null) => {
     tipo_documento: form.tipoDocumento,
     autogenerado: "ASD",
     paciente: form.nombreCompleto,
-    fecha_nacimiento: form.fechaNacimiento,
+    fecha_nacimiento: fechaFormularioParaApi(form.fechaNacimiento),
     genero: form.sexo,
     grado_instruccion: form.gradoInstruccion,
     id_modalidad: form.modalidadTRR == 'Hemodiálisis' ? 1 : form.modalidadTRR == 'Diálisis Peritoneal' ? 2 : 3,
@@ -1271,7 +1316,7 @@ const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
   if (idPeriodo == null) return null;
 
   const idModalidad = form.modalidadTRR === 'Hemodiálisis' ? 1 : form.modalidadTRR === 'Diálisis Peritoneal' ? 2 : 3;
-  const fechaAtencion = form.fechaInicioTRR || new Date().toISOString().slice(0, 10);
+  const fechaAtencion = fechaFormularioParaApi(form.fechaInicioTRR) || new Date().toISOString().slice(0, 10);
 
   const payloadAtencion = {
     id_paciente: idPaciente,
@@ -1293,7 +1338,7 @@ const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
     : resolverTipoAccesoTexto(form.tipoAccesoInicio);
   const payloadUnidades = {
     id_paciente_atencion: idPacienteAtencion,
-    fecha_creacion_acceso: form.fechaCreacionAcceso || '',
+    fecha_creacion_acceso: fechaFormularioParaApi(form.fechaCreacionAcceso) || '',
     tipo_acceso: tipoAcceso,
     localizacion_acceso: resolverLocalizacionAccesoTexto(form.localizacionAcceso) || '',
   };
@@ -1347,11 +1392,11 @@ const registrarPacienteDialisis = async (respuesta) => {
     id_paciente: respuesta.id_paciente,
     id_etiologia: idEtiologia,
     modalidad_inicio_trr: form.modalidadTRR,
-    fecha_inicio_trr: form.fechaInicioTRR,
+    fecha_inicio_trr: fechaFormularioParaApi(form.fechaInicioTRR),
     subsistema_salud: form.subsistemaSalud,
     tipo_acceso: form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : resolverTipoAccesoTexto(form.tipoAccesoInicio),
-    fecha_creacion_acceso: form.fechaCreacionAcceso,
-    fecha_primer_ingreso: form.fechaPrimerIngreso,
+    fecha_creacion_acceso: fechaFormularioParaApi(form.fechaCreacionAcceso),
+    fecha_primer_ingreso: fechaFormularioParaApi(form.fechaPrimerIngreso),
     enf_ateroesclerotica_cardiaca: form.comorbilidades.includes("Aterosclerosis") ? 'Sí' : 'NO',
     enf_insuficiencia_cardiaca_congestiva: form.comorbilidades.includes("Insuficiencia cardiaca") ? 'Sí' : 'NO',
     enf_vascular_periferica: form.comorbilidades.includes("Vascular periférica") ? 'Sí' : 'NO',
@@ -1392,8 +1437,13 @@ const fetchEtiologias = async () => {
   }
 };
 
-/** Resuelve periodo (id numérico o string "YYYY-MM") al id_periodo que espera el backend. */
+/** Resuelve id_periodo: primero el mes de la fecha de inicio TRR, si no el periodo del selector. */
 const getIdPeriodoParaPayload = () => {
+  if (form.idPeriodo != null && form.idPeriodo !== '') {
+    const desdeFecha = Number(form.idPeriodo);
+    if (!Number.isNaN(desdeFecha)) return desdeFecha;
+  }
+
   const v = periodoSeleccionado.value;
   if (v == null || v === '') return null;
   const listaPeriodos = Array.isArray(periodos.value) ? periodos.value : [];
@@ -1431,18 +1481,15 @@ const registroPacienteHistorial = async (respuesta) => {
 }
 
 
-// Función para buscar periodo IPRESS
-function searchPeriodoIpress() {
-  const resultado = periodoIpress.value.find(
-    item => item.id_ipress === idClinicaSeleccionada.value && item.periodo === periodoSeleccionado.value
-  );
-  if (resultado) {
-    idPeriodoIpress.value = resultado.id_periodo_ipress;
-    console.log("ID Periodo IPRESS seleccionado:", idPeriodoIpress.value);
-  } else {
+async function searchPeriodoIpress() {
+  if (idClinicaSeleccionada.value == null || periodoSeleccionado.value == null) {
     idPeriodoIpress.value = null;
-    console.log("No se encontró periodo IPRESS para esta combinación");
+    return;
   }
+  idPeriodoIpress.value = await resolverIdPeriodoIpress(
+    periodoSeleccionado.value,
+    idClinicaSeleccionada.value,
+  );
 }
 
 // Fetch IPRESS asignadas al usuario
@@ -1463,16 +1510,6 @@ const fetchIpress = async (url = null) => {
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
     ipress.value = [];
-  }
-};
-
-// Fetch Periodo IPRESS
-const fetchPeriodoIpress = async (url = null) => {
-  try {
-    const respuesta = await getAllIpress(url ?? "/periodoIpress/");
-    periodoIpress.value = respuesta;
-  } catch (error) {
-    console.error('Error al obtener Periodo IPRESS:', error);
   }
 };
 
@@ -1512,9 +1549,14 @@ async function guardarEdicionSupervisor() {
     return;
   }
   if (!validarFormulario()) return;
+  calcularEdadInicioTRR();
   const idPeriodo = getIdPeriodoParaPayload();
   if (idPeriodo == null) {
-    ElMessage({ message: 'El periodo seleccionado no existe en el sistema. Elija un mes que ya esté registrado.', type: 'warning', plain: true });
+    ElMessage({
+      message: 'Indique la Fecha de Inicio de TRR (periodo válido) o seleccione un periodo registrado en el sistema.',
+      type: 'warning',
+      plain: true,
+    });
     return;
   }
   const idEtiologia =
@@ -1533,7 +1575,7 @@ async function guardarEdicionSupervisor() {
       tipo_documento: form.tipoDocumento,
       autogenerado: 'ASD',
       paciente: form.nombreCompleto,
-      fecha_nacimiento: form.fechaNacimiento,
+      fecha_nacimiento: fechaFormularioParaApi(form.fechaNacimiento),
       genero: form.sexo,
       grado_instruccion: form.gradoInstruccion,
       id_modalidad: form.modalidadTRR === 'Hemodiálisis' ? 1 : form.modalidadTRR === 'Diálisis Peritoneal' ? 2 : 3,
@@ -1544,11 +1586,11 @@ async function guardarEdicionSupervisor() {
       id_paciente: idPacienteEdicionInterno.value,
       id_etiologia: idEtiologia,
       modalidad_inicio_trr: form.modalidadTRR,
-      fecha_inicio_trr: form.fechaInicioTRR,
+      fecha_inicio_trr: fechaFormularioParaApi(form.fechaInicioTRR),
       subsistema_salud: form.subsistemaSalud,
       tipo_acceso: form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : resolverTipoAccesoTexto(form.tipoAccesoInicio),
-      fecha_creacion_acceso: form.fechaCreacionAcceso,
-      fecha_primer_ingreso: form.fechaPrimerIngreso,
+      fecha_creacion_acceso: fechaFormularioParaApi(form.fechaCreacionAcceso),
+      fecha_primer_ingreso: fechaFormularioParaApi(form.fechaPrimerIngreso),
       enf_ateroesclerotica_cardiaca: form.comorbilidades.includes('Aterosclerosis') ? 'Sí' : 'NO',
       enf_insuficiencia_cardiaca_congestiva: form.comorbilidades.includes('Insuficiencia cardiaca') ? 'Sí' : 'NO',
       enf_vascular_periferica: form.comorbilidades.includes('Vascular periférica') ? 'Sí' : 'NO',
@@ -1598,7 +1640,7 @@ async function cargarEdicionSupervisor() {
     form.tipoDocumento = pac.tipo_documento || '';
     form.numeroDocumento = pac.documento || '';
     form.nombreCompleto = pac.paciente || '';
-    form.fechaNacimiento = normalizarFechaApi(pac.fecha_nacimiento);
+    form.fechaNacimiento = fechaIsoADDisplay(pac.fecha_nacimiento);
     form.sexo = apiGeneroAForm(pac.genero);
     form.gradoInstruccion = pac.grado_instruccion || '';
 
@@ -1612,10 +1654,10 @@ async function cargarEdicionSupervisor() {
     if (dia.modalidad_inicio_trr) {
       form.modalidadTRR = dia.modalidad_inicio_trr;
     }
-    form.fechaInicioTRR = normalizarFechaApi(dia.fecha_inicio_trr);
+    form.fechaInicioTRR = fechaIsoADDisplay(dia.fecha_inicio_trr);
     form.subsistemaSalud = dia.subsistema_salud || '';
-    form.fechaCreacionAcceso = normalizarFechaApi(dia.fecha_creacion_acceso);
-    form.fechaPrimerIngreso = normalizarFechaApi(dia.fecha_primer_ingreso);
+    form.fechaCreacionAcceso = fechaIsoADDisplay(dia.fecha_creacion_acceso);
+    form.fechaPrimerIngreso = fechaIsoADDisplay(dia.fecha_primer_ingreso);
     form.comorbilidades = mapComorbilidadesDesdeDialisis(dia);
 
     const tipoId = tipoAccesoLabelAId(dia.tipo_acceso);
@@ -1645,6 +1687,8 @@ async function cargarEdicionSupervisor() {
   } finally {
     silenciarWatchsAccesoModalidad.value = false;
     cargandoEdicionSupervisor.value = false;
+    actualizarErroresFechas();
+    calcularEdadInicioTRR();
   }
 }
 
@@ -1661,3 +1705,34 @@ onMounted(() => {
   fetchEtiologias();
 });
 </script>
+
+<style scoped>
+.formulario-paciente :deep(.form-grid .el-form-item) {
+  margin-bottom: 0;
+  align-items: stretch;
+}
+
+.formulario-paciente :deep(.form-grid .el-form-item__label) {
+  display: flex;
+  align-items: flex-end;
+  min-height: 2.75rem;
+  padding-bottom: 8px;
+  line-height: 1.3;
+  height: auto !important;
+  white-space: normal;
+}
+
+.formulario-paciente :deep(.trr-grid .el-form-item__label) {
+  min-height: 3rem;
+}
+
+.formulario-paciente :deep(.form-grid .el-form-item__content) {
+  align-items: flex-start;
+}
+
+.formulario-paciente :deep(.el-date-editor),
+.formulario-paciente :deep(.el-select),
+.formulario-paciente :deep(.el-autocomplete) {
+  width: 100%;
+}
+</style>

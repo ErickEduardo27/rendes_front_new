@@ -96,6 +96,7 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
+                  <th class="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider w-16">Gráfico</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -116,6 +117,16 @@
                     <span v-else class="text-slate-400">—</span>
                   </td>
                   <td class="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate" :title="r.comentario_evaluacion || ''">{{ textoComentarioSupervisor(r.comentario_evaluacion) }}</td>
+                  <td class="px-4 py-3 text-center">
+                    <button
+                      type="button"
+                      class="inline-flex p-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                      title="Ver tendencia y recurrencias de infecciones"
+                      @click="abrirDashboardPaciente(r)"
+                    >
+                      <ChartBarIcon class="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -149,6 +160,7 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
+                  <th class="px-4 py-3 text-center text-xs font-bold text-slate-600 uppercase tracking-wider w-16">Gráfico</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -169,6 +181,17 @@
                     <span v-else class="text-slate-400">—</span>
                   </td>
                   <td class="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate" :title="fila.comentario_evaluacion || ''">{{ textoComentarioSupervisor(fila.comentario_evaluacion) }}</td>
+                  <td class="px-4 py-3 text-center">
+                    <button
+                      type="button"
+                      class="inline-flex p-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-40"
+                      title="Ver tendencia y recurrencias de infecciones"
+                      :disabled="!fila.id_paciente"
+                      @click="abrirDashboardPaciente(fila)"
+                    >
+                      <ChartBarIcon class="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -272,16 +295,25 @@
         </div>
       </div>
     </div>
+
+    <DashboardInfeccionesPaciente
+      v-model:visible="dashboardVisible"
+      :id-paciente="dashboardPaciente.id"
+      :nombre="dashboardPaciente.nombre"
+      :documento="dashboardPaciente.documento"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
+import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
+import DashboardInfeccionesPaciente from '@/components/registros/DashboardInfeccionesPaciente.vue';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
@@ -318,6 +350,9 @@ const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto
 const mostrarBotonNuevo = computed(() => formularioAbierto.value);
 
 const exportandoExcel = ref(false);
+
+const dashboardVisible = ref(false);
+const dashboardPaciente = ref({ id: null, nombre: '', documento: '' });
 
 const puedeExportarEventosInfecciososExcel = computed(() => {
   if (cargando.value) return false;
@@ -392,6 +427,30 @@ function documentoPaciente(r) {
   return r.datosPacienteAtencion?.datosPaciente?.documento || r.datosPaciente?.documento || '—';
 }
 
+function idPacienteDesdeFila(fila) {
+  if (fila?.id_paciente != null) return fila.id_paciente;
+  return (
+    fila?.datosPacienteAtencion?.datosPaciente?.id_paciente
+    ?? fila?.datosPaciente?.id_paciente
+    ?? fila?.datosPacienteAtencion?.id_paciente
+    ?? null
+  );
+}
+
+function abrirDashboardPaciente(fila) {
+  const id = idPacienteDesdeFila(fila);
+  if (id == null) {
+    ElMessage.warning('No se pudo identificar al paciente para el gráfico.');
+    return;
+  }
+  dashboardPaciente.value = {
+    id,
+    nombre: fila.paciente || nombrePaciente(fila) || 'Paciente',
+    documento: fila.documento || documentoPaciente(fila) || '',
+  };
+  dashboardVisible.value = true;
+}
+
 function estadoAprobacionClase(estado) {
   const valor = String(estado || '').toUpperCase();
   if (valor === 'APROBADO') return 'bg-emerald-100 text-emerald-700';
@@ -434,13 +493,16 @@ const todosPacientesLista = computed(() => {
     const r = id != null ? porAtencion[String(id)] : null;
     const paciente = a.datosPaciente?.paciente ?? '—';
     const documento = a.datosPaciente?.documento ?? '—';
+    const idPaciente = a.datosPaciente?.id_paciente ?? a.id_paciente ?? null;
     if (r) {
       return {
         id_paciente_atencion: id,
+        id_paciente: idPacienteDesdeFila(r) ?? idPaciente,
         id_evento_acceso_vascular: r.id_evento_acceso_vascular,
         tieneRegistro: true,
         paciente: nombrePaciente(r),
         documento: documentoPaciente(r),
+        datosPacienteAtencion: r.datosPacienteAtencion,
         fecha_evento: r.fecha_evento || '',
         tipo_infeccion: r.tipo_infeccion || '',
         antmicrobial: r.antmicrobial || '',
@@ -454,6 +516,7 @@ const todosPacientesLista = computed(() => {
     }
     return {
       id_paciente_atencion: id,
+      id_paciente: idPaciente,
       tieneRegistro: false,
       paciente,
       documento,

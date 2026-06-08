@@ -368,13 +368,7 @@
 
     <!-- Modal: registro nuevo o edición supervisor (ficha diálisis) -->
     <div v-if="mostrarModalNuevo || mostrarModalEdicionSupervisor" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4 relative">
-        <button
-          class="absolute top-3 right-3 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full p-1 shadow"
-          @click="cerrarModalFormularioPaciente"
-        >
-          ✕
-        </button>
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4">
         <FormularioPaciente
           :key="claveModalFormularioPaciente"
           :periodo-inicial="periodoSeleccionado"
@@ -398,6 +392,7 @@ import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
+import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 import FormularioPaciente from './FormularioPaciente.vue';
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
@@ -493,16 +488,13 @@ const fetchEstadisticasRegistros = async () => {
   }
 
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, resPeriodoIpress] = await Promise.all([
+    const [resUnidades, resEventos, resMorb, resResultados, idPeriodoIpress] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${qs}`),
       getAllIpress(`/eventosAccesosVasculares/?${qs}`),
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
-      //(idPeriodo != null && idIpress != null) ? postAllIpress('/consulta_periodo_ipress/', { id_periodo: Number(idPeriodo), id_ipress: Number(idIpress), id_estado: 1 }) : Promise.resolve([]),
+      resolverIdPeriodoIpress(idPeriodo, idIpress),
     ]);
-
-    const arrPeriodoIpress = Array.isArray(resPeriodoIpress) ? resPeriodoIpress : (resPeriodoIpress?.length ? resPeriodoIpress : []);
-    const idPeriodoIpress = arrPeriodoIpress.length ? arrPeriodoIpress[0].id_periodo_ipress : null;
     let totalVacunaciones = 0;
     if (idPeriodoIpress != null) {
       try {
