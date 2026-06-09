@@ -952,26 +952,71 @@ const etiquetaTipoDocumento = computed(() => {
   return 'documento';
 });
 
+const PATRONES_NO_ASEGURADO = [
+  /no\s+asegurado/i,
+  /no\s+se\s+encuentra/i,
+  /fallecid/i,
+  /\beps\b/i,
+  /no\s+registra/i,
+  /sin\s+cobertura/i,
+  /exclusi[oó]n/i,
+  /cesante/i,
+  /no\s+habido/i,
+  /no\s+pertenece/i,
+];
+
+function vigenciaSeguroVigente(fecVigHasta) {
+  const texto = String(fecVigHasta ?? '').trim();
+  if (!texto) return false;
+  const partes = texto.split('/');
+  if (partes.length !== 3) return false;
+  const [dia, mes, anio] = partes;
+  const fin = new Date(Number(anio), Number(mes) - 1, Number(dia));
+  if (Number.isNaN(fin.getTime())) return false;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  return fin >= hoy;
+}
+
 /**
- * Asegurado vigente: flagIndicadorActivo "1", desEstadoConsulta vacío (codEstadoConsulta suele ser "0").
- * No asegurado: desEstadoConsulta con mensaje (ej. afiliado a EPS) o flagIndicadorActivo distinto de "1".
+ * EsSalud puede devolver codError "0" con desEstadoConsulta informativo
+ * (ej. cod 52: "Asegurado debe acercarse a su Centro...") sin negar cobertura.
  */
 const evaluarEstadoSeguroPaciente = (persona) => {
   const mensajeEstado = String(persona?.desEstadoConsulta ?? '').trim();
-  const flagActivo = String(persona?.flagIndicadorActivo ?? '').trim();
+  const autogenerado = String(persona?.autogenerado ?? '').trim();
+  const codTipoSeguro = String(persona?.codTipoSeguroSGH ?? '').trim();
+  const fecVigHasta = String(persona?.fecVigHasta ?? '').trim();
 
   if (mensajeEstado) {
-    return { asegurado: false, mensaje: mensajeEstado };
+    const mensajeIndicaAsegurado = /^asegurado\b/i.test(mensajeEstado);
+    const mensajeIndicaRechazo = PATRONES_NO_ASEGURADO.some((rx) => rx.test(mensajeEstado));
+
+    if (mensajeIndicaAsegurado && !mensajeIndicaRechazo) {
+      return { asegurado: true, mensaje: '', aviso: mensajeEstado };
+    }
+    if (mensajeIndicaRechazo) {
+      return { asegurado: false, mensaje: mensajeEstado, aviso: '' };
+    }
   }
 
-  if (flagActivo !== '1') {
-    return {
-      asegurado: false,
-      mensaje: 'El paciente no se encuentra asegurado activo en EsSalud.',
-    };
+  const tieneAutogenerado = autogenerado.length > 0;
+  const tieneTipoSeguro = codTipoSeguro.length > 0 && codTipoSeguro !== '0';
+  const vigenciaVigente = vigenciaSeguroVigente(fecVigHasta);
+
+  if (tieneAutogenerado || (tieneTipoSeguro && vigenciaVigente)) {
+    return { asegurado: true, mensaje: '', aviso: mensajeEstado };
   }
 
-  return { asegurado: true, mensaje: '' };
+  if (mensajeEstado) {
+    return { asegurado: false, mensaje: mensajeEstado, aviso: '' };
+  }
+
+  return {
+    asegurado: false,
+    mensaje: 'El paciente no se encuentra asegurado activo en EsSalud.',
+    aviso: '',
+  };
 };
 
 const documentoValidoParaConsulta = computed(() => {
@@ -1039,7 +1084,7 @@ const consultarDNI = async () => {
     const data = response?.data ?? response;
 
     // 4. Validar respuesta y extraer datos
-    if (data.codError !== "0") {
+    if (String(data.codError ?? '') !== '0') {
       errorDNI.value = data.desError || 'Error en la consulta del servicio.';
       return;
     }
@@ -1140,6 +1185,14 @@ const consultarDNI = async () => {
     }
 
     ElMessage({ message: 'Datos encontrados y completados', type: 'success', plain: true });
+    if (estadoSeguro.aviso) {
+      ElMessage({
+        message: estadoSeguro.aviso,
+        type: 'info',
+        plain: true,
+        duration: 8000,
+      });
+    }
 
   } catch (error) {
     console.error('Error consulta seguro:', error);
