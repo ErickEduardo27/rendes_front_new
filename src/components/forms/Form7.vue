@@ -1,228 +1,215 @@
 <template>
-  <div class="p-6 space-y-6">
+  <div class="form7-shell p-4 space-y-4 max-w-5xl">
 
-    <div class="flex items-center gap-4 flex-wrap bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-      <div class="flex items-center gap-2">
-        <label class="text-xs font-semibold text-gray-500 uppercase">Periodo de Reporte:</label>
-        <select v-model="periodoSeleccionado" class="border border-gray-300 px-2 py-1 rounded text-sm bg-gray-50 text-gray-700" :disabled="true">
-          <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
-        </select>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 bg-white p-3 rounded-lg border border-gray-200">
+      <div>
+        <label class="form7-meta-label">Periodo de reporte</label>
+        <div class="form7-info-box">{{ periodoDisplay }}</div>
       </div>
-
-      <div class="flex items-center gap-2 border-l pl-4 border-gray-200">
-        <label class="text-xs font-semibold text-gray-500 uppercase">Clínica:</label>
-        <span class="text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 px-3 py-1 rounded">{{ paciente.ipress }}</span>
+      <div>
+        <label class="form7-meta-label">Clínica</label>
+        <div class="form7-info-box">{{ clinicaDisplay }}</div>
       </div>
-
-      <div class="flex items-center gap-2 border-l pl-4 border-gray-200">
-        <label class="text-xs font-semibold text-gray-500 uppercase">Modalidad de Diálisis:</label>
-        <span class="text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 px-3 py-1 rounded">
-          {{ pacienteSeleccionado.id_modalidad == 1 ? "Hemodialisis" : "Peritoneal" }}
-        </span>
+      <div>
+        <label class="form7-meta-label">Modalidad de diálisis</label>
+        <div class="form7-info-box">{{ modalidadDisplay }}</div>
       </div>
     </div>
 
-    <div class="flex gap-6 mt-6">
-      <div class="flex-1 space-y-6">
-        <div>
-          <h2 class="text-xl font-bold text-[#008f9c] mb-1">SEROLOGÍA Y VACUNACIÓN</h2>
-          <p class="text-sm text-gray-500">Complete la información médica del paciente en las diferentes secciones</p>
-        </div>
+    <p v-if="rangoFechasPeriodo.min" class="text-[11px] text-gray-500">
+      Fechas dentro del periodo ({{ rangoFechasPeriodoTexto.min }} a {{ rangoFechasPeriodoTexto.max }}). Formato: dd-mm-aaaa. También puede usar el calendario.
+    </p>
 
-        <div>
-          <h3 class="font-medium mb-3 text-gray-700">Condición Serológica Actual</h3>
-          <div class="space-y-4">
-            
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="text-sm text-gray-600 font-medium">VHB</label>
-                <select class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.vhbEstado">
-                  <option :value="null">Seleccione una opción</option>
-                  <option>Positivo</option>
-                  <option>Negativo</option>
-                  <option>Desconocido</option>
-                </select>
-                <label class="text-sm mt-2 block text-gray-600">Fecha de Examen</label>
-                <input type="date" class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.vhbFecha" />
-              </div>
-              
-              <div>
-                <label class="text-sm text-gray-600 font-medium">Anti-HBc Total</label>
-                <select class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.antiHbcEstado">
-                  <option :value="null">Seleccione una opción</option>
-                  <option>Positivo</option>
-                  <option>Negativo</option>
-                  <option>Desconocido</option>
-                </select>
-                <label class="text-sm mt-2 block text-gray-600">Fecha de Examen</label>
-                <input type="date" class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.antiHbcFecha" />
-              </div>
+    <div class="space-y-4">
+      <div class="border-l-4 border-[#008f9c] pl-3">
+        <h2 class="text-base font-bold text-gray-800">Serología y vacunación</h2>
+        <p class="text-xs text-gray-500">Complete la información del paciente</p>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+        <h3 class="form7-section-title">Condición serológica actual</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="form7-field">
+            <label class="form7-label">VHB</label>
+            <select class="form7-control" v-model="form.vhbEstado">
+              <option :value="null">Seleccione</option>
+              <option>Positivo</option>
+              <option>Negativo</option>
+              <option>Desconocido</option>
+            </select>
+            <label class="form7-label-sub">Fecha examen</label>
+            <div class="form7-date-wrap">
+              <input type="text" class="form7-control form7-control--date" v-model="form.vhbFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhbFecha }" @blur="validarCampoFechaEnBlur('vhbFecha')" />
+              <input :ref="(el) => setDatePickerRef('vhbFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('vhbFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('vhbFecha', $event)" />
+              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('vhbFecha')">
+                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </button>
             </div>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="text-sm text-gray-600 font-medium">VHC</label>
-                <select class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.vhcEstado">
-                  <option :value="null">Seleccione una opción</option>
-                  <option>Positivo</option>
-                  <option>Negativo</option>
-                  <option>Desconocido</option>
-                </select>
-                <label class="text-sm mt-2 block text-gray-600">Fecha de Examen</label>
-                <input type="date" class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.vhcFecha" />
-              </div>
-              <div>
-                <label class="text-sm text-gray-600 font-medium">VIH</label>
-                <select class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.vihEstado">
-                  <option :value="null">Seleccione una opción</option>
-                  <option>Positivo</option>
-                  <option>Negativo</option>
-                  <option>Desconocido</option>
-                </select>
-                <label class="text-sm mt-2 block text-gray-600">Fecha de Examen</label>
-                <input type="date" class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.vihFecha" />
-              </div>
+            <p v-if="erroresFecha.vhbFecha" class="form7-date-error">{{ erroresFecha.vhbFecha }}</p>
+          </div>
+          <div class="form7-field">
+            <label class="form7-label">Anti-HBc total</label>
+            <select class="form7-control" v-model="form.antiHbcEstado">
+              <option :value="null">Seleccione</option>
+              <option>Positivo</option>
+              <option>Negativo</option>
+              <option>Desconocido</option>
+            </select>
+            <label class="form7-label-sub">Fecha examen</label>
+            <div class="form7-date-wrap">
+              <input type="text" class="form7-control form7-control--date" v-model="form.antiHbcFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.antiHbcFecha }" @blur="validarCampoFechaEnBlur('antiHbcFecha')" />
+              <input :ref="(el) => setDatePickerRef('antiHbcFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('antiHbcFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('antiHbcFecha', $event)" />
+              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('antiHbcFecha')">
+                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </button>
             </div>
-
+            <p v-if="erroresFecha.antiHbcFecha" class="form7-date-error">{{ erroresFecha.antiHbcFecha }}</p>
+          </div>
+          <div class="form7-field">
+            <label class="form7-label">VHC</label>
+            <select class="form7-control" v-model="form.vhcEstado">
+              <option :value="null">Seleccione</option>
+              <option>Positivo</option>
+              <option>Negativo</option>
+              <option>Desconocido</option>
+            </select>
+            <label class="form7-label-sub">Fecha examen</label>
+            <div class="form7-date-wrap">
+              <input type="text" class="form7-control form7-control--date" v-model="form.vhcFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhcFecha }" @blur="validarCampoFechaEnBlur('vhcFecha')" />
+              <input :ref="(el) => setDatePickerRef('vhcFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('vhcFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('vhcFecha', $event)" />
+              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('vhcFecha')">
+                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </button>
+            </div>
+            <p v-if="erroresFecha.vhcFecha" class="form7-date-error">{{ erroresFecha.vhcFecha }}</p>
+          </div>
+          <div class="form7-field">
+            <label class="form7-label">VIH</label>
+            <select class="form7-control" v-model="form.vihEstado">
+              <option :value="null">Seleccione</option>
+              <option>Positivo</option>
+              <option>Negativo</option>
+              <option>Desconocido</option>
+            </select>
+            <label class="form7-label-sub">Fecha examen</label>
+            <div class="form7-date-wrap">
+              <input type="text" class="form7-control form7-control--date" v-model="form.vihFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vihFecha }" @blur="validarCampoFechaEnBlur('vihFecha')" />
+              <input :ref="(el) => setDatePickerRef('vihFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('vihFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('vihFecha', $event)" />
+              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('vihFecha')">
+                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </button>
+            </div>
+            <p v-if="erroresFecha.vihFecha" class="form7-date-error">{{ erroresFecha.vihFecha }}</p>
           </div>
         </div>
 
-        <div>
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <label class="text-sm text-gray-600 font-medium">Título de AcHBs (mUI/mL)</label>
-              <input 
-                  type="number" 
-                  class="w-full border rounded px-3 py-2 mt-1 focus:outline-none focus:ring-1 focus:ring-sky-500" 
-                  v-model.number="form.vacunaHepatitis"
-                  placeholder="Ingrese el valor numérico"
-                  :min="0"
-                  :max="2000"
-                  :step="0.01"
-                />
+        <hr class="border-gray-100" />
+
+        <h3 class="form7-section-title">Título AcHBs</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="form7-field">
+            <label class="form7-label">Título (mUI/mL)</label>
+            <input
+              type="number"
+              class="form7-control"
+              v-model.number="form.vacunaHepatitis"
+              placeholder="0 – 2000"
+              :min="0"
+              :max="2000"
+              :step="0.01"
+            />
+          </div>
+          <div class="form7-field">
+            <label class="form7-label">Estado según AcHBs</label>
+            <input type="text" class="form7-control form7-control--readonly" v-model="form.estadoAcHBs" disabled />
+          </div>
+          <div class="form7-field">
+            <label class="form7-label">Fecha de prueba</label>
+            <div class="form7-date-wrap">
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaVacHepatitis" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaVacHepatitis }" @blur="validarCampoFechaEnBlur('fechaVacHepatitis')" />
+              <input :ref="(el) => setDatePickerRef('fechaVacHepatitis', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaVacHepatitis')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaVacHepatitis', $event)" />
+              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaVacHepatitis')">
+                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </button>
             </div>
-            <div>
-              <label class="text-sm text-gray-600 font-medium">Estado según AcHbs</label>
-              <input type="text" class="w-full border rounded px-3 py-2 mt-1 bg-gray-50 text-gray-500" placeholder="Estado según AcHBs"
-                v-model="form.estadoAcHBs" disabled />
-            </div>
-            <div>
-              <label class="text-sm text-gray-600 font-medium">Fecha de Prueba</label>
-              <input type="date" class=" w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.fechaVacHepatitis" />
-            </div>
+            <p v-if="erroresFecha.fechaVacHepatitis" class="form7-date-error">{{ erroresFecha.fechaVacHepatitis }}</p>
           </div>
         </div>
 
-        <div>
-          <h3 class="font-medium text-gray-700 mb-3">Vacunación Contra Hepatitis B</h3>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-sm text-gray-600 font-medium">Última Dosis Administrada</label>
-              <select class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.dosisHepatitisB">
-                <option :value="null">Seleccione una opción</option>
-                <option>1er dosis</option>
-                <option>2da dosis</option>
-                <option>3ra dosis</option>
-                <option>Refuerzo</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-sm text-gray-600 font-medium">Fecha de Vacunación</label>
-              <input type="date" class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" placeholder="Fecha de Vacunación"
-                v-model="form.fechaHepatitisB" />
-            </div>
-          </div>
-        </div>
+        <hr class="border-gray-100" />
 
-        <div>
-          <h3 class="font-medium text-gray-700 mb-3">Vacunación Contra Covid-19</h3>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-sm text-gray-600 font-medium">Última Dosis Administrada</label>
-              <select class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" v-model="form.dosisCovid">
-                <option :value="null">Seleccione una opción</option>
-                <option>1er dosis</option>
-                <option>2da dosis</option>
-                <option>3ra dosis</option>
-                <option>Refuerzo</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-sm text-gray-600 font-medium">Fecha de Vacunación</label>
-              <input type="date" class="w-full border rounded px-3 py-2 mt-1 text-gray-700 focus:outline-none focus:ring-1 focus:ring-sky-500" placeholder="Fecha de Vacunación"
-                v-model="form.fechaCovid" />
-            </div>
+        <h3 class="form7-section-title">Vacunación</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="form7-field">
+            <label class="form7-label">Hepatitis B — dosis</label>
+            <select class="form7-control" v-model="form.dosisHepatitisB">
+              <option :value="null">Seleccione</option>
+              <option>1er dosis</option>
+              <option>2da dosis</option>
+              <option>3ra dosis</option>
+              <option>Refuerzo</option>
+            </select>
           </div>
-        </div>
-
-        <div>
-          <h3 class="font-medium text-gray-700 mb-3">Vacunación Contra Influenza</h3>
-          <div class="grid grid-cols-1 gap-4">
-            <div>
-              <label class="text-sm text-gray-600 font-medium">Fecha de Vacunación</label>
-              <input type="date" class="w-full border rounded px-3 py-2 mt-1 text-gray-700 md:w-1/2 focus:outline-none focus:ring-1 focus:ring-sky-500" placeholder="Fecha de Vacunación"
-                v-model="form.fechaInfluenza" />
+          <div class="form7-field">
+            <label class="form7-label">Hepatitis B — fecha</label>
+            <div class="form7-date-wrap">
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaHepatitisB" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaHepatitisB }" @blur="validarCampoFechaEnBlur('fechaHepatitisB')" />
+              <input :ref="(el) => setDatePickerRef('fechaHepatitisB', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaHepatitisB')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaHepatitisB', $event)" />
+              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaHepatitisB')">
+                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </button>
             </div>
+            <p v-if="erroresFecha.fechaHepatitisB" class="form7-date-error">{{ erroresFecha.fechaHepatitisB }}</p>
           </div>
-        </div>
-
-        <div>
-          <h3 class="font-medium text-gray-700 mb-3">Vacunación Contra Neumococo</h3>
-          <div class="grid grid-cols-1 gap-4">
-            <div>
-              <label class="text-sm text-gray-600 font-medium">Fecha de Vacunación</label>
-              <input type="date" class="w-full border rounded px-3 py-2 mt-1 text-gray-700 md:w-1/2 focus:outline-none focus:ring-1 focus:ring-sky-500" placeholder="Fecha de Vacunación"
-                v-model="form.fechaNeumococo" />
+          <div class="form7-field">
+            <label class="form7-label">Covid-19 — dosis</label>
+            <select class="form7-control" v-model="form.dosisCovid">
+              <option :value="null">Seleccione</option>
+              <option>1er dosis</option>
+              <option>2da dosis</option>
+              <option>3ra dosis</option>
+              <option>Refuerzo</option>
+            </select>
+          </div>
+          <div class="form7-field">
+            <label class="form7-label">Covid-19 — fecha</label>
+            <div class="form7-date-wrap">
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaCovid" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaCovid }" @blur="validarCampoFechaEnBlur('fechaCovid')" />
+              <input :ref="(el) => setDatePickerRef('fechaCovid', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaCovid')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaCovid', $event)" />
+              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaCovid')">
+                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </button>
             </div>
+            <p v-if="erroresFecha.fechaCovid" class="form7-date-error">{{ erroresFecha.fechaCovid }}</p>
           </div>
-        </div>
-
-        <div class="flex justify-end gap-3 mt-8 pt-4 border-t">
-          <button class="bg-gray-200 text-gray-700 px-6 py-2 rounded font-medium hover:bg-gray-300 transition-colors" @click="$emit('cancelar')">Cancelar</button>
-          <button class="bg-[#008f9c] text-white px-6 py-2 rounded font-medium hover:bg-[#007a85] transition-colors" @click="postForm()">Registrar</button>
+          <div class="form7-field">
+            <label class="form7-label">Influenza — fecha</label>
+            <div class="form7-date-wrap">
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaInfluenza" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaInfluenza }" @blur="validarCampoFechaEnBlur('fechaInfluenza')" />
+              <input :ref="(el) => setDatePickerRef('fechaInfluenza', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaInfluenza')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaInfluenza', $event)" />
+              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaInfluenza')">
+                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </button>
+            </div>
+            <p v-if="erroresFecha.fechaInfluenza" class="form7-date-error">{{ erroresFecha.fechaInfluenza }}</p>
+          </div>
+          <div class="form7-field">
+            <label class="form7-label">Neumococo — fecha</label>
+            <div class="form7-date-wrap">
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaNeumococo" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaNeumococo }" @blur="validarCampoFechaEnBlur('fechaNeumococo')" />
+              <input :ref="(el) => setDatePickerRef('fechaNeumococo', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaNeumococo')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaNeumococo', $event)" />
+              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaNeumococo')">
+                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+              </button>
+            </div>
+            <p v-if="erroresFecha.fechaNeumococo" class="form7-date-error">{{ erroresFecha.fechaNeumococo }}</p>
+          </div>
         </div>
       </div>
 
-      <div class="w-80" v-if="pacienteSeleccionado.value">
-        <div class="bg-white border rounded-xl shadow-sm overflow-hidden sticky top-6">
-          <div class="h-2 bg-[#008f9c]"></div>
-          
-          <div class="p-6">
-            <div class="flex justify-center mb-4">
-              <div class="bg-gray-100 rounded-full h-20 w-20 flex items-center justify-center border border-gray-200">
-                <svg class="h-10 w-10 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-            </div>
-            
-            <p class="text-center font-bold text-gray-800 uppercase tracking-wide mb-1">{{ pacienteSeleccionado.value.paciente }}</p>
-            <p class="text-center text-xs text-gray-500 mb-6">DNI: {{ pacienteSeleccionado.value.documento }}</p>
-            
-            <div class="space-y-3">
-              <div class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
-                <span class="text-gray-500">Edad:</span>
-                <span class="font-medium text-gray-800">{{ edadPaciente }}</span>
-              </div>
-              <div class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
-                <span class="text-gray-500">Sexo:</span>
-                <span class="font-medium text-gray-800">{{ pacienteSeleccionado.value.genero == "M" ? "Masculino" : "Femenino" }}</span>
-              </div>
-              <div class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
-                <span class="text-gray-500">Tipo de Registro:</span>
-                <span class="font-medium text-gray-800">{{ pacienteSeleccionado.value.id_modalidad == 1 ? "Hemodialisis" : "Peritoneal" }}</span>
-              </div>
-              <div class="flex justify-between items-center text-sm border-b border-gray-100 pb-2">
-                <span class="text-gray-500">Estado:</span>
-                <span class="px-2 py-0.5 bg-green-50 text-green-600 rounded text-xs font-bold border border-green-200">{{ pacienteSeleccionado.value.estado }}</span>
-              </div>
-              <div class="flex justify-between items-center text-sm">
-                <span class="text-gray-500">Fecha de Ingreso:</span>
-                <span class="font-medium text-gray-800">15/06/2025</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" class="form7-btn form7-btn--secondary" @click="$emit('cancelar')">Cancelar</button>
+        <button type="button" class="form7-btn form7-btn--primary" @click="postForm()">{{ idVacunacionEdicion ? 'Guardar cambios' : 'Registrar' }}</button>
       </div>
     </div>
   </div>
@@ -230,8 +217,8 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { ref, onMounted, computed, reactive, watch } from 'vue';
-import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
+import { ref, onMounted, computed, reactive, watch, inject } from 'vue'
+import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 // Importamos la librería de confeti
 //import confetti from 'canvas-confetti';
 
@@ -252,45 +239,300 @@ const props = defineProps({
   idRed: {
     type: Number,
     default: 1
-  }
+  },
+  idPacienteAtencion: {
+    type: [Number, String],
+    default: null
+  },
+  registroEdicion: {
+    type: Object,
+    default: null
+  },
+  clinicaNombre: { type: String, default: '' },
+  periodoLabel: { type: String, default: '' },
+  modalidadNombre: { type: String, default: '' },
 })
 const { paciente, periodo } = props
 const emit = defineEmits(['cancelar', 'guardado'])
 
-const clinicaSeleccionada = ref('');
-const clinicas = ref(['DA VIDA SAC.']);
-const modalidad = ref('');
+const periodoGlobal = inject('periodoGlobal', ref(null))
+const clinicaGlobal = inject('clinicaGlobal', ref(null))
+const modalidadGlobal = inject('modalidadGlobal', ref(null))
+
+const idVacunacionEdicion = ref(null)
+const clinicasLista = ref([])
+const periodos = ref([])
+
+function valorTexto(v) {
+  if (v === null || v === undefined || v === '') return null
+  return v
+}
+
+function cargarRegistroEdicion(registro) {
+  if (!registro) return
+  idVacunacionEdicion.value = registro.id_vacunacion
+  form.vhbEstado = valorTexto(registro.vhb)
+  form.vhbFecha = fechaDesdeRegistro(registro.fecha_vhb)
+  form.antiHbcEstado = valorTexto(registro.antiHbc)
+  form.antiHbcFecha = fechaDesdeRegistro(registro.fecha_antiHbc)
+  form.vhcEstado = valorTexto(registro.vhc)
+  form.vhcFecha = fechaDesdeRegistro(registro.fecha_vhc)
+  form.vihEstado = valorTexto(registro.vih)
+  form.vihFecha = fechaDesdeRegistro(registro.fecha_vih)
+  const titulo = registro.titulo_acHbs
+  form.vacunaHepatitis = titulo != null && titulo !== '' ? Number(titulo) : null
+  form.estadoAcHBs = valorTexto(registro.estado_acHbs)
+  form.fechaVacHepatitis = fechaDesdeRegistro(registro.fecha_titulo_acHbs)
+  form.dosisHepatitisB = valorTexto(registro.dosis_hepatitis_b)
+  form.fechaHepatitisB = fechaDesdeRegistro(registro.fecha_hepatitis_b)
+  form.dosisCovid = valorTexto(registro.dosis_covid)
+  form.fechaCovid = fechaDesdeRegistro(registro.fecha_covid)
+  form.fechaInfluenza = fechaDesdeRegistro(registro.fecha_influenza)
+  form.fechaNeumococo = fechaDesdeRegistro(registro.fecha_neumococo)
+}
+
+const periodoVisibleId = computed(() => periodoGlobal.value ?? periodo ?? null)
+const clinicaVisibleId = computed(() => clinicaGlobal.value ?? null)
+const modalidadVisibleId = computed(() => modalidadGlobal.value ?? null)
+
+const periodoTexto = computed(() => {
+  const idPeriodo = periodoVisibleId.value
+  if (idPeriodo == null) return ''
+  const lista = Array.isArray(periodos.value) ? periodos.value : []
+  const item = lista.find((per) => String(per.id_periodo) === String(idPeriodo))
+  return item?.periodo || ''
+})
+
+const clinicaTexto = computed(() => {
+  const idClinica = clinicaVisibleId.value
+  if (idClinica == null || idClinica === '') return ''
+  const lista = Array.isArray(clinicasLista.value) ? clinicasLista.value : []
+  const item = lista.find((ip) => String(ip.id_ipress) === String(idClinica))
+  return item?.nombre_corto || item?.ipress || ''
+})
+
+const modalidadTexto = computed(() => {
+  const equivalencias = {
+    1: 'Hemodiálisis',
+    2: 'Diálisis Peritoneal',
+    3: 'Trasplante',
+  }
+  return equivalencias[Number(modalidadVisibleId.value)] || ''
+})
+
+const periodoDisplay = computed(() => props.periodoLabel || periodoTexto.value || '—')
+const clinicaDisplay = computed(() => props.clinicaNombre || clinicaTexto.value || '—')
+const modalidadDisplay = computed(() => props.modalidadNombre || modalidadTexto.value || '—')
+
+const rangoFechasPeriodo = computed(() => {
+  const lista = Array.isArray(periodos.value) ? periodos.value : []
+  const idPeriodo = periodoVisibleId.value
+  if (idPeriodo == null || idPeriodo === '') return { min: null, max: null }
+  const p = lista.find((per) => String(per.id_periodo) === String(idPeriodo))
+  if (!p?.periodo) return { min: null, max: null }
+  const parts = String(p.periodo).trim().split('-')
+  if (parts.length < 2) return { min: null, max: null }
+  const year = parseInt(parts[0], 10)
+  const month = parseInt(parts[1], 10)
+  if (Number.isNaN(year) || Number.isNaN(month)) return { min: null, max: null }
+  const firstDay = new Date(year, month - 1, 1)
+  const lastDay = new Date(year, month, 0)
+  return {
+    min: firstDay.toISOString().split('T')[0],
+    max: lastDay.toISOString().split('T')[0],
+  }
+})
+
+const CAMPOS_FECHA = [
+  { key: 'vhbFecha', label: 'Fecha de examen VHB' },
+  { key: 'antiHbcFecha', label: 'Fecha de examen Anti-HBc' },
+  { key: 'vhcFecha', label: 'Fecha de examen VHC' },
+  { key: 'vihFecha', label: 'Fecha de examen VIH' },
+  { key: 'fechaVacHepatitis', label: 'Fecha de prueba AcHBs' },
+  { key: 'fechaHepatitisB', label: 'Fecha de vacunación Hepatitis B' },
+  { key: 'fechaCovid', label: 'Fecha de vacunación Covid-19' },
+  { key: 'fechaInfluenza', label: 'Fecha de vacunación Influenza' },
+  { key: 'fechaNeumococo', label: 'Fecha de vacunación Neumococo' },
+]
+
+/** Convierte dd-mm-aaaa, dd/mm/aaaa o aaaa-mm-dd a yyyy-mm-dd (comparación y calendario). */
+function parseFechaAISO(value) {
+  const s = String(value ?? '').trim()
+  if (!s) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const dmY = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/)
+  if (dmY) {
+    const d = dmY[1].padStart(2, '0')
+    const m = dmY[2].padStart(2, '0')
+    const y = dmY[3]
+    return `${y}-${m}-${d}`
+  }
+  return null
+}
+
+/** Formato visible y de guardado: dd-mm-aaaa */
+function formatFechaDDMMAAAA(value) {
+  const iso = parseFechaAISO(value)
+  if (!iso) return null
+  const [y, m, d] = iso.split('-')
+  return `${d}-${m}-${y}`
+}
+
+function fechaDDMMAAAAValida(value) {
+  const iso = parseFechaAISO(value)
+  if (!iso) return false
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d
+}
+
+function fechaDesdeRegistro(value) {
+  const t = valorTexto(value)
+  if (!t) return null
+  return formatFechaDDMMAAAA(t) || t
+}
+
+const rangoFechasPeriodoTexto = computed(() => {
+  const r = rangoFechasPeriodo.value
+  if (!r.min || !r.max) return { min: '', max: '' }
+  return {
+    min: formatFechaDDMMAAAA(r.min) || r.min,
+    max: formatFechaDDMMAAAA(r.max) || r.max,
+  }
+})
+
+const erroresFecha = reactive({})
+const datePickerRefs = {}
+
+function setDatePickerRef(key, el) {
+  if (el) datePickerRefs[key] = el
+}
+
+function fechaPickerValue(key) {
+  return parseFechaAISO(form[key]) || ''
+}
+
+function mensajeErrorFecha(key) {
+  const fecha = form[key]
+  if (!fecha) {
+    erroresFecha[key] = ''
+    return ''
+  }
+  if (!fechaDDMMAAAAValida(fecha)) {
+    return 'Formato inválido (dd-mm-aaaa)'
+  }
+  const iso = parseFechaAISO(fecha)
+  const rango = rangoFechasPeriodo.value
+  const rangoTxt = rangoFechasPeriodoTexto.value
+  if (rango.min && rango.max && iso && (iso < rango.min || iso > rango.max)) {
+    return `Debe estar entre ${rangoTxt.min} y ${rangoTxt.max}`
+  }
+  return ''
+}
+
+function validarCampoFechaEnBlur(key) {
+  normalizarCampoFecha(key)
+  erroresFecha[key] = mensajeErrorFecha(key)
+}
+
+function onFechaPickerChange(key, event) {
+  const iso = event.target?.value
+  form[key] = iso ? formatFechaDDMMAAAA(iso) : null
+  erroresFecha[key] = mensajeErrorFecha(key)
+}
+
+function abrirSelectorFecha(key) {
+  const el = datePickerRefs[key]
+  if (!el) return
+  if (typeof el.showPicker === 'function') {
+    try {
+      el.showPicker()
+      return
+    } catch {
+      // fallback below
+    }
+  }
+  el.focus()
+  el.click()
+}
+
+function normalizarCampoFecha(key) {
+  const raw = form[key]
+  if (raw == null || String(raw).trim() === '') {
+    form[key] = null
+    return
+  }
+  const formateada = formatFechaDDMMAAAA(raw)
+  if (formateada) form[key] = formateada
+}
+
+function normalizarTodasLasFechas() {
+  CAMPOS_FECHA.forEach(({ key }) => {
+    normalizarCampoFecha(key)
+    erroresFecha[key] = mensajeErrorFecha(key)
+  })
+}
+
+function validarFechasPeriodo() {
+  const rango = rangoFechasPeriodo.value
+  const rangoTxt = rangoFechasPeriodoTexto.value
+  for (const { key, label } of CAMPOS_FECHA) {
+    const fecha = form[key]
+    if (!fecha) continue
+    if (!fechaDDMMAAAAValida(fecha)) {
+      return `${label}: use el formato dd-mm-aaaa`
+    }
+    const iso = parseFechaAISO(fecha)
+    if (rango.min && rango.max && (iso < rango.min || iso > rango.max)) {
+      return `${label} debe estar entre ${rangoTxt.min} y ${rangoTxt.max}`
+    }
+  }
+  return null
+}
 
 const form = reactive({
-  turno: 1,
-  frecuencia: 1,
-  // Condición Serológica
   vhbEstado: null,
   vhbFecha: null,
   vhcEstado: null,
   vhcFecha: null,
   vihEstado: null,
   vihFecha: null,
-  antiHbcEstado: null, // NUEVO CAMPO
-  antiHbcFecha: null,  // NUEVO CAMPO
-  // Vacunación Hepatitis
+  antiHbcEstado: null,
+  antiHbcFecha: null,
   vacunaHepatitis: null,
   estadoAcHBs: null,
   fechaVacHepatitis: null,
-  // Vacunación Hepatitis B
   dosisHepatitisB: null,
   fechaHepatitisB: null,
-  // Vacunación Covid-19
   dosisCovid: null,
   fechaCovid: null,
-  // Vacunación Influenza
   fechaInfluenza: null,
-  // Vacunación Neumococo
   fechaNeumococo: null,
-  id_periodo_ipress: props.idPeriodoIpress ?? 17,
-  id_red: props.idRed ?? 1,
-  id_paciente: paciente.id_paciente
 })
+
+function buildPayload() {
+  const payload = {
+    id_paciente_atencion: props.idPacienteAtencion,
+    vhbEstado: form.vhbEstado,
+    vhbFecha: form.vhbFecha,
+    antiHbcEstado: form.antiHbcEstado,
+    antiHbcFecha: form.antiHbcFecha,
+    vhcEstado: form.vhcEstado,
+    vhcFecha: form.vhcFecha,
+    vihEstado: form.vihEstado,
+    vihFecha: form.vihFecha,
+    vacunaHepatitis: form.vacunaHepatitis != null && form.vacunaHepatitis !== '' ? String(form.vacunaHepatitis) : '',
+    estadoAcHBs: form.estadoAcHBs,
+    fechaVacHepatitis: form.fechaVacHepatitis,
+    dosisHepatitisB: form.dosisHepatitisB,
+    fechaHepatitisB: form.fechaHepatitisB,
+    dosisCovid: form.dosisCovid,
+    fechaCovid: form.fechaCovid,
+    fechaInfluenza: form.fechaInfluenza,
+    fechaNeumococo: form.fechaNeumococo,
+  }
+  return payload
+}
 
 watch(() => form.vacunaHepatitis, (nuevoValor) => {
   // 1. RESTRICCIÓN DE RANGO SUPERIOR: Topamos el valor máximo a 2000
@@ -324,9 +566,6 @@ watch(() => form.vacunaHepatitis, (nuevoValor) => {
 
 const router = useRouter()
 const pacienteSeleccionado = paciente
-const periodoSeleccionado = periodo
-
-console.log("Paciente recibido:", periodo)  // ✅ No lanzará error
 
 const validarCampos = () => {
   // Lista de campos requeridos (ajusta según tus necesidades)
@@ -378,29 +617,40 @@ const lanzarFuegosArtificiales = () => {
   }, 250);
 };
 
-const postForm = async (url = null) => {
+const postForm = async () => {
+  normalizarTodasLasFechas()
   const campoFaltante = validarCampos();
   if (campoFaltante) {
     alert(`Por favor complete el campo obligatorio: ${campoFaltante}`);
     return;
   }
-  if (props.idPeriodoIpress != null) form.id_periodo_ipress = props.idPeriodoIpress;
-  if (props.idRed != null) form.id_red = props.idRed;
-  form.id_paciente = paciente.id_paciente;
+  const errorFecha = validarFechasPeriodo();
+  if (errorFecha) {
+    alert(errorFecha);
+    return;
+  }
+  if (props.idPacienteAtencion == null || props.idPacienteAtencion === '') {
+    alert('No se encontró la atención del paciente para el periodo actual. Cierre el formulario y vuelva a seleccionar al paciente.');
+    return;
+  }
+  const payload = buildPayload();
   try {
-    const respuesta = await postAllIpress(url ?? "/vacunaciones/", form);
-    
-    // 1. Lanzar los fuegos artificiales
-    lanzarFuegosArtificiales();
-    
-    // 2. Esperar 1 segundo antes de mostrar la alerta para que se vea la animación
-    setTimeout(() => {
-      alert("Se registró con éxito");
+    if (idVacunacionEdicion.value != null) {
+      await patchAllIpress(`/vacunaciones/${idVacunacionEdicion.value}/`, payload);
       emit('guardado');
-    }, 1000);
-
+      return;
+    }
+    await postAllIpress('/vacunaciones/', payload);
+    emit('guardado');
   } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+    console.error('Error al guardar vacunación:', error);
+    const detalle = error?.response?.data;
+    const mensaje = typeof detalle === 'string'
+      ? detalle
+      : detalle
+        ? JSON.stringify(detalle)
+        : 'Error al guardar el registro de vacunación';
+    alert(mensaje);
   }
 };
 
@@ -413,22 +663,36 @@ const fetchPaciente = async (url = null) => {
     console.error('Error al obtener IPRESS:', error);
   }
 };
-const periodos = ref([])
-// Otros datos
-const fetchPeriodo = async (url = null) => {
+const fetchPeriodo = async () => {
   try {
-    const respuesta = await getAllIpress(url ?? "/periodos/");
-    periodos.value = respuesta;
-
+    const respuesta = await getAllIpress('/periodos/')
+    periodos.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || [])
   } catch (error) {
-    console.error('Error al obtener IPRESS:', error);
+    console.error('Error al obtener periodos:', error)
+    periodos.value = []
   }
-};
+}
 
-onMounted(() => {
-  fetchPaciente();
-  fetchPeriodo();
-});
+const fetchClinicas = async () => {
+  try {
+    const res = await getAllIpress('/ipress/')
+    clinicasLista.value = Array.isArray(res) ? res : (res?.results || [])
+  } catch (error) {
+    console.error('Error al cargar IPRESS:', error)
+    clinicasLista.value = []
+  }
+}
+
+watch(() => props.registroEdicion, (registro) => {
+  if (registro) cargarRegistroEdicion(registro)
+}, { immediate: true })
+
+onMounted(async () => {
+  await Promise.all([fetchPaciente(), fetchPeriodo(), fetchClinicas()])
+  if (props.registroEdicion) {
+    cargarRegistroEdicion(props.registroEdicion)
+  }
+})
 
 
 const mes = ref('JULIO')
@@ -538,3 +802,183 @@ const motivosNoVacunacion = [
   { value: 'no corresponde', label: 'No corresponde' }
 ]
 </script> -->
+
+<style scoped>
+.form7-meta-label {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.form7-info-box {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+}
+
+.form7-section-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.form7-field {
+  min-width: 0;
+}
+
+.form7-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.form7-label-sub {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-top: 0.375rem;
+  margin-bottom: 0.2rem;
+}
+
+.form7-shell input.form7-control,
+.form7-shell select.form7-control {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: #1e293b;
+  background-color: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form7-shell input.form7-control:focus,
+.form7-shell select.form7-control:focus {
+  border-color: #008f9c;
+  box-shadow: 0 0 0 2px rgb(0 143 156 / 0.15);
+}
+
+.form7-shell input.form7-control--readonly,
+.form7-shell input.form7-control:disabled {
+  background-color: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.form7-shell select.form7-control {
+  cursor: pointer;
+}
+
+.form7-date-wrap {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
+.form7-date-wrap .form7-control--date {
+  flex: 1;
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.form7-date-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.form7-date-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-left: none;
+  border-radius: 0 0.375rem 0.375rem 0;
+  background: #f8fafc;
+  color: #008f9c;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.form7-date-btn:hover {
+  background: #ecfeff;
+}
+
+.form7-date-btn-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.form7-shell input.form7-control--date {
+  font-variant-numeric: tabular-nums;
+}
+
+.form7-shell input.form7-control--error {
+  border-color: #f87171;
+  background-color: #fef2f2;
+}
+
+.form7-date-error {
+  margin-top: 0.2rem;
+  font-size: 0.625rem;
+  line-height: 0.875rem;
+  color: #dc2626;
+}
+
+.form7-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.form7-btn--secondary {
+  color: #374151;
+  background: #fff;
+  border-color: #d1d5db;
+}
+
+.form7-btn--secondary:hover {
+  background: #f9fafb;
+}
+
+.form7-btn--primary {
+  color: #fff;
+  background: #008f9c;
+  border-color: #008f9c;
+}
+
+.form7-btn--primary:hover {
+  background: #007a85;
+}
+</style>

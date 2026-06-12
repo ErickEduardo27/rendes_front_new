@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50/50 p-6">
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-[100rem] mx-auto w-full">
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -33,12 +33,12 @@
           </button> -->
           <button
             type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-45 disabled:pointer-events-none"
+            class="header-accion-btn header-accion-btn-secundario"
             :disabled="!puedeExportarVacunacionExcel || exportandoExcel"
             :title="puedeExportarVacunacionExcel ? 'Exporta la vista actual (todos los registros del filtro)' : 'No hay datos para exportar con los filtros actuales'"
             @click="exportarDatosVacunacionExcel"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             {{ exportandoExcel ? 'Exportando…' : 'Exportar Excel' }}
@@ -46,10 +46,10 @@
           <button
             v-if="mostrarBotonNuevo"
             type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#008f9c] text-white font-semibold rounded-lg shadow-sm hover:bg-[#007a85] transition-colors"
+            class="header-accion-btn header-accion-btn-primario"
             @click="abrirModalNuevo"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             Nuevo
@@ -84,44 +84,67 @@
           </div>
           <template v-else>
             <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
+            <table class="tabla-vac divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">VHB</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">VHC</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">VIH</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Título AcHBs</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Dosis Hepatitis B</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Dosis Covid</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha Influenza</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha Neumococo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
+                  <th class="tabla-vac-th">Paciente</th>
+                  <th class="tabla-vac-th">DNI</th>
+                  <th class="tabla-vac-th">VHB</th>
+                  <th class="tabla-vac-th">VHC</th>
+                  <th class="tabla-vac-th">VIH</th>
+                  <th class="tabla-vac-th">Título AcHBs</th>
+                  <th class="tabla-vac-th">Dosis Hep. B</th>
+                  <th class="tabla-vac-th">Dosis Covid</th>
+                  <th class="tabla-vac-th">F. Influenza</th>
+                  <th class="tabla-vac-th">F. Neumococo</th>
+                  <th class="tabla-vac-th">Estado</th>
+                  <th class="tabla-vac-th">Editado sup.</th>
+                  <th class="tabla-vac-th">Comentario sup.</th>
+                  <th class="tabla-vac-th tabla-vac-th-acciones">Acciones</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="r in registrosPaginados" :key="r.id_vacunacion" class="hover:bg-slate-50 transition-colors">
-                  <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.vhb ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.vhc ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.vih ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.titulo_acHbs ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.dosis_hepatitis_b ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.dosis_covid ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_influenza ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_neumococo ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span>
+                  <td class="tabla-vac-td font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ documentoPaciente(r) }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ r.vhb ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ r.vhc ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ r.vih ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ r.titulo_acHbs ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ r.dosis_hepatitis_b ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ r.dosis_covid ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ r.fecha_influenza ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ r.fecha_neumococo ?? '—' }}</td>
+                  <td class="tabla-vac-td">
+                    <span class="tabla-vac-badge inline-flex rounded-full px-2 py-0.5 font-semibold whitespace-nowrap" :class="estadoAprobacionClase(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span>
                   </td>
-                  <td class="px-4 py-3 text-sm">
-                    <span v-if="r.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                  <td class="tabla-vac-td">
+                    <span v-if="r.supervisor_edito_registro" class="tabla-vac-badge inline-flex rounded-full bg-violet-100 px-2 py-0.5 font-semibold text-violet-800 whitespace-nowrap">Sí</span>
                     <span v-else class="text-slate-400">—</span>
                   </td>
-                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[180px] truncate" :title="r.comentario_evaluacion || ''">{{ textoComentarioSupervisor(r.comentario_evaluacion) }}</td>
+                  <td class="tabla-vac-td tabla-vac-col-comentario text-slate-600" :title="r.comentario_evaluacion || ''">{{ r.comentario_evaluacion?.trim() || '—' }}</td>
+                  <td class="tabla-vac-td tabla-vac-td-acciones">
+                    <div class="inline-flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        class="tabla-vac-btn tabla-vac-btn-editar"
+                        :disabled="!formularioAbierto"
+                        :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                        @click="abrirModalEditar(r)"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        class="tabla-vac-btn tabla-vac-btn-eliminar"
+                        :disabled="!formularioAbierto || eliminandoId === r.id_vacunacion"
+                        :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                        @click="eliminarRegistro(r)"
+                      >
+                        {{ eliminandoId === r.id_vacunacion ? '…' : 'Eliminar' }}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -141,44 +164,68 @@
           </div>
           <template v-else>
             <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
+            <table class="tabla-vac divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">VHB</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">VHC</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">VIH</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Título AcHBs</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Dosis Hepatitis B</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Dosis Covid</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha Influenza</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha Neumococo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
+                  <th class="tabla-vac-th">Paciente</th>
+                  <th class="tabla-vac-th">DNI</th>
+                  <th class="tabla-vac-th">VHB</th>
+                  <th class="tabla-vac-th">VHC</th>
+                  <th class="tabla-vac-th">VIH</th>
+                  <th class="tabla-vac-th">Título AcHBs</th>
+                  <th class="tabla-vac-th">Dosis Hep. B</th>
+                  <th class="tabla-vac-th">Dosis Covid</th>
+                  <th class="tabla-vac-th">F. Influenza</th>
+                  <th class="tabla-vac-th">F. Neumococo</th>
+                  <th class="tabla-vac-th">Estado</th>
+                  <th class="tabla-vac-th">Editado sup.</th>
+                  <th class="tabla-vac-th">Comentario sup.</th>
+                  <th class="tabla-vac-th tabla-vac-th-acciones">Acciones</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
-                  <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.documento || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.vhb ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.vhc ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.vih ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.titulo_acHbs ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.dosis_hepatitis_b ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.dosis_covid ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.fecha_influenza ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.fecha_neumococo ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(fila.estado_aprobacion)">{{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}</span>
+                  <td class="tabla-vac-td font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fila.documento || '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fila.vhb ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fila.vhc ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fila.vih ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fila.titulo_acHbs ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fila.dosis_hepatitis_b ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fila.dosis_covid ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fila.fecha_influenza ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fila.fecha_neumococo ?? '—' }}</td>
+                  <td class="tabla-vac-td">
+                    <span class="tabla-vac-badge inline-flex rounded-full px-2 py-0.5 font-semibold whitespace-nowrap" :class="estadoAprobacionClase(fila.estado_aprobacion)">{{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}</span>
                   </td>
-                  <td class="px-4 py-3 text-sm">
-                    <span v-if="fila.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                  <td class="tabla-vac-td">
+                    <span v-if="fila.supervisor_edito_registro" class="tabla-vac-badge inline-flex rounded-full bg-violet-100 px-2 py-0.5 font-semibold text-violet-800 whitespace-nowrap">Sí</span>
                     <span v-else class="text-slate-400">—</span>
                   </td>
-                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[180px] truncate" :title="fila.comentario_evaluacion || ''">{{ textoComentarioSupervisor(fila.comentario_evaluacion) }}</td>
+                  <td class="tabla-vac-td tabla-vac-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
+                  <td class="tabla-vac-td tabla-vac-td-acciones">
+                    <div v-if="fila.tieneRegistro" class="inline-flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        class="tabla-vac-btn tabla-vac-btn-editar"
+                        :disabled="!formularioAbierto"
+                        :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                        @click="abrirModalEditar(fila.registro)"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        class="tabla-vac-btn tabla-vac-btn-eliminar"
+                        :disabled="!formularioAbierto || eliminandoId === fila.id_vacunacion"
+                        :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                        @click="eliminarRegistro(fila.registro)"
+                      >
+                        {{ eliminandoId === fila.id_vacunacion ? '…' : 'Eliminar' }}
+                      </button>
+                    </div>
+                    <span v-else class="text-slate-400">—</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -198,7 +245,7 @@
     <div v-if="mostrarModalNuevo" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <div class="bg-[#008f9c] px-6 py-4 flex justify-between items-center">
-          <h3 class="font-bold text-white flex items-center gap-2">Nuevo registro de Vacunación</h3>
+          <h3 class="font-bold text-white flex items-center gap-2">{{ tituloModalFormulario }}</h3>
           <button type="button" class="text-white/80 hover:text-white" @click="cerrarModalNuevo">✕</button>
         </div>
         <div class="p-6 overflow-y-auto flex-1">
@@ -243,10 +290,16 @@
           </div>
           <div v-else>
             <Form7
+              :key="form7ModalKey"
               :paciente="pacienteParaFormulario"
               :periodo="periodoNumero"
               :id-periodo-ipress="idPeriodoIpress"
               :id-red="idRed"
+              :id-paciente-atencion="idPacienteAtencionParaForm"
+              :registro-edicion="registroEdicion"
+              :clinica-nombre="clinicaActualTexto"
+              :periodo-label="periodoActualTexto"
+              :modalidad-nombre="modalidadActualTexto"
               @cancelar="cerrarModalNuevo"
               @guardado="onGuardado"
             />
@@ -289,7 +342,7 @@
 import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
-import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
+import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import Form7 from '@/components/forms/Form7.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 
@@ -300,6 +353,7 @@ const modalidadGlobal = inject('modalidadGlobal', ref(null));
 const NUMERO_FORMULARIO_VACUNACION = 5;
 
 const registros = ref([]);
+const periodos = ref([]);
 const cargando = ref(false);
 const mostrarModalNuevo = ref(false);
 const vistaActiva = ref('registros');
@@ -318,6 +372,9 @@ const importando = ref(false);
 const resultadoImportacion = ref(null);
 const estadoFormulario = ref('CERRADO');
 const cargandoEstadoFormulario = ref(false);
+const registroEdicion = ref(null);
+const eliminandoId = ref(null);
+const form7ModalKey = ref(0);
 
 const PAGE_SIZE_TABLAS = 10;
 const pageSizeTablas = ref(PAGE_SIZE_TABLAS);
@@ -411,12 +468,47 @@ const periodoNumero = computed(() => {
   return Number(v);
 });
 
+const periodoActualTexto = computed(() => {
+  const item = periodos.value.find((p) => String(p.id_periodo) === String(periodoNumero.value));
+  return item?.periodo || '—';
+});
+
+const clinicaActualTexto = computed(() => {
+  const atencion = listadoAtenciones.value[0];
+  return atencion?.datosIpress?.nombre_corto || atencion?.datosIpress?.ipress || '—';
+});
+
+const modalidadActualTexto = computed(() => {
+  const equivalencias = {
+    1: 'Hemodiálisis',
+    2: 'Diálisis Peritoneal',
+    3: 'Trasplante',
+  };
+  return equivalencias[Number(modalidadGlobal.value)] || '—';
+});
+
 function nombrePaciente(r) {
-  return r.datosPaciente?.paciente || r.datosPacienteAtencion?.datosPaciente?.paciente || '—';
+  return r.datosPacienteAtencion?.datosPaciente?.paciente || r.datosPaciente?.paciente || '—';
 }
 function documentoPaciente(r) {
-  return r.datosPaciente?.documento || r.datosPacienteAtencion?.datosPaciente?.documento || '—';
+  return r.datosPacienteAtencion?.datosPaciente?.documento || r.datosPaciente?.documento || '—';
 }
+
+function pacienteDesdeRegistro(registro) {
+  return registro?.datosPacienteAtencion?.datosPaciente
+    || registro?.datosPaciente
+    || null;
+}
+
+function idAtencionDesdeRegistro(registro) {
+  return registro?.id_paciente_atencion
+    ?? registro?.datosPacienteAtencion?.id_paciente_atencion
+    ?? null;
+}
+
+const tituloModalFormulario = computed(() => (
+  registroEdicion.value ? 'Editar registro de Vacunación' : 'Nuevo registro de Vacunación'
+));
 
 function estadoAprobacionClase(estado) {
   const valor = String(estado || '').toUpperCase();
@@ -463,7 +555,9 @@ const todosPacientesLista = computed(() => {
     if (r) {
       return {
         id_paciente_atencion: id,
+        id_vacunacion: r.id_vacunacion,
         tieneRegistro: true,
+        registro: r,
         paciente: nombrePaciente(r),
         documento: documentoPaciente(r),
         vhb: r.vhb || '',
@@ -575,44 +669,26 @@ async function fetchRegistros() {
   const idPeriodo = periodoGlobal.value;
   const idIpress = clinicaGlobal.value;
   const idModalidad = modalidadGlobal.value;
-  if (idPeriodo == null || idIpress == null) {
+  const params = new URLSearchParams();
+  if (idPeriodo != null && idPeriodo !== '') params.set('id_periodo', idPeriodo);
+  if (idIpress != null && idIpress !== '') params.set('id_ipress', idIpress);
+  if (idModalidad != null && idModalidad !== '') params.set('id_modalidad', idModalidad);
+  const qs = params.toString();
+  if (!qs) {
     registros.value = [];
     listadoAtenciones.value = [];
-    cargando.value = false;
     return;
   }
   cargando.value = true;
   try {
     const idPerIpress = await fetchIdPeriodoIpress();
     idPeriodoIpress.value = idPerIpress;
-    if (idPerIpress == null) {
-      registros.value = [];
-      const params = new URLSearchParams();
-      if (idPeriodo != null && idPeriodo !== '') params.set('id_periodo', idPeriodo);
-      if (idIpress != null && idIpress !== '') params.set('id_ipress', idIpress);
-      if (idModalidad != null && idModalidad !== '') params.set('id_modalidad', idModalidad);
-      const qs = params.toString();
-      if (qs) {
-        try {
-          const resAten = await getAllIpress(`/pacienteAtencion/?${qs}`);
-          listadoAtenciones.value = Array.isArray(resAten) ? resAten : resAten?.results || [];
-        } catch (e) {
-          listadoAtenciones.value = [];
-        }
-      }
-    } else {
-      const params = new URLSearchParams();
-      if (idPeriodo != null && idPeriodo !== '') params.set('id_periodo', idPeriodo);
-      if (idIpress != null && idIpress !== '') params.set('id_ipress', idIpress);
-      if (idModalidad != null && idModalidad !== '') params.set('id_modalidad', idModalidad);
-      const qs = params.toString();
-      const [resVac, resAten] = await Promise.all([
-        getAllIpress(`/vacunaciones/?id_periodo_ipress=${idPerIpress}`),
-        qs ? getAllIpress(`/pacienteAtencion/?${qs}`) : Promise.resolve([]),
-      ]);
-      registros.value = Array.isArray(resVac) ? resVac : resVac?.results || [];
-      listadoAtenciones.value = Array.isArray(resAten) ? resAten : (resAten?.results || []);
-    }
+    const [resVac, resAten] = await Promise.all([
+      getAllIpress(`/vacunaciones/?${qs}`),
+      getAllIpress(`/pacienteAtencion/?${qs}`),
+    ]);
+    registros.value = Array.isArray(resVac) ? resVac : resVac?.results || [];
+    listadoAtenciones.value = Array.isArray(resAten) ? resAten : resAten?.results || [];
   } catch (e) {
     console.error('Error al cargar vacunaciones:', e);
     registros.value = [];
@@ -646,9 +722,12 @@ async function fetchPacientesAtencion() {
 
 function abrirModalNuevo() {
   if (!formularioAbierto.value) return;
+  registroEdicion.value = null;
   pacienteParaFormulario.value = null;
+  idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
   busquedaPaciente.value = '';
+  form7ModalKey.value += 1;
   fetchPacientesAtencion();
   mostrarModalNuevo.value = true;
   if (idPeriodoIpress.value == null) {
@@ -658,12 +737,48 @@ function abrirModalNuevo() {
   }
 }
 
+function abrirModalEditar(registro) {
+  if (!formularioAbierto.value || !registro) return;
+  const paciente = pacienteDesdeRegistro(registro);
+  const idAtencion = idAtencionDesdeRegistro(registro);
+  if (!paciente || idAtencion == null) {
+    ElMessage.error('No se pudo cargar el paciente del registro.');
+    return;
+  }
+  registroEdicion.value = registro;
+  pacienteParaFormulario.value = paciente;
+  idPacienteAtencionParaForm.value = idAtencion;
+  idPacienteSeleccionado.value = '';
+  busquedaPaciente.value = '';
+  form7ModalKey.value += 1;
+  mostrarModalNuevo.value = true;
+}
+
+async function eliminarRegistro(registro) {
+  if (!formularioAbierto.value || !registro?.id_vacunacion) return;
+  const nombre = nombrePaciente(registro);
+  const confirmar = window.confirm(`¿Eliminar el registro de vacunación de ${nombre}?`);
+  if (!confirmar) return;
+  eliminandoId.value = registro.id_vacunacion;
+  try {
+    await deleteAllIpress(`/vacunaciones/${registro.id_vacunacion}/`);
+    ElMessage.success('Registro eliminado correctamente.');
+    await fetchRegistros();
+  } catch (e) {
+    console.error('Error al eliminar vacunación:', e);
+    ElMessage.error('No se pudo eliminar el registro.');
+  } finally {
+    eliminandoId.value = null;
+  }
+}
+
 function confirmarPacienteYMostrarFormulario() {
   const id = idPacienteSeleccionado.value;
   const atencion = listadoAtenciones.value.find((a) => a.id_paciente_atencion === id || String(a.id_paciente_atencion) === String(id));
   if (atencion?.datosPaciente) {
     pacienteParaFormulario.value = atencion.datosPaciente;
     idPacienteAtencionParaForm.value = atencion.id_paciente_atencion ?? id;
+    form7ModalKey.value += 1;
   }
   if (idPeriodoIpress.value == null) {
     fetchIdPeriodoIpress().then((v) => {
@@ -674,6 +789,7 @@ function confirmarPacienteYMostrarFormulario() {
 
 function cerrarModalNuevo() {
   mostrarModalNuevo.value = false;
+  registroEdicion.value = null;
   pacienteParaFormulario.value = null;
   idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
@@ -796,15 +912,146 @@ async function ejecutarImportacion() {
   }
 }
 
+async function fetchPeriodos() {
+  try {
+    const res = await getAllIpress('/periodos/');
+    periodos.value = Array.isArray(res) ? res : (res?.results || []);
+  } catch (e) {
+    console.error('Error al cargar periodos:', e);
+    periodos.value = [];
+  }
+}
+
 watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   fetchRegistros();
   fetchEstadoFormulario();
 }, { deep: true });
 onMounted(() => {
+  fetchPeriodos();
   fetchRegistros();
   fetchEstadoFormulario();
 });
 </script>
 
 <style scoped>
+.tabla-vac {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.tabla-vac-th,
+.tabla-vac-td {
+  white-space: nowrap;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  vertical-align: middle;
+}
+
+.tabla-vac-th {
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tabla-vac-badge {
+  font-size: 0.6875rem;
+}
+
+.tabla-vac-col-comentario {
+  min-width: 12rem;
+}
+
+.tabla-vac tbody td:first-child {
+  min-width: 9rem;
+}
+
+.tabla-vac-th-acciones,
+.tabla-vac-td-acciones {
+  text-align: right;
+}
+
+.tabla-vac-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1rem;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.tabla-vac-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.tabla-vac-btn-editar {
+  border: 1px solid #a5f3fc;
+  color: #0e7490;
+  background: transparent;
+}
+
+.tabla-vac-btn-editar:hover:not(:disabled) {
+  background: #ecfeff;
+}
+
+.tabla-vac-btn-eliminar {
+  border: 1px solid #fecdd3;
+  color: #be123c;
+  background: transparent;
+}
+
+.tabla-vac-btn-eliminar:hover:not(:disabled) {
+  background: #fff1f2;
+}
+
+.header-accion-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.header-accion-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.header-accion-btn-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.header-accion-btn-secundario {
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  background: #fff;
+}
+
+.header-accion-btn-secundario:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.header-accion-btn-primario {
+  border: 1px solid #008f9c;
+  color: #fff;
+  background: #008f9c;
+}
+
+.header-accion-btn-primario:hover:not(:disabled) {
+  background: #007a85;
+}
 </style>

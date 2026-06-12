@@ -19,7 +19,7 @@
        <!--  <SidebarItem :icon="BellAlertIcon" label="Notificaciones" to="/notificaciones" /> -->
 
         <SidebarItem 
-            v-if="['Supervisor', 'Admin','Clinicas','Hospitales'].includes(perfil)"
+            v-if="['Admin','Clinicas','Hospitales'].includes(perfil)"
             :icon="DocumentMagnifyingGlassIcon" 
             label="Registros" 
             :submenu="[
@@ -43,7 +43,7 @@
         />
         
         <SidebarItem 
-            v-if="['Supervisor', 'Admin'].includes(perfil)"
+            v-if="perfil === 'Admin'"
             :icon="DocumentMagnifyingGlassIcon" 
             label="Administración" 
             :submenu="[

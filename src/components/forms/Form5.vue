@@ -1,54 +1,64 @@
 <template>
-  <div class="p-6 space-y-6 bg-gray-50 min-h-screen">
+  <div class="form5-shell p-4 space-y-4 bg-gray-50">
 
-    <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-x-8 gap-y-4">
-      <div class="flex items-center gap-3">
-        <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Periodo de Reporte:</span>
-        <select v-model="periodoSeleccionado" class="border border-gray-200 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-600 font-medium outline-none" disabled>
-          <option v-for="per in periodos" :key="per.id_periodo" :value="per.id_periodo">{{ per.periodo }}</option>
-        </select>
+    <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Periodo de reporte</label>
+          <div class="form5-info-box">
+            {{ periodoDisplay }}
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Clínica</label>
+          <div class="form5-info-box">
+            {{ clinicaDisplay }}
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Modalidad de diálisis</label>
+          <div class="form5-info-box">
+            {{ modalidadDisplay }}
+          </div>
+        </div>
       </div>
-
-      <div class="flex items-center gap-3">
-        <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Clínica:</span>
-        <span class="text-sm border border-gray-200 rounded-md px-3 py-1.5 bg-gray-50 text-gray-600 font-medium">{{ paciente.ipress }}</span>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Modalidad de Diálisis:</span>
-        <span class="text-sm border border-gray-200 rounded-md px-3 py-1.5 bg-gray-50 text-gray-600 font-medium">{{ pacienteSeleccionado.id_modalidad == 1 ? "Hemodiálisis" : "Peritoneal" }}</span>
+      <div v-if="paciente" class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+        <span class="font-semibold text-slate-700">Paciente:</span>
+        <span class="font-medium text-slate-800">{{ paciente.paciente || '—' }}</span>
+        <span class="text-slate-300">|</span>
+        <span class="font-semibold text-slate-700">DNI:</span>
+        <span class="font-medium text-slate-800">{{ paciente.documento || '—' }}</span>
       </div>
     </div>
 
-    <div class="border-l-4 border-cyan-600 pl-3 my-6">
-      <h2 class="text-xl font-bold text-gray-800">Resultados Clínicos</h2>
-      <p class="text-sm text-gray-500">Complete la información médica del paciente</p>
+    <div class="border-l-4 border-cyan-600 pl-3">
+      <h2 class="text-base font-bold text-slate-800">Resultados Clínicos</h2>
+      <p class="text-xs text-slate-500">Complete la información médica del paciente</p>
     </div>
 
-    <div class="flex flex-col lg:flex-row gap-6 items-start">
+    <div class="flex flex-col lg:flex-row gap-4 items-start">
       
-      <div class="flex-1 w-full space-y-6">
-        <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
+      <div class="flex-1 w-full">
+        <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-4">
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div v-for="campo in camposResultados" :key="campo.key">
-              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
                 {{ campo.label }}
               </label>
 
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
                 <input
                   v-model.number="form[campo.key]"
                   type="number"
                   :min="campo.min"
                   :max="campo.max"
                   :step="campo.allowDecimals ? '0.01' : '1'"
-                  class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition-all"
+                  class="form5-control"
                   :readonly="campo.readonly"
-                  :class="{ 
-                    'bg-gray-100 text-gray-600 cursor-not-allowed': campo.readonly, 
-                    'border-red-500 bg-red-50': validarCampo(campo),
-                    'bg-white': !campo.readonly && !validarCampo(campo)
+                  :class="{
+                    'form5-control--readonly': campo.readonly,
+                    'form5-control--error': validarCampo(campo),
                   }"
                   @keydown="campo.allowDecimals ? permitirDecimal($event) : bloquearDecimal($event)"
                   @blur="validarRango(campo)"
@@ -56,13 +66,13 @@
                 />
                 
                 <div
-                  class="w-5 h-5 rounded-full border border-gray-200 shadow-inner flex-shrink-0 transition-colors duration-300"
+                  class="w-4 h-4 rounded-full border border-slate-200 shadow-inner flex-shrink-0 transition-colors duration-300"
                   :class="obtenerColorSemaforo(campo)"
                 ></div>
 
                 <button
                   type="button"
-                  class="p-1.5 rounded-md border border-cyan-200 text-cyan-600 hover:bg-cyan-50 transition-colors flex-shrink-0"
+                  class="form5-btn-icon"
                   title="Ver historial del paciente"
                   @click="abrirHistoricoCampo(campo)"
                 >
@@ -70,17 +80,17 @@
                 </button>
               </div>
 
-              <p v-if="validarCampo(campo)" class="text-xs text-red-500 mt-1.5 font-medium">
+              <p v-if="validarCampo(campo)" class="text-[11px] text-red-500 mt-1 font-medium">
                 El valor debe estar entre {{ campo.min }} y {{ campo.max }}
               </p>
             </div>
           </div>
 
-          <hr class="border-gray-100 my-4" />
+          <hr class="border-slate-100" />
 
-          <div class="space-y-1 w-full md:w-1/2 pr-3">
-            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Tiempo de diálisis (horas)</label>
-            <div class="flex items-center gap-3">
+          <div class="w-full md:w-1/2 md:pr-3">
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Tiempo de diálisis (horas)</label>
+            <div class="flex items-center gap-2">
               <input
                 v-model="form.tmpDialisis"
                 type="number"
@@ -89,43 +99,43 @@
                 step="any"
                 inputmode="decimal"
                 placeholder="Ej. 2, 2.5, 3.25"
-                class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white"
+                class="form5-control"
               />
               <button
                 type="button"
-                class="p-1.5 rounded-md border border-cyan-200 text-cyan-600 hover:bg-cyan-50 transition-colors flex-shrink-0"
+                class="form5-btn-icon"
                 title="Ver historial del paciente"
                 @click="abrirHistoricoCampo(campoTiempoDialisis)"
               >
                 <ChartBarIcon class="w-4 h-4" />
               </button>
             </div>
-            <p class="text-xs text-gray-400">Ingrese el valor en horas (número entero o decimal, entre 0,25 y 8).</p>
+            <p class="text-[11px] text-slate-400 mt-1">Ingrese el valor en horas (número entero o decimal, entre 0,25 y 8).</p>
           </div>
 
-          <h3 class="text-lg font-bold text-gray-800 mt-8 mb-4">Tratamiento Administrado</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Eritropoyetina</label>
-              <select v-model="form.eritropoyetina" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
+          <h3 class="text-sm font-bold text-slate-800 pt-1">Tratamiento Administrado</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Eritropoyetina</label>
+              <select v-model="form.eritropoyetina" class="form5-control">
                 <option value="">Seleccione una opción</option>
                 <option value="1">Sí</option>
                 <option value="2">No</option>
               </select>
             </div>
 
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Hierro</label>
-              <select v-model="form.hierro" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Hierro</label>
+              <select v-model="form.hierro" class="form5-control">
                 <option value="">Seleccione una opción</option>
                 <option value="1">Sí</option>
                 <option value="2">No</option>
               </select>
             </div>
 
-            <div class="space-y-1">
-              <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Calcitriol</label>
-              <select v-model="form.hiperparatiroidismo" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Calcitriol</label>
+              <select v-model="form.hiperparatiroidismo" class="form5-control">
                 <option value="">Seleccione una opción</option>
                 <option value="1">Sí</option>
                 <option value="2">No</option>
@@ -133,12 +143,20 @@
             </div>
           </div>
 
-          <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-100">
-            <button @click="$emit('cancelar')" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
+          <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              class="form5-btn form5-btn--secondary"
+              @click="$emit('cancelar')"
+            >
               Cancelar
             </button>
-            <button @click="postForm" class="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-              Registrar
+            <button
+              type="button"
+              class="form5-btn form5-btn--primary"
+              @click="postForm"
+            >
+              {{ idResultadoEdicion ? 'Guardar cambios' : 'Registrar' }}
             </button>
           </div>
         </div>
@@ -276,21 +294,63 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, inject } from 'vue'
 import { ChartBarIcon } from '@heroicons/vue/24/outline'
-import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
+import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 
-const { paciente, periodo, idPacienteAtencion } = defineProps({
+const props = defineProps({
   paciente: { type: Object, required: true },
   periodo: { type: Number, default: null },
-  idPacienteAtencion: { type: [Number, String], default: null }
+  idPacienteAtencion: { type: [Number, String], default: null },
+  registroEdicion: { type: Object, default: null },
+  clinicaNombre: { type: String, default: '' },
+  periodoLabel: { type: String, default: '' },
+  modalidadNombre: { type: String, default: '' },
 })
+
+const { paciente, periodo, idPacienteAtencion } = props
 
 const emit = defineEmits(['cancelar', 'guardado'])
 
-const pacienteSeleccionado = ref(paciente)
-const periodoSeleccionado = ref(periodo)
+const periodoGlobal = inject('periodoGlobal', ref(null))
+const clinicaGlobal = inject('clinicaGlobal', ref(null))
+const modalidadGlobal = inject('modalidadGlobal', ref(null))
+
 const periodos = ref([])
+const clinicas = ref([])
+
+const periodoVisibleId = computed(() => periodoGlobal.value ?? periodo ?? null)
+const clinicaVisibleId = computed(() => clinicaGlobal.value ?? null)
+const modalidadVisibleId = computed(() => modalidadGlobal.value ?? null)
+
+const periodoTexto = computed(() => {
+  const idPeriodo = periodoVisibleId.value
+  if (idPeriodo == null) return ''
+  const lista = Array.isArray(periodos.value) ? periodos.value : []
+  const item = lista.find((per) => String(per.id_periodo) === String(idPeriodo))
+  return item?.periodo || ''
+})
+
+const clinicaTexto = computed(() => {
+  const idClinica = clinicaVisibleId.value
+  if (idClinica == null || idClinica === '') return ''
+  const lista = Array.isArray(clinicas.value) ? clinicas.value : []
+  const item = lista.find((ip) => String(ip.id_ipress) === String(idClinica))
+  return item?.nombre_corto || item?.ipress || ''
+})
+
+const modalidadTexto = computed(() => {
+  const equivalencias = {
+    1: 'Hemodiálisis',
+    2: 'Diálisis Peritoneal',
+    3: 'Trasplante',
+  }
+  return equivalencias[Number(modalidadVisibleId.value)] || ''
+})
+
+const periodoDisplay = computed(() => props.periodoLabel || periodoTexto.value || '—')
+const clinicaDisplay = computed(() => props.clinicaNombre || clinicaTexto.value || '—')
+const modalidadDisplay = computed(() => props.modalidadNombre || modalidadTexto.value || '—')
 
 const form = ref({
   tmpDialisis: '',
@@ -331,6 +391,58 @@ const campoTiempoDialisis = {
   max: 8,
   rangoVerde: null,
   rangoAmarillo: null,
+}
+
+const idResultadoEdicion = ref(null)
+
+function parseNumeroCampo(val) {
+  if (val == null || val === '') return null
+  const n = Number(String(val).replace(',', '.'))
+  return Number.isNaN(n) ? null : n
+}
+
+function boolToSelect(val) {
+  if (val === true || val === 'true' || val === 1 || val === '1') return '1'
+  if (val === false || val === 'false' || val === 0 || val === '0') return '2'
+  return ''
+}
+
+function tiempoDialisisDesdeRegistro(val) {
+  if (val == null || val === '') return ''
+  if (typeof val === 'object' && val !== null) {
+    const h = val.hour ?? val.hours ?? 0
+    const m = val.minute ?? val.minutes ?? 0
+    const s = val.second ?? val.seconds ?? 0
+    const horas = h + m / 60 + s / 3600
+    return String(Math.round(horas * 100) / 100)
+  }
+  const str = String(val).trim()
+  if (/^\d{1,2}:\d{2}(:\d{2})?(\.\d+)?$/.test(str)) {
+    const parts = str.split(':')
+    const h = parseInt(parts[0], 10) || 0
+    const m = parseInt(parts[1], 10) || 0
+    const sec = parseFloat(parts[2] || '0') || 0
+    const horas = h + m / 60 + sec / 3600
+    return String(Math.round(horas * 100) / 100)
+  }
+  const n = Number(str.replace(',', '.'))
+  return Number.isNaN(n) ? '' : String(n)
+}
+
+function cargarRegistroEdicion(registro) {
+  if (!registro) return
+  idResultadoEdicion.value = registro.id_resultado_clinico
+  form.value.hb = parseNumeroCampo(registro.Hb ?? registro.hb)
+  form.value.calcio = parseNumeroCampo(registro.calcio)
+  form.value.fosforo = parseNumeroCampo(registro.fosforo)
+  form.value.pthi = parseNumeroCampo(registro.PTHi ?? registro.pthi)
+  form.value.alb = parseNumeroCampo(registro.Alb ?? registro.alb)
+  form.value.calcioCorregido = parseNumeroCampo(registro.calcio_corregido)
+  form.value.kt = parseNumeroCampo(registro.ktv ?? registro.kt)
+  form.value.tmpDialisis = tiempoDialisisDesdeRegistro(registro.tiempo_dialisis)
+  form.value.eritropoyetina = boolToSelect(registro.eritropoyetina)
+  form.value.hierro = boolToSelect(registro.hierro)
+  form.value.hiperparatiroidismo = boolToSelect(registro.calcitriol)
 }
 
 const historicoResultados = ref([])
@@ -635,7 +747,18 @@ const obtenerColorSemaforo = (campo) => {
 
 /* DATA */
 const fetchPeriodo = async () => {
-  periodos.value = await getAllIpress("/periodos/")
+  const res = await getAllIpress('/periodos/')
+  periodos.value = Array.isArray(res) ? res : (res?.results || [])
+}
+
+const fetchClinicas = async () => {
+  try {
+    const res = await getAllIpress('/ipress/')
+    clinicas.value = Array.isArray(res) ? res : (res?.results || [])
+  } catch (e) {
+    console.error('Error al cargar IPRESS:', e)
+    clinicas.value = []
+  }
 }
 
 const TIEMPO_DIALISIS_MIN = 0.25
@@ -691,6 +814,11 @@ const postForm = async () => {
         hierro: form.value.hierro === 1 || form.value.hierro === '1',
         calcitriol: form.value.hiperparatiroidismo === 1 || form.value.hiperparatiroidismo === '1'
       }
+      if (idResultadoEdicion.value != null) {
+        await patchAllIpress(`/resultadosClinicos/${idResultadoEdicion.value}/`, payload)
+        emit('guardado')
+        return
+      }
     } else {
       payload = form.value
     }
@@ -707,5 +835,123 @@ const postForm = async () => {
   }
 }
 
-onMounted(fetchPeriodo)
+onMounted(async () => {
+  await Promise.all([fetchPeriodo(), fetchClinicas()])
+  if (props.registroEdicion) {
+    cargarRegistroEdicion(props.registroEdicion)
+  }
+})
 </script>
+
+<style scoped>
+.form5-info-box {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  color: #334155;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+}
+
+.form5-shell input.form5-control,
+.form5-shell select.form5-control {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.375rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #1e293b;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form5-shell input.form5-control:focus,
+.form5-shell select.form5-control:focus {
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 3px rgb(6 182 212 / 0.2);
+}
+
+.form5-shell input.form5-control--readonly {
+  background-color: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.form5-shell input.form5-control--error {
+  border-color: #f87171;
+  background-color: #fef2f2;
+}
+
+.form5-shell input.form5-control--error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgb(239 68 68 / 0.15);
+}
+
+.form5-shell select.form5-control {
+  cursor: pointer;
+  appearance: auto;
+}
+
+.form5-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.form5-btn--secondary {
+  color: #334155;
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+}
+
+.form5-btn--secondary:hover {
+  background-color: #f8fafc;
+}
+
+.form5-btn--primary {
+  color: #ffffff;
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.form5-btn--primary:hover {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.form5-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0.375rem;
+  color: #0891b2;
+  background-color: #ffffff;
+  border: 1px solid #a5f3fc;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.form5-btn-icon:hover {
+  background-color: #ecfeff;
+}
+</style>

@@ -79,6 +79,7 @@
             type="text"
             placeholder="Apellidos y nombres..."
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            @input="aplicarFiltrosBusqueda"
           />
         </div>
         <div class="flex-1 min-w-[160px]">
@@ -88,13 +89,17 @@
             type="text"
             placeholder="DNI / CE / pasaporte..."
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            @input="aplicarFiltrosBusqueda"
           />
         </div>
       </div>
       <p v-if="idIpress == null || idPerido == null" class="text-sm text-amber-600">
         Seleccione clínica (IPRESS) y periodo en el encabezado para cargar la lista.
       </p>
-      <div v-else class="overflow-x-auto border rounded-lg">
+      <div v-else class="overflow-x-auto border rounded-lg relative">
+        <p v-if="cargandoPacientes" class="text-xs text-slate-500 px-3 py-2 bg-slate-50 border-b border-slate-100">
+          Buscando en el servidor…
+        </p>
         <table class="min-w-full text-sm">
           <thead class="bg-slate-100 text-slate-700">
             <tr>
@@ -131,11 +136,10 @@
               <td class="px-3 py-2">
                 <div class="flex flex-wrap gap-1 items-center">
                   <button
-                    v-if="esSupervisor"
                     type="button"
                     class="text-xs px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                     :disabled="row.sin_registro_dialisis || !row.id_paciente_dialisis"
-                    :title="row.sin_registro_dialisis ? 'Sin ficha de diálisis: complete el registro antes de editar la ficha' : 'Editar datos del paciente y ficha de diálisis (supervisor)'"
+                    :title="row.sin_registro_dialisis ? 'Sin ficha de diálisis: complete el registro antes de editar' : 'Editar datos del paciente y ficha de diálisis'"
                     @click="abrirEdicionSupervisor(row)"
                   >
                     Editar
@@ -368,13 +372,14 @@
 
     <!-- Modal: registro nuevo o edición supervisor (ficha diálisis) -->
     <div v-if="mostrarModalNuevo || mostrarModalEdicionSupervisor" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         <FormularioPaciente
           :key="claveModalFormularioPaciente"
           :periodo-inicial="periodoSeleccionado"
           :id-periodo-ipress-inicial="idPeriodoIpress"
           :id-clinica-inicial="idClinicaSeleccionada"
           :nombre-clinica-inicial="clinicaSeleccionada"
+          :mostrar-tabla-edicion="false"
           :numero-documento-inicial="mostrarModalEdicionSupervisor ? '' : documentoPrefillRegistro"
           :id-paciente-edicion-supervisor="mostrarModalEdicionSupervisor ? (filaEdicionSupervisor?.datosPaciente?.id_paciente ?? null) : null"
           :id-paciente-dialisis-edicion-supervisor="mostrarModalEdicionSupervisor ? (filaEdicionSupervisor?.id_paciente_dialisis ?? null) : null"
@@ -403,6 +408,8 @@ const modalidadGlobal = inject('modalidadGlobal', ref(null));
 
 const filtroNombre = ref("");
 const filtroDni = ref("");
+const cargandoPacientes = ref(false);
+let debounceFiltrosTimer = null;
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 
@@ -763,14 +770,17 @@ async function searchPeriodoIpress() {
 }
 
 const fetchPacientes = async () => {
-  if (idIpress.value == null || idPerido.value == null) {
+  const ipressId = clinicaGlobal.value ?? idIpress.value;
+  const periodoId = periodoGlobal.value ?? idPerido.value;
+  if (ipressId == null || ipressId === '' || periodoId == null || periodoId === '') {
     pacientes.value = [];
     return;
   }
+  cargandoPacientes.value = true;
   try {
     const params = new URLSearchParams({
-      id_ipress: String(idIpress.value),
-      id_periodo: String(idPerido.value),
+      id_ipress: String(ipressId),
+      id_periodo: String(periodoId),
     });
     const mod = modalidadGlobal.value;
     if (mod != null && mod !== '') {
@@ -780,13 +790,27 @@ const fetchPacientes = async () => {
     const d = filtroDni.value.trim();
     if (n) params.set('nombre', n);
     if (d) params.set('documento', d);
-    // URL plana: evita 404 en algunos despliegues donde `pacientesDialisis/<pk>/` captura `por_ipress_periodo` como id
     const respuesta = await getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${params.toString()}`);
     pacientes.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
   } catch (error) {
     console.error('Error al obtener lista de pacientes diálisis:', error);
     pacientes.value = [];
+  } finally {
+    cargandoPacientes.value = false;
   }
+};
+
+/** Consulta al backend con debounce al escribir en los filtros. */
+const aplicarFiltrosBusqueda = () => {
+  const ipressId = clinicaGlobal.value ?? idIpress.value;
+  const periodoId = periodoGlobal.value ?? idPerido.value;
+  if (ipressId == null || ipressId === '' || periodoId == null || periodoId === '') return;
+
+  paginaActual.value = 1;
+  clearTimeout(debounceFiltrosTimer);
+  debounceFiltrosTimer = setTimeout(() => {
+    fetchPacientes();
+  }, 350);
 };
 
 const fetchPeriodoIpress = async (url = null) => {
@@ -880,7 +904,7 @@ const cerrarModalNuevo = () => {
 };
 
 const abrirEdicionSupervisor = (row) => {
-  if (!esSupervisor.value || row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return;
+  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return;
   documentoPrefillRegistro.value = '';
   mostrarModalNuevo.value = false;
   filaEdicionSupervisor.value = row;
@@ -982,16 +1006,6 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], async () => {
   fetchEstadisticasAtencion();
   fetchEstadisticasRegistros();
 }, { deep: true });
-
-/** Refetch lista al escribir filtros (misma consulta al backend con nombre/documento). */
-let debounceFiltrosTimer = null;
-watch([filtroNombre, filtroDni], () => {
-  if (idIpress.value == null || idPerido.value == null) return;
-  clearTimeout(debounceFiltrosTimer);
-  debounceFiltrosTimer = setTimeout(() => {
-    fetchPacientes();
-  }, 400);
-});
 
 onMounted(async () => {
   await fetchPeriodoIpress();

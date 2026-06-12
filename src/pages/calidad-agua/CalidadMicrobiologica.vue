@@ -1,72 +1,69 @@
 <template>
   <div class="min-h-screen bg-slate-50/80 p-4 sm:p-6">
-    <div class="max-w-7xl mx-auto space-y-6">
-      <header class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div class="max-w-[100rem] mx-auto space-y-4">
+      <header class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            <span class="w-1.5 h-8 bg-cyan-500 rounded-full shrink-0" aria-hidden="true"></span>
+          <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <span class="w-1.5 h-7 bg-cyan-500 rounded-full shrink-0" aria-hidden="true"></span>
             Calidad microbiológica
           </h1>
-          <p class="text-slate-500 text-sm mt-1 max-w-2xl">
+          <p class="text-slate-500 text-xs mt-1 max-w-2xl">
             Registros de recuento bacteriano y endotoxinas en agua tratada y líquido de diálisis.
           </p>
         </div>
-        <div class="flex flex-wrap items-end gap-3">
+        <div class="flex flex-wrap items-end gap-2">
           <button
             type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-cyan-700 transition-colors"
+            class="header-accion-btn header-accion-btn-primario"
             @click="abrirModalNuevo"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
-            Registrar nuevo
+            Nuevo
           </button>
         </div>
       </header>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
+          <table class="tabla-cm divide-y divide-slate-200">
             <thead>
               <tr class="bg-slate-50 border-b border-slate-200">
-                <th class="text-left px-4 py-3 font-bold text-slate-600 uppercase text-xs tracking-wider">Periodo</th>
-                <th class="text-left px-4 py-3 font-bold text-slate-600 uppercase text-xs tracking-wider">Control</th>
-                <th class="text-left px-4 py-3 font-bold text-slate-600 uppercase text-xs tracking-wider">Bac. agua (Osm. / Circ.)</th>
-                <th class="text-left px-4 py-3 font-bold text-slate-600 uppercase text-xs tracking-wider">Endo. agua</th>
-                <th class="text-left px-4 py-3 font-bold text-slate-600 uppercase text-xs tracking-wider">Bac. líquido (M1 / M2)</th>
-                <th class="text-left px-4 py-3 font-bold text-slate-600 uppercase text-xs tracking-wider">Endo. líquido</th>
-                <th class="text-right px-4 py-3 font-bold text-slate-600 uppercase text-xs tracking-wider">Acciones</th>
+                <th class="tabla-cm-th">F. registro</th>
+                <th class="tabla-cm-th">Control</th>
+                <th class="tabla-cm-th">Bac. agua (Osm. / Circ.)</th>
+                <th class="tabla-cm-th">Endo. agua</th>
+                <th class="tabla-cm-th">Bac. líquido (M1 / M2)</th>
+                <th class="tabla-cm-th">Endo. líquido</th>
+                <th class="tabla-cm-th tabla-cm-th-acciones">Acciones</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-for="registro in registrosFiltrados" :key="registro.id" class="hover:bg-slate-50/80 transition-colors">
-                <td class="px-4 py-3 text-slate-800 font-medium whitespace-nowrap">{{ registro.periodo }}</td>
-                <td class="px-4 py-3 text-slate-600">{{ registro.control }}</td>
-                <td class="px-4 py-3 text-slate-600 tabular-nums">
+                <td class="tabla-cm-td font-medium text-slate-800">{{ formatoFechaTabla(registro.fechaRegistro || registro.periodo) }}</td>
+                <td class="tabla-cm-td text-slate-600">{{ registro.control }}</td>
+                <td class="tabla-cm-td text-slate-600 tabular-nums">
                   {{ formatoNumero(registro.bacSaOsmosis) }} / {{ formatoNumero(registro.bacAniCirculacion) }}
                 </td>
-                <td class="px-4 py-3 text-slate-600 text-xs max-w-[200px]">
-                  {{ resumenEndoAgua(registro) }}
-                </td>
-                <td class="px-4 py-3 text-slate-600 tabular-nums">
+                <td class="tabla-cm-td text-slate-600">{{ resumenEndoAgua(registro) }}</td>
+                <td class="tabla-cm-td text-slate-600 tabular-nums">
                   {{ formatoNumero(registro.bacMaquiHemodi) }} / {{ formatoNumero(registro.bacMaquiHemodi2) }}
                 </td>
-                <td class="px-4 py-3 text-slate-600 text-xs max-w-[200px]">
-                  {{ resumenEndoLiquido(registro) }}
-                </td>
-                <td class="px-4 py-3 text-right">
+                <td class="tabla-cm-td text-slate-600">{{ resumenEndoLiquido(registro) }}</td>
+                <td class="tabla-cm-td tabla-cm-td-acciones">
                   <button
                     type="button"
-                    class="inline-flex items-center px-3 py-1.5 rounded-lg border border-cyan-200 text-cyan-700 text-xs font-semibold hover:bg-cyan-50 transition-colors"
-                    @click="abrirModal(registro)"
+                    class="tabla-cm-btn tabla-cm-btn-editar"
+                    title="Editar registro"
+                    @click="abrirModalEditar(registro)"
                   >
-                    Ver / Editar
+                    Editar
                   </button>
                 </td>
               </tr>
               <tr v-if="registrosFiltrados.length === 0">
-                <td colspan="7" class="px-4 py-12 text-center text-slate-500 italic">
+                <td colspan="7" class="tabla-cm-td text-center text-slate-500 italic py-8">
                   No hay registros para esta IPRESS.
                 </td>
               </tr>
@@ -76,264 +73,160 @@
       </div>
     </div>
 
-    <!-- Modal ver / editar -->
+    <!-- Modal nuevo / editar -->
     <div
-      v-if="mostrarModal"
+      v-if="mostrarModalFormulario"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
-      @click.self="cerrarModal"
+      @click.self="cerrarModalFormulario"
     >
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative border border-slate-200">
-        <div class="sticky top-0 bg-gradient-to-r from-cyan-600 to-cyan-700 px-5 py-4 flex justify-between items-center rounded-t-2xl">
-          <h3 class="text-lg font-bold text-white">Detalle del registro</h3>
-          <button type="button" class="text-white/90 hover:text-white text-xl leading-none p-1" aria-label="Cerrar" @click="cerrarModal">✕</button>
-        </div>
-        <div class="p-5 space-y-5 text-sm">
-          <div class="flex flex-wrap gap-4 text-slate-600 border-b border-slate-100 pb-4">
-            <div><span class="font-semibold text-slate-800">Periodo:</span> {{ registroActual.periodo }}</div>
-            <div><span class="font-semibold text-slate-800">Control:</span> {{ registroActual.control }}</div>
-          </div>
-
-          <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-            <h4 class="text-xs font-bold text-cyan-800 uppercase tracking-wide">Recuento bacteriano en agua tratada (UFC/mL)</h4>
-            <p class="text-slate-700"><span class="text-slate-500">Salida de la ósmosis:</span> {{ formatoNumero(registroActual.bacSaOsmosis) }}</p>
-            <p class="text-slate-700"><span class="text-slate-500">Retorno del anillo de circulación:</span> {{ formatoNumero(registroActual.bacAniCirculacion) }}</p>
-          </div>
-
-          <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-            <h4 class="text-xs font-bold text-cyan-800 uppercase tracking-wide">Nivel de endotoxinas en agua tratada (UE/mL)</h4>
-            <p class="text-slate-700">
-              <span class="text-slate-500">Salida de la ósmosis:</span> {{ textoEndotoxina(registroActual.endoAguaTrata) }}
-            </p>
-            <p class="text-slate-700">
-              <span class="text-slate-500">Retorno del anillo de circulación:</span> {{ textoEndotoxina(registroActual.rtnAnilloCir) }}
-            </p>
-          </div>
-
-          <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-            <h4 class="text-xs font-bold text-cyan-800 uppercase tracking-wide">Recuento bacteriano en líquido de diálisis (UFC/mL)</h4>
-            <p class="text-slate-700"><span class="text-slate-500">Máquina de hemodiálisis 1:</span> {{ formatoNumero(registroActual.bacMaquiHemodi) }}</p>
-            <p class="text-slate-700"><span class="text-slate-500">Máquina de hemodiálisis 2:</span> {{ formatoNumero(registroActual.bacMaquiHemodi2) }}</p>
-          </div>
-
-          <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-3">
-            <h4 class="text-xs font-bold text-cyan-800 uppercase tracking-wide">Nivel de endotoxinas en líquido de diálisis (UE/mL)</h4>
-            <p class="text-slate-700">
-              <span class="text-slate-500">Máquina de hemodiálisis 1:</span> {{ textoEndotoxina(registroActual.endMaquiHemodi) }}
-            </p>
-            <p class="text-slate-700">
-              <span class="text-slate-500">Máquina de hemodiálisis 2:</span> {{ textoEndotoxina(registroActual.endMaquiHemodi2) }}
-            </p>
-          </div>
-
-          <div class="flex justify-end pt-2">
-            <button
-              type="button"
-              class="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-semibold text-sm hover:bg-slate-200 transition-colors"
-              @click="cerrarModal"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal nuevo registro -->
-    <div
-      v-if="mostrarModalNuevo"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
-      @click.self="cerrarModalNuevo"
-    >
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto relative border border-slate-200">
-        <div class="sticky top-0 z-10 bg-gradient-to-r from-cyan-600 to-cyan-700 px-5 py-4 flex justify-between items-center rounded-t-2xl">
-          <h2 class="text-lg font-bold text-white">Registrar calidad microbiológica</h2>
-          <button type="button" class="text-white/90 hover:text-white text-xl leading-none p-1" aria-label="Cerrar" @click="cerrarModalNuevo">✕</button>
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto relative border border-slate-200">
+        <div class="sticky top-0 z-10 bg-gradient-to-r from-cyan-600 to-cyan-700 px-4 py-3 flex justify-between items-center rounded-t-xl">
+          <h2 class="text-sm font-bold text-white">
+            {{ modoEdicion ? 'Editar calidad microbiológica' : 'Registrar calidad microbiológica' }}
+          </h2>
+          <button type="button" class="text-white/90 hover:text-white text-lg leading-none p-1" aria-label="Cerrar" @click="cerrarModalFormulario">✕</button>
         </div>
 
-        <form class="p-5 sm:p-6 space-y-6" @submit.prevent="registrarNuevo">
-          <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Se realizó controles</label>
-            <select
-              v-model="control"
-              class="w-full max-w-md border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-            >
-              <option value="">Seleccione una opción</option>
+        <form class="p-4 space-y-3" @submit.prevent="guardarRegistro">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+            <div>
+              <label class="cm-label">Periodo de reporte</label>
+              <div class="cm-info-box">{{ periodoDisplay }}</div>
+            </div>
+            <div class="cm-campo">
+              <label class="cm-label">Fecha de registro *</label>
+              <input
+                v-model="fechaRegistro"
+                type="date"
+                class="cm-control"
+                :min="rangoFechasPeriodo.min || undefined"
+                :max="rangoFechasPeriodo.max || undefined"
+                :disabled="!rangoFechasPeriodo.min"
+                @change="validarFechaRegistro"
+                @blur="validarFechaRegistro"
+              />
+              <p v-if="rangoFechasPeriodo.min" class="cm-hint">
+                Debe estar entre {{ rangoFechasPeriodoTexto.min }} y {{ rangoFechasPeriodoTexto.max }}
+              </p>
+              <p v-else class="cm-hint text-amber-700">Seleccione un periodo en la barra superior.</p>
+              <p v-if="errorFechaRegistro" class="cm-error">{{ errorFechaRegistro }}</p>
+            </div>
+          </div>
+
+          <div class="cm-campo">
+            <label class="cm-label">Se realizó controles</label>
+            <select v-model="control" class="cm-control">
+              <option value="">Seleccione</option>
               <option value="1">Sí</option>
               <option value="2">No</option>
             </select>
-            <p v-if="control === ''" class="text-xs text-slate-500 mt-2">
-              Indique primero si se realizaron controles para continuar.
-            </p>
           </div>
 
           <template v-if="control === '1'">
-          <!-- Recuento bacteriano agua tratada -->
-          <section class="rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 space-y-4">
-            <h3 class="text-sm font-bold text-cyan-900 border-b border-cyan-200/80 pb-2">
-              Recuento bacteriano en agua tratada (UFC/mL)
-            </h3>
-            <div class="space-y-4">
-              <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <label class="text-sm font-medium text-slate-700 sm:w-64 shrink-0">Salida de la ósmosis</label>
-                <input
-                  v-model="bacSaOsmosis"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Ej. 10,00"
-                  class="flex-1 border border-slate-300 rounded-lg px-3 py-2.5 text-sm tabular-nums focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                />
+            <section class="cm-seccion">
+              <h3 class="cm-seccion-titulo">Recuento bacteriano en agua tratada (UFC/mL)</h3>
+              <div class="cm-grid">
+                <div class="cm-campo">
+                  <label class="cm-label">Salida de la ósmosis</label>
+                  <input v-model="bacSaOsmosis" type="number" step="0.01" min="0" placeholder="10,00" class="cm-control tabular-nums" />
+                </div>
+                <div class="cm-campo">
+                  <label class="cm-label">Retorno anillo circulación</label>
+                  <input v-model="bacAniCirculacion" type="number" step="0.01" min="0" placeholder="10,00" class="cm-control tabular-nums" />
+                </div>
               </div>
-              <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <label class="text-sm font-medium text-slate-700 sm:w-64 shrink-0">Retorno del anillo de circulación</label>
-                <input
-                  v-model="bacAniCirculacion"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Ej. 10,00"
-                  class="flex-1 border border-slate-300 rounded-lg px-3 py-2.5 text-sm tabular-nums focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                />
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <!-- Endotoxinas agua tratada -->
-          <section class="rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 space-y-4">
-            <h3 class="text-sm font-bold text-cyan-900 border-b border-cyan-200/80 pb-2">
-              Nivel de endotoxinas en agua tratada (UE/mL)
-            </h3>
-            <div class="space-y-4">
-              <div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-                <label class="text-sm font-medium text-slate-700 sm:w-64 shrink-0 pt-2">Salida de la ósmosis</label>
-                <div class="flex-1 space-y-2">
-                  <select
-                    v-model="endoAguaTrata"
-                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  >
+            <section class="cm-seccion">
+              <h3 class="cm-seccion-titulo">Endotoxinas en agua tratada (UE/mL)</h3>
+              <div class="cm-grid">
+                <div class="cm-campo">
+                  <label class="cm-label">Salida de la ósmosis</label>
+                  <select v-model="endoAguaTrata" class="cm-control">
                     <option value="">Seleccione</option>
-                    <option value="Normal">Normal (≤ 0,25 UE/mL)</option>
-                    <option value="Alto">Alto (&gt; 0,25 UE/mL)</option>
+                    <option value="Normal">Normal (≤ 0,25)</option>
+                    <option value="Alto">Alto (&gt; 0,25)</option>
                   </select>
-                  <p class="text-xs text-slate-500 pl-0.5">{{ textoEndotoxina(endoAguaTrata) }}</p>
+                </div>
+                <div class="cm-campo">
+                  <label class="cm-label">Retorno anillo circulación</label>
+                  <select v-model="rtnAnilloCir" class="cm-control">
+                    <option value="">Seleccione</option>
+                    <option value="Normal">Normal (≤ 0,25)</option>
+                    <option value="Alto">Alto (&gt; 0,25)</option>
+                  </select>
                 </div>
               </div>
-              <div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-                <label class="text-sm font-medium text-slate-700 sm:w-64 shrink-0 pt-2">Retorno del anillo de circulación</label>
-                <div class="flex-1 space-y-2">
-                  <select
-                    v-model="rtnAnilloCir"
-                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  >
-                    <option value="">Seleccione</option>
-                    <option value="Normal">Normal (≤ 0,25 UE/mL)</option>
-                    <option value="Alto">Alto (&gt; 0,25 UE/mL)</option>
-                  </select>
-                  <p class="text-xs text-slate-500 pl-0.5">{{ textoEndotoxina(rtnAnilloCir) }}</p>
-                </div>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <!-- Recuento bacteriano líquido diálisis -->
-          <section class="rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 space-y-4">
-            <h3 class="text-sm font-bold text-cyan-900 border-b border-cyan-200/80 pb-2">
-              Recuento bacteriano en líquido de diálisis (UFC/mL)
-            </h3>
-            <div class="space-y-4">
-              <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <label class="text-sm font-medium text-slate-700 sm:w-64 shrink-0">Máquina de hemodiálisis 1</label>
-                <input
-                  v-model="bacMaquiHemodi"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Ej. 7,00"
-                  class="flex-1 border border-slate-300 rounded-lg px-3 py-2.5 text-sm tabular-nums focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                />
+            <section class="cm-seccion">
+              <h3 class="cm-seccion-titulo">Recuento bacteriano en líquido de diálisis (UFC/mL)</h3>
+              <div class="cm-grid">
+                <div class="cm-campo">
+                  <label class="cm-label">Máquina hemodiálisis 1</label>
+                  <input v-model="bacMaquiHemodi" type="number" step="0.01" min="0" placeholder="7,00" class="cm-control tabular-nums" />
+                </div>
+                <div class="cm-campo">
+                  <label class="cm-label">Máquina hemodiálisis 2</label>
+                  <input v-model="bacMaquiHemodi2" type="number" step="0.01" min="0" placeholder="11,00" class="cm-control tabular-nums" />
+                </div>
               </div>
-              <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                <label class="text-sm font-medium text-slate-700 sm:w-64 shrink-0">Máquina de hemodiálisis 2</label>
-                <input
-                  v-model="bacMaquiHemodi2"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Ej. 11,00"
-                  class="flex-1 border border-slate-300 rounded-lg px-3 py-2.5 text-sm tabular-nums focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                />
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <!-- Endotoxinas líquido diálisis -->
-          <section class="rounded-xl border border-slate-200 bg-slate-50/50 p-4 sm:p-5 space-y-4">
-            <h3 class="text-sm font-bold text-cyan-900 border-b border-cyan-200/80 pb-2">
-              Nivel de endotoxinas en líquido de diálisis (UE/mL)
-            </h3>
-            <div class="space-y-4">
-              <div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-                <label class="text-sm font-medium text-slate-700 sm:w-64 shrink-0 pt-2">Máquina de hemodiálisis 1</label>
-                <div class="flex-1 space-y-2">
-                  <select
-                    v-model="endMaquiHemodi"
-                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  >
+            <section class="cm-seccion">
+              <h3 class="cm-seccion-titulo">Endotoxinas en líquido de diálisis (UE/mL)</h3>
+              <div class="cm-grid">
+                <div class="cm-campo">
+                  <label class="cm-label">Máquina hemodiálisis 1</label>
+                  <select v-model="endMaquiHemodi" class="cm-control">
                     <option value="">Seleccione</option>
-                    <option value="Normal">Normal (≤ 0,25 UE/mL)</option>
-                    <option value="Alto">Alto (&gt; 0,25 UE/mL)</option>
+                    <option value="Normal">Normal (≤ 0,25)</option>
+                    <option value="Alto">Alto (&gt; 0,25)</option>
                   </select>
-                  <p class="text-xs text-slate-500 pl-0.5">{{ textoEndotoxina(endMaquiHemodi) }}</p>
+                </div>
+                <div class="cm-campo">
+                  <label class="cm-label">Máquina hemodiálisis 2</label>
+                  <select v-model="endMaquiHemodi2" class="cm-control">
+                    <option value="">Seleccione</option>
+                    <option value="Normal">Normal (≤ 0,25)</option>
+                    <option value="Alto">Alto (&gt; 0,25)</option>
+                  </select>
                 </div>
               </div>
-              <div class="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
-                <label class="text-sm font-medium text-slate-700 sm:w-64 shrink-0 pt-2">Máquina de hemodiálisis 2</label>
-                <div class="flex-1 space-y-2">
-                  <select
-                    v-model="endMaquiHemodi2"
-                    class="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                  >
-                    <option value="">Seleccione</option>
-                    <option value="Normal">Normal (≤ 0,25 UE/mL)</option>
-                    <option value="Alto">Alto (&gt; 0,25 UE/mL)</option>
-                  </select>
-                  <p class="text-xs text-slate-500 pl-0.5">{{ textoEndotoxina(endMaquiHemodi2) }}</p>
-                </div>
-              </div>
-            </div>
-          </section>
+            </section>
           </template>
 
           <div
             v-else-if="control === '2'"
-            class="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900"
+            class="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-900"
           >
-            No se realizaron controles: puede registrar el registro sin completar mediciones. Los valores de laboratorio no aplican en este caso.
+            No se realizaron controles: puede guardar sin completar mediciones.
           </div>
 
-          <div class="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 pt-2 border-t border-slate-100">
+          <div class="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 pt-2 border-t border-slate-100">
             <button
               type="button"
-              class="px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
-              @click="cerrarModalNuevo"
+              class="cm-btn cm-btn-secundario"
+              @click="cerrarModalFormulario"
             >
               Cancelar
             </button>
-            <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div class="flex flex-col sm:flex-row gap-2">
               <button
+                v-if="!modoEdicion"
                 type="button"
-                class="px-4 py-2.5 rounded-lg border border-cyan-200 text-cyan-800 font-semibold text-sm hover:bg-cyan-50 transition-colors disabled:opacity-45 disabled:pointer-events-none"
+                class="cm-btn cm-btn-outline"
                 :disabled="!puedeEnviarRegistro"
-                @click="registrarYVolver"
+                @click="guardarYVolver"
               >
-                Registrar y volver a llenar
+                Registrar y volver
               </button>
               <button
                 type="submit"
-                class="px-4 py-2.5 rounded-lg bg-cyan-600 text-white font-semibold text-sm hover:bg-cyan-700 shadow-sm transition-colors disabled:opacity-45 disabled:pointer-events-none"
+                class="cm-btn cm-btn-primario"
                 :disabled="!puedeEnviarRegistro"
               >
-                Registrar
+                {{ modoEdicion ? 'Guardar cambios' : 'Registrar' }}
               </button>
             </div>
           </div>
@@ -344,7 +237,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, inject, onMounted } from 'vue';
+import { ElMessage } from 'element-plus';
+import { getAllIpress } from '@/services/ipress/Ipress.service';
+
+const periodoGlobal = inject('periodoGlobal', ref(null));
+const periodos = ref([]);
 
 const listaIpress = ref([
   { id_ipress: 1, nombre_corto: 'Centro Nacional de Salud Renal' },
@@ -357,7 +255,7 @@ const registros = ref([
   {
     id: 1,
     id_ipress: 1,
-    periodo: '2025-09-01',
+    fechaRegistro: '2025-09-15',
     control: 'Sí',
     bacSaOsmosis: 10,
     bacAniCirculacion: 10,
@@ -371,16 +269,16 @@ const registros = ref([
   {
     id: 2,
     id_ipress: 1,
-    periodo: '2025-08-01',
+    fechaRegistro: '2025-08-10',
     control: 'No',
-    bacSaOsmosis: 20,
-    bacAniCirculacion: 8,
-    endoAguaTrata: 'Alto',
-    rtnAnilloCir: 'Normal',
-    bacMaquiHemodi: 5,
-    bacMaquiHemodi2: 9,
-    endMaquiHemodi: 'Alto',
-    endMaquiHemodi2: 'Normal',
+    bacSaOsmosis: null,
+    bacAniCirculacion: null,
+    endoAguaTrata: '',
+    rtnAnilloCir: '',
+    bacMaquiHemodi: null,
+    bacMaquiHemodi2: null,
+    endMaquiHemodi: '',
+    endMaquiHemodi2: '',
   },
 ]);
 
@@ -388,13 +286,14 @@ const registrosFiltrados = computed(() =>
   registros.value.filter((r) => !r.id_ipress || r.id_ipress === ipressSeleccionada.value),
 );
 
-const mostrarModal = ref(false);
-const registroActual = ref({});
+const mostrarModalFormulario = ref(false);
+const modoEdicion = ref(false);
+const registroEdicionId = ref(null);
 
-const mostrarModalNuevo = ref(false);
+const fechaRegistro = ref('');
+const errorFechaRegistro = ref('');
 
 const control = ref('');
-const periodo = ref('');
 const bacSaOsmosis = ref('');
 const bacAniCirculacion = ref('');
 const endoAguaTrata = ref('');
@@ -404,8 +303,97 @@ const bacMaquiHemodi2 = ref('');
 const endMaquiHemodi = ref('');
 const endMaquiHemodi2 = ref('');
 
-/** Requiere Sí o No antes de registrar */
-const puedeEnviarRegistro = computed(() => control.value === '1' || control.value === '2');
+const periodoVisibleId = computed(() => periodoGlobal.value ?? null);
+
+const periodoTexto = computed(() => {
+  const idPeriodo = periodoVisibleId.value;
+  if (idPeriodo == null) return '';
+  const lista = Array.isArray(periodos.value) ? periodos.value : [];
+  const item = lista.find((per) => String(per.id_periodo) === String(idPeriodo));
+  return item?.periodo || '';
+});
+
+const periodoDisplay = computed(() => periodoTexto.value || '—');
+
+const rangoFechasPeriodo = computed(() => {
+  const lista = Array.isArray(periodos.value) ? periodos.value : [];
+  const idPeriodo = periodoVisibleId.value;
+  if (idPeriodo == null || idPeriodo === '') return { min: null, max: null };
+  const p = lista.find((per) => String(per.id_periodo) === String(idPeriodo));
+  if (!p?.periodo) return { min: null, max: null };
+  const parts = String(p.periodo).trim().split('-');
+  if (parts.length < 2) return { min: null, max: null };
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  if (Number.isNaN(year) || Number.isNaN(month)) return { min: null, max: null };
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  return {
+    min: firstDay.toISOString().split('T')[0],
+    max: lastDay.toISOString().split('T')[0],
+  };
+});
+
+const rangoFechasPeriodoTexto = computed(() => {
+  const r = rangoFechasPeriodo.value;
+  if (!r.min || !r.max) return { min: '', max: '' };
+  return {
+    min: formatoFechaTabla(r.min),
+    max: formatoFechaTabla(r.max),
+  };
+});
+
+const puedeEnviarRegistro = computed(() => {
+  if (!fechaRegistro.value || errorFechaRegistro.value) return false;
+  if (!rangoFechasPeriodo.value.min) return false;
+  return control.value === '1' || control.value === '2';
+});
+
+function formatoFechaTabla(iso) {
+  if (!iso) return '—';
+  const s = String(iso).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-');
+    return `${d}-${m}-${y}`;
+  }
+  return s;
+}
+
+function validarFechaRegistro() {
+  const fecha = fechaRegistro.value;
+  const rango = rangoFechasPeriodo.value;
+  const rangoTxt = rangoFechasPeriodoTexto.value;
+  if (!rango.min || !rango.max) {
+    errorFechaRegistro.value = 'Seleccione un periodo de reporte válido.';
+    return false;
+  }
+  if (!fecha) {
+    errorFechaRegistro.value = 'Indique la fecha de registro.';
+    return false;
+  }
+  if (fecha < rango.min || fecha > rango.max) {
+    errorFechaRegistro.value = `La fecha debe estar entre ${rangoTxt.min} y ${rangoTxt.max}.`;
+    return false;
+  }
+  errorFechaRegistro.value = '';
+  return true;
+}
+
+async function fetchPeriodos() {
+  try {
+    const res = await getAllIpress('/periodos/');
+    periodos.value = Array.isArray(res) ? res : (res?.results || []);
+  } catch (e) {
+    console.error('Error al cargar periodos:', e);
+    periodos.value = [];
+  }
+}
+
+function controlDesdeRegistro(val) {
+  if (val === 'Sí') return '1';
+  if (val === 'No') return '2';
+  return '';
+}
 
 function limpiarSoloMediciones() {
   bacSaOsmosis.value = '';
@@ -423,8 +411,8 @@ watch(control, (val) => {
 });
 
 function textoEndotoxina(val) {
-  if (val === 'Normal') return '≤ 0,25 (Normal)';
-  if (val === 'Alto') return '> 0,25 (Alto)';
+  if (val === 'Normal') return '≤ 0,25';
+  if (val === 'Alto') return '> 0,25';
   return '—';
 }
 
@@ -447,26 +435,10 @@ function resumenEndoLiquido(r) {
   return `M1: ${a} · M2: ${b}`;
 }
 
-function abrirModal(registro) {
-  registroActual.value = { ...registro };
-  mostrarModal.value = true;
-}
-
-function cerrarModal() {
-  mostrarModal.value = false;
-}
-
-function abrirModalNuevo() {
-  mostrarModalNuevo.value = true;
-}
-
-function cerrarModalNuevo() {
-  mostrarModalNuevo.value = false;
-}
-
 function limpiarFormulario() {
+  fechaRegistro.value = '';
+  errorFechaRegistro.value = '';
   control.value = '';
-  periodo.value = '';
   bacSaOsmosis.value = '';
   bacAniCirculacion.value = '';
   endoAguaTrata.value = '';
@@ -477,12 +449,48 @@ function limpiarFormulario() {
   endMaquiHemodi2.value = '';
 }
 
+function cargarRegistroEnFormulario(registro) {
+  fechaRegistro.value = registro.fechaRegistro || registro.periodo || '';
+  validarFechaRegistro();
+  control.value = controlDesdeRegistro(registro.control);
+  if (control.value === '1') {
+    bacSaOsmosis.value = registro.bacSaOsmosis ?? '';
+    bacAniCirculacion.value = registro.bacAniCirculacion ?? '';
+    endoAguaTrata.value = registro.endoAguaTrata || '';
+    rtnAnilloCir.value = registro.rtnAnilloCir || '';
+    bacMaquiHemodi.value = registro.bacMaquiHemodi ?? '';
+    bacMaquiHemodi2.value = registro.bacMaquiHemodi2 ?? '';
+    endMaquiHemodi.value = registro.endMaquiHemodi || '';
+    endMaquiHemodi2.value = registro.endMaquiHemodi2 || '';
+  }
+}
+
+function abrirModalNuevo() {
+  modoEdicion.value = false;
+  registroEdicionId.value = null;
+  limpiarFormulario();
+  mostrarModalFormulario.value = true;
+}
+
+function abrirModalEditar(registro) {
+  modoEdicion.value = true;
+  registroEdicionId.value = registro.id;
+  limpiarFormulario();
+  cargarRegistroEnFormulario(registro);
+  mostrarModalFormulario.value = true;
+}
+
+function cerrarModalFormulario() {
+  mostrarModalFormulario.value = false;
+  modoEdicion.value = false;
+  registroEdicionId.value = null;
+  limpiarFormulario();
+}
+
 function construirRegistroDesdeFormulario() {
   const conMediciones = control.value === '1';
   return {
-    id: Date.now(),
-    id_ipress: ipressSeleccionada.value,
-    periodo: new Date().toISOString().slice(0, 10),
+    fechaRegistro: fechaRegistro.value,
     control: control.value === '1' ? 'Sí' : control.value === '2' ? 'No' : '',
     bacSaOsmosis: conMediciones && bacSaOsmosis.value !== '' ? Number(bacSaOsmosis.value) : null,
     bacAniCirculacion: conMediciones && bacAniCirculacion.value !== '' ? Number(bacAniCirculacion.value) : null,
@@ -495,16 +503,257 @@ function construirRegistroDesdeFormulario() {
   };
 }
 
-function registrarNuevo() {
+function guardarRegistro() {
+  if (!validarFechaRegistro()) {
+    ElMessage.warning(errorFechaRegistro.value || 'Revise la fecha de registro.');
+    return;
+  }
   if (!puedeEnviarRegistro.value) return;
-  registros.value.unshift(construirRegistroDesdeFormulario());
-  limpiarFormulario();
-  cerrarModalNuevo();
+  const datos = construirRegistroDesdeFormulario();
+
+  if (modoEdicion.value && registroEdicionId.value != null) {
+    const idx = registros.value.findIndex((r) => r.id === registroEdicionId.value);
+    if (idx >= 0) {
+      registros.value[idx] = {
+        ...registros.value[idx],
+        ...datos,
+      };
+    }
+  } else {
+    registros.value.unshift({
+      id: Date.now(),
+      id_ipress: ipressSeleccionada.value,
+      ...datos,
+    });
+  }
+
+  cerrarModalFormulario();
 }
 
-function registrarYVolver() {
+function guardarYVolver() {
+  if (!validarFechaRegistro()) {
+    ElMessage.warning(errorFechaRegistro.value || 'Revise la fecha de registro.');
+    return;
+  }
   if (!puedeEnviarRegistro.value) return;
-  registros.value.unshift(construirRegistroDesdeFormulario());
+  const datos = construirRegistroDesdeFormulario();
+  registros.value.unshift({
+    id: Date.now(),
+    id_ipress: ipressSeleccionada.value,
+    ...datos,
+  });
   limpiarFormulario();
 }
+
+watch(periodoGlobal, () => {
+  if (fechaRegistro.value) validarFechaRegistro();
+});
+
+onMounted(() => {
+  fetchPeriodos();
+});
 </script>
+
+<style scoped>
+.tabla-cm {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.tabla-cm-th,
+.tabla-cm-td {
+  white-space: nowrap;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.6875rem;
+  line-height: 1.25;
+}
+
+.tabla-cm-th {
+  text-align: left;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tabla-cm-th-acciones,
+.tabla-cm-td-acciones {
+  text-align: right;
+}
+
+.tabla-cm-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.tabla-cm-btn-editar {
+  border: 1px solid #a5f3fc;
+  color: #0e7490;
+  background: transparent;
+}
+
+.tabla-cm-btn-editar:hover {
+  background: #ecfeff;
+}
+
+.header-accion-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.header-accion-btn-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.header-accion-btn-primario {
+  border: 1px solid #0891b2;
+  color: #fff;
+  background: #0891b2;
+}
+
+.header-accion-btn-primario:hover {
+  background: #0e7490;
+}
+
+.cm-seccion {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  padding: 0.5rem 0.625rem;
+}
+
+.cm-seccion-titulo {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #155e75;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.375rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .cm-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cm-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.cm-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.cm-info-box {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+}
+
+.cm-hint {
+  font-size: 0.625rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+
+.cm-error {
+  font-size: 0.625rem;
+  color: #dc2626;
+  margin-top: 0.15rem;
+}
+
+.cm-control {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: #1e293b;
+  background: #fff;
+}
+
+.cm-control:focus {
+  outline: none;
+  border-color: #0891b2;
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.2);
+}
+
+.cm-btn {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.cm-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.cm-btn-secundario {
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  background: #fff;
+}
+
+.cm-btn-secundario:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.cm-btn-outline {
+  border: 1px solid #a5f3fc;
+  color: #0e7490;
+  background: #fff;
+}
+
+.cm-btn-outline:hover:not(:disabled) {
+  background: #ecfeff;
+}
+
+.cm-btn-primario {
+  border: 1px solid #0891b2;
+  color: #fff;
+  background: #0891b2;
+}
+
+.cm-btn-primario:hover:not(:disabled) {
+  background: #0e7490;
+}
+</style>

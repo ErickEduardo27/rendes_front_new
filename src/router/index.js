@@ -40,6 +40,7 @@ const routes = [
         path: 'ipress',
         name: 'Ipress',
         component: () => import('@/pages/ipress/Ipress.vue'),
+        meta: { bloqueadoSupervisor: true },
       },
       {
         path: 'pacientes',
@@ -50,16 +51,19 @@ const routes = [
         path: 'perfiles',
         name: 'perfiles',
         component: () => import('@/pages/perfiles/Perfiles.vue'),
+        meta: { bloqueadoSupervisor: true },
       },
       {
         path: 'usuarios',
         name: 'usuarios',
         component: () => import('@/pages/usuarios/Usuarios.vue'),
+        meta: { bloqueadoSupervisor: true },
       },
       {
         path: 'calidad-agua',
         name: 'CalidadMicrobiologica',
         component: () => import('@/pages/calidad-agua/CalidadMicrobiologica.vue'),
+        meta: { bloqueadoSupervisor: true },
       },
       {
         path: 'movimientos',
@@ -70,7 +74,7 @@ const routes = [
         path: 'acceso-vascular',
         name: 'AccesoVascular',
         component: () => import('@/pages/registros/accesoActual/index.vue'),
-        meta: { mostrarNotificarRegistros: true },
+        meta: { mostrarNotificarRegistros: true, bloqueadoSupervisor: true },
       },
       {
         path: 'evaluacion',
@@ -88,25 +92,25 @@ const routes = [
         path: 'eventos-infecciosos',
         name: 'EventosInfecciosos',
         component: () => import('@/pages/registros/eventosInfecciosos/index.vue'),
-        meta: { mostrarNotificarRegistros: true },
+        meta: { mostrarNotificarRegistros: true, bloqueadoSupervisor: true },
       },
       {
         path: 'morbilidad-hospitalaria',
         name: 'MorbilidadHospitalaria',
         component: () => import('@/pages/registros/morbilidadHospitalaria/index.vue'),
-        meta: { mostrarNotificarRegistros: true },
+        meta: { mostrarNotificarRegistros: true, bloqueadoSupervisor: true },
       },
       {
         path: 'resultados-clinicos',
         name: 'ResultadosClinicos',
         component: () => import('@/pages/registros/resultadosClinicos/index.vue'),
-        meta: { mostrarNotificarRegistros: true },
+        meta: { mostrarNotificarRegistros: true, bloqueadoSupervisor: true },
       },
       {
         path: 'vacunacion',
         name: 'Vacunacion',
         component: () => import('@/pages/registros/vacunacion/index.vue'),
-        meta: { mostrarNotificarRegistros: true },
+        meta: { mostrarNotificarRegistros: true, bloqueadoSupervisor: true },
       },
       {
         path: 'descarga-datos-analista',
@@ -144,6 +148,11 @@ function perfilEsAnalista(user) {
   return String(p).trim().toLowerCase().includes('analista')
 }
 
+function perfilEsSupervisor(user) {
+  const p = user?.datosPerfil?.perfil || (typeof localStorage !== 'undefined' ? localStorage.getItem('perfil') : '') || ''
+  return String(p).trim().toLowerCase().includes('supervisor')
+}
+
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   const { isAuthenticated } = storeToRefs(authStore) // 👈 REACTIVO
@@ -157,6 +166,10 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.requiresAnalista && !perfilEsAnalista(authStore.user)) {
+    return next({ name: 'Inicio' })
+  }
+
+  if (to.matched.some((r) => r.meta?.bloqueadoSupervisor) && perfilEsSupervisor(authStore.user)) {
     return next({ name: 'Inicio' })
   }
 

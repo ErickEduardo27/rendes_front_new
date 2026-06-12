@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50/50 p-6">
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-[100rem] mx-auto w-full">
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
@@ -21,32 +21,32 @@
         <div class="flex items-center gap-2">
           <button
             type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-cyan-300 text-cyan-700 font-semibold rounded-lg shadow-sm hover:bg-cyan-50 transition-colors"
+            class="header-accion-btn header-accion-btn-cyan"
             @click="descargarFormatoExcel"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             Descargar formato
           </button>
           <button
             type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-45 disabled:pointer-events-none"
+            class="header-accion-btn header-accion-btn-secundario"
             :disabled="!puedeExportarResultadosClinicosExcel || exportandoExcel"
             :title="puedeExportarResultadosClinicosExcel ? 'Exporta la vista actual (Solo con registros o Todos los pacientes)' : (vistaActiva === 'cargas' ? 'Cambie a la pestaña de registros o pacientes para exportar' : 'No hay datos para exportar con los filtros actuales')"
             @click="exportarDatosResultadosClinicosExcel"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             {{ exportandoExcel ? 'Exportando…' : 'Exportar Excel' }}
           </button>
           <button
             type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
+            class="header-accion-btn header-accion-btn-secundario"
             @click="abrirModalImportar"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
             Importar
@@ -54,10 +54,10 @@
           <button
             v-if="mostrarBotonNuevo"
             type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white font-semibold rounded-lg shadow-sm hover:bg-cyan-700 transition-colors"
+            class="header-accion-btn header-accion-btn-primario"
             @click="abrirModalNuevo"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             Nuevo
@@ -100,48 +100,73 @@
           </div>
           <template v-else>
             <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
+            <table class="tabla-rc divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hb</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Calcio</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fósforo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">PTHi</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Alb</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Kt/V</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">T. diálisis (h)</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Eritropoyetina</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hierro</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Calcitriol</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
+                  <th class="tabla-rc-th">Paciente</th>
+                  <th class="tabla-rc-th">DNI</th>
+                  <th class="tabla-rc-th">Hb</th>
+                  <th class="tabla-rc-th">Calcio</th>
+                  <th class="tabla-rc-th">Fósforo</th>
+                  <th class="tabla-rc-th">PTHi</th>
+                  <th class="tabla-rc-th">Alb</th>
+                  <th class="tabla-rc-th">Calcio corregido</th>
+                  <th class="tabla-rc-th">Kt/V</th>
+                  <th class="tabla-rc-th">T. diálisis (h)</th>
+                  <th class="tabla-rc-th">Eritropoyetina</th>
+                  <th class="tabla-rc-th">Hierro</th>
+                  <th class="tabla-rc-th">Calcitriol</th>
+                  <th class="tabla-rc-th">Estado</th>
+                  <th class="tabla-rc-th">Editado sup.</th>
+                  <th class="tabla-rc-th">Comentario sup.</th>
+                  <th class="tabla-rc-th tabla-rc-th-acciones">Acciones</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="r in registrosPaginados" :key="r.id_resultado_clinico" class="hover:bg-slate-50 transition-colors">
-                  <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.Hb ?? r.hb ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.calcio ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.fosforo ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.PTHi ?? r.pthi ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.Alb ?? r.alb ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ r.ktv ?? r.kt ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600 tabular-nums">{{ formatearTiempoDialisisTabla(r.tiempo_dialisis) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(r.eritoproyetina) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(r.hierro) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(r.calcitriol) }}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span>
+                  <td class="tabla-rc-td font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ documentoPaciente(r) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ r.Hb ?? r.hb ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ r.calcio ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ r.fosforo ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ r.PTHi ?? r.pthi ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ r.Alb ?? r.alb ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ valorCalcioCorregido(r) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ r.ktv ?? r.kt ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600 tabular-nums">{{ formatearTiempoDialisisTabla(r.tiempo_dialisis) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ siNo(r.eritoproyetina) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ siNo(r.hierro) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ siNo(r.calcitriol) }}</td>
+                  <td class="tabla-rc-td">
+                    <span class="tabla-rc-badge inline-flex rounded-full px-2 py-0.5 font-semibold whitespace-nowrap" :class="estadoAprobacionClase(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span>
                   </td>
-                  <td class="px-4 py-3 text-sm">
-                    <span v-if="r.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                  <td class="tabla-rc-td">
+                    <span v-if="r.supervisor_edito_registro" class="tabla-rc-badge inline-flex rounded-full bg-violet-100 px-2 py-0.5 font-semibold text-violet-800 whitespace-nowrap">Sí</span>
                     <span v-else class="text-slate-400">—</span>
                   </td>
-                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[180px] truncate" :title="r.comentario_evaluacion || ''">{{ textoComentarioSupervisor(r.comentario_evaluacion) }}</td>
+                  <td class="tabla-rc-td tabla-rc-col-comentario text-slate-600" :title="r.comentario_evaluacion || ''">{{ r.comentario_evaluacion?.trim() || '—' }}</td>
+                  <td class="tabla-rc-td tabla-rc-td-acciones">
+                    <div class="inline-flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        class="tabla-rc-btn tabla-rc-btn-editar"
+                        :disabled="!formularioAbierto"
+                        :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                        @click="abrirModalEditar(r)"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        class="tabla-rc-btn tabla-rc-btn-eliminar"
+                        :disabled="!formularioAbierto || eliminandoId === r.id_resultado_clinico"
+                        :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                        @click="eliminarRegistro(r)"
+                      >
+                        {{ eliminandoId === r.id_resultado_clinico ? '…' : 'Eliminar' }}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -161,48 +186,74 @@
           </div>
           <template v-else>
             <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
+            <table class="tabla-rc divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hb</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Calcio</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fósforo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">PTHi</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Alb</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Kt/V</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">T. diálisis (h)</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Eritropoyetina</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hierro</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Calcitriol</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Comentario sup.</th>
+                  <th class="tabla-rc-th">Paciente</th>
+                  <th class="tabla-rc-th">DNI</th>
+                  <th class="tabla-rc-th">Hb</th>
+                  <th class="tabla-rc-th">Calcio</th>
+                  <th class="tabla-rc-th">Fósforo</th>
+                  <th class="tabla-rc-th">PTHi</th>
+                  <th class="tabla-rc-th">Alb</th>
+                  <th class="tabla-rc-th">Calcio corregido</th>
+                  <th class="tabla-rc-th">Kt/V</th>
+                  <th class="tabla-rc-th">T. diálisis (h)</th>
+                  <th class="tabla-rc-th">Eritropoyetina</th>
+                  <th class="tabla-rc-th">Hierro</th>
+                  <th class="tabla-rc-th">Calcitriol</th>
+                  <th class="tabla-rc-th">Estado</th>
+                  <th class="tabla-rc-th">Editado sup.</th>
+                  <th class="tabla-rc-th">Comentario sup.</th>
+                  <th class="tabla-rc-th tabla-rc-th-acciones">Acciones</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
-                  <td class="px-4 py-3 text-sm font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.documento || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.Hb ?? fila.hb ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.calcio ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.fosforo ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.PTHi ?? fila.pthi ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.Alb ?? fila.alb ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ fila.ktv ?? '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600 tabular-nums">{{ formatearTiempoDialisisTabla(fila.tiempo_dialisis) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(fila.eritoproyetina) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(fila.hierro) }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-600">{{ siNo(fila.calcitriol) }}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" :class="estadoAprobacionClase(fila.estado_aprobacion)">{{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}</span>
+                  <td class="tabla-rc-td font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ fila.documento || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ fila.Hb ?? fila.hb ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ fila.calcio ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ fila.fosforo ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ fila.PTHi ?? fila.pthi ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ fila.Alb ?? fila.alb ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ valorCalcioCorregido(fila) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ fila.ktv ?? '—' }}</td>
+                  <td class="tabla-rc-td text-slate-600 tabular-nums">{{ formatearTiempoDialisisTabla(fila.tiempo_dialisis) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ siNo(fila.eritoproyetina) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ siNo(fila.hierro) }}</td>
+                  <td class="tabla-rc-td text-slate-600">{{ siNo(fila.calcitriol) }}</td>
+                  <td class="tabla-rc-td">
+                    <span class="tabla-rc-badge inline-flex rounded-full px-2 py-0.5 font-semibold whitespace-nowrap" :class="estadoAprobacionClase(fila.estado_aprobacion)">{{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}</span>
                   </td>
-                  <td class="px-4 py-3 text-sm">
-                    <span v-if="fila.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800">Sí</span>
+                  <td class="tabla-rc-td">
+                    <span v-if="fila.supervisor_edito_registro" class="tabla-rc-badge inline-flex rounded-full bg-violet-100 px-2 py-0.5 font-semibold text-violet-800 whitespace-nowrap">Sí</span>
                     <span v-else class="text-slate-400">—</span>
                   </td>
-                  <td class="px-4 py-3 text-sm text-slate-600 max-w-[180px] truncate" :title="fila.comentario_evaluacion || ''">{{ textoComentarioSupervisor(fila.comentario_evaluacion) }}</td>
+                  <td class="tabla-rc-td tabla-rc-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
+                  <td class="tabla-rc-td tabla-rc-td-acciones">
+                    <div v-if="fila.tieneRegistro" class="inline-flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        class="tabla-rc-btn tabla-rc-btn-editar"
+                        :disabled="!formularioAbierto"
+                        :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                        @click="abrirModalEditar(fila.registro)"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        class="tabla-rc-btn tabla-rc-btn-eliminar"
+                        :disabled="!formularioAbierto || eliminandoId === fila.id_resultado_clinico"
+                        :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                        @click="eliminarRegistro(fila.registro)"
+                      >
+                        {{ eliminandoId === fila.id_resultado_clinico ? '…' : 'Eliminar' }}
+                      </button>
+                    </div>
+                    <span v-else class="text-slate-400">—</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -222,17 +273,17 @@
           </div>
           <template v-else>
             <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
+            <table class="tabla-rc divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Archivo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Periodo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Clinica</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Modalidad</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Filas</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Guardadas</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Errores</th>
+                  <th class="tabla-rc-th">Fecha</th>
+                  <th class="tabla-rc-th">Archivo</th>
+                  <th class="tabla-rc-th">Periodo</th>
+                  <th class="tabla-rc-th">Clinica</th>
+                  <th class="tabla-rc-th">Modalidad</th>
+                  <th class="tabla-rc-th">Filas</th>
+                  <th class="tabla-rc-th">Guardadas</th>
+                  <th class="tabla-rc-th">Errores</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -242,14 +293,14 @@
                   class="hover:bg-slate-50 transition-colors cursor-pointer"
                   @click="abrirDetalleCarga(carga)"
                 >
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.fecha }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.archivo }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.periodo || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.clinica || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.modalidad || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ carga.totalFilas }}</td>
-                  <td class="px-4 py-3 text-sm text-green-700 font-semibold">{{ carga.guardadas }}</td>
-                  <td class="px-4 py-3 text-sm text-red-700 font-semibold">{{ carga.errores }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ carga.fecha }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ carga.archivo }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ carga.periodo || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ carga.clinica || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ carga.modalidad || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ carga.totalFilas }}</td>
+                  <td class="tabla-rc-td text-green-700 font-semibold">{{ carga.guardadas }}</td>
+                  <td class="tabla-rc-td text-red-700 font-semibold">{{ carga.errores }}</td>
                 </tr>
               </tbody>
             </table>
@@ -269,11 +320,11 @@
     <div v-if="mostrarModalNuevo" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center">
-          <h3 class="font-bold text-white flex items-center gap-2">Nuevo registro de Resultados Clínicos</h3>
+          <h3 class="font-bold text-white flex items-center gap-2">{{ tituloModalFormulario }}</h3>
           <button type="button" class="text-white/80 hover:text-white" @click="cerrarModalNuevo">✕</button>
         </div>
-        <div class="p-6 overflow-y-auto flex-1">
-          <div v-if="!pacienteParaFormulario" class="space-y-4">
+        <div class="overflow-y-auto flex-1">
+          <div v-if="!pacienteParaFormulario" class="space-y-4 p-6">
             <label class="block text-sm font-bold text-slate-700">Busque el paciente</label>
             <input
               v-model="busquedaPaciente"
@@ -314,9 +365,14 @@
           </div>
           <div v-else>
             <Form5
+              :key="form5ModalKey"
               :paciente="pacienteParaFormulario"
               :periodo="periodoNumero"
               :id-paciente-atencion="idPacienteAtencionParaForm"
+              :registro-edicion="registroEdicion"
+              :clinica-nombre="clinicaActualTexto"
+              :periodo-label="periodoActualTexto"
+              :modalidad-nombre="modalidadActualTexto"
               @cancelar="cerrarModalNuevo"
               @guardado="onGuardado"
             />
@@ -381,19 +437,19 @@
             </div>
           </div>
           <div class="overflow-x-auto border border-slate-200 rounded-xl">
-            <table class="min-w-full divide-y divide-slate-200">
+            <table class="tabla-rc divide-y divide-slate-200">
               <thead class="bg-slate-50">
                 <tr>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Hb</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Calcio</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fosforo</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">PTHi</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Alb</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Kt/V</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
+                  <th class="tabla-rc-th">DNI</th>
+                  <th class="tabla-rc-th">Paciente</th>
+                  <th class="tabla-rc-th">Hb</th>
+                  <th class="tabla-rc-th">Calcio</th>
+                  <th class="tabla-rc-th">Fosforo</th>
+                  <th class="tabla-rc-th">PTHi</th>
+                  <th class="tabla-rc-th">Alb</th>
+                  <th class="tabla-rc-th">Kt/V</th>
+                  <th class="tabla-rc-th">Estado</th>
+                  <th class="tabla-rc-th">Detalle</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -401,18 +457,18 @@
                   v-for="(detalle, index) in detallesCargaPaginados"
                   :key="`${cargaSeleccionada.id}-${(paginaDetalleCarga - 1) * PAGE_SIZE_TABLAS + index}`"
                 >
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.dni || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.paciente || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.Hb || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.calcio || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.fosforo || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.PTHi || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.Alb || '—' }}</td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.ktv || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ detalle.dni || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ detalle.paciente || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ detalle.Hb || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ detalle.calcio || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ detalle.fosforo || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ detalle.PTHi || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ detalle.Alb || '—' }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ detalle.ktv || '—' }}</td>
                   <td class="px-4 py-3 text-sm font-semibold" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
                     {{ detalle.guardado ? 'Guardado' : 'Error' }}
                   </td>
-                  <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.mensaje }}</td>
+                  <td class="tabla-rc-td text-slate-700">{{ detalle.mensaje }}</td>
                 </tr>
               </tbody>
             </table>
@@ -435,7 +491,7 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
-import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
+import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import Form5 from '@/components/forms/Form5.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 
@@ -457,6 +513,9 @@ const idPacienteSeleccionado = ref('');
 const busquedaPaciente = ref('');
 const pacienteParaFormulario = ref(null);
 const idPacienteAtencionParaForm = ref(null);
+const registroEdicion = ref(null);
+const form5ModalKey = ref(0);
+const eliminandoId = ref(null);
 const mostrarModalImportar = ref(false);
 const arrastrando = ref(false);
 const archivoSeleccionado = ref(null);
@@ -567,12 +626,6 @@ function estadoAprobacionClase(estado) {
   return 'bg-amber-100 text-amber-700';
 }
 
-function textoComentarioSupervisor(text) {
-  const s = String(text || '').trim();
-  if (!s) return '—';
-  return s.length > 64 ? `${s.slice(0, 64)}…` : s;
-}
-
 /** Muestra tiempo de diálisis como horas numéricas (2, 2.5), no como HH:MM:SS de la BD. */
 function formatearHorasDecimal(num) {
   if (num == null || Number.isNaN(num)) return '—';
@@ -673,6 +726,25 @@ const normalizarNumero = (valor) => {
   return Number.isNaN(numero) ? null : numero;
 };
 
+function calcularCalcioCorregido(calcio, alb) {
+  const c = normalizarNumero(calcio);
+  const a = normalizarNumero(alb);
+  if (c == null || a == null) return null;
+  return Math.round((c + 0.8 * (4 - a)) * 100) / 100;
+}
+
+function valorCalcioCorregido(row) {
+  const guardado = row?.calcio_corregido;
+  if (guardado != null && String(guardado).trim() !== '') return guardado;
+  const calculado = calcularCalcioCorregido(row?.calcio, row?.Alb ?? row?.alb);
+  return calculado != null ? calculado : '—';
+}
+
+function valorCalcioCorregidoExport(row) {
+  const v = valorCalcioCorregido(row);
+  return v === '—' ? '' : String(v);
+}
+
 async function fetchPeriodos() {
   try {
     const respuesta = await getAllIpress('/periodos/');
@@ -702,7 +774,9 @@ const todosPacientesLista = computed(() => {
     if (r) {
       return {
         id_paciente_atencion: id,
+        id_resultado_clinico: r.id_resultado_clinico,
         tieneRegistro: true,
+        registro: r,
         paciente: nombrePaciente(r),
         documento: documentoPaciente(r),
         Hb: r.Hb ?? r.hb,
@@ -710,6 +784,7 @@ const todosPacientesLista = computed(() => {
         fosforo: r.fosforo,
         PTHi: r.PTHi ?? r.pthi,
         Alb: r.Alb ?? r.alb,
+        calcio_corregido: r.calcio_corregido,
         ktv: r.ktv,
         tiempo_dialisis: r.tiempo_dialisis,
         eritoproyetina: r.eritoproyetina,
@@ -730,6 +805,7 @@ const todosPacientesLista = computed(() => {
       fosforo: '',
       PTHi: '',
       Alb: '',
+      calcio_corregido: '',
       ktv: '',
       tiempo_dialisis: '',
       eritoproyetina: null,
@@ -819,6 +895,7 @@ function filasExcelResultadosVistaRegistros() {
     Fósforo: r.fosforo ?? '',
     PTHi: r.PTHi ?? r.pthi ?? '',
     Alb: r.Alb ?? r.alb ?? '',
+    'Calcio corregido': valorCalcioCorregidoExport(r),
     'Kt/V': r.ktv ?? r.kt ?? '',
     'T. diálisis (h)': tDial === '—' ? '' : tDial,
     Eritropoyetina: siNo(r.eritoproyetina),
@@ -843,6 +920,7 @@ function filasExcelResultadosVistaTodos() {
     Fósforo: fila.fosforo ?? '',
     PTHi: fila.PTHi ?? fila.pthi ?? '',
     Alb: fila.Alb ?? fila.alb ?? '',
+    'Calcio corregido': valorCalcioCorregidoExport(fila),
     'Kt/V': fila.ktv ?? '',
     'T. diálisis (h)': tDial === '—' ? '' : tDial,
     Eritropoyetina: siNo(fila.eritoproyetina),
@@ -1049,13 +1127,67 @@ async function fetchPacientesAtencion() {
   }
 }
 
+function pacienteDesdeRegistro(registro) {
+  return registro?.datosPacienteAtencion?.datosPaciente
+    || registro?.datosPaciente
+    || null;
+}
+
+function idAtencionDesdeRegistro(registro) {
+  return registro?.id_paciente_atencion
+    ?? registro?.datosPacienteAtencion?.id_paciente_atencion
+    ?? null;
+}
+
+const tituloModalFormulario = computed(() => (
+  registroEdicion.value ? 'Editar registro de Resultados Clínicos' : 'Nuevo registro de Resultados Clínicos'
+));
+
 function abrirModalNuevo() {
   if (!formularioAbierto.value) return;
+  registroEdicion.value = null;
   pacienteParaFormulario.value = null;
+  idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
   busquedaPaciente.value = '';
+  form5ModalKey.value += 1;
   fetchPacientesAtencion();
   mostrarModalNuevo.value = true;
+}
+
+function abrirModalEditar(registro) {
+  if (!formularioAbierto.value || !registro) return;
+  const paciente = pacienteDesdeRegistro(registro);
+  const idAtencion = idAtencionDesdeRegistro(registro);
+  if (!paciente || idAtencion == null) {
+    ElMessage.error('No se pudo cargar el paciente del registro.');
+    return;
+  }
+  registroEdicion.value = registro;
+  pacienteParaFormulario.value = paciente;
+  idPacienteAtencionParaForm.value = idAtencion;
+  idPacienteSeleccionado.value = '';
+  busquedaPaciente.value = '';
+  form5ModalKey.value += 1;
+  mostrarModalNuevo.value = true;
+}
+
+async function eliminarRegistro(registro) {
+  if (!formularioAbierto.value || !registro?.id_resultado_clinico) return;
+  const nombre = nombrePaciente(registro);
+  const confirmar = window.confirm(`¿Eliminar el registro de resultados clínicos de ${nombre}?`);
+  if (!confirmar) return;
+  eliminandoId.value = registro.id_resultado_clinico;
+  try {
+    await deleteAllIpress(`/resultadosClinicos/${registro.id_resultado_clinico}/`);
+    ElMessage.success('Registro eliminado correctamente.');
+    await fetchRegistros();
+  } catch (e) {
+    console.error('Error al eliminar resultado clínico:', e);
+    ElMessage.error('No se pudo eliminar el registro.');
+  } finally {
+    eliminandoId.value = null;
+  }
 }
 
 function confirmarPacienteYMostrarFormulario() {
@@ -1064,11 +1196,13 @@ function confirmarPacienteYMostrarFormulario() {
   if (atencion?.datosPaciente) {
     pacienteParaFormulario.value = atencion.datosPaciente;
     idPacienteAtencionParaForm.value = atencion.id_paciente_atencion ?? id;
+    form5ModalKey.value += 1;
   }
 }
 
 function cerrarModalNuevo() {
   mostrarModalNuevo.value = false;
+  registroEdicion.value = null;
   pacienteParaFormulario.value = null;
   idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
@@ -1257,4 +1391,134 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.tabla-rc {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.tabla-rc-th,
+.tabla-rc-td {
+  white-space: nowrap;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  vertical-align: middle;
+}
+
+.tabla-rc-th {
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tabla-rc-badge {
+  font-size: 0.6875rem;
+}
+
+.tabla-rc-col-comentario {
+  min-width: 12rem;
+}
+
+.tabla-rc tbody td:first-child {
+  min-width: 9rem;
+}
+
+.tabla-rc-th-acciones,
+.tabla-rc-td-acciones {
+  text-align: right;
+}
+
+.tabla-rc-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1rem;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.tabla-rc-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.tabla-rc-btn-editar {
+  border: 1px solid #a5f3fc;
+  color: #0e7490;
+  background: transparent;
+}
+
+.tabla-rc-btn-editar:hover:not(:disabled) {
+  background: #ecfeff;
+}
+
+.tabla-rc-btn-eliminar {
+  border: 1px solid #fecdd3;
+  color: #be123c;
+  background: transparent;
+}
+
+.tabla-rc-btn-eliminar:hover:not(:disabled) {
+  background: #fff1f2;
+}
+
+.header-accion-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.header-accion-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.header-accion-btn-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.header-accion-btn-secundario {
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  background: #fff;
+}
+
+.header-accion-btn-secundario:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.header-accion-btn-cyan {
+  border: 1px solid #67e8f9;
+  color: #0e7490;
+  background: #fff;
+}
+
+.header-accion-btn-cyan:hover:not(:disabled) {
+  background: #ecfeff;
+}
+
+.header-accion-btn-primario {
+  border: 1px solid #0891b2;
+  color: #fff;
+  background: #0891b2;
+}
+
+.header-accion-btn-primario:hover:not(:disabled) {
+  background: #0e7490;
+}
 </style>

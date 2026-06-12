@@ -1,5 +1,6 @@
 <template>
-  <div class="p-6">
+  <HomeSupervisor v-if="esSupervisorPerfil" />
+  <div v-else class="p-6">
     <FormularioPaciente v-if="mostrarFormulario == 1" 
       :periodoInicial="periodoSeleccionado" 
       :idPeriodoIpressInicial="idPeriodoIpress"
@@ -34,7 +35,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { esSupervisor } from '@/utils/perfil'
+import HomeSupervisor from './HomeSupervisor.vue'
 import ListaPacientes from './ListaPacientes.vue'
 import FormularioPaciente from './FormularioPaciente.vue'
 import CaptarPaciente from './CaptarPaciente.vue'
@@ -45,6 +48,8 @@ import Form4 from '@/components/forms/Form4.vue'
 import Form5 from '@/components/forms/Form5.vue'
 import Form7 from '@/components/forms/Form7.vue'
 import Form2Peritoneal from '@/components/forms/typesForm2/Form2Peritoneal.vue'
+
+const esSupervisorPerfil = computed(() => esSupervisor())
 
 const mostrarFormulario = ref(4)
 const pacienteSeleccionado = ref(null)

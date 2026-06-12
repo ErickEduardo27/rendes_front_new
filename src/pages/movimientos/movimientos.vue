@@ -271,6 +271,7 @@
                     :id-periodo-ipress-inicial="idPeriodoIpress"
                     :id-clinica-inicial="idClinicaSeleccionada"
                     :nombre-clinica-inicial="clinicaSeleccionada"
+                    :mostrar-tabla-edicion="false"
                     :numero-documento-inicial="documentoPrefillRegistro"
                     @cancelar="onCerrarFormularioPacienteMovimientos"
                 />

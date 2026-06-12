@@ -32,7 +32,7 @@
 
                     <div v-if="!modoCompletarAlta && mostrarLista" class="border border-gray-200 rounded-md max-h-48 overflow-y-auto bg-white">
                         <div v-for="item in resultadosFiltrados" :key="item.id" class="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-cyan-50 transition-colors">
-                            <input type="checkbox" :value="item" v-model="form.seleccionados" class="w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500 cursor-pointer" />
+                            <input type="checkbox" :value="item" v-model="form.seleccionados" class="w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500 cursor-pointer" @change="onDiagnosticoSeleccionado($event)" />
                             <span class="text-sm text-gray-700 cursor-default"><strong>{{ item.codigo }}</strong> - {{ item.descripcion }}</span>
                         </div>
                     </div>
@@ -83,7 +83,7 @@
                         Cancelar
                     </button>
                     <button @click="postForm()" class="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-                        {{ modoCompletarAlta ? 'Guardar fecha de alta' : 'Registrar' }}
+                        {{ modoCompletarAlta ? 'Guardar fecha de alta' : (idMorbilidadEdicion ? 'Guardar cambios' : 'Registrar') }}
                     </button>
                 </div>
             </div>
@@ -98,7 +98,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
 
 // 👇 defineProps debe estar fuera de cualquier función
-const { paciente, periodo, idPacienteAtencion } = defineProps({
+const props = defineProps({
     paciente: {
         type: Object,
         required: true
@@ -110,8 +110,14 @@ const { paciente, periodo, idPacienteAtencion } = defineProps({
     idPacienteAtencion: {
         type: [Number, String],
         default: null
+    },
+    registroEdicion: {
+        type: Object,
+        default: null
     }
 })
+
+const { paciente, periodo, idPacienteAtencion } = props
 
 const emit = defineEmits(['cancelar', 'guardado'])
 
@@ -143,6 +149,56 @@ const rangoFechasPeriodo = computed(() => {
 const ultimoRegistroHospitalizacion = ref(null);
 const modoCompletarAlta = ref(false);
 const idMorbilidadCompletar = ref(null);
+const idMorbilidadEdicion = ref(null);
+
+function toInputDate(value) {
+    if (value == null || value === '') return '';
+    const s = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    return s;
+}
+
+function registroTieneAlta(registro) {
+    return Boolean(toInputDate(registro?.fecha_alta_hospitalizacion));
+}
+
+function limpiarFormularioNuevo() {
+    modoCompletarAlta.value = false;
+    idMorbilidadCompletar.value = null;
+    form.value.fIniHos = '';
+    form.value.fAltHos = '';
+    form.value.fuente = '';
+    form.value.seleccionados = [];
+    form.value.filtroCodigo = '';
+    form.value.filtroDescripcion = '';
+    errorFechaAlta.value = '';
+}
+
+function diagnosticosDesdeRegistro(registro) {
+    const codigos = (registro?.codigo_diagnostico || '').split(',').map((c) => c.trim()).filter(Boolean);
+    const diagnosticos = (registro?.diagnostico || '').split(',').map((d) => d.trim()).filter(Boolean);
+    const sel = [];
+    codigos.forEach((cod, i) => {
+        const item = items.value.find((it) => String(it.codigo).trim() === cod);
+        if (item) sel.push(item);
+        else if (diagnosticos[i]) sel.push({ id: 9000 + i, codigo: cod, descripcion: diagnosticos[i] });
+        else sel.push({ id: 9000 + i, codigo: cod, descripcion: cod });
+    });
+    return sel;
+}
+
+function cargarRegistroEdicion(registro) {
+    if (!registro) return;
+    modoCompletarAlta.value = false;
+    idMorbilidadCompletar.value = null;
+    idMorbilidadEdicion.value = registro.id_morbilidad_hospitalaria;
+    form.value.fIniHos = toInputDate(registro.fecha_hospitalizacion);
+    form.value.fAltHos = toInputDate(registro.fecha_alta_hospitalizacion);
+    form.value.fuente = registro.fuente || '';
+    form.value.seleccionados = diagnosticosDesdeRegistro(registro);
+    form.value.filtroCodigo = '';
+    form.value.filtroDescripcion = '';
+}
 
 const items = ref([
     { id: 1, codigo: 'J96.0', descripcion: 'Insuficiencia respiratoria aguda' },
@@ -1002,40 +1058,33 @@ const fetchPaciente = async (url = null) => {
 
 const fetchUltimoRegistroHospitalizacion = async () => {
     if (idPacienteAtencion == null || idPacienteAtencion === '') return;
+    if (props.registroEdicion) return;
     try {
         const res = await getAllIpress(`/morbilidadesHospitalarias/?id_paciente_atencion=${idPacienteAtencion}`);
         const lista = Array.isArray(res) ? res : (res?.results || []);
+        lista.sort((a, b) => (Number(b.id_morbilidad_hospitalaria) || 0) - (Number(a.id_morbilidad_hospitalaria) || 0));
         const ultimo = lista[0] || null;
         ultimoRegistroHospitalizacion.value = ultimo;
-        if (ultimo?.fecha_alta_hospitalizacion) {
-            fechaAltaAnterior.value = ultimo.fecha_alta_hospitalizacion;
-        } else {
-            fechaAltaAnterior.value = '';
-        }
-        if (ultimo && !ultimo.fecha_alta_hospitalizacion) {
+
+        const ultimoConAlta = lista.find((r) => registroTieneAlta(r)) || null;
+        fechaAltaAnterior.value = ultimoConAlta ? toInputDate(ultimoConAlta.fecha_alta_hospitalizacion) : '';
+
+        if (ultimo && !registroTieneAlta(ultimo)) {
             modoCompletarAlta.value = true;
             idMorbilidadCompletar.value = ultimo.id_morbilidad_hospitalaria;
-            form.value.fIniHos = ultimo.fecha_hospitalizacion || '';
+            form.value.fIniHos = toInputDate(ultimo.fecha_hospitalizacion);
             form.value.fAltHos = '';
             form.value.fuente = ultimo.fuente || '';
-            const codigos = (ultimo.codigo_diagnostico || '').split(',').map(c => c.trim()).filter(Boolean);
-            const diagnosticos = (ultimo.diagnostico || '').split(',').map(d => d.trim()).filter(Boolean);
-            const sel = [];
-            codigos.forEach((cod, i) => {
-                const item = items.value.find(it => String(it.codigo).trim() === cod);
-                if (item) sel.push(item);
-                else if (diagnosticos[i]) sel.push({ id: 9000 + i, codigo: cod, descripcion: diagnosticos[i] });
-            });
-            form.value.seleccionados = sel;
+            form.value.seleccionados = diagnosticosDesdeRegistro(ultimo);
+            form.value.filtroCodigo = '';
+            form.value.filtroDescripcion = '';
         } else {
-            modoCompletarAlta.value = false;
-            idMorbilidadCompletar.value = null;
+            limpiarFormularioNuevo();
         }
     } catch (e) {
         console.error('Error al cargar último registro de hospitalización:', e);
         ultimoRegistroHospitalizacion.value = null;
-        modoCompletarAlta.value = false;
-        idMorbilidadCompletar.value = null;
+        limpiarFormularioNuevo();
     }
 };
 
@@ -1099,6 +1148,17 @@ const mostrarLista = computed(() =>
     hayBusqueda.value && resultadosFiltrados.value.length > 0
 );
 
+const limpiarFiltrosBusqueda = () => {
+    form.value.filtroCodigo = '';
+    form.value.filtroDescripcion = '';
+};
+
+const onDiagnosticoSeleccionado = (event) => {
+    if (event?.target?.checked) {
+        limpiarFiltrosBusqueda();
+    }
+};
+
 const quitarSeleccion = (item) => {
     form.value.seleccionados = form.value.seleccionados.filter(i => i.id !== item.id);
 };
@@ -1146,6 +1206,11 @@ const postForm = async (url = null) => {
                 fecha_alta_hospitalizacion: form.value.fAltHos || '',
                 fuente: form.value.fuente || ''
             };
+            if (idMorbilidadEdicion.value != null) {
+                await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadEdicion.value}/`, payload);
+                emit('guardado');
+                return;
+            }
         } else {
             payload = {
                 ...form.value,
@@ -1193,6 +1258,10 @@ const edadPaciente = computed(() => {
 onMounted(async () => {
     await fetchPeriodo();
     fetchPaciente();
+    if (props.registroEdicion) {
+        cargarRegistroEdicion(props.registroEdicion);
+        return;
+    }
     if (idPacienteAtencion != null && idPacienteAtencion !== '') {
         fetchUltimoRegistroHospitalizacion();
     }

@@ -3,11 +3,16 @@
     <div class="flex items-center gap-3 min-w-0">
       <Bars3Icon class="icons-arrow-left w-6 h-6 shrink-0 text-cyan-600 cursor-pointer" @click="$emit('toggle-sidebar')" />
       <SelectorPeriodo
+        v-if="mostrarSelectorPeriodo"
         v-model:periodo="periodo"
         v-model:clinica="clinica"
         v-model:modalidad="modalidad"
         @change="onSelectorChange"
       />
+      <div v-else class="min-w-0">
+        <h1 class="text-sm sm:text-base font-bold text-cyan-800 truncate">Panel de supervisión</h1>
+        <p class="text-[11px] text-slate-500 hidden sm:block">Resumen de clínicas asignadas</p>
+      </div>
     </div>
 
     <div class="flex items-center gap-2 shrink-0">
@@ -110,6 +115,7 @@ import router from "@/router/index";
 import { toast } from 'vue-sonner'
 import { TokenService } from '@/services/api/token.service'
 import SelectorPeriodo from '@/components/SelectorPeriodo.vue'
+import { esSupervisor } from '@/utils/perfil'
 
 const props = defineProps({
   periodo: { type: [Number, String], default: null },
@@ -138,6 +144,12 @@ const onSelectorChange = (payload) => {
 const authStore = useAuthStore()
 const showMenu = ref(false)
 const route = useRoute()
+
+/** En Inicio el supervisor usa su panel propio; en el resto de rutas conserva periodo/clínica/modalidad. */
+const mostrarSelectorPeriodo = computed(() => {
+  if (esSupervisor() && route.name === 'Inicio') return false
+  return true
+})
 const noLeidas = ref(0)
 let pollTimer = null
 
