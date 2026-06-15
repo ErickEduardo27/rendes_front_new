@@ -404,7 +404,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Buscar Paciente*</label>
                         <el-autocomplete 
                             v-model="formEgresar.pacienteBusqueda" 
-                            :fetch-suggestions="querySearchPacientes" 
+                            :fetch-suggestions="querySearchPacientesEgresar" 
                             clearable
                             placeholder="Buscar por DNI o nombre..." 
                             @select="handleSelectPacienteEgresar" 
@@ -412,15 +412,19 @@
                             class="w-full"
                         >
                             <template #default="{ item }">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <div class="font-medium">{{ item.paciente }}</div>
+                                <div class="flex justify-between items-center gap-2">
+                                    <div class="min-w-0">
+                                        <div class="font-medium truncate">{{ item.paciente }}</div>
                                         <div class="text-xs text-gray-500">DNI: {{ item.documento }}</div>
+                                        <div v-if="item.nombre_clinica" class="text-xs text-gray-400 truncate">{{ item.nombre_clinica }}</div>
                                     </div>
-                                    <div class="text-xs text-gray-400">{{ item.estado }}</div>
+                                    <div class="text-xs text-gray-400 shrink-0">{{ item.estado }}</div>
                                 </div>
                             </template>
                         </el-autocomplete>
+                        <p v-if="debeLimitarClinicasAlUsuario() && !pacientesEgresar.length" class="text-xs text-amber-600 mt-1">
+                            No hay pacientes activos en sus clínicas asignadas para el periodo seleccionado.
+                        </p>
                     </div>
 
                     <!-- Información del Paciente Seleccionado -->
@@ -431,14 +435,17 @@
                             <div><strong>DNI:</strong> {{ pacienteSeleccionadoEgresar.documento }}</div>
                             <div><strong>Estado:</strong> {{ pacienteSeleccionadoEgresar.estado }}</div>
                             <div><strong>Modalidad:</strong> {{ etiquetaModalidad(pacienteSeleccionadoEgresar.id_modalidad) }}</div>
+                            <div v-if="pacienteSeleccionadoEgresar.nombre_clinica" class="col-span-2">
+                                <strong>Clínica:</strong> {{ pacienteSeleccionadoEgresar.nombre_clinica }}
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Clínica (solo lectura desde estado global) -->
+                    <!-- Clínica -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Clínica</label>
                         <div class="w-full border border-gray-200 rounded p-2.5 text-sm bg-gray-50 text-gray-700">
-                            {{ nombreClinicaGlobal || '— Seleccione clínica en la barra superior —' }}
+                            {{ nombreClinicaEgresar || (debeLimitarClinicasAlUsuario() ? '— Se definirá al seleccionar el paciente —' : '— Seleccione clínica en la barra superior —') }}
                         </div>
                     </div>
 
@@ -510,6 +517,8 @@
 import { ref, computed, onMounted, reactive, inject, watch } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
+import { debeLimitarClinicasAlUsuario } from '@/utils/perfil';
+import { useAuthStore } from '@/store/auth';
 import { ElMessage } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import FormularioPaciente from '../inicio/FormularioPaciente.vue';
@@ -520,6 +529,7 @@ const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 
 const nombrePeriodoGlobal = computed(() => {
   const id = periodoGlobal.value;
@@ -533,6 +543,14 @@ const nombreClinicaGlobal = computed(() => {
   const list = Array.isArray(ipress.value) ? ipress.value : [];
   const c = list.find(i => i.id_ipress === id);
   return c ? (c.nombre_corto || c.ipress || '') : '';
+});
+
+const nombreClinicaEgresar = computed(() => {
+  if (pacienteSeleccionadoEgresar.value?.nombre_clinica) {
+    return pacienteSeleccionadoEgresar.value.nombre_clinica;
+  }
+  if (formEgresar.clinicaNombre) return formEgresar.clinicaNombre;
+  return nombreClinicaGlobal.value;
 });
 
 // Rango de fechas del periodo global (día 1 … último día del mes; mismo criterio para egreso y captación)
@@ -564,6 +582,7 @@ const movimientos = ref([]);
 const periodos = ref([]);
 const ipress = ref([]);
 const pacientes = ref([]);
+const pacientesEgresar = ref([]);
 const mostrarModalCaptar = ref(false);
 const mostrarModalEgresar = ref(false);
 
@@ -666,6 +685,155 @@ const querySearchPacientes = (queryString, cb) => {
     cb(results);
 };
 
+const querySearchPacientesEgresar = (queryString, cb) => {
+    const base = pacientesEgresar.value;
+    const results = queryString
+        ? base.filter((p) =>
+            p.paciente?.toLowerCase().includes(queryString.toLowerCase()) ||
+            p.documento?.includes(queryString)
+          )
+        : base;
+    cb(results);
+};
+
+const filaListadoAPacienteEgresar = (row, idIpress) => {
+    const p = row?.datosPaciente || {};
+    const list = Array.isArray(ipress.value) ? ipress.value : [];
+    const clinica = list.find((i) => String(i.id_ipress) === String(idIpress));
+    return {
+        id_paciente: p.id_paciente ?? row.id_paciente,
+        paciente: p.paciente ?? '',
+        documento: p.documento ?? '',
+        estado: p.estado ?? '',
+        id_modalidad: row.modalidad ?? p.id_modalidad,
+        id_ipress: idIpress,
+        nombre_clinica: clinica?.nombre_corto || clinica?.ipress || '',
+        id_paciente_atencion: row.id_paciente_atencion,
+    };
+};
+
+const obtenerIdsIpressAsignados = async () => {
+    const idUsuario = authStore.user?.id_usuario;
+    if (!idUsuario) return [];
+    try {
+        const asignaciones = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${idUsuario}`);
+        const listaAsig = Array.isArray(asignaciones) ? asignaciones : (asignaciones?.results || []);
+        return [...new Set(listaAsig.map((a) => a.id_ipress).filter((id) => id != null && id !== ''))];
+    } catch (e) {
+        console.error('Error al obtener clínicas asignadas:', e);
+        return [];
+    }
+};
+
+/** Pacientes con atención ACTIVA en la IPRESS/periodo (aptos para egreso). */
+const cargarPacientesActivosDeIpress = async (idIpress, periodoId, idModalidad = null) => {
+    const paramsListado = new URLSearchParams({
+        id_ipress: String(idIpress),
+        id_periodo: String(periodoId),
+    });
+    if (idModalidad != null && idModalidad !== '') {
+        paramsListado.set('id_modalidad', String(idModalidad));
+    }
+
+    const paramsAtencion = new URLSearchParams({
+        id_ipress: String(idIpress),
+        id_periodo: String(periodoId),
+    });
+    if (idModalidad != null && idModalidad !== '') {
+        paramsAtencion.set('id_modalidad', String(idModalidad));
+    }
+
+    const [respuesta, atencionesRes] = await Promise.all([
+        getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${paramsListado.toString()}`),
+        getAllIpress(`/pacienteAtencion/?${paramsAtencion.toString()}`),
+    ]);
+
+    const lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+    const atenciones = Array.isArray(atencionesRes) ? atencionesRes : (atencionesRes?.results || []);
+    const activosPorPaciente = new Map();
+
+    for (const a of atenciones) {
+        if (String(a.estado || '').toUpperCase() !== 'ACTIVO') continue;
+        const pid = a.id_paciente ?? a.datosPaciente?.id_paciente;
+        if (pid != null) activosPorPaciente.set(String(pid), a);
+    }
+
+    return lista
+        .filter((row) => {
+            const pid = row?.datosPaciente?.id_paciente ?? row.id_paciente;
+            return pid != null && activosPorPaciente.has(String(pid));
+        })
+        .map((row) => {
+            const item = filaListadoAPacienteEgresar(row, idIpress);
+            const at = activosPorPaciente.get(String(item.id_paciente));
+            if (at) {
+                item.estado_atencion = at.estado;
+                item.id_paciente_atencion = at.id_paciente_atencion;
+                item.id_modalidad = item.id_modalidad ?? at.id_modalidad ?? at.datosModalidad?.id_modalidad;
+            }
+            return item;
+        });
+};
+
+const fetchPacientesParaEgresar = async () => {
+    const periodoId = periodoGlobal.value ?? formEgresar.periodo;
+    pacientesEgresar.value = [];
+
+    if (periodoId == null || periodoId === '') {
+        return;
+    }
+
+    if (debeLimitarClinicasAlUsuario()) {
+        const idsIpress = await obtenerIdsIpressAsignados();
+        if (!idsIpress.length) return;
+
+        const acumulado = [];
+        const vistos = new Set();
+
+        await Promise.all(
+            idsIpress.map(async (idIpress) => {
+                try {
+                    const items = await cargarPacientesActivosDeIpress(idIpress, periodoId);
+                    for (const item of items) {
+                        const clave = `${item.id_paciente}-${item.id_ipress}`;
+                        if (item.id_paciente != null && !vistos.has(clave)) {
+                            vistos.add(clave);
+                            acumulado.push(item);
+                        }
+                    }
+                } catch (e) {
+                    console.error(`Error listando pacientes IPRESS ${idIpress}:`, e);
+                }
+            })
+        );
+
+        pacientesEgresar.value = acumulado.sort((a, b) =>
+            (a.paciente || '').localeCompare(b.paciente || '', 'es')
+        );
+        return;
+    }
+
+    const idIpress = clinicaGlobal.value;
+    if (idIpress != null && idIpress !== '') {
+        try {
+            pacientesEgresar.value = await cargarPacientesActivosDeIpress(
+                idIpress,
+                periodoId,
+                modalidadGlobal.value
+            );
+        } catch (e) {
+            console.error('Error al obtener pacientes para egreso:', e);
+            pacientesEgresar.value = [];
+        }
+        return;
+    }
+
+    await fetchPacientes();
+    pacientesEgresar.value = pacientes.value.filter(
+        (p) => String(p.estado || '').toUpperCase() !== 'EGRESADO'
+    );
+};
+
 const handleSelectClinica = (item) => {
     filtros.clinica = item.id_ipress;
     fetchMovimientos();
@@ -685,6 +853,10 @@ const handleSelectPaciente = async (item) => {
 const handleSelectPacienteEgresar = (item) => {
     pacienteSeleccionadoEgresar.value = item;
     formEgresar.paciente = item.id_paciente;
+    if (item.id_ipress != null && item.id_ipress !== '') {
+        formEgresar.clinica = item.id_ipress;
+        formEgresar.clinicaNombre = item.nombre_clinica || '';
+    }
 };
 
 const filtrarMovimientos = () => {
@@ -1042,10 +1214,19 @@ const captarPaciente = async () => {
 
 // Funciones de Modal Egresar (clínica y periodo se toman del estado global)
 const abrirModalEgresar = async () => {
-    await fetchPacientes();
+    if (periodoGlobal.value == null || periodoGlobal.value === '') {
+        ElMessage({
+            message: 'Seleccione el periodo en la barra superior antes de egresar un paciente.',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+    await fetchPacientesParaEgresar();
     formEgresar.paciente = null;
     formEgresar.pacienteBusqueda = '';
     formEgresar.clinica = clinicaGlobal.value ?? null;
+    formEgresar.clinicaNombre = nombreClinicaGlobal.value;
     formEgresar.periodo = periodoGlobal.value ?? '';
     formEgresar.fecha = '';
     formEgresar.tipo_egreso = '';
@@ -1118,28 +1299,71 @@ const egresarPaciente = async () => {
             });
         }
 
-        const payload = {
-            paciente: formEgresar.paciente,
-            periodo: formEgresar.periodo,
-            ipress: formEgresar.clinica,
-            condicion: 'EGRESADO',
-            tipo_egreso: tipoEgresoTexto,
-            fecha_egreso: formEgresar.fecha,
-            observaciones: formEgresar.observaciones
-        };
+        const atencionActiva =
+            pacienteSeleccionadoEgresar.value?.id_paciente_atencion
+                ? { id_paciente_atencion: pacienteSeleccionadoEgresar.value.id_paciente_atencion }
+                : await obtenerAtencionActivaParaEgreso({
+                    pacienteId: formEgresar.paciente,
+                    periodoId: formEgresar.periodo,
+                    ipressId: formEgresar.clinica,
+                    modalidadId: modalidadActual,
+                });
 
-        await postAllIpress("/PacienteRegistro/", payload);
+        if (!atencionActiva?.id_paciente_atencion) {
+            ElMessage({
+                message: 'No se encontró una atención activa del paciente en la clínica y periodo indicados.',
+                type: 'error',
+                plain: true,
+            });
+            return;
+        }
 
-        await patchPacienteEstado(formEgresar.paciente, 'EGRESADO');
-        
+        const obsEgreso = truncarObservaciones(
+            formEgresar.observaciones
+                ? `Egreso: ${tipoEgresoTexto}. ${formEgresar.observaciones}`
+                : `Egreso: ${tipoEgresoTexto}`
+        );
+
+        await patchAllIpress(`/pacienteAtencion/${atencionActiva.id_paciente_atencion}/`, {
+            estado: 'EGRESADO',
+            tipo_atencion: 'EGRESO',
+            fecha_fin: formEgresar.fecha,
+            fecha_atencion: formEgresar.fecha,
+            observaciones: obsEgreso,
+        });
+
+        try {
+            await postAllIpress('/PacienteRegistro/', {
+                paciente: formEgresar.paciente,
+                periodo: formEgresar.periodo,
+                ipress: formEgresar.clinica,
+                condicion: 'EGRESADO',
+                tipo_egreso: tipoEgresoTexto,
+                fecha_egreso: formEgresar.fecha,
+                observaciones: formEgresar.observaciones,
+            });
+        } catch (e) {
+            console.warn('PacienteRegistro (auditoría):', e);
+        }
+
+        try {
+            await patchPacienteEstado(formEgresar.paciente, 'EGRESADO');
+        } catch (e) {
+            console.warn('No se actualizó estado en rd_pacientes:', e);
+        }
+
         ElMessage({
             message: 'Paciente egresado exitosamente',
             type: 'success',
             plain: true,
         });
-        
+
         cerrarModalEgresar();
-        await fetchMovimientos();
+        await fetchMovimientos({
+            idPeriodo: formEgresar.periodo,
+            idIpress: formEgresar.clinica,
+            idModalidad: modalidadActual,
+        });
     } catch (error) {
         console.error('Error al egresar paciente:', error);
         ElMessage({
@@ -1151,11 +1375,11 @@ const egresarPaciente = async () => {
 };
 
 // Funciones de carga de datos: listar atenciones según periodo, ipress y modalidad globales
-const fetchMovimientos = async () => {
+const fetchMovimientos = async (filtrosOverride = null) => {
     try {
-        const idPeriodo = periodoGlobal.value;
-        const idIpress = clinicaGlobal.value;
-        const idModalidad = modalidadGlobal.value;
+        const idPeriodo = filtrosOverride?.idPeriodo ?? periodoGlobal.value;
+        const idIpress = filtrosOverride?.idIpress ?? clinicaGlobal.value;
+        const idModalidad = filtrosOverride?.idModalidad ?? modalidadGlobal.value;
 
         const params = new URLSearchParams();
         if (idPeriodo != null && idPeriodo !== '') params.set('id_periodo', idPeriodo);
@@ -1170,21 +1394,28 @@ const fetchMovimientos = async () => {
         movimientos.value = lista.map((mov) => {
             const fechaStr = mov.fecha_atencion || (mov.created_at ? new Date(mov.created_at).toLocaleDateString() : 'N/A');
             const tipoAtencion = String(mov.tipo_atencion || '').toUpperCase();
+            const estadoAtencion = String(mov.estado || '').toUpperCase();
             let tipo = 'INGRESO';
             if (tipoAtencion === 'CAMBIO_MODALIDAD') tipo = 'CAMBIO_MODALIDAD';
-            else if (tipoAtencion === 'EGRESO' || String(mov.estado || '').toUpperCase() === 'EGRESADO') tipo = 'EGRESO';
+            else if (tipoAtencion === 'EGRESO' || estadoAtencion === 'EGRESADO') tipo = 'EGRESO';
 
             const modalidadLabel = mov.datosModalidad?.modalidad
                 || etiquetaModalidad(mov.id_modalidad ?? mov.datosModalidad?.id_modalidad);
 
+            const fechaMov = tipo === 'EGRESO'
+                ? (mov.fecha_fin || mov.fecha_atencion || (typeof mov.created_at === 'string' ? mov.created_at.slice(0, 10) : null) || fechaStr)
+                : (typeof mov.created_at === 'string' ? (mov.created_at.slice(0, 10) || fechaStr) : (mov.fecha_atencion || 'N/A'));
+
             return {
                 id: mov.id_paciente_atencion,
                 tipo,
-                condicion: tipoAtencion === 'CAMBIO_MODALIDAD' ? 'CAMBIO_MODALIDAD' : (mov.tipo_atencion || 'N/A'),
-                fecha: typeof mov.created_at === 'string' ? (mov.created_at.slice(0, 10) || fechaStr) : (mov.fecha_atencion || 'N/A'),
+                condicion: tipo === 'EGRESO'
+                    ? 'EGRESADO'
+                    : (tipoAtencion === 'CAMBIO_MODALIDAD' ? 'CAMBIO_MODALIDAD' : (mov.tipo_atencion || 'N/A')),
+                fecha: fechaMov,
                 paciente_nombre: mov.datosPaciente?.paciente || 'N/A',
                 paciente_dni: mov.datosPaciente?.documento || 'N/A',
-                tipo_egreso: tipoAtencion === 'CAMBIO_MODALIDAD' ? null : (mov.tipo_egreso || null),
+                tipo_egreso: tipo === 'EGRESO' ? extraerTipoEgresoDesdeObs(mov.observaciones) : null,
                 observaciones: mov.observaciones,
                 periodo: mov.datosPeriodo?.periodo || 'N/A',
                 clinica: mov.datosIpress?.nombre_corto || mov.datosIpress?.ipress || 'N/A',
@@ -1346,8 +1577,35 @@ function truncarObservaciones(texto, max = 100) {
     return s.length <= max ? s : `${s.slice(0, max - 3)}...`;
 }
 
+function extraerTipoEgresoDesdeObs(observaciones) {
+    const obs = String(observaciones || '').trim();
+    if (!obs) return null;
+    const match = obs.match(/^Egreso:\s*([^.]+)/i);
+    return match ? match[1].trim() : obs;
+}
+
+async function obtenerAtencionActivaParaEgreso({ pacienteId, periodoId, ipressId, modalidadId }) {
+    const params = new URLSearchParams({
+        id_paciente: String(pacienteId),
+        id_periodo: String(periodoId),
+    });
+    if (ipressId != null && ipressId !== '') params.set('id_ipress', String(ipressId));
+    if (modalidadId != null && modalidadId !== '') params.set('id_modalidad', String(modalidadId));
+
+    const res = await getAllIpress(`/pacienteAtencion/?${params.toString()}`);
+    const lista = Array.isArray(res) ? res : (res?.results || []);
+
+    return (
+        lista.find((a) => String(a.estado || '').toUpperCase() === 'ACTIVO')
+        || lista.find((a) => String(a.tipo_atencion || '').toUpperCase() !== 'EGRESO' && String(a.estado || '').toUpperCase() !== 'EGRESADO')
+        || null
+    );
+}
+
 async function obtenerModalidadActualPaciente(pacienteId) {
-    const enLista = pacientes.value.find((p) => String(p.id_paciente) === String(pacienteId));
+    const enLista =
+        pacientesEgresar.value.find((p) => String(p.id_paciente) === String(pacienteId)) ||
+        pacientes.value.find((p) => String(p.id_paciente) === String(pacienteId));
     if (enLista?.id_modalidad != null && enLista.id_modalidad !== '') {
         return Number(enLista.id_modalidad);
     }

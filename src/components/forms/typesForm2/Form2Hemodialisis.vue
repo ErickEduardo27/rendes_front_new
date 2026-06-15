@@ -479,7 +479,7 @@
 import { useRouter } from 'vue-router'
 import { ref, onMounted, reactive, computed, watch, inject } from 'vue';
 import { getAllIpress, patchAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
-import { prepararPayloadUnidadesActuales } from '@/utils/unidadesActualesPayload';
+import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import { ElMessage } from 'element-plus';
 
 const props = defineProps({
@@ -785,19 +785,7 @@ const editForm = async (url = null) => {
     } catch (error) { console.error(error); }
 };
 
-const normalizarTipoAcceso = (valor) => {
-    if (!valor) return null;
-    const texto = String(valor).trim();
-    const equivalencias = {
-        '1': 'Catéter Venoso Central Temporal',
-        '2': 'Catéter Venoso Central de Larga Permanencia',
-        '3': 'Fístula Arteriovenosa',
-        '4': 'Injerto Autólogo',
-        '5': 'Injerto Protésico',
-        '6': 'Catéter peritoneal',
-    };
-    return equivalencias[texto] || texto;
-};
+const normalizarTipoAcceso = (valor) => tipoAccesoDesdeDb(valor);
 
 const normalizarLocalizacion = (valor) => {
     if (!valor) return null;

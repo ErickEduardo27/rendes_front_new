@@ -29,6 +29,28 @@ function truncar(texto) {
   return s.slice(0, MAX_LEN);
 }
 
+const COMPACTO_A_ETIQUETA = Object.fromEntries(
+  Object.entries(TIPO_ACCESO_POR_ETIQUETA).map(([etiqueta, codigo]) => [codigo, etiqueta]),
+);
+
+const ID_A_ETIQUETA = Object.fromEntries(
+  Object.entries(TIPO_ACCESO_POR_ID).map(([id, codigo]) => [id, COMPACTO_A_ETIQUETA[codigo] || codigo]),
+);
+
+/** Convierte valor de BD (código corto, id numérico o etiqueta) a etiqueta del formulario. */
+export function tipoAccesoDesdeDb(valor) {
+  if (valor == null || valor === '') return null;
+  const texto = String(valor).trim();
+  if (TIPO_ACCESO_POR_ETIQUETA[texto]) return texto;
+  if (COMPACTO_A_ETIQUETA[texto]) return COMPACTO_A_ETIQUETA[texto];
+  const id = Number(texto);
+  if (!Number.isNaN(id) && ID_A_ETIQUETA[id]) return ID_A_ETIQUETA[id];
+  const porEtiqueta = Object.keys(TIPO_ACCESO_POR_ETIQUETA).find(
+    (etiqueta) => etiqueta.localeCompare(texto, undefined, { sensitivity: 'accent' }) === 0,
+  );
+  return porEtiqueta || texto;
+}
+
 /** Normaliza tipo de acceso al formato que cabe en varchar(40). */
 export function tipoAccesoParaDb(valor) {
   if (valor == null || valor === '') return '';

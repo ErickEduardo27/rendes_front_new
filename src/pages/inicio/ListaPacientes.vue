@@ -100,40 +100,60 @@
         <p v-if="cargandoPacientes" class="text-xs text-slate-500 px-3 py-2 bg-slate-50 border-b border-slate-100">
           Buscando en el servidor…
         </p>
-        <table class="min-w-full text-sm">
+        <table class="min-w-full text-xs tabla-pacientes">
           <thead class="bg-slate-100 text-slate-700">
             <tr>
-              <th class="text-left px-3 py-2 font-semibold">Documento</th>
-              <th class="text-left px-3 py-2 font-semibold">Paciente</th>
-              <th class="text-left px-3 py-2 font-semibold">Modalidad inicio TRR</th>
-              <th class="text-left px-3 py-2 font-semibold">F. inicio TRR</th>
-              <th class="text-left px-3 py-2 font-semibold">Subsistema</th>
-              <th class="text-left px-3 py-2 font-semibold">Tipo acceso</th>
-              <th class="text-left px-3 py-2 font-semibold">Etiología</th>
-              <th class="text-left px-3 py-2 font-semibold">Acciones</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">T. doc.</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Documento</th>
+              <th class="text-left px-2 py-2 font-semibold min-w-[140px]">Paciente</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. nac.</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Sexo</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Grado</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Mod. TRR</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. inicio TRR</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Subsistema</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Tipo acceso</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Localización</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. creac. acceso</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. 1er ingreso</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. ingreso hosp.</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Hosp. proced.</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Etiología</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Comorb.</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap sticky right-0 bg-slate-100">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr
               v-for="row in pacientesPaginados"
               :key="row.id_paciente_dialisis ?? `at-${row.id_paciente_atencion}`"
-              class="border-t border-slate-100 hover:bg-slate-50"
+              class="border-t border-slate-100 hover:bg-slate-50 group"
             >
-              <td class="px-3 py-2 font-mono">{{ row.datosPaciente?.documento ?? '—' }}</td>
-              <td class="px-3 py-2">
-                {{ row.datosPaciente?.paciente ?? '—' }}
+              <td class="px-2 py-2">{{ celda(row.datosPaciente?.tipo_documento) }}</td>
+              <td class="px-2 py-2 font-mono">{{ celda(row.datosPaciente?.documento) }}</td>
+              <td class="px-2 py-2">
+                {{ celda(row.datosPaciente?.paciente) }}
                 <span
                   v-if="row.sin_registro_dialisis"
-                  class="ml-2 text-[10px] font-semibold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded"
+                  class="ml-1 block mt-0.5 text-[10px] font-semibold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded w-fit"
                   title="Tiene atención en el periodo pero aún no tiene ficha en diálisis"
                 >Sin ficha diálisis</span>
               </td>
-              <td class="px-3 py-2">{{ row.modalidad_inicio_trr || '—' }}</td>
-              <td class="px-3 py-2 whitespace-nowrap">{{ row.fecha_inicio_trr || '—' }}</td>
-              <td class="px-3 py-2">{{ row.subsistema_salud || '—' }}</td>
-              <td class="px-3 py-2 max-w-[140px] truncate" :title="row.tipo_acceso">{{ row.tipo_acceso || '—' }}</td>
-              <td class="px-3 py-2 max-w-[160px] truncate" :title="etiologiaTexto(row)">{{ etiologiaTexto(row) }}</td>
-              <td class="px-3 py-2">
+              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.datosPaciente?.fecha_nacimiento) }}</td>
+              <td class="px-2 py-2 whitespace-nowrap">{{ generoTexto(row.datosPaciente?.genero) }}</td>
+              <td class="px-2 py-2 max-w-[90px] truncate" :title="row.datosPaciente?.grado_instruccion">{{ celda(row.datosPaciente?.grado_instruccion) }}</td>
+              <td class="px-2 py-2 max-w-[110px] truncate" :title="row.modalidad_inicio_trr">{{ celda(row.modalidad_inicio_trr) }}</td>
+              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_inicio_trr) }}</td>
+              <td class="px-2 py-2 max-w-[100px] truncate" :title="row.subsistema_salud">{{ celda(row.subsistema_salud) }}</td>
+              <td class="px-2 py-2 max-w-[130px] truncate" :title="tipoAccesoTexto(row.tipo_acceso)">{{ tipoAccesoTexto(row.tipo_acceso) }}</td>
+              <td class="px-2 py-2 max-w-[130px] truncate" :title="row.localizacion_acceso_inicio">{{ celda(row.localizacion_acceso_inicio) }}</td>
+              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_creacion_acceso) }}</td>
+              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_primer_ingreso) }}</td>
+              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_ingreso_hospital) }}</td>
+              <td class="px-2 py-2 max-w-[120px] truncate" :title="row.hospital_procedencia_trr">{{ celda(row.hospital_procedencia_trr) }}</td>
+              <td class="px-2 py-2 max-w-[140px] truncate" :title="etiologiaTexto(row)">{{ etiologiaTexto(row) }}</td>
+              <td class="px-2 py-2 max-w-[120px] truncate" :title="comorbilidadesTexto(row)">{{ comorbilidadesTexto(row) }}</td>
+              <td class="px-2 py-2 sticky right-0 bg-white group-hover:bg-slate-50">
                 <div class="flex flex-wrap gap-1 items-center">
                   <button
                     type="button"
@@ -144,7 +164,7 @@
                   >
                     Editar
                   </button>
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-sky-100 text-sky-800 hover:bg-sky-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 1)" @click="abrirFormulario(row, 1)">
+                 <!--  <button type="button" class="text-xs px-2 py-0.5 rounded bg-sky-100 text-sky-800 hover:bg-sky-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 1)" @click="abrirFormulario(row, 1)">
                     Acceso
                     <span v-if="metaFormulario(row, 1)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
                   </button>
@@ -163,12 +183,12 @@
                   <button type="button" class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 5)" @click="abrirFormulario(row, 5)">
                     Vacun.
                     <span v-if="metaFormulario(row, 5)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
-                  </button>
+                  </button> -->
                 </div>
               </td>
             </tr>
             <tr v-if="!pacientes.length">
-              <td colspan="8" class="px-3 py-8 text-center text-gray-500">
+              <td colspan="18" class="px-3 py-8 text-center text-gray-500">
                 No hay pacientes con atención en esta clínica y periodo
                 <span v-if="filtroNombre.trim() || filtroDni.trim()"> (pruebe otro filtro)</span>.
               </td>
@@ -398,7 +418,87 @@ import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
+import { tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import FormularioPaciente from './FormularioPaciente.vue';
+
+const LISTA_TIPOS_ACCESO = [
+  { id: '1', label: 'Catéter Venoso Central Temporal' },
+  { id: '2', label: 'Catéter Venoso Central de Larga Permanencia' },
+  { id: '3', label: 'Fístula Arteriovenosa' },
+  { id: '4', label: 'Injerto Autólogo' },
+  { id: '5', label: 'Injerto Protésico' },
+  { id: '6', label: 'Catéter peritoneal' },
+];
+
+const COMORBILIDADES_CAMPOS = [
+  ['enf_insuficiencia_cardiaca_congestiva', 'ICC'],
+  ['enf_diabetes', 'Diabetes'],
+  ['enf_ateroesclerotica_cardiaca', 'Aterosclerosis'],
+  ['enf_hipertension', 'HTA'],
+  ['enf_vascular_periferica', 'Vasc. perif.'],
+  ['enf_tuberculosis', 'TBC'],
+  ['enf_cerebro_vascular', 'ACV'],
+  ['enf_cancer', 'Cáncer'],
+  ['enf_otra', 'Otra'],
+];
+
+function celda(val) {
+  const s = val != null && String(val).trim() !== '' ? String(val).trim() : '';
+  return s || '—';
+}
+
+function parseFechaAISO(value) {
+  const s = String(value ?? '').trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const dmY = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (dmY) {
+    const d = dmY[1].padStart(2, '0');
+    const m = dmY[2].padStart(2, '0');
+    const y = dmY[3];
+    return `${y}-${m}-${d}`;
+  }
+  return null;
+}
+
+function formatFechaDDMMAAAA(value) {
+  const iso = parseFechaAISO(value);
+  if (!iso) return null;
+  const [y, m, d] = iso.split('-');
+  return `${d}-${m}-${y}`;
+}
+
+function fechaCelda(val) {
+  if (val == null || String(val).trim() === '') return '—';
+  return formatFechaDDMMAAAA(val) || String(val).trim();
+}
+
+function esSiComorb(v) {
+  const s = String(v || '').trim().toLowerCase();
+  return s === 'sí' || s === 'si' || s === 's';
+}
+
+function tipoAccesoTexto(valor) {
+  if (valor == null || String(valor).trim() === '') return '—';
+  const texto = String(valor).trim();
+  const desdeDb = tipoAccesoDesdeDb(texto);
+  const found = LISTA_TIPOS_ACCESO.find(
+    (t) => String(t.id) === texto || t.label === texto || t.label === desdeDb,
+  );
+  return found?.label || desdeDb || texto;
+}
+
+function generoTexto(g) {
+  const u = String(g || '').trim().toUpperCase();
+  if (u === 'M' || u.startsWith('MASC')) return 'M';
+  if (u === 'F' || u.startsWith('FEM')) return 'F';
+  return celda(g);
+}
+
+function comorbilidadesTexto(row) {
+  const items = COMORBILIDADES_CAMPOS.filter(([campo]) => esSiComorb(row?.[campo])).map(([, label]) => label);
+  return items.length ? items.join(', ') : '—';
+}
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
 const router = useRouter();
@@ -431,7 +531,8 @@ const pacientesFiltrados = computed(() => pacientes.value);
 const etiologiaTexto = (row) => {
   const e = row?.datosEti;
   if (!e) return '—';
-  return e.especifica || e.codigo || e.general || '—';
+  const partes = [e.general, e.especifica || e.codigo].filter((x) => x != null && String(x).trim() !== '');
+  return partes.length ? partes.join(' — ') : '—';
 };
 
 // Estadísticas de pacientes desde tabla paciente_atencion (por periodo, ipress, modalidad)

@@ -18,3 +18,14 @@ export function esAdmin() {
 export function esEvaluador() {
   return esSupervisor() || esAdmin();
 }
+
+/** Clínicas, hospitales y supervisor: solo IPRESS asignadas en rd_usuarios_ipress. */
+export function debeLimitarClinicasAlUsuario() {
+  const p = obtenerNombrePerfil().toLowerCase();
+  return (
+    p.includes('clínica') ||
+    p.includes('clinica') ||
+    p.includes('hospital') ||
+    p.includes('supervisor')
+  );
+}

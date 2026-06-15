@@ -261,7 +261,7 @@
               <el-date-picker v-model="form.fechaCreacionAcceso" v-bind="attrsFechaDDMMAAAA" @change="actualizarErroresFechas" />
             </el-form-item>
             <el-form-item label="Tipo de Acceso de Inicio" >
-              <el-select v-model="form.tipoAccesoInicio" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'">
+              <el-select v-model="form.tipoAccesoInicio" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'" @change="actualizarErroresFechas">
                 <el-option v-for="tipo in tiposAccesoFiltrados" :key="tipo.id" :label="tipo.label" :value="tipo.id" />
               </el-select>
             </el-form-item>
@@ -689,6 +689,26 @@ const CAMPOS_FECHA_VALIDACION = [
   { key: 'fechaPrimerIngreso', label: 'Fecha de Primer Ingreso a Unidad' },
 ];
 
+const TIPO_ACCESO_FISTULA = '3';
+
+const esTipoAccesoFistula = () => String(form.tipoAccesoInicio) === TIPO_ACCESO_FISTULA;
+
+const fechaSumandoUnMes = (fecha) => {
+  if (!fecha) return null;
+  const d = new Date(fecha);
+  d.setMonth(d.getMonth() + 1);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const fechaRestandoUnMes = (fecha) => {
+  if (!fecha) return null;
+  const d = new Date(fecha);
+  d.setMonth(d.getMonth() - 1);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
 const validarCampoFecha = (key, label) => {
   const valor = form[key];
   if (!valor) {
@@ -721,11 +741,29 @@ const validarCampoFecha = (key, label) => {
     return;
   }
 
+  if (key === 'fechaCreacionAcceso' && esTipoAccesoFistula()) {
+    const inicioTRR = normalizarFecha(form.fechaInicioTRR);
+    if (inicioTRR) {
+      const fechaLimite = fechaRestandoUnMes(inicioTRR);
+      if (fecha > fechaLimite) {
+        erroresFecha[key] = 'Si el acceso es Fístula, debe ser al menos 1 mes antes del inicio de TRR.';
+        return;
+      }
+    }
+  }
+
   if (key === 'fechaInicioTRR') {
     const creacion = normalizarFecha(form.fechaCreacionAcceso);
     if (creacion && fecha < creacion) {
       erroresFecha[key] = 'No puede ser anterior a la Fecha de Creación del Acceso de Inicio.';
       return;
+    }
+    if (esTipoAccesoFistula() && creacion) {
+      const fechaMinima = fechaSumandoUnMes(creacion);
+      if (fecha < fechaMinima) {
+        erroresFecha[key] = 'Si el acceso es Fístula, debe ser al menos 1 mes después de la creación del acceso.';
+        return;
+      }
     }
   }
 
@@ -750,6 +788,7 @@ watch(
     form.fechaInicioTRR,
     form.fechaIngresoEsSalud,
     form.fechaPrimerIngreso,
+    form.tipoAccesoInicio,
     periodoSeleccionado.value,
   ],
   () => actualizarErroresFechas()
