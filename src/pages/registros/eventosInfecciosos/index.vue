@@ -365,6 +365,7 @@ import { ElMessage } from 'element-plus';
 import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
+import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
 import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 import DashboardInfeccionesPaciente from '@/components/registros/DashboardInfeccionesPaciente.vue';
@@ -674,7 +675,9 @@ async function fetchRegistros() {
       getAllIpress(`/pacienteAtencion/?${qs}`),
     ]);
     registros.value = Array.isArray(resReg) ? resReg : resReg?.results || [];
-    listadoAtenciones.value = Array.isArray(resAten) ? resAten : resAten?.results || [];
+    listadoAtenciones.value = atencionesParaListadoRegistros(
+      Array.isArray(resAten) ? resAten : resAten?.results || []
+    );
   } catch (e) {
     console.error('Error al cargar eventos infecciosos:', e);
     registros.value = [];
@@ -699,7 +702,9 @@ async function fetchPacientesAtencion() {
   }
   try {
     const res = await getAllIpress(`/pacienteAtencion/?${qs}`);
-    listadoAtenciones.value = Array.isArray(res) ? res : res?.results || [];
+    listadoAtenciones.value = atencionesParaListadoRegistros(
+      Array.isArray(res) ? res : res?.results || []
+    );
   } catch (e) {
     console.error('Error al cargar atenciones:', e);
     listadoAtenciones.value = [];

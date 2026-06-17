@@ -144,16 +144,14 @@
                   <label class="cm-label">Salida de la ósmosis</label>
                   <select v-model="endoAguaTrata" class="cm-control">
                     <option value="">Seleccione</option>
-                    <option value="Normal">Normal (≤ 0,25)</option>
-                    <option value="Alto">Alto (&gt; 0,25)</option>
+                    <option v-for="op in opcionesEndotoxina" :key="op.value" :value="op.value">{{ op.label }}</option>
                   </select>
                 </div>
                 <div class="cm-campo">
                   <label class="cm-label">Retorno anillo circulación</label>
                   <select v-model="rtnAnilloCir" class="cm-control">
                     <option value="">Seleccione</option>
-                    <option value="Normal">Normal (≤ 0,25)</option>
-                    <option value="Alto">Alto (&gt; 0,25)</option>
+                    <option v-for="op in opcionesEndotoxina" :key="op.value" :value="op.value">{{ op.label }}</option>
                   </select>
                 </div>
               </div>
@@ -180,16 +178,14 @@
                   <label class="cm-label">Máquina hemodiálisis 1</label>
                   <select v-model="endMaquiHemodi" class="cm-control">
                     <option value="">Seleccione</option>
-                    <option value="Normal">Normal (≤ 0,25)</option>
-                    <option value="Alto">Alto (&gt; 0,25)</option>
+                    <option v-for="op in opcionesEndotoxina" :key="op.value" :value="op.value">{{ op.label }}</option>
                   </select>
                 </div>
                 <div class="cm-campo">
                   <label class="cm-label">Máquina hemodiálisis 2</label>
                   <select v-model="endMaquiHemodi2" class="cm-control">
                     <option value="">Seleccione</option>
-                    <option value="Normal">Normal (≤ 0,25)</option>
-                    <option value="Alto">Alto (&gt; 0,25)</option>
+                    <option v-for="op in opcionesEndotoxina" :key="op.value" :value="op.value">{{ op.label }}</option>
                   </select>
                 </div>
               </div>
@@ -303,6 +299,13 @@ const bacMaquiHemodi2 = ref('');
 const endMaquiHemodi = ref('');
 const endMaquiHemodi2 = ref('');
 
+const opcionesEndotoxina = [
+  { value: 'Normal', label: 'Normal (≤ 0,25)' },
+  { value: 'Alto', label: 'Alto (> 0,25)' },
+  { value: 'Normal_03', label: 'Normal (≤ 0,3)' },
+  { value: 'Anormal_03', label: 'Anormal (> 0,3)' },
+];
+
 const periodoVisibleId = computed(() => periodoGlobal.value ?? null);
 
 const periodoTexto = computed(() => {
@@ -410,10 +413,20 @@ watch(control, (val) => {
   if (val !== '1') limpiarSoloMediciones();
 });
 
+function normalizarEndotoxina(val) {
+  if (val === 'Anormal') return 'Anormal_03';
+  return val || '';
+}
+
 function textoEndotoxina(val) {
-  if (val === 'Normal') return '≤ 0,25';
-  if (val === 'Alto') return '> 0,25';
-  return '—';
+  const etiquetas = {
+    Normal: '≤ 0,25',
+    Alto: '> 0,25',
+    Normal_03: '≤ 0,3',
+    Anormal_03: '> 0,3',
+    Anormal: '> 0,3',
+  };
+  return etiquetas[val] || '—';
 }
 
 function formatoNumero(val) {
@@ -456,12 +469,12 @@ function cargarRegistroEnFormulario(registro) {
   if (control.value === '1') {
     bacSaOsmosis.value = registro.bacSaOsmosis ?? '';
     bacAniCirculacion.value = registro.bacAniCirculacion ?? '';
-    endoAguaTrata.value = registro.endoAguaTrata || '';
-    rtnAnilloCir.value = registro.rtnAnilloCir || '';
+    endoAguaTrata.value = normalizarEndotoxina(registro.endoAguaTrata);
+    rtnAnilloCir.value = normalizarEndotoxina(registro.rtnAnilloCir);
     bacMaquiHemodi.value = registro.bacMaquiHemodi ?? '';
     bacMaquiHemodi2.value = registro.bacMaquiHemodi2 ?? '';
-    endMaquiHemodi.value = registro.endMaquiHemodi || '';
-    endMaquiHemodi2.value = registro.endMaquiHemodi2 || '';
+    endMaquiHemodi.value = normalizarEndotoxina(registro.endMaquiHemodi);
+    endMaquiHemodi2.value = normalizarEndotoxina(registro.endMaquiHemodi2);
   }
 }
 

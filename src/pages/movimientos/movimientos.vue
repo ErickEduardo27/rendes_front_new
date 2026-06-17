@@ -510,6 +510,40 @@
                 </div>
             </div>
         </div>
+
+        <!-- Modal: Hospitalización → Morbilidad hospitalaria -->
+        <div
+            v-if="mostrarModalMorbilidadHospitalaria"
+            class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+        >
+            <div class="bg-white rounded-lg shadow-xl p-6 w-[520px] max-h-[90vh] overflow-y-auto relative">
+                <button class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl" @click="cerrarModalMorbilidadHospitalaria">&times;</button>
+                <h3 class="text-xl font-bold mb-3 text-gray-800 flex items-center gap-2">
+                    <span class="text-2xl">🏥</span>
+                    <span>Egreso por hospitalización</span>
+                </h3>
+                <p class="text-sm text-gray-700">
+                    ¿Ya registró la <strong>Morbilidad Hospitalaria</strong> del paciente para el periodo actual?
+                </p>
+
+                <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+                    <button
+                        type="button"
+                        class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                        @click="cerrarModalMorbilidadHospitalaria"
+                    >
+                        Sí
+                    </button>
+                    <button
+                        type="button"
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                        @click="irAMorbilidadHospitalaria"
+                    >
+                        No
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -607,6 +641,7 @@ const mensajeCondicion = ref('');
 const ultimoEgreso = ref(null);
 const paginaActual = ref(1);
 const itemsPorPagina = 10;
+const mostrarModalMorbilidadHospitalaria = ref(false);
 
 // Filtros
 const filtros = reactive({
@@ -1043,26 +1078,79 @@ const cerrarModalCaptar = () => {
     mostrarModalCaptar.value = false;
 };
 
+const resolverAtencionParaCaptacion = (listaAtenciones) => {
+    const lista = Array.isArray(listaAtenciones) ? listaAtenciones : [];
+    const activa = lista.find((a) => String(a.estado || '').toUpperCase() === 'ACTIVO');
+    const egresadas = lista
+        .filter((a) => String(a.estado || '').toUpperCase() === 'EGRESADO')
+        .sort((a, b) => (Number(b.id_paciente_atencion) || 0) - (Number(a.id_paciente_atencion) || 0));
+    const pendiente = lista.find((a) => a.id_ipress == null);
+    return {
+        activa: activa || null,
+        atencionEgresada: egresadas[0] || null,
+        atencionPendiente: pendiente || null,
+    };
+};
+
 const determinarCondicionPaciente = async (pacienteId) => {
+    ultimoEgreso.value = null;
     try {
+        const idPeriodo = periodoGlobal.value;
+        const idIpress = clinicaGlobal.value;
+        const idModalidad = modalidadGlobal.value;
+
+        if (idPeriodo != null && idModalidad != null) {
+            const paramsAt = new URLSearchParams({
+                id_paciente: String(pacienteId),
+                id_periodo: String(idPeriodo),
+                id_modalidad: String(idModalidad),
+            });
+            if (idIpress != null && idIpress !== '') {
+                paramsAt.set('id_ipress', String(idIpress));
+            }
+            const atRes = await getAllIpress(`/pacienteAtencion/?${paramsAt}`);
+            const atList = Array.isArray(atRes) ? atRes : (atRes?.results || []);
+            const { activa, atencionEgresada } = resolverAtencionParaCaptacion(atList);
+
+            if (activa) {
+                condicionAutomatica.value = 'YA_ACTIVO';
+                mensajeCondicion.value = 'El paciente ya tiene atención activa en este periodo, clínica y modalidad.';
+                formCaptar.condicion = activa.tipo_atencion || 'CONTINUADOR';
+                return;
+            }
+
+            if (atencionEgresada) {
+                condicionAutomatica.value = 'REINGRESO';
+                mensajeCondicion.value = 'El paciente fue egresado en este periodo. El ingreso se registrará como REINGRESO.';
+                formCaptar.condicion = 'REINGRESO';
+                ultimoEgreso.value = {
+                    tipo_egreso: extraerTipoEgresoDesdeObs(atencionEgresada.observaciones) || 'No especificado',
+                    fecha: atencionEgresada.fecha_fin
+                        || atencionEgresada.fecha_atencion
+                        || (atencionEgresada.created_at ? new Date(atencionEgresada.created_at).toLocaleDateString() : '—'),
+                };
+                return;
+            }
+        }
+
         const respuesta = await getAllIpress(`/PacienteRegistro/?paciente=${pacienteId}`);
-        
+
         if (!respuesta || respuesta.length === 0) {
             condicionAutomatica.value = 'NUEVO';
             mensajeCondicion.value = 'Este es el primer registro del paciente en el sistema.';
             formCaptar.condicion = 'NUEVO';
         } else {
-            const egresos = respuesta.filter(r => r.condicion === 'EGRESADO').sort((a, b) => 
+            const egresos = respuesta.filter((r) => r.condicion === 'EGRESADO').sort((a, b) =>
                 new Date(b.fecha_created) - new Date(a.fecha_created)
             );
-            
+
             if (egresos.length > 0) {
                 condicionAutomatica.value = 'REINGRESO';
                 mensajeCondicion.value = 'El paciente tiene un egreso previo registrado.';
                 formCaptar.condicion = 'REINGRESO';
                 ultimoEgreso.value = {
                     tipo_egreso: egresos[0].tipo_egreso || 'No especificado',
-                    fecha: new Date(egresos[0].fecha_created).toLocaleDateString()
+                    fecha: new Date(egresos[0].fecha_created).toLocaleDateString(),
                 };
             } else {
                 condicionAutomatica.value = 'CONTINUADOR';
@@ -1126,6 +1214,15 @@ const captarPaciente = async () => {
         return;
     }
 
+    if (condicionAutomatica.value === 'YA_ACTIVO') {
+        ElMessage({
+            message: 'El paciente ya tiene atención activa en este periodo. Use egreso si corresponde.',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+
     if (condicionAutomatica.value === 'REINGRESO' && !ultimoEgreso.value) {
         ElMessage({
             message: 'No se puede registrar un reingreso sin un egreso previo',
@@ -1166,9 +1263,24 @@ const captarPaciente = async () => {
 
         const tipoAtencion = condicionAutomatica.value === 'REINGRESO' ? 'REINGRESO' : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR');
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-        const atencionesExistentes = await getAllIpress(`/pacienteAtencion/?id_paciente=${formCaptar.paciente}&id_periodo=${idPeriodo}&id_modalidad=${idModalidad}`);
+        const paramsAtencion = new URLSearchParams({
+            id_paciente: String(formCaptar.paciente),
+            id_periodo: String(idPeriodo),
+            id_modalidad: String(idModalidad),
+            id_ipress: String(idIpress),
+        });
+        const atencionesExistentes = await getAllIpress(`/pacienteAtencion/?${paramsAtencion}`);
         const listaAtenciones = Array.isArray(atencionesExistentes) ? atencionesExistentes : (atencionesExistentes?.results || []);
-        const atencionPendiente = listaAtenciones.find((item) => item.id_ipress == null);
+        const { activa, atencionEgresada, atencionPendiente } = resolverAtencionParaCaptacion(listaAtenciones);
+
+        if (activa) {
+            ElMessage({
+                message: 'El paciente ya tiene atención activa en este periodo, clínica y modalidad.',
+                type: 'warning',
+                plain: true,
+            });
+            return;
+        }
 
         const payload = {
             id_paciente: formCaptar.paciente,
@@ -1181,21 +1293,22 @@ const captarPaciente = async () => {
             fecha_fin: '',
             estado: 'ACTIVO',
             observaciones: formCaptar.observaciones || '',
-            created_at: now
+            created_at: now,
         };
 
-        if (atencionPendiente?.id_paciente_atencion) {
-            await patchAllIpress(`/pacienteAtencion/${atencionPendiente.id_paciente_atencion}/`, payload);
+        const idReactivar = atencionEgresada?.id_paciente_atencion ?? atencionPendiente?.id_paciente_atencion;
+        if (idReactivar) {
+            await patchAllIpress(`/pacienteAtencion/${idReactivar}/`, payload);
         } else {
-            await postAllIpress("/pacienteAtencion/", payload);
+            await postAllIpress('/pacienteAtencion/', payload);
         }
 
-        const estadoPaciente = pacienteSeleccionado.value?.estado === 'REGISTRADO' ? 'NUEVO' : 'REINGRESO';
+        const estadoPaciente = condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'REINGRESO';
         await patchPacienteEstado(formCaptar.paciente, estadoPaciente);
         await actualizarPeriodoIpressPaciente(formCaptar.paciente, idPeriodo, idIpress);
 
         ElMessage({
-            message: 'Paciente captado exitosamente',
+            message: tipoAtencion === 'REINGRESO' ? 'Reingreso registrado exitosamente' : 'Paciente captado exitosamente',
             type: 'success',
             plain: true,
         });
@@ -1239,6 +1352,106 @@ const abrirModalEgresar = async () => {
 const cerrarModalEgresar = () => {
     mostrarModalEgresar.value = false;
 };
+
+const cerrarModalMorbilidadHospitalaria = () => {
+    mostrarModalMorbilidadHospitalaria.value = false;
+};
+
+const irAMorbilidadHospitalaria = () => {
+    // Abrir en nueva pestaña para no perder la vista de movimientos
+    const href = router.resolve({ name: 'MorbilidadHospitalaria' }).href;
+    try {
+        window.open(href, '_blank');
+    } catch (e) {
+        // fallback: navegación en la misma pestaña
+        router.push({ name: 'MorbilidadHospitalaria' });
+    } finally {
+        cerrarModalMorbilidadHospitalaria();
+    }
+};
+
+function isoDesdeValorApi(valor) {
+    if (!valor) return null;
+    const s = String(valor).trim();
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}\s/.test(s)) return s.slice(0, 10);
+    return null;
+}
+
+function maxIso(a, b) {
+    if (!a) return b || null;
+    if (!b) return a || null;
+    return a > b ? a : b;
+}
+
+async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPaciente, idPacienteAtencion, rango }) {
+    const min = rango?.min;
+    const max = rango?.max;
+
+    const within = (iso) => {
+        if (!iso) return false;
+        if (min && iso < min) return false;
+        if (max && iso > max) return false;
+        return true;
+    };
+
+    let ultima = null;
+
+    // Acceso vascular (unidades actuales): usa id_paciente
+    try {
+        const res = await getAllIpress(`/unidadesActuales/?id_paciente=${idPaciente}`);
+        const lista = Array.isArray(res) ? res : (res?.results || []);
+        for (const r of lista) {
+            const iso = isoDesdeValorApi(r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual);
+            if (within(iso)) ultima = maxIso(ultima, iso);
+        }
+    } catch (e) {
+        console.warn('No se pudo obtener unidadesActuales:', e);
+    }
+
+    // Eventos infecciosos acceso vascular: usa id_paciente_atencion
+    if (idPacienteAtencion) {
+        try {
+            const res = await getAllIpress(`/eventosAccesosVasculares/?id_paciente_atencion=${idPacienteAtencion}`);
+            const lista = Array.isArray(res) ? res : (res?.results || []);
+            for (const r of lista) {
+                const iso = isoDesdeValorApi(r.fecha_evento);
+                if (within(iso)) ultima = maxIso(ultima, iso);
+            }
+        } catch (e) {
+            console.warn('No se pudo obtener eventosAccesosVasculares:', e);
+        }
+
+        // Vacunación: usa id_paciente_atencion
+        try {
+            const res = await getAllIpress(`/vacunaciones/?id_paciente_atencion=${idPacienteAtencion}`);
+            const lista = Array.isArray(res) ? res : (res?.results || []);
+            const campos = [
+                'fecha_vhb',
+                'fecha_antiHbc',
+                'fecha_vhc',
+                'fecha_vih',
+                'fecha_titulo_acHbs',
+                'fecha_hepatitis_b',
+                'fecha_covid',
+                'fecha_influenza',
+                'fecha_neumococo',
+            ];
+            for (const r of lista) {
+                for (const c of campos) {
+                    const iso = isoDesdeValorApi(r[c]);
+                    if (within(iso)) ultima = maxIso(ultima, iso);
+                }
+            }
+        } catch (e) {
+            console.warn('No se pudo obtener vacunaciones:', e);
+        }
+    }
+
+    return ultima;
+}
 
 const egresarPaciente = async () => {
     if (!formEgresar.paciente || !formEgresar.periodo || !formEgresar.fecha || !formEgresar.tipo_egreso || !formEgresar.clinica) {
@@ -1318,6 +1531,22 @@ const egresarPaciente = async () => {
             return;
         }
 
+        // La fecha de egreso debe ser posterior al último registro clínico del periodo (excepto calidad de agua)
+        const ultimaFecha = await obtenerUltimaFechaRegistrosPacientePeriodo({
+            idPaciente: formEgresar.paciente,
+            idPacienteAtencion: atencionActiva.id_paciente_atencion,
+            rango: rangoFechaEgreso.value,
+        });
+        if (ultimaFecha && String(formEgresar.fecha) <= String(ultimaFecha)) {
+            ElMessage({
+                message: `La Fecha de Egreso debe ser posterior al último registro del paciente en el periodo (${ultimaFecha}).`,
+                type: 'error',
+                plain: true,
+                duration: 6000,
+            });
+            return;
+        }
+
         const obsEgreso = truncarObservaciones(
             formEgresar.observaciones
                 ? `Egreso: ${tipoEgresoTexto}. ${formEgresar.observaciones}`
@@ -1364,6 +1593,10 @@ const egresarPaciente = async () => {
             idIpress: formEgresar.clinica,
             idModalidad: modalidadActual,
         });
+
+        if (formEgresar.tipo_egreso === 'Hospitalización') {
+            mostrarModalMorbilidadHospitalaria.value = true;
+        }
     } catch (error) {
         console.error('Error al egresar paciente:', error);
         ElMessage({

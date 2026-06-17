@@ -31,12 +31,13 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div class="form7-field">
             <label class="form7-label">VHB</label>
-            <select class="form7-control" v-model="form.vhbEstado">
+            <select class="form7-control" v-model="form.vhbEstado" @change="onCambioEstadoSerologico('vhbEstado', 'vhbFecha')">
               <option :value="null">Seleccione</option>
               <option>Positivo</option>
               <option>Negativo</option>
               <option>Desconocido</option>
             </select>
+            <template v-if="!esEstadoDesconocido(form.vhbEstado)">
             <label class="form7-label-sub">Fecha examen</label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.vhbFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhbFecha }" @blur="validarCampoFechaEnBlur('vhbFecha')" />
@@ -46,15 +47,17 @@
               </button>
             </div>
             <p v-if="erroresFecha.vhbFecha" class="form7-date-error">{{ erroresFecha.vhbFecha }}</p>
+            </template>
           </div>
           <div class="form7-field">
             <label class="form7-label">Anti-HBc total</label>
-            <select class="form7-control" v-model="form.antiHbcEstado">
+            <select class="form7-control" v-model="form.antiHbcEstado" @change="onCambioEstadoSerologico('antiHbcEstado', 'antiHbcFecha')">
               <option :value="null">Seleccione</option>
               <option>Positivo</option>
               <option>Negativo</option>
               <option>Desconocido</option>
             </select>
+            <template v-if="!esEstadoDesconocido(form.antiHbcEstado)">
             <label class="form7-label-sub">Fecha examen</label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.antiHbcFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.antiHbcFecha }" @blur="validarCampoFechaEnBlur('antiHbcFecha')" />
@@ -64,15 +67,17 @@
               </button>
             </div>
             <p v-if="erroresFecha.antiHbcFecha" class="form7-date-error">{{ erroresFecha.antiHbcFecha }}</p>
+            </template>
           </div>
           <div class="form7-field">
             <label class="form7-label">VHC</label>
-            <select class="form7-control" v-model="form.vhcEstado">
+            <select class="form7-control" v-model="form.vhcEstado" @change="onCambioEstadoSerologico('vhcEstado', 'vhcFecha')">
               <option :value="null">Seleccione</option>
               <option>Positivo</option>
               <option>Negativo</option>
               <option>Desconocido</option>
             </select>
+            <template v-if="!esEstadoDesconocido(form.vhcEstado)">
             <label class="form7-label-sub">Fecha examen</label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.vhcFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhcFecha }" @blur="validarCampoFechaEnBlur('vhcFecha')" />
@@ -82,15 +87,17 @@
               </button>
             </div>
             <p v-if="erroresFecha.vhcFecha" class="form7-date-error">{{ erroresFecha.vhcFecha }}</p>
+            </template>
           </div>
           <div class="form7-field">
             <label class="form7-label">VIH</label>
-            <select class="form7-control" v-model="form.vihEstado">
+            <select class="form7-control" v-model="form.vihEstado" @change="onCambioEstadoSerologico('vihEstado', 'vihFecha')">
               <option :value="null">Seleccione</option>
               <option>Positivo</option>
               <option>Negativo</option>
               <option>Desconocido</option>
             </select>
+            <template v-if="!esEstadoDesconocido(form.vihEstado)">
             <label class="form7-label-sub">Fecha examen</label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.vihFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vihFecha }" @blur="validarCampoFechaEnBlur('vihFecha')" />
@@ -100,6 +107,7 @@
               </button>
             </div>
             <p v-if="erroresFecha.vihFecha" class="form7-date-error">{{ erroresFecha.vihFecha }}</p>
+            </template>
           </div>
         </div>
 
@@ -117,13 +125,21 @@
               :min="0"
               :max="2000"
               :step="0.01"
+              :disabled="esEstadoDesconocido(form.estadoAcHBs)"
             />
           </div>
           <div class="form7-field">
             <label class="form7-label">Estado según AcHBs</label>
-            <input type="text" class="form7-control form7-control--readonly" v-model="form.estadoAcHBs" disabled />
+            <select class="form7-control" v-model="form.estadoAcHBs" @change="onCambioEstadoAcHBs">
+              <option :value="null">Seleccione</option>
+              <option>Desconocido</option>
+              <option>No Responde</option>
+              <option>Respuesta pobre</option>
+              <option>Óptimo</option>
+              <option>Excelente</option>
+            </select>
           </div>
-          <div class="form7-field">
+          <div v-if="!esEstadoDesconocido(form.estadoAcHBs)" class="form7-field">
             <label class="form7-label">Fecha de prueba</label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.fechaVacHepatitis" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaVacHepatitis }" @blur="validarCampoFechaEnBlur('fechaVacHepatitis')" />
@@ -289,6 +305,16 @@ function cargarRegistroEdicion(registro) {
   form.fechaCovid = fechaDesdeRegistro(registro.fecha_covid)
   form.fechaInfluenza = fechaDesdeRegistro(registro.fecha_influenza)
   form.fechaNeumococo = fechaDesdeRegistro(registro.fecha_neumococo)
+  if (esEstadoDesconocido(form.vhbEstado)) form.vhbFecha = null
+  if (esEstadoDesconocido(form.antiHbcEstado)) form.antiHbcFecha = null
+  if (esEstadoDesconocido(form.vhcEstado)) form.vhcFecha = null
+  if (esEstadoDesconocido(form.vihEstado)) form.vihFecha = null
+  if (esEstadoDesconocido(form.estadoAcHBs)) {
+    form.vacunaHepatitis = null
+    form.fechaVacHepatitis = null
+  } else if (!form.estadoAcHBs && (form.vacunaHepatitis == null || form.vacunaHepatitis === '')) {
+    form.estadoAcHBs = 'Desconocido'
+  }
 }
 
 const periodoVisibleId = computed(() => periodoGlobal.value ?? periodo ?? null)
@@ -344,16 +370,78 @@ const rangoFechasPeriodo = computed(() => {
 })
 
 const CAMPOS_FECHA = [
-  { key: 'vhbFecha', label: 'Fecha de examen VHB' },
-  { key: 'antiHbcFecha', label: 'Fecha de examen Anti-HBc' },
-  { key: 'vhcFecha', label: 'Fecha de examen VHC' },
-  { key: 'vihFecha', label: 'Fecha de examen VIH' },
-  { key: 'fechaVacHepatitis', label: 'Fecha de prueba AcHBs' },
-  { key: 'fechaHepatitisB', label: 'Fecha de vacunación Hepatitis B' },
-  { key: 'fechaCovid', label: 'Fecha de vacunación Covid-19' },
-  { key: 'fechaInfluenza', label: 'Fecha de vacunación Influenza' },
-  { key: 'fechaNeumococo', label: 'Fecha de vacunación Neumococo' },
+  { key: 'vhbFecha', label: 'Fecha de examen VHB', estadoKey: 'vhbEstado' },
+  { key: 'antiHbcFecha', label: 'Fecha de examen Anti-HBc', estadoKey: 'antiHbcEstado' },
+  { key: 'vhcFecha', label: 'Fecha de examen VHC', estadoKey: 'vhcEstado' },
+  { key: 'vihFecha', label: 'Fecha de examen VIH', estadoKey: 'vihEstado' },
+  { key: 'fechaVacHepatitis', label: 'Fecha de prueba AcHBs', achbs: true },
+  { key: 'fechaHepatitisB', label: 'Fecha de vacunación Hepatitis B', vacuna: true },
+  { key: 'fechaCovid', label: 'Fecha de vacunación Covid-19', vacuna: true },
+  { key: 'fechaInfluenza', label: 'Fecha de vacunación Influenza', vacuna: true },
+  { key: 'fechaNeumococo', label: 'Fecha de vacunación Neumococo', vacuna: true },
 ]
+
+const CAMPOS_FECHA_VACUNAS = [
+  { key: 'fechaHepatitisB', label: 'Hepatitis B' },
+  { key: 'fechaCovid', label: 'Covid-19' },
+  { key: 'fechaInfluenza', label: 'Influenza' },
+  { key: 'fechaNeumococo', label: 'Neumococo' },
+]
+
+function esEstadoDesconocido(estado) {
+  return String(estado || '').trim().toLowerCase() === 'desconocido'
+}
+
+function fechaSerologiaAplica(campo) {
+  if (campo.estadoKey && esEstadoDesconocido(form[campo.estadoKey])) return false
+  if (campo.achbs && esEstadoDesconocido(form.estadoAcHBs)) return false
+  return true
+}
+
+function onCambioEstadoSerologico(estadoKey, fechaKey) {
+  if (esEstadoDesconocido(form[estadoKey])) {
+    form[fechaKey] = null
+    erroresFecha[fechaKey] = ''
+  }
+}
+
+function onCambioEstadoAcHBs() {
+  if (esEstadoDesconocido(form.estadoAcHBs)) {
+    form.vacunaHepatitis = null
+    form.fechaVacHepatitis = null
+    erroresFecha.fechaVacHepatitis = ''
+  }
+}
+
+function validarFechasVacunasDuplicadas() {
+  for (const { key } of CAMPOS_FECHA_VACUNAS) {
+    const prev = erroresFecha[key]
+    if (prev && String(prev).includes('Máximo 2 vacunas')) {
+      erroresFecha[key] = mensajeErrorFecha(key)
+    }
+  }
+
+  const conteo = {}
+  for (const { key } of CAMPOS_FECHA_VACUNAS) {
+    const iso = parseFechaAISO(form[key])
+    if (!iso) continue
+    conteo[iso] = (conteo[iso] || 0) + 1
+  }
+
+  let mensajeGlobal = null
+  for (const [iso, total] of Object.entries(conteo)) {
+    if (total > 2) {
+      mensajeGlobal = `Máximo 2 vacunas con la misma fecha (${formatFechaDDMMAAAA(iso)}).`
+      const msg = mensajeGlobal
+      for (const { key } of CAMPOS_FECHA_VACUNAS) {
+        if (parseFechaAISO(form[key]) === iso) {
+          erroresFecha[key] = msg
+        }
+      }
+    }
+  }
+  return mensajeGlobal
+}
 
 /** Convierte dd-mm-aaaa, dd/mm/aaaa o aaaa-mm-dd a yyyy-mm-dd (comparación y calendario). */
 function parseFechaAISO(value) {
@@ -433,12 +521,18 @@ function mensajeErrorFecha(key) {
 function validarCampoFechaEnBlur(key) {
   normalizarCampoFecha(key)
   erroresFecha[key] = mensajeErrorFecha(key)
+  if (CAMPOS_FECHA_VACUNAS.some((c) => c.key === key)) {
+    validarFechasVacunasDuplicadas()
+  }
 }
 
 function onFechaPickerChange(key, event) {
   const iso = event.target?.value
   form[key] = iso ? formatFechaDDMMAAAA(iso) : null
   erroresFecha[key] = mensajeErrorFecha(key)
+  if (CAMPOS_FECHA_VACUNAS.some((c) => c.key === key)) {
+    validarFechasVacunasDuplicadas()
+  }
 }
 
 function abrirSelectorFecha(key) {
@@ -471,12 +565,15 @@ function normalizarTodasLasFechas() {
     normalizarCampoFecha(key)
     erroresFecha[key] = mensajeErrorFecha(key)
   })
+  validarFechasVacunasDuplicadas()
 }
 
 function validarFechasPeriodo() {
   const rango = rangoFechasPeriodo.value
   const rangoTxt = rangoFechasPeriodoTexto.value
-  for (const { key, label } of CAMPOS_FECHA) {
+  for (const campo of CAMPOS_FECHA) {
+    if (!fechaSerologiaAplica(campo)) continue
+    const { key, label } = campo
     const fecha = form[key]
     if (!fecha) continue
     if (!fechaDDMMAAAAValida(fecha)) {
@@ -487,7 +584,7 @@ function validarFechasPeriodo() {
       return `${label} debe estar entre ${rangoTxt.min} y ${rangoTxt.max}`
     }
   }
-  return null
+  return validarFechasVacunasDuplicadas()
 }
 
 const form = reactive({
@@ -535,21 +632,20 @@ function buildPayload() {
 }
 
 watch(() => form.vacunaHepatitis, (nuevoValor) => {
-  // 1. RESTRICCIÓN DE RANGO SUPERIOR: Topamos el valor máximo a 2000
+  if (esEstadoDesconocido(form.estadoAcHBs)) return
+
   if (nuevoValor > 2000) {
     form.vacunaHepatitis = 2000;
-    return; // Se detiene aquí. Vue volverá a ejecutar el watch automáticamente con el valor 2000.
+    return;
   }
 
-  // 2. Si el valor es null, undefined, vacío o no es un número válido
   if (nuevoValor === null || nuevoValor === undefined || nuevoValor === '' || isNaN(nuevoValor)) {
-    form.estadoAcHBs = '';
+    form.estadoAcHBs = 'Desconocido';
     return;
   }
 
   const valor = Number(nuevoValor);
 
-  // 3. Calcular el estado según los rangos numéricos
   if (valor < 10) {
     form.estadoAcHBs = 'No Responde';
   } else if (valor >= 10 && valor < 100) {
@@ -559,7 +655,7 @@ watch(() => form.vacunaHepatitis, (nuevoValor) => {
   } else if (valor >= 1000 && valor <= 2000) {
     form.estadoAcHBs = 'Excelente';
   } else {
-    form.estadoAcHBs = '';
+    form.estadoAcHBs = 'Desconocido';
   }
 });
 
@@ -568,19 +664,28 @@ const router = useRouter()
 const pacienteSeleccionado = paciente
 
 const validarCampos = () => {
-  // Lista de campos requeridos (ajusta según tus necesidades)
   const camposRequeridos = [
-    
-    'vhbEstado', 'vhbFecha',
-    'vhcEstado', 'vhcFecha',
-    'vihEstado', 'vihFecha',
-    'antiHbcEstado', 'antiHbcFecha', // NUEVO CAMPO AÑADIDO A VALIDACIÓN
-    'vacunaHepatitis', 'estadoAcHBs', 'fechaVacHepatitis',
-    'dosisHepatitisB', 'fechaHepatitisB',
-    'dosisCovid', 'fechaCovid',
+    'vhbEstado',
+    'vhcEstado',
+    'vihEstado',
+    'antiHbcEstado',
+    'estadoAcHBs',
+    'dosisHepatitisB',
+    'fechaHepatitisB',
+    'dosisCovid',
+    'fechaCovid',
     'fechaInfluenza',
-    'fechaNeumococo'
+    'fechaNeumococo',
   ];
+
+  if (!esEstadoDesconocido(form.vhbEstado)) camposRequeridos.push('vhbFecha')
+  if (!esEstadoDesconocido(form.antiHbcEstado)) camposRequeridos.push('antiHbcFecha')
+  if (!esEstadoDesconocido(form.vhcEstado)) camposRequeridos.push('vhcFecha')
+  if (!esEstadoDesconocido(form.vihEstado)) camposRequeridos.push('vihFecha')
+  if (!esEstadoDesconocido(form.estadoAcHBs)) {
+    camposRequeridos.push('vacunaHepatitis', 'fechaVacHepatitis')
+  }
+
   for (const campo of camposRequeridos) {
     if (!form[campo] || form[campo] === '' || form[campo] === null) {
       return campo;

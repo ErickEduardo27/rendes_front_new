@@ -346,6 +346,7 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
+import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
 import Form4 from '@/components/forms/Form4.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 
@@ -644,7 +645,9 @@ async function fetchRegistros() {
       getAllIpress(`/pacienteAtencion/?${qs}`),
     ]);
     registros.value = Array.isArray(resReg) ? resReg : resReg?.results || [];
-    listadoAtenciones.value = Array.isArray(resAten) ? resAten : resAten?.results || [];
+    listadoAtenciones.value = atencionesParaListadoRegistros(
+      Array.isArray(resAten) ? resAten : resAten?.results || []
+    );
   } catch (e) {
     console.error('Error al cargar morbilidades hospitalarias:', e);
     registros.value = [];
@@ -669,7 +672,9 @@ async function fetchPacientesAtencion() {
   }
   try {
     const res = await getAllIpress(`/pacienteAtencion/?${qs}`);
-    listadoAtenciones.value = Array.isArray(res) ? res : res?.results || [];
+    listadoAtenciones.value = atencionesParaListadoRegistros(
+      Array.isArray(res) ? res : res?.results || []
+    );
   } catch (e) {
     console.error('Error al cargar atenciones:', e);
     listadoAtenciones.value = [];

@@ -32,6 +32,16 @@
           <button
             type="button"
             class="header-accion-btn header-accion-btn-secundario"
+            @click="abrirModalImportar"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Importar
+          </button>
+          <button
+            type="button"
+            class="header-accion-btn header-accion-btn-secundario"
             :disabled="!puedeExportarResultadosClinicosExcel || exportandoExcel"
             :title="puedeExportarResultadosClinicosExcel ? 'Exporta la vista actual (Solo con registros o Todos los pacientes)' : (vistaActiva === 'cargas' ? 'Cambie a la pestaña de registros o pacientes para exportar' : 'No hay datos para exportar con los filtros actuales')"
             @click="exportarDatosResultadosClinicosExcel"
@@ -40,16 +50,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             {{ exportandoExcel ? 'Exportando…' : 'Exportar Excel' }}
-          </button>
-          <button
-            type="button"
-            class="header-accion-btn header-accion-btn-secundario"
-            @click="abrirModalImportar"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            Importar
           </button>
           <button
             v-if="mostrarBotonNuevo"
@@ -382,13 +382,18 @@
     </div>
 
     <div v-if="mostrarModalImportar" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center shrink-0">
           <h3 class="font-bold text-white">Importar Resultados Clínicos</h3>
           <button type="button" class="text-white/80 hover:text-white" @click="cerrarModalImportar">✕</button>
         </div>
-        <div class="p-6 space-y-6">
-          <p class="text-sm text-slate-600">Cargue el Excel completado. La importación valida rangos clínicos, el DNI del paciente según el filtro actual y el tiempo de diálisis en <strong>horas</strong> (número entero o decimal, p. ej. 2, 2.5, 3.25) entre 0,25 y 8.</p>
+        <div class="p-6 space-y-4 overflow-y-auto">
+          <p class="text-sm text-slate-600">
+            Cargue el Excel completado. La importación valida rangos clínicos, el DNI del paciente según el filtro actual y el
+            <strong>tiempo de diálisis</strong> en <strong>horas o fracción de hora</strong>, usando incrementos de <strong>0,25</strong>
+            (ej.: 1, 1,25, 1,5, 1,75, 2, 2,25…) entre <strong>0,25</strong> y <strong>8</strong>.
+            Eritropoyetina, hierro y calcitriol: <strong>Sí</strong> o <strong>No</strong> (deje vacío si no aplica).
+          </p>
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-2">Cargar archivo Excel</label>
             <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center" @dragover.prevent="arrastrando = true" @dragleave.prevent="arrastrando = false" @drop.prevent="onDropArchivo" :class="arrastrando ? 'border-cyan-400 bg-cyan-50/50' : ''">
@@ -399,7 +404,46 @@
             </div>
           </div>
           <div v-if="importando" class="text-center text-slate-500 text-sm">Importando...</div>
-          <div v-if="resultadoImportacion" class="rounded-lg p-3 text-sm" :class="resultadoImportacion.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'">{{ resultadoImportacion.mensaje }}</div>
+          <div
+            v-if="resultadoImportacion"
+            class="rounded-lg p-3 text-sm"
+            :class="claseResultadoImportacion"
+          >
+            <p>{{ resultadoImportacion.mensaje }}</p>
+            <button
+              v-if="resultadoImportacion.detallesErrores?.length"
+              type="button"
+              class="mt-2 text-xs font-bold underline hover:no-underline"
+              @click="mostrarDetallesErroresImportacion = !mostrarDetallesErroresImportacion"
+            >
+              {{ mostrarDetallesErroresImportacion ? 'Ocultar detalles' : 'Ver detalles' }}
+            </button>
+          </div>
+          <div
+            v-if="mostrarDetallesErroresImportacion && resultadoImportacion?.detallesErrores?.length"
+            class="rounded-lg border border-red-200 bg-red-50/50 max-h-56 overflow-y-auto"
+          >
+            <table class="w-full text-xs">
+              <thead class="bg-red-100/80 sticky top-0">
+                <tr>
+                  <th class="px-3 py-2 text-left font-bold text-red-900">DNI</th>
+                  <th class="px-3 py-2 text-left font-bold text-red-900">Paciente</th>
+                  <th class="px-3 py-2 text-left font-bold text-red-900">Error</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(detalle, idx) in resultadoImportacion.detallesErrores"
+                  :key="`err-import-${idx}`"
+                  class="border-t border-red-100"
+                >
+                  <td class="px-3 py-2 text-slate-700">{{ detalle.dni || '—' }}</td>
+                  <td class="px-3 py-2 text-slate-700">{{ detalle.paciente || '—' }}</td>
+                  <td class="px-3 py-2 text-red-800 font-medium">{{ detalle.mensaje }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <div class="flex justify-end gap-2 pt-2">
             <button type="button" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalImportar">Cerrar</button>
             <button type="button" class="px-4 py-2 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg disabled:opacity-50" :disabled="!archivoSeleccionado || importando" @click="ejecutarImportacion">Importar datos</button>
@@ -492,6 +536,7 @@ import { ElMessage } from 'element-plus';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
+import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
 import Form5 from '@/components/forms/Form5.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 
@@ -522,6 +567,7 @@ const archivoSeleccionado = ref(null);
 const inputArchivoImportar = ref(null);
 const importando = ref(false);
 const resultadoImportacion = ref(null);
+const mostrarDetallesErroresImportacion = ref(false);
 const historialCargas = ref([]);
 const mostrarDetalleCarga = ref(false);
 const cargaSeleccionada = ref(null);
@@ -538,6 +584,16 @@ const paginaDetalleCarga = ref(1);
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
 const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto' : 'Cerrado'));
 const mostrarBotonNuevo = computed(() => formularioAbierto.value);
+
+const claseResultadoImportacion = computed(() => {
+  const r = resultadoImportacion.value;
+  if (!r) return '';
+  if (r.ok) return 'bg-green-50 text-green-800 border border-green-200';
+  if (r.parcial) return 'bg-amber-50 text-amber-900 border border-amber-200';
+  return 'bg-red-50 text-red-800 border border-red-200';
+});
+
+const MENSAJE_TIEMPO_DIALISIS_IMPORT = 'Tiempo de diálisis inválido. Registre horas o fracciones de hora en incrementos de 0,25 (ej.: 1, 1,25, 1,5, 1,75, 2). Rango permitido: 0,25 a 8.';
 
 const COLUMNAS_FORMATO = [
   'dni',
@@ -608,13 +664,19 @@ function documentoPaciente(r) {
   return r.datosPacienteAtencion?.datosPaciente?.documento || r.datosPaciente?.documento || '—';
 }
 function siNo(val) {
-  if (val === true || val === 'true' || val === 'Sí' || val === 1) return 'Sí';
-  if (val === false || val === 'false' || val === 'No' || val === 0) return 'No';
+  if (val === true || val === 1) return 'Sí';
+  if (val === false || val === 0) return 'No';
+  const s = String(val ?? '').trim().toLowerCase();
+  if (['true', '1', 'si', 'sí'].includes(s)) return 'Sí';
+  if (['false', '0', 'no'].includes(s)) return 'No';
   return '—';
 }
 function toBool(val) {
-  if (val === true || val === 'true' || val === 'Sí' || val === '1' || val === 1) return true;
-  if (val === false || val === 'false' || val === 'No' || val === '0' || val === 0) return false;
+  if (val === true || val === 1) return true;
+  if (val === false || val === 0) return false;
+  const s = String(val ?? '').trim().toLowerCase();
+  if (['true', '1', 'si', 'sí'].includes(s)) return true;
+  if (['false', '0', 'no'].includes(s)) return false;
   return false;
 }
 
@@ -1017,7 +1079,7 @@ const validarFilaImportacion = (obj) => {
   if (tiempoStrParaValidar && !esTiempoDialisisValorValido(rawTiempo)) {
     return {
       ok: false,
-      mensaje: `Tiempo de diálisis inválido. Use un número entre ${TIEMPO_DIALISIS_MIN} y ${TIEMPO_DIALISIS_MAX} horas (ej. 2, 2.5, 3.25).`,
+      mensaje: MENSAJE_TIEMPO_DIALISIS_IMPORT,
     };
   }
   payload.tiempo_dialisis = tiempoStrParaValidar
@@ -1095,7 +1157,9 @@ async function fetchRegistros() {
       getAllIpress(`/pacienteAtencion/?${qs}`),
     ]);
     registros.value = Array.isArray(resReg) ? resReg : resReg?.results || [];
-    listadoAtenciones.value = Array.isArray(resAten) ? resAten : resAten?.results || [];
+    listadoAtenciones.value = atencionesParaListadoRegistros(
+      Array.isArray(resAten) ? resAten : resAten?.results || []
+    );
   } catch (e) {
     console.error('Error al cargar resultados clínicos:', e);
     registros.value = [];
@@ -1120,7 +1184,9 @@ async function fetchPacientesAtencion() {
   }
   try {
     const res = await getAllIpress(`/pacienteAtencion/?${qs}`);
-    listadoAtenciones.value = Array.isArray(res) ? res : res?.results || [];
+    listadoAtenciones.value = atencionesParaListadoRegistros(
+      Array.isArray(res) ? res : res?.results || []
+    );
   } catch (e) {
     console.error('Error al cargar atenciones:', e);
     listadoAtenciones.value = [];
@@ -1217,12 +1283,14 @@ function onGuardado() {
 function abrirModalImportar() {
   archivoSeleccionado.value = null;
   resultadoImportacion.value = null;
+  mostrarDetallesErroresImportacion.value = false;
   mostrarModalImportar.value = true;
 }
 function cerrarModalImportar() {
   mostrarModalImportar.value = false;
   archivoSeleccionado.value = null;
   resultadoImportacion.value = null;
+  mostrarDetallesErroresImportacion.value = false;
   arrastrando.value = false;
   fetchRegistros();
 }
@@ -1238,9 +1306,9 @@ function descargarFormatoExcel() {
     '', // calcio_corregido (opcional; con calcio+Alb se calcula al importar)
     '', // ktv
     '', // tiempo_dialisis
-    'Sí/No',
-    'Sí/No',
-    'Sí/No',
+    '', // eritropoyetina
+    '', // hierro
+    '', // calcitriol
   ]);
   const ws = XLSX.utils.aoa_to_sheet([COLUMNAS_FORMATO, ...filasBase]);
   const wb = XLSX.utils.book_new();
@@ -1252,6 +1320,7 @@ function onSeleccionarArchivo(ev) {
   if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
     archivoSeleccionado.value = file;
     resultadoImportacion.value = null;
+    mostrarDetallesErroresImportacion.value = false;
   }
   ev.target.value = '';
 }
@@ -1261,6 +1330,7 @@ function onDropArchivo(ev) {
   if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
     archivoSeleccionado.value = file;
     resultadoImportacion.value = null;
+    mostrarDetallesErroresImportacion.value = false;
   }
 }
 function leerFilasExcel(file) {
@@ -1288,6 +1358,7 @@ async function ejecutarImportacion() {
   }
   importando.value = true;
   resultadoImportacion.value = null;
+  mostrarDetallesErroresImportacion.value = false;
   try {
     const rows = await leerFilasExcel(file);
     if (rows.length < 2) {
@@ -1353,22 +1424,45 @@ async function ejecutarImportacion() {
       ...historialCargas.value,
     ];
     guardarHistorialCargas();
-    const msgExito = `Importación completada: ${creados} registro(s) creado(s).` + (errores ? ` ${errores} fila(s) con error.` : '');
+    const detallesErrores = detalles.filter((d) => !d.guardado);
+    const importacionExitosa = creados > 0 && errores === 0;
+    const importacionParcial = creados > 0 && errores > 0;
+    const importacionRechazada = creados === 0 && errores > 0;
+
+    let mensaje = '';
+    if (importacionExitosa) {
+      mensaje = `Importación completada: ${creados} registro(s) creado(s).`;
+    } else if (importacionParcial) {
+      mensaje = `Importación parcial: ${creados} registro(s) creado(s) y ${errores} fila(s) con error. Revise los detalles y corrija el archivo.`;
+    } else if (importacionRechazada) {
+      mensaje = `No se importó ningún registro. ${errores} fila(s) con error. Revise los detalles y corrija el archivo.`;
+    } else {
+      mensaje = 'No se encontraron filas válidas para importar.';
+    }
+
     await fetchRegistros();
-    if (creados > 0) {
+
+    if (importacionExitosa) {
       mostrarModalImportar.value = false;
       archivoSeleccionado.value = null;
       resultadoImportacion.value = null;
+      mostrarDetallesErroresImportacion.value = false;
       arrastrando.value = false;
       await Swal.fire({
         icon: 'success',
         title: 'Importación exitosa',
-        text: msgExito,
+        text: mensaje,
         confirmButtonText: 'Aceptar',
         confirmButtonColor: '#0891b2',
       });
     } else {
-      resultadoImportacion.value = { ok: true, mensaje: msgExito };
+      resultadoImportacion.value = {
+        ok: false,
+        parcial: importacionParcial,
+        mensaje,
+        detallesErrores,
+      };
+      mostrarDetallesErroresImportacion.value = detallesErrores.length > 0;
     }
   } catch (e) {
     console.error(e);

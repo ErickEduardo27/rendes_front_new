@@ -557,6 +557,7 @@
 import { ref, computed, onMounted, watch, inject } from 'vue';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
+import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
 import { prepararPayloadUnidadesActuales } from '@/utils/unidadesActualesPayload';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
 import { ElMessage } from 'element-plus';
@@ -1055,7 +1056,9 @@ async function fetchRegistros() {
       getAllIpress(`/pacienteAtencion/?${qs}`),
     ]);
     registros.value = Array.isArray(resRegistros) ? resRegistros : (resRegistros?.results || []);
-    listadoAtenciones.value = Array.isArray(resAtenciones) ? resAtenciones : (resAtenciones?.results || []);
+    listadoAtenciones.value = atencionesParaListadoRegistros(
+      Array.isArray(resAtenciones) ? resAtenciones : (resAtenciones?.results || [])
+    );
   } catch (e) {
     console.error('Error al cargar registros de acceso vascular:', e);
     registros.value = [];
@@ -1080,7 +1083,9 @@ async function fetchPacientesAtencion() {
   }
   try {
     const res = await getAllIpress(`/pacienteAtencion/?${qs}`);
-    listadoAtenciones.value = Array.isArray(res) ? res : (res?.results || []);
+    listadoAtenciones.value = atencionesParaListadoRegistros(
+      Array.isArray(res) ? res : (res?.results || [])
+    );
   } catch (e) {
     console.error('Error al cargar atenciones:', e);
     listadoAtenciones.value = [];

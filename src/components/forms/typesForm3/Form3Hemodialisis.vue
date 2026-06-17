@@ -293,6 +293,8 @@ const props = defineProps({
   paciente: { type: Object, default: null },
   idPacienteAtencion: { type: [Number, String], default: null },
   registroEdicion: { type: Object, default: null },
+  iniciarConInfeccion: { type: Boolean, default: false },
+  fechaEventoInicial: { type: String, default: '' },
 });
 const emit = defineEmits(['cancelar', 'guardado']);
 const enModal = computed(() => props.idPacienteAtencion != null && props.idPacienteAtencion !== '');
@@ -482,6 +484,20 @@ function cargarRegistroEdicion(registro) {
     tpGermen: germenAValor(registro.germen),
   }];
   form.obligoCambioAcceso = false;
+}
+
+function aplicarInicioDesdeAcceso() {
+  if (!props.iniciarConInfeccion || props.registroEdicion) return;
+  tieneInfeccion.value = true;
+  eventosInfecciosos.value = [{
+    id: Date.now(),
+    feEvento: props.fechaEventoInicial || '',
+    tpInfeccion: '',
+    tratamientoIV: false,
+    vancomicinaIV: false,
+    hemocultivoPositivo: false,
+    tpGermen: '',
+  }];
 }
 
 
@@ -708,6 +724,7 @@ onMounted(async () => {
     await fetchUnidadesActualesPaciente();
     if (enModal.value) {
       if (props.registroEdicion) cargarRegistroEdicion(props.registroEdicion);
+      else aplicarInicioDesdeAcceso();
       fetchHistorialEventosApi();
       fetchPeriodoIpress();
     }

@@ -134,10 +134,16 @@
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de creación
                                     *</label>
                                 <input v-model="form.fecha_creacion_acceso_nuevo" type="date"
-                                    class="w-full border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5"
+                                    class="w-full border text-slate-800 text-sm rounded-lg p-2.5"
+                                    :class="erroresNuevoAcceso.fecha_creacion_acceso_nuevo ? 'border-red-500' : 'border-slate-300'"
                                     :min="minFechaNuevoAccesoVascular || undefined"
-                                    :max="rangoFechasPeriodo.max || undefined" />
-                                <p v-if="fechaCreacionAccesoActualISO" class="text-[11px] text-slate-500 mt-1">
+                                    :max="rangoFechasPeriodo.max || undefined"
+                                    @input="erroresNuevoAcceso.fecha_creacion_acceso_nuevo = ''" />
+                                <p v-if="erroresNuevoAcceso.fecha_creacion_acceso_nuevo"
+                                    class="text-[11px] text-red-500 mt-1 font-medium">
+                                    {{ erroresNuevoAcceso.fecha_creacion_acceso_nuevo }}
+                                </p>
+                                <p v-else-if="fechaCreacionAccesoActualISO" class="text-[11px] text-slate-500 mt-1">
                                     No puede ser anterior al acceso vigente ({{ fechaCreacionAccesoActualISO }}).
                                 </p>
                             </div>
@@ -145,34 +151,52 @@
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de acceso
                                     *</label>
                                 <select v-model="form.tipo_acceso_nuevo"
-                                    class="w-full border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 bg-white">
+                                    class="w-full border text-slate-800 text-sm rounded-lg p-2.5 bg-white"
+                                    :class="erroresNuevoAcceso.tipo_acceso_nuevo ? 'border-red-500' : 'border-slate-300'"
+                                    @change="erroresNuevoAcceso.tipo_acceso_nuevo = ''">
                                     <option value="">Seleccione…</option>
                                     <option v-for="t in tiposAccesoNuevoFiltrados" :key="t.value" :value="t.value">{{
                                         t.label }}</option>
                                 </select>
+                                <p v-if="erroresNuevoAcceso.tipo_acceso_nuevo"
+                                    class="text-[11px] text-red-500 mt-1 font-medium">
+                                    {{ erroresNuevoAcceso.tipo_acceso_nuevo }}
+                                </p>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Localización
                                     *</label>
                                 <select v-model="form.localizacion_acceso_nuevo"
-                                    class="w-full border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 bg-white"
-                                    :disabled="!form.tipo_acceso_nuevo">
+                                    class="w-full border text-slate-800 text-sm rounded-lg p-2.5 bg-white"
+                                    :class="erroresNuevoAcceso.localizacion_acceso_nuevo ? 'border-red-500' : 'border-slate-300'"
+                                    :disabled="!form.tipo_acceso_nuevo"
+                                    @change="erroresNuevoAcceso.localizacion_acceso_nuevo = ''">
                                     <option value="">Seleccione…</option>
                                     <option v-for="op in opcionesLocalizacionNuevoFiltradas" :key="op.value"
                                         :value="op.value">{{ op.label }}</option>
                                 </select>
+                                <p v-if="erroresNuevoAcceso.localizacion_acceso_nuevo"
+                                    class="text-[11px] text-red-500 mt-1 font-medium">
+                                    {{ erroresNuevoAcceso.localizacion_acceso_nuevo }}
+                                </p>
                             </div>
                         </div>
                         <div v-if="tieneHistorialAcceso" class="px-6 pb-4">
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Motivo del
-                                cambio</label>
+                                cambio *</label>
                             <select v-model="form.motivo_cambio"
-                                class="w-full max-w-md border border-slate-300 text-slate-800 text-sm rounded-lg p-2.5 bg-white">
-                                <option :value="null">— Opcional —</option>
+                                class="w-full max-w-md border text-slate-800 text-sm rounded-lg p-2.5 bg-white"
+                                :class="erroresNuevoAcceso.motivo_cambio ? 'border-red-500' : 'border-slate-300'"
+                                @change="erroresNuevoAcceso.motivo_cambio = ''">
+                                <option :value="null">Seleccione…</option>
                                 <option value="Complicación mecánica">Complicación mecánica</option>
                                 <option value="Complicación infecciosa">Complicación infecciosa</option>
                                 <option value="Prescripción médica">Prescripción médica</option>
                             </select>
+                            <p v-if="erroresNuevoAcceso.motivo_cambio"
+                                class="text-[11px] text-red-500 mt-1 font-medium">
+                                {{ erroresNuevoAcceso.motivo_cambio }}
+                            </p>
                         </div>
                         <div class="px-6 pb-6 flex flex-wrap gap-2 justify-end border-t border-slate-100 pt-4">
                             <button type="button"
@@ -410,64 +434,49 @@
             </div>
         </div>
 
-        <div v-if="mostrarModuloInfeccion"
-            class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden animate-scaleIn">
-                <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
-                    <h3 class="font-bold text-white flex items-center gap-2">
-                        <span>🦠</span> Módulo de Infección
-                    </h3>
-                    <button class="text-white/70 hover:text-white" @click="cerrarModuloInfeccion">&times;</button>
+        <div v-if="mostrarModalPreguntaInfeccion"
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scaleIn">
+                <div class="bg-cyan-600 px-6 py-4">
+                    <h3 class="font-bold text-white text-sm uppercase tracking-wide">Complicación infecciosa</h3>
                 </div>
-                <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                    <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-2">¿Presenta infecciones?</label>
-                        <select v-model="formInfeccion.presentaInfecciones"
-                            class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
-                            <option value="si">Sí</option>
-                            <option value="no">No</option>
-                        </select>
-                    </div>
+                <div class="p-6">
+                    <p class="text-slate-700 text-sm leading-relaxed">
+                        El motivo del cambio es <strong>Complicación infecciosa</strong>.
+                        ¿Desea registrar la infección?
+                    </p>
+                </div>
+                <div class="bg-slate-50 px-6 py-4 flex flex-wrap justify-end gap-3 border-t border-slate-100">
+                    <button type="button" @click="cerrarPreguntaInfeccion"
+                        class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
+                        Ya la registré
+                    </button>
+                    <button type="button" @click="aceptarRegistrarInfeccion"
+                        class="px-4 py-2 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg shadow-sm transition-colors">
+                        Sí
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                    <div v-if="formInfeccion.presentaInfecciones === 'si'"
-                        class="p-4 bg-red-50 rounded-xl border border-red-100 space-y-4 animate-fadeIn">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo</label>
-                                <select v-model="formInfeccion.tipoInfeccion"
-                                    class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
-                                    <option value="bacteriana">Bacteriana</option>
-                                    <option value="viral">Viral</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label
-                                    class="block text-xs font-bold text-slate-500 uppercase mb-1">Localización</label>
-                                <select v-model="formInfeccion.localizacion"
-                                    class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
-                                    <option value="acceso_vascular">Acceso Vascular</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Inicio</label>
-                            <input v-model="formInfeccion.fechaInicio" type="date"
-                                class="w-full border border-slate-300 rounded-lg p-2.5 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
-                            <textarea v-model="formInfeccion.observaciones"
-                                class="w-full border border-slate-300 rounded-lg p-2.5 text-sm"
-                                placeholder="Detalles clínicos..." rows="3"></textarea>
-                        </div>
-                    </div>
+        <div v-if="mostrarForm3Infeccion"
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden animate-scaleIn flex flex-col">
+                <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center shrink-0">
+                    <h3 class="font-bold text-white text-sm uppercase tracking-wide">Registrar evento infeccioso</h3>
+                    <button type="button" class="text-white/80 hover:text-white text-xl leading-none"
+                        @click="cerrarForm3Infeccion">&times;</button>
                 </div>
-                <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-100">
-                    <button @click="cerrarModuloInfeccion"
-                        class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">Cerrar</button>
-                    <button @click="guardarInfeccion"
-                        class="px-4 py-2 text-sm font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm transition-colors">Guardar
-                        Datos</button>
+                <div class="overflow-y-auto flex-1 custom-scrollbar">
+                    <Form3Hemodialisis
+                        :key="form3InfeccionKey"
+                        :paciente="paciente"
+                        :id-paciente-atencion="idPacienteAtencion"
+                        :iniciar-con-infeccion="true"
+                        :fecha-evento-inicial="fechaAccesoParaInfeccion"
+                        @guardado="onGuardadoForm3Infeccion"
+                        @cancelar="cerrarForm3Infeccion"
+                    />
                 </div>
             </div>
         </div>
@@ -477,10 +486,12 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { ref, onMounted, reactive, computed, watch, inject } from 'vue';
+import { ref, onMounted, reactive, computed, watch, inject, defineAsyncComponent } from 'vue';
 import { getAllIpress, patchAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import { ElMessage } from 'element-plus';
+
+const Form3Hemodialisis = defineAsyncComponent(() => import('@/components/forms/typesForm3/Form3Hemodialisis.vue'));
 
 const props = defineProps({
     paciente: { type: Object, required: true },
@@ -511,7 +522,7 @@ const form = reactive({
     id_paciente: paciente.id_paciente
 })
 
-const formInfeccion = reactive({ presentaInfecciones: '', tipoInfeccion: '', localizacion: '', fechaInicio: '', fechaResolucion: '', tratamiento: '', observaciones: '' })
+
 const formCaptar = reactive({ condicion: '', fecha: '', observaciones: '' })
 const formEgresar = reactive({ fecha: '', tipo_egreso: '', motivo_especifico: '', observaciones: '' })
 
@@ -527,8 +538,11 @@ const periodos = ref([])
 const clinicas = ref([])
 const mostrarHistorico = ref(false);
 const historico = ref([]);
-const mostrarModuloInfeccion = ref(false);
-const historialInfecciones = ref([]);
+const mostrarForm3Infeccion = ref(false);
+const form3InfeccionKey = ref(0);
+const mostrarModalPreguntaInfeccion = ref(false);
+const pendienteEmitirGuardado = ref(false);
+const fechaAccesoParaInfeccion = ref('');
 const mostrarModalCaptar = ref(false);
 const mostrarModalEgresar = ref(false);
 const historialMovimientos = ref([]);
@@ -600,9 +614,12 @@ const opcionesLocalizacionNuevoFiltradas = computed(() => {
     return listaLocalizacionesNuevo.filter(op => op.tipo === tipoElegido);
 });
 
+const silenciandoWatchTipoAcceso = ref(false);
+
 watch(() => form.tipo_acceso_nuevo, (val) => {
+    if (silenciandoWatchTipoAcceso.value) return;
     form.localizacion_acceso_nuevo = '';
-    if (val === 'Catéter peritoneal') form.localizacion_acceso_nuevo = '19. Catéter peritoneal';
+    if (val === 'Catéter peritoneal') form.localizacion_acceso_nuevo = 'Catéter peritoneal';
 });
 
 const limpiarCamposNuevoAcceso = () => {
@@ -610,6 +627,27 @@ const limpiarCamposNuevoAcceso = () => {
     form.tipo_acceso_nuevo = null;
     form.localizacion_acceso_nuevo = null;
     form.motivo_cambio = null;
+    limpiarErroresNuevoAcceso();
+};
+
+const erroresNuevoAcceso = reactive({
+    fecha_creacion_acceso_nuevo: '',
+    tipo_acceso_nuevo: '',
+    localizacion_acceso_nuevo: '',
+    motivo_cambio: '',
+});
+
+const LABELS_CAMPOS_NUEVO_ACCESO = {
+    fecha_creacion_acceso_nuevo: 'Fecha de creación',
+    tipo_acceso_nuevo: 'Tipo de acceso',
+    localizacion_acceso_nuevo: 'Localización',
+    motivo_cambio: 'Motivo del cambio',
+};
+
+const limpiarErroresNuevoAcceso = () => {
+    for (const key of Object.keys(erroresNuevoAcceso)) {
+        erroresNuevoAcceso[key] = '';
+    }
 };
 
 watch(deseaRegistrarCambioAcceso, (v) => {
@@ -683,24 +721,46 @@ const minFechaNuevoAccesoVascular = computed(() => {
 });
 
 const validarFormulario = () => {
-    const camposObligatorios = ['fecha_creacion_acceso_nuevo', 'tipo_acceso_nuevo', 'localizacion_acceso_nuevo'];
+    limpiarErroresNuevoAcceso();
+
+    const camposObligatorios = [
+        'fecha_creacion_acceso_nuevo',
+        'tipo_acceso_nuevo',
+        'localizacion_acceso_nuevo',
+    ];
+    if (tieneHistorialAcceso.value) {
+        camposObligatorios.push('motivo_cambio');
+    }
+
+    let primerError = '';
     for (const campo of camposObligatorios) {
-        if (!form[campo]) {
-            ElMessage({ message: `Por favor complete el campo: ${campo}`, type: 'warning', plain: true })
-            return false;
+        const valor = form[campo];
+        if (valor == null || valor === '') {
+            const msg = `Complete el campo "${LABELS_CAMPOS_NUEVO_ACCESO[campo]}".`;
+            erroresNuevoAcceso[campo] = msg;
+            if (!primerError) primerError = msg;
         }
     }
+    if (primerError) {
+        ElMessage({ message: primerError, type: 'warning', plain: true });
+        return false;
+    }
+
     const rango = rangoFechasPeriodo.value;
     if (rango.min && rango.max && form.fecha_creacion_acceso_nuevo) {
         const f = form.fecha_creacion_acceso_nuevo;
         if (f < rango.min || f > rango.max) {
-            ElMessage({ message: `La fecha debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max})`, type: 'warning', plain: true });
+            const msg = `La fecha debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`;
+            erroresNuevoAcceso.fecha_creacion_acceso_nuevo = msg;
+            ElMessage({ message: msg, type: 'warning', plain: true });
             return false;
         }
     }
     const vig = fechaCreacionAccesoActualISO.value;
     if (vig && form.fecha_creacion_acceso_nuevo && form.fecha_creacion_acceso_nuevo < vig) {
-        ElMessage({ message: 'La fecha del nuevo acceso no puede ser anterior a la fecha del acceso vigente.', type: 'warning', plain: true });
+        const msg = 'La fecha del nuevo acceso no puede ser anterior a la fecha del acceso vigente.';
+        erroresNuevoAcceso.fecha_creacion_acceso_nuevo = msg;
+        ElMessage({ message: msg, type: 'warning', plain: true });
         return false;
     }
     return true;
@@ -712,13 +772,54 @@ function motivoDesdeRegistro(valor) {
     return mapa[String(valor)] || valor;
 }
 
+const esComplicacionInfecciosa = (motivo) => {
+    const normalizado = motivoDesdeRegistro(motivo);
+    return normalizado === 'Complicación infecciosa';
+};
+
+const finalizarFlujoGuardado = () => {
+    emit('guardado');
+};
+
+const cerrarPreguntaInfeccion = () => {
+    mostrarModalPreguntaInfeccion.value = false;
+    if (pendienteEmitirGuardado.value) {
+        pendienteEmitirGuardado.value = false;
+        finalizarFlujoGuardado();
+    }
+};
+
+const aceptarRegistrarInfeccion = () => {
+    mostrarModalPreguntaInfeccion.value = false;
+    form3InfeccionKey.value += 1;
+    mostrarForm3Infeccion.value = true;
+};
+
+const cerrarForm3Infeccion = () => {
+    mostrarForm3Infeccion.value = false;
+    if (pendienteEmitirGuardado.value) {
+        pendienteEmitirGuardado.value = false;
+        finalizarFlujoGuardado();
+    }
+};
+
+const onGuardadoForm3Infeccion = () => {
+    mostrarForm3Infeccion.value = false;
+    if (pendienteEmitirGuardado.value) {
+        pendienteEmitirGuardado.value = false;
+        finalizarFlujoGuardado();
+    }
+};
+
 function cargarRegistroEdicion(registro) {
     if (!registro) return;
     deseaRegistrarCambioAcceso.value = 'si';
     form.fecha_creacion_acceso_nuevo = registro.fecha_creacion_acceso || registro.fecha_creacion_acceso_actual || null;
-    form.tipo_acceso_nuevo = normalizarTipoAcceso(registro.tipo_acceso || registro.tipo_acceso_actual) || null;
     const loc = registro.localizacion_acceso || registro.localizacion_acceso_actual;
-    form.localizacion_acceso_nuevo = normalizarLocalizacion(loc) ?? loc ?? null;
+    silenciandoWatchTipoAcceso.value = true;
+    form.tipo_acceso_nuevo = normalizarTipoAcceso(registro.tipo_acceso || registro.tipo_acceso_actual) || null;
+    form.localizacion_acceso_nuevo = normalizarLocalizacionNuevo(loc);
+    silenciandoWatchTipoAcceso.value = false;
     form.motivo_cambio = motivoDesdeRegistro(registro.motivo_cambio);
 }
 
@@ -730,13 +831,15 @@ const guardarRegistro = async () => {
         return;
     }
     guardando.value = true;
+    const motivoGuardado = form.motivo_cambio;
+    const fechaAccesoGuardada = form.fecha_creacion_acceso_nuevo;
     try {
         const payload = prepararPayloadUnidadesActuales({
             id_paciente_atencion: Number(idAtencion),
             tipo_acceso: normalizarTipoAcceso(form.tipo_acceso_nuevo),
             localizacion_acceso: describirLocalizacion(form.localizacion_acceso_nuevo),
             fecha_creacion_acceso: form.fecha_creacion_acceso_nuevo,
-            motivo_cambio: form.motivo_cambio || null
+            motivo_cambio: motivoGuardado || null
         });
         const idEdicion = props.registroEdicion?.id_unidad_actual;
         if (idEdicion) {
@@ -746,12 +849,18 @@ const guardarRegistro = async () => {
             await postAllIpress('/unidadesActuales/', payload);
             ElMessage({ message: 'Registro guardado correctamente.', type: 'success', plain: true });
         }
-        emit('guardado');
         await fetchUnidadesActualesPaciente();
         if (!idEdicion) {
             limpiarCamposNuevoAcceso();
             deseaRegistrarCambioAcceso.value = 'no';
             if (!tieneHistorialAcceso.value) form.cambio_acceso = 'false';
+        }
+        if (esComplicacionInfecciosa(motivoGuardado)) {
+            fechaAccesoParaInfeccion.value = fechaAccesoGuardada || '';
+            pendienteEmitirGuardado.value = true;
+            mostrarModalPreguntaInfeccion.value = true;
+        } else {
+            finalizarFlujoGuardado();
         }
     } catch (error) {
         console.error(error);
@@ -800,6 +909,30 @@ const normalizarLocalizacion = (valor) => {
         if (porNumero) return porNumero.value;
     }
     return null;
+};
+
+/** Valor del select de localización nuevo (texto sin prefijo numérico). */
+const normalizarLocalizacionNuevo = (valor) => {
+    if (!valor) return null;
+    const str = String(valor).trim();
+    const directa = listaLocalizacionesNuevo.find(
+        (o) => o.value === str || o.label === str
+    );
+    if (directa) return directa.value;
+
+    const idNormalizado = normalizarLocalizacion(valor);
+    if (idNormalizado) {
+        const op = opcionesLocalizacion.find((o) => o.value === idNormalizado);
+        const sinPrefijo = op?.label.replace(/^\d+\.\s*/, '');
+        const enLista = listaLocalizacionesNuevo.find((o) => o.value === sinPrefijo);
+        if (enLista) return enLista.value;
+    }
+
+    const sinPrefijo = str.replace(/^\d+\.\s*/, '');
+    const porTexto = listaLocalizacionesNuevo.find(
+        (o) => o.value.localeCompare(sinPrefijo, undefined, { sensitivity: 'accent' }) === 0
+    );
+    return porTexto?.value ?? null;
 };
 
 const describirLocalizacion = (valor) => {
@@ -874,10 +1007,6 @@ const fetchClinicas = async () => {
 
 const abrirHistorico = async () => { mostrarHistorico.value = true; };
 const cerrarHistorico = () => { mostrarHistorico.value = false; };
-const abrirModuloInfeccion = () => { mostrarModuloInfeccion.value = true; fetchHistorialInfecciones(); };
-const cerrarModuloInfeccion = () => { mostrarModuloInfeccion.value = false; };
-const guardarInfeccion = async () => { cerrarModuloInfeccion(); };
-const fetchHistorialInfecciones = async () => { historialInfecciones.value = []; };
 const abrirModalCaptar = async () => { await determinarCondicionPaciente(); mostrarModalCaptar.value = true; };
 const cerrarModalCaptar = () => { mostrarModalCaptar.value = false; };
 const captarPaciente = async () => { cerrarModalCaptar(); };
