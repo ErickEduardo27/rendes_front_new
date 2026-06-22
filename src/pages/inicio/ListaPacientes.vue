@@ -103,9 +103,10 @@
         <table class="min-w-full text-xs tabla-pacientes">
           <thead class="bg-slate-100 text-slate-700">
             <tr>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. 1er ingreso</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">T. doc.</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Documento</th>
-              <th class="text-left px-2 py-2 font-semibold min-w-[140px]">Paciente</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap min-w-[140px]">Paciente</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. nac.</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Sexo</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Grado</th>
@@ -115,7 +116,6 @@
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Tipo acceso</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Localización</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. creac. acceso</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. 1er ingreso</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. ingreso hosp.</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Hosp. proced.</th>
               <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Etiología</th>
@@ -129,13 +129,14 @@
               :key="row.id_paciente_dialisis ?? `at-${row.id_paciente_atencion}`"
               class="border-t border-slate-100 hover:bg-slate-50 group"
             >
+              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_primer_ingreso) }}</td>
               <td class="px-2 py-2">{{ celda(row.datosPaciente?.tipo_documento) }}</td>
               <td class="px-2 py-2 font-mono">{{ celda(row.datosPaciente?.documento) }}</td>
-              <td class="px-2 py-2">
-                {{ celda(row.datosPaciente?.paciente) }}
+              <td class="px-2 py-2 whitespace-nowrap">
+                <span :title="celda(row.datosPaciente?.paciente)">{{ celda(row.datosPaciente?.paciente) }}</span>
                 <span
                   v-if="row.sin_registro_dialisis"
-                  class="ml-1 block mt-0.5 text-[10px] font-semibold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded w-fit"
+                  class="ml-1 inline text-[10px] font-semibold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded align-middle"
                   title="Tiene atención en el periodo pero aún no tiene ficha en diálisis"
                 >Sin ficha diálisis</span>
               </td>
@@ -148,7 +149,6 @@
               <td class="px-2 py-2 max-w-[130px] truncate" :title="tipoAccesoTexto(row.tipo_acceso)">{{ tipoAccesoTexto(row.tipo_acceso) }}</td>
               <td class="px-2 py-2 max-w-[130px] truncate" :title="row.localizacion_acceso_inicio">{{ celda(row.localizacion_acceso_inicio) }}</td>
               <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_creacion_acceso) }}</td>
-              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_primer_ingreso) }}</td>
               <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_ingreso_hospital) }}</td>
               <td class="px-2 py-2 max-w-[120px] truncate" :title="row.hospital_procedencia_trr">{{ celda(row.hospital_procedencia_trr) }}</td>
               <td class="px-2 py-2 max-w-[140px] truncate" :title="etiologiaTexto(row)">{{ etiologiaTexto(row) }}</td>

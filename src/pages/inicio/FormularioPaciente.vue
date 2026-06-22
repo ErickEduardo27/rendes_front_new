@@ -204,9 +204,9 @@
             </el-form-item>
             <el-form-item label="Grado de Instrucción" required>
               <el-select v-model="form.gradoInstruccion" placeholder="Seleccione" class="w-full" clearable>
+                <el-option label="Sin instrucción" value="Sin instrucción" />
                 <el-option label="Primaria" value="Primaria" />
                 <el-option label="Secundaria" value="Secundaria" />
-                <el-option label="Técnico" value="Técnico" />
                 <el-option label="Superior" value="Superior" />
               </el-select>
             </el-form-item>
@@ -323,11 +323,10 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 dayjs.extend(customParseFormat);
 import { getAllIpress, postAllIpress, patchAllIpress, deleteAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
-import { prepararPayloadUnidadesActuales } from '@/utils/unidadesActualesPayload';
+import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import { ElMessage, ElConfigProvider, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElButton, ElCheckbox, ElCheckboxGroup, ElDatePicker, ElAutocomplete } from 'element-plus';
 import es from 'element-plus/dist/locale/es.mjs';
 import Swal from 'sweetalert2';
-import router from '@/router/index';
 
 const periodoSeleccionado = ref(null);
 const clinicaSeleccionada = ref('');
@@ -385,6 +384,8 @@ const cargandoEdicionSupervisor = ref(false)
 const guardandoRegistro = ref(false)
 const idPacienteEdicionInterno = ref(null)
 const idPacienteDialisisEdicionInterno = ref(null)
+const idUnidadActualEdicionInterno = ref(null)
+const idPacienteAtencionEdicionInterno = ref(null)
 const pacientesListadoEdicion = ref([])
 const cargandoListadoEdicion = ref(false)
 const filtroListadoNombre = ref('')
@@ -918,16 +919,18 @@ const resolverTipoAccesoTexto = (valor) => {
 const tipoAccesoLabelAId = (tipoAccesoApi) => {
   const t = String(tipoAccesoApi || '').trim();
   if (!t) return '';
+  const etiqueta = tipoAccesoDesdeDb(t) || t;
   const found = listaTiposAcceso.find((x) => {
-    if (String(x.id) === t || x.label === t) return true;
+    if (String(x.id) === t || String(x.id) === etiqueta) return true;
+    if (x.label === t || x.label === etiqueta) return true;
     try {
-      return String(x.label).localeCompare(t, undefined, { sensitivity: 'accent' }) === 0;
+      return String(x.label).localeCompare(etiqueta, undefined, { sensitivity: 'accent' }) === 0;
     } catch {
       return false;
     }
   });
   if (found) return found.id;
-  const tl = t.toLowerCase();
+  const tl = etiqueta.toLowerCase();
   if (tl.includes('no habido') || tl === '—' || tl === '-') return '';
   if (tl.includes('peritoneal')) return '6';
   if (tl.includes('fístula') || tl.includes('fistula') || tl.includes('fav')) return '3';
@@ -1077,17 +1080,58 @@ const resolverLocalizacionAccesoTexto = (valor) => {
   return encontrado?.label ?? texto;
 };
 
+const normalizarTextoLocalizacion = (texto) =>
+  String(texto || '').trim().replace(/^\d+\.\s*/, '');
+
 const localizacionTextoAId = (texto) => {
   if (!texto) return '';
-  const t = String(texto).trim();
-  const encontrado = listaOpcionesAcceso.find(
+  const t = normalizarTextoLocalizacion(texto);
+  if (!t) return '';
+
+  let encontrado = listaOpcionesAcceso.find(
     (opcion) =>
       String(opcion.id) === t ||
       opcion.label === t ||
-      opcion.label.replace(/^\d+\.\s*/, '') === t
+      normalizarTextoLocalizacion(opcion.label) === t,
   );
+  if (encontrado) return encontrado.id;
+
+  encontrado = listaOpcionesAcceso.find((opcion) => {
+    try {
+      return normalizarTextoLocalizacion(opcion.label).localeCompare(t, undefined, { sensitivity: 'accent' }) === 0;
+    } catch {
+      return false;
+    }
+  });
+  if (encontrado) return encontrado.id;
+
+  encontrado = listaOpcionesAcceso.find((opcion) => {
+    const label = normalizarTextoLocalizacion(opcion.label);
+    return label.startsWith(t) || t.startsWith(label.slice(0, Math.min(label.length, t.length)));
+  });
   return encontrado?.id ?? '';
 };
+
+function aplicarAccesoInicioEnFormulario(dia, unidadFallback = null) {
+  let tipoApi = dia?.tipo_acceso;
+  let localizacionTexto = dia?.localizacion_acceso_inicio || '';
+  let fechaAcceso = dia?.fecha_creacion_acceso;
+
+  if ((!tipoApi || String(tipoApi).trim() === '') && unidadFallback) {
+    tipoApi = unidadFallback.tipo_acceso || unidadFallback.tipo_acceso_actual;
+  }
+  if (!localizacionTexto && unidadFallback) {
+    localizacionTexto = unidadFallback.localizacion_acceso || unidadFallback.localizacion_acceso_actual || '';
+  }
+  if (!fechaAcceso && unidadFallback) {
+    fechaAcceso = unidadFallback.fecha_creacion_acceso || unidadFallback.fecha_creacion_acceso_actual;
+  }
+
+  form.tipoAccesoInicio = tipoAccesoLabelAId(tipoApi)
+    || (form.modalidadTRR === 'Diálisis Peritoneal' ? '6' : '');
+  form.fechaCreacionAcceso = fechaIsoADDisplay(fechaAcceso);
+  form.localizacionAcceso = localizacionTextoAId(localizacionTexto);
+}
 
 async function aplicarUbigeoDesdePersonaEsSalud(persona) {
   if (!persona) return;
@@ -1168,6 +1212,85 @@ function camposDialisisAccesoTrr() {
     localizacion_acceso_inicio: resolverLocalizacionAccesoTexto(form.localizacionAcceso) || '',
     hospital_procedencia_trr: String(form.hospitalProcedencia || '').trim(),
   };
+}
+
+async function resolverIdPacienteAtencionParaEdicion(idPaciente) {
+  const idPeriodo = idPeriodoListado.value ?? getIdPeriodoParaPayload();
+  const idIpress = idIpressListado.value;
+  const mod = modalidadGlobal.value;
+  if (idPeriodo == null || idPaciente == null) return null;
+  const params = new URLSearchParams({
+    id_paciente: String(idPaciente),
+    id_periodo: String(idPeriodo),
+  });
+  if (idIpress != null && idIpress !== '') params.set('id_ipress', String(idIpress));
+  if (mod != null && mod !== '') params.set('id_modalidad', String(mod));
+  const res = await getAllIpress(`/pacienteAtencion/?${params}`);
+  const lista = Array.isArray(res) ? res : (res?.results || []);
+  const activa = lista.find((a) => String(a.estado || '').toUpperCase() === 'ACTIVO');
+  const candidata = activa || [...lista].sort(
+    (a, b) => (Number(b.id_paciente_atencion) || 0) - (Number(a.id_paciente_atencion) || 0),
+  )[0];
+  return candidata?.id_paciente_atencion ?? null;
+}
+
+function esAccesoInicioUnidad(unidad) {
+  const motivo = unidad?.motivo_cambio;
+  return motivo == null || String(motivo).trim() === '';
+}
+
+async function cargarUnidadActualParaEdicion(idP) {
+  idUnidadActualEdicionInterno.value = null;
+  idPacienteAtencionEdicionInterno.value = await resolverIdPacienteAtencionParaEdicion(idP);
+
+  let unidades = [];
+  if (idPacienteAtencionEdicionInterno.value) {
+    const res = await getAllIpress(`/unidadesActuales/?id_paciente_atencion=${idPacienteAtencionEdicionInterno.value}`);
+    unidades = Array.isArray(res) ? res : (res?.results || []);
+  }
+  if (!unidades.length) {
+    const res = await getAllIpress(`/unidadesActuales/?id_paciente=${idP}`);
+    unidades = Array.isArray(res) ? res : (res?.results || []);
+  }
+
+  const inicioUnidades = unidades.filter(esAccesoInicioUnidad);
+  const candidatas = inicioUnidades.length ? inicioUnidades : unidades;
+  const ordenadas = [...candidatas].sort(
+    (a, b) => (Number(a.id_unidad_actual) || 0) - (Number(b.id_unidad_actual) || 0),
+  );
+  const unidad = ordenadas[0] || null;
+  idUnidadActualEdicionInterno.value = unidad?.id_unidad_actual ?? null;
+  if (!idPacienteAtencionEdicionInterno.value && unidad) {
+    idPacienteAtencionEdicionInterno.value = unidad.id_paciente_atencion
+      ?? unidad.datosPacienteAtencion?.id_paciente_atencion
+      ?? null;
+  }
+  return unidad;
+}
+
+async function sincronizarUnidadActualEnEdicion() {
+  let idPa = idPacienteAtencionEdicionInterno.value;
+  if (!idPa) {
+    idPa = await resolverIdPacienteAtencionParaEdicion(idPacienteEdicionInterno.value);
+    idPacienteAtencionEdicionInterno.value = idPa;
+  }
+  if (!idPa) return;
+
+  const payloadUnidades = prepararPayloadUnidadesActuales({
+    id_paciente_atencion: Number(idPa),
+    fecha_creacion_acceso: fechaFormularioParaApi(form.fechaCreacionAcceso) || '',
+    tipo_acceso: form.modalidadTRR === 'Trasplante'
+      ? 'NO HABIDO'
+      : resolverTipoAccesoTexto(form.tipoAccesoInicio),
+    localizacion_acceso: resolverLocalizacionAccesoTexto(form.localizacionAcceso) || '',
+  });
+
+  if (idUnidadActualEdicionInterno.value) {
+    await patchAllIpress(`/unidadesActuales/${idUnidadActualEdicionInterno.value}/`, payloadUnidades);
+  } else {
+    const res = await postAllIpress('/unidadesActuales/', payloadUnidades);
+    idUnidadActualEdicionInterno.value = res?.id_unidad_actual ?? res?.id ?? null;
+  }
 }
 // Filtro B: Tipo de Acceso -> Localizaciones específicas (Validación Cruzada)
 const opcionesAccesoFiltradas = computed(() => {
@@ -1648,6 +1771,16 @@ const registrarPaciente = async () => {
     return;
   }
 
+  const idIpress = idIpressListado.value;
+  if (idIpress == null || Number.isNaN(Number(idIpress))) {
+    ElMessage({
+      message: 'Seleccione la clínica (IPRESS) en la barra superior antes de registrar el paciente.',
+      type: 'warning',
+      plain: true,
+    });
+    return;
+  }
+
   const payloadPaciente = {
     documento: form.numeroDocumento,
     tipo_documento: form.tipoDocumento,
@@ -1688,10 +1821,10 @@ const registrarPaciente = async () => {
 
     await registroPacienteHistorial({ id_paciente: estadoRegistro.idPaciente, documento: respuesta?.documento });
 
-    await preguntarCaptacion({
-      ...respuesta,
-      id_paciente: estadoRegistro.idPaciente,
-      documento: respuesta?.documento || form.numeroDocumento,
+    await finalizarCaptacionPaciente({
+      idPaciente: estadoRegistro.idPaciente,
+      idPeriodo,
+      idIpress,
     });
   } catch (error) {
     console.error('Error en registro de paciente:', error);
@@ -1714,18 +1847,26 @@ const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
     throw { error: 'No se pudo determinar el periodo para la atención del paciente.' };
   }
 
+  const idIpress = idIpressListado.value;
+  if (idIpress == null || Number.isNaN(Number(idIpress))) {
+    throw { error: 'Seleccione la clínica (IPRESS) en la barra superior antes de registrar el paciente.' };
+  }
+
   const idModalidad = form.modalidadTRR === 'Hemodiálisis' ? 1 : form.modalidadTRR === 'Diálisis Peritoneal' ? 2 : 3;
-  const fechaAtencion = fechaFormularioParaApi(form.fechaInicioTRR) || new Date().toISOString().slice(0, 10);
+  const fechaCaptacion = fechaFormularioParaApi(form.fechaPrimerIngreso);
+  if (!fechaCaptacion) {
+    throw { error: 'Indique la fecha de primer ingreso a la unidad.' };
+  }
 
   const payloadAtencion = {
     id_paciente: idPaciente,
-    id_ipress: null,
+    id_ipress: idIpress,
     id_periodo: idPeriodo,
     id_modalidad: idModalidad,
-    fecha_atencion: fechaAtencion,
+    fecha_atencion: fechaCaptacion,
     tipo_atencion: 'NUEVO',
     estado: 'ACTIVO',
-    fecha_inicio: new Date().toISOString().slice(0, 10),
+    fecha_inicio: fechaCaptacion,
   };
 
   const resAtencion = await postAllIpress('/pacienteAtencion/', payloadAtencion);
@@ -1749,31 +1890,37 @@ const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
   return { idPacienteAtencion, idUnidadActual };
 }
 
-const preguntarCaptacion = async (respuesta) => {
-  const documentoPaciente = respuesta?.documento || form.numeroDocumento || '';
-  const result = await Swal.fire({
-    title: 'Paciente registrado',
-    text: 'Desea captar al paciente ahora?',
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: 'Si, captar',
-    cancelButtonText: 'No',
-    confirmButtonColor: '#16a34a',
-  });
+async function patchPacienteEstado(pacienteId, nuevoEstado) {
+  await patchAllIpress(`/pacientes/${pacienteId}/`, { estado: nuevoEstado });
+}
 
-  if (result.isConfirmed) {
-    const destino = {
-      name: 'Movimientos',
-      query: { captarDni: documentoPaciente },
-    };
-    const href = router.resolve(destino).href;
-    window.location.assign(href);
-    return;
+async function actualizarPeriodoIpressPaciente(pacienteId, periodoId, ipressId) {
+  const respuesta = await getAllIpress(`/pacientesDialisis/?id_paciente=${pacienteId}`);
+  const lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+  const dial = [...lista].sort(
+    (a, b) => (Number(b.id_paciente_dialisis) || 0) - (Number(a.id_paciente_dialisis) || 0),
+  )[0];
+  if (!dial?.id_paciente_dialisis) return;
+
+  const idPeriodoIpress = await resolverIdPeriodoIpress(periodoId, ipressId);
+  if (idPeriodoIpress != null) {
+    await patchAllIpress(`/pacientesDialisis/${dial.id_paciente_dialisis}/`, {
+      id_periodo_ipress: idPeriodoIpress,
+    });
   }
+}
 
-  ElMessage({ message: 'Paciente registrado exitosamente', type: 'success', plain: true });
-  setTimeout(() => window.location.reload(), 1200);
-};
+async function finalizarCaptacionPaciente({ idPaciente, idPeriodo, idIpress }) {
+  await patchPacienteEstado(idPaciente, 'NUEVO');
+  await actualizarPeriodoIpressPaciente(idPaciente, idPeriodo, idIpress);
+
+  ElMessage({
+    message: 'Paciente registrado y captado exitosamente.',
+    type: 'success',
+    plain: true,
+  });
+  emit('guardado');
+}
 
 const fetchPeriodo = async (url = null) => {
   try {
@@ -1958,6 +2105,7 @@ async function guardarEdicionSupervisor() {
       enf_otra: form.comorbilidades.includes('Otra') ? 'Sí' : 'NO',
     };
     await patchAllIpress(`/pacientesDialisis/${idPacienteDialisisEdicionInterno.value}/`, payloadDialisis);
+    await sincronizarUnidadActualEnEdicion();
 
     ElMessage({ message: 'Cambios guardados correctamente.', type: 'success', plain: true });
     if (props.mostrarTablaEdicion) {
@@ -2013,6 +2161,8 @@ function cancelarEdicionPaciente() {
   modoEdicionSupervisor.value = false;
   idPacienteEdicionInterno.value = null;
   idPacienteDialisisEdicionInterno.value = null;
+  idUnidadActualEdicionInterno.value = null;
+  idPacienteAtencionEdicionInterno.value = null;
   errorDNI.value = '';
   if (props.mostrarTablaEdicion) {
     fetchPacientesParaEdicion();
@@ -2049,35 +2199,14 @@ async function cargarDatosPacienteParaEdicion(idP, idDial) {
     }
     form.fechaInicioTRR = fechaIsoADDisplay(dia.fecha_inicio_trr);
     form.subsistemaSalud = dia.subsistema_salud || '';
-    form.fechaCreacionAcceso = fechaIsoADDisplay(dia.fecha_creacion_acceso);
     form.fechaPrimerIngreso = fechaIsoADDisplay(dia.fecha_primer_ingreso);
     form.fechaIngresoEsSalud = fechaIsoADDisplay(dia.fecha_ingreso_hospital);
     form.hospitalProcedencia = dia.hospital_procedencia_trr || '';
     form.comorbilidades = mapComorbilidadesDesdeDialisis(dia);
 
-    const tipoId = tipoAccesoLabelAId(dia.tipo_acceso);
-    form.tipoAccesoInicio = tipoId || (form.modalidadTRR === 'Diálisis Peritoneal' ? '6' : '');
-
-    let localizacionGuardada = dia.localizacion_acceso_inicio || '';
-    if (!localizacionGuardada) {
-      try {
-        const resUnidades = await getAllIpress(`/unidadesActuales/?id_paciente=${idP}`);
-        const unidades = Array.isArray(resUnidades) ? resUnidades : (resUnidades?.results || []);
-        const ordenadas = [...unidades]
-          .filter((u) => u.localizacion_acceso || u.localizacion_acceso_actual)
-          .sort((a, b) => {
-            const fa = a.fecha_creacion_acceso || a.fecha_creacion_acceso_actual || '';
-            const fb = b.fecha_creacion_acceso || b.fecha_creacion_acceso_actual || '';
-            return String(fa).localeCompare(String(fb));
-          });
-        localizacionGuardada = ordenadas[0]?.localizacion_acceso || ordenadas[0]?.localizacion_acceso_actual || '';
-      } catch {
-        localizacionGuardada = '';
-      }
-    }
-
+    const unidadActual = await cargarUnidadActualParaEdicion(idP);
+    aplicarAccesoInicioEnFormulario(dia, unidadActual);
     await nextTick();
-    form.localizacionAcceso = localizacionTextoAId(localizacionGuardada);
 
     let idEt = valorPkOAnidado(dia.id_etiologia);
     if (idEt == null) idEt = dia.id_etiologia_id;
@@ -2101,6 +2230,8 @@ async function cargarDatosPacienteParaEdicion(idP, idDial) {
     modoEdicionSupervisor.value = false;
     idPacienteEdicionInterno.value = null;
     idPacienteDialisisEdicionInterno.value = null;
+    idUnidadActualEdicionInterno.value = null;
+    idPacienteAtencionEdicionInterno.value = null;
   } finally {
     silenciarWatchsAccesoModalidad.value = false;
     cargandoEdicionSupervisor.value = false;

@@ -9,13 +9,13 @@
             <div class="flex gap-2">
                 <button
                     type="button"
-                    class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition flex items-center gap-2"
+                    class="bg-sky-500 text-white px-3 py-1.5 rounded text-xs font-semibold shadow hover:bg-sky-600 transition flex items-center gap-1.5"
                     @click="abrirModalConsultaDocumento"
                 >
                     <span>➕</span>
-                    <span>Consultar Paciente</span>
+                    <span>Captar Paciente</span>
                 </button>
-                <button @click="abrirModalEgresar" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 flex items-center gap-2">
+                <button @click="abrirModalEgresar" class="bg-red-500 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-red-600 flex items-center gap-1.5">
                     <span>➖</span>
                     <span>Egresar Paciente</span>
                 </button>
@@ -50,57 +50,60 @@
         <!-- Tabla de Movimientos -->
         <div class="bg-white rounded-lg shadow border overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="w-full text-xs">
                     <thead class="bg-gray-50 border-b">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Fecha
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Paciente
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 DNI
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Tipo Movimiento
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Condición
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Tipo Egreso
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Periodo
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Clínica
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Modalidad / detalle
+                            </th>
+                            <th class="px-3 py-2 text-center text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                                Acciones
                             </th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <tr v-if="movimientosFiltrados.length === 0">
-                            <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+                            <td colspan="10" class="px-3 py-6 text-center text-gray-500">
                                 No hay movimientos registrados
                             </td>
                         </tr>
                         <tr v-for="(movimiento, index) in movimientosPaginados" :key="index" class="hover:bg-gray-50">
-                            <td class="px-4 py-3 text-sm text-gray-900">
+                            <td class="px-3 py-2 text-gray-900 whitespace-nowrap">
                                 {{ movimiento.fecha }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">
+                            <td class="px-3 py-2 text-gray-900 font-medium whitespace-nowrap">
                                 {{ movimiento.paciente_nombre }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600">
+                            <td class="px-3 py-2 text-gray-600 whitespace-nowrap">
                                 {{ movimiento.paciente_dni }}
                             </td>
-                            <td class="px-4 py-3 text-sm">
+                            <td class="px-3 py-2">
                                 <span :class="[
-                                    'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                                    'inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full',
                                     movimiento.tipo === 'INGRESO' ? 'bg-green-100 text-green-800' :
                                     movimiento.tipo === 'EGRESO' ? 'bg-red-100 text-red-800' :
                                     movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'bg-indigo-100 text-indigo-800' :
@@ -109,9 +112,9 @@
                                     {{ movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'CAMBIO MOD.' : movimiento.tipo }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-900">
+                            <td class="px-3 py-2 text-gray-900">
                                 <span :class="[
-                                    'inline-flex px-2 py-1 text-xs font-semibold rounded-full',
+                                    'inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full',
                                     movimiento.condicion === 'NUEVO' ? 'bg-purple-100 text-purple-800' : 
                                     movimiento.condicion === 'REINGRESO' ? 'bg-yellow-100 text-yellow-800' : 
                                     movimiento.condicion === 'CONTINUADOR' ? 'bg-blue-100 text-blue-800' :
@@ -122,17 +125,31 @@
                                     {{ movimiento.condicion }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600">
+                            <td class="px-3 py-2 text-gray-600">
                                 {{ movimiento.tipo_egreso || '-' }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600">
+                            <td class="px-3 py-2 text-gray-600 whitespace-nowrap">
                                 {{ movimiento.periodo }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600">
+                            <td class="px-3 py-2 text-gray-600">
                                 {{ movimiento.clinica || '-' }}
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-600 max-w-[220px] truncate" :title="movimiento.detalle_modalidad || ''">
+                            <td class="px-3 py-2 text-gray-600 max-w-[220px] truncate" :title="movimiento.detalle_modalidad || ''">
                                 {{ movimiento.detalle_modalidad || movimiento.modalidad || '-' }}
+                            </td>
+                            <td class="px-3 py-2 text-center whitespace-nowrap">
+                                <button
+                                    type="button"
+                                    class="font-semibold text-[11px] px-2 py-1 rounded transition"
+                                    :class="movimiento.tipo === 'CAMBIO_MODALIDAD'
+                                        ? 'text-gray-400 cursor-not-allowed'
+                                        : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'"
+                                    :disabled="movimiento.tipo === 'CAMBIO_MODALIDAD'"
+                                    :title="movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'Los cambios de modalidad no se editan desde aquí' : 'Editar movimiento'"
+                                    @click="editarMovimiento(movimiento)"
+                                >
+                                    Editar
+                                </button>
                             </td>
                         </tr>
                     </tbody>
@@ -283,15 +300,22 @@
             <div class="bg-white rounded-lg shadow-xl p-6 w-[700px] max-h-[90vh] overflow-y-auto relative">
                 <button class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl" @click="cerrarModalCaptar">&times;</button>
                 <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                    <span class="text-2xl">➕</span>
-                    <span>Captar Paciente</span>
+                    <span class="text-2xl">{{ movimientoEnEdicion ? '✏️' : '➕' }}</span>
+                    <span>{{ movimientoEnEdicion ? 'Editar ingreso / reingreso' : 'Captar Paciente' }}</span>
                 </h3>
                 
                 <div class="space-y-4">
                     <!-- Selección de Paciente -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Buscar Paciente*</label>
-                        <el-autocomplete 
+                        <div
+                            v-if="movimientoEnEdicion"
+                            class="w-full border border-gray-200 rounded p-2.5 text-sm bg-gray-50 text-gray-700"
+                        >
+                            {{ formCaptar.pacienteBusqueda || '—' }}
+                        </div>
+                        <el-autocomplete
+                            v-else
                             v-model="formCaptar.pacienteBusqueda" 
                             :fetch-suggestions="querySearchPacientes" 
                             clearable
@@ -361,12 +385,15 @@
                             v-model="formCaptar.fecha"
                             type="date"
                             class="w-full border rounded p-2 text-sm"
-                            :min="rangoFechaCaptura.min"
-                            :max="rangoFechaCaptura.max"
+                            :min="rangoFechaCapturaPaciente.min"
+                            :max="rangoFechaCapturaPaciente.max"
                         />
                         <p class="text-xs text-gray-500 mt-1">
                             Debe estar en el mes del periodo seleccionado en la barra superior (incluido el día 1).
-                            <span v-if="rangoFechaCaptura.placeholder" class="block text-amber-700 mt-0.5">{{ rangoFechaCaptura.placeholder }}</span>
+                            <span v-if="rangoFechaCapturaPaciente.placeholder" class="block text-amber-700 mt-0.5">{{ rangoFechaCapturaPaciente.placeholder }}</span>
+                            <span v-if="rangoFechaCapturaPaciente.fechaUltimoEgreso" class="block mt-0.5">
+                                No anterior al último egreso del paciente ({{ rangoFechaCapturaPaciente.fechaUltimoEgreso }}).
+                            </span>
                         </p>
                     </div>
 
@@ -383,7 +410,7 @@
                         Cancelar
                     </button>
                     <button @click="captarPaciente" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                        Captar Paciente
+                        {{ movimientoEnEdicion ? 'Guardar cambios' : 'Captar Paciente' }}
                     </button>
                 </div>
             </div>
@@ -394,15 +421,22 @@
             <div class="bg-white rounded-lg shadow-xl p-6 w-[700px] max-h-[90vh] overflow-y-auto relative">
                 <button class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl" @click="cerrarModalEgresar">&times;</button>
                 <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                    <span class="text-2xl">➖</span>
-                    <span>Egresar Paciente</span>
+                    <span class="text-2xl">{{ movimientoEnEdicion ? '✏️' : '➖' }}</span>
+                    <span>{{ movimientoEnEdicion ? 'Editar egreso' : 'Egresar Paciente' }}</span>
                 </h3>
                 
                 <div class="space-y-4">
                     <!-- Selección de Paciente -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Buscar Paciente*</label>
-                        <el-autocomplete 
+                        <div
+                            v-if="movimientoEnEdicion"
+                            class="w-full border border-gray-200 rounded p-2.5 text-sm bg-gray-50 text-gray-700"
+                        >
+                            {{ formEgresar.pacienteBusqueda || '—' }}
+                        </div>
+                        <el-autocomplete
+                            v-else
                             v-model="formEgresar.pacienteBusqueda" 
                             :fetch-suggestions="querySearchPacientesEgresar" 
                             clearable
@@ -438,6 +472,12 @@
                             <div v-if="pacienteSeleccionadoEgresar.nombre_clinica" class="col-span-2">
                                 <strong>Clínica:</strong> {{ pacienteSeleccionadoEgresar.nombre_clinica }}
                             </div>
+                            <div v-if="fechaPrimerIngresoEgresar" class="col-span-2">
+                                <strong>Primer ingreso a unidad:</strong> {{ fechaPrimerIngresoEgresar }}
+                            </div>
+                            <div v-if="ultimaFechaRegistrosEgresar" class="col-span-2">
+                                <strong>Último registro en periodo:</strong> {{ ultimaFechaRegistrosEgresar }}
+                            </div>
                         </div>
                     </div>
 
@@ -464,11 +504,19 @@
                             v-model="formEgresar.fecha"
                             type="date"
                             class="w-full border rounded p-2 text-sm"
-                            :min="rangoFechaEgreso.min"
-                            :max="rangoFechaEgreso.max"
-                            :placeholder="rangoFechaEgreso.placeholder"
+                            :min="minFechaEgresoInput"
+                            :max="rangoFechaEgresoPaciente.max"
+                            :placeholder="rangoFechaEgresoPaciente.placeholder"
                         />
-                        <p v-if="rangoFechaEgreso.placeholder" class="text-xs text-amber-600 mt-1">{{ rangoFechaEgreso.placeholder }}</p>
+                        <p v-if="rangoFechaEgresoPaciente.placeholder" class="text-xs text-amber-600 mt-1">{{ rangoFechaEgresoPaciente.placeholder }}</p>
+                        <p v-else-if="rangoFechaEgresoPaciente.fechaPrimerIngreso || rangoFechaEgresoPaciente.ultimaFechaRegistros" class="text-xs text-gray-500 mt-1 space-y-0.5">
+                            <span v-if="rangoFechaEgresoPaciente.fechaPrimerIngreso" class="block">
+                                No anterior al primer ingreso a la unidad ({{ rangoFechaEgresoPaciente.fechaPrimerIngreso }}).
+                            </span>
+                            <span v-if="rangoFechaEgresoPaciente.ultimaFechaRegistros" class="block">
+                                No anterior al último registro del periodo, clínica y modalidad actuales ({{ rangoFechaEgresoPaciente.ultimaFechaRegistros }}).
+                            </span>
+                        </p>
                     </div>
 
                     <!-- Tipo de Egreso -->
@@ -505,7 +553,7 @@
                         Cancelar
                     </button>
                     <button @click="egresarPaciente" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                        Egresar Paciente
+                        {{ movimientoEnEdicion ? 'Guardar cambios' : 'Egresar Paciente' }}
                     </button>
                 </div>
             </div>
@@ -517,7 +565,7 @@
             class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
         >
             <div class="bg-white rounded-lg shadow-xl p-6 w-[520px] max-h-[90vh] overflow-y-auto relative">
-                <button class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl" @click="cerrarModalMorbilidadHospitalaria">&times;</button>
+                <button class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl" @click="confirmarMorbilidadYaRegistrada">&times;</button>
                 <h3 class="text-xl font-bold mb-3 text-gray-800 flex items-center gap-2">
                     <span class="text-2xl">🏥</span>
                     <span>Egreso por hospitalización</span>
@@ -530,16 +578,16 @@
                     <button
                         type="button"
                         class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-                        @click="cerrarModalMorbilidadHospitalaria"
+                        @click="confirmarMorbilidadYaRegistrada"
                     >
-                        Sí
+                        Sí, ya registré
                     </button>
                     <button
                         type="button"
                         class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                         @click="irAMorbilidadHospitalaria"
                     >
-                        No
+                        Registrar hospitalización
                     </button>
                 </div>
             </div>
@@ -609,7 +657,49 @@ const rangoFechaEgreso = computed(() => {
   return { min, max, placeholder: '' };
 });
 
-const rangoFechaCaptura = computed(() => rangoFechaEgreso.value);
+const fechaPrimerIngresoEgresar = ref(null);
+const ultimaFechaRegistrosEgresar = ref(null);
+
+const rangoFechaEgresoPaciente = computed(() => {
+  const base = rangoFechaEgreso.value;
+  const minCalculada = maxIso(
+    maxIso(base.min, fechaPrimerIngresoEgresar.value),
+    ultimaFechaRegistrosEgresar.value,
+  ) || base.min || fechaPrimerIngresoEgresar.value || ultimaFechaRegistrosEgresar.value;
+  return {
+    ...base,
+    min: minCalculada || base.min,
+    fechaPrimerIngreso: fechaPrimerIngresoEgresar.value,
+    ultimaFechaRegistros: ultimaFechaRegistrosEgresar.value,
+  };
+});
+
+/** En edición, permitir mostrar la fecha guardada aunque sea anterior al mínimo calculado. */
+const minFechaEgresoInput = computed(() => {
+  const min = rangoFechaEgresoPaciente.value.min;
+  const fechaActual = movimientoEnEdicion.value
+    ? (formEgresar.fecha || movimientoEnEdicion.value.fecha)
+    : null;
+  if (fechaActual && fechaActual !== 'N/A' && min && String(fechaActual) < String(min)) {
+    return fechaActual;
+  }
+  return min;
+});
+
+const ultimoEgreso = ref(null);
+
+const rangoFechaCapturaPaciente = computed(() => {
+  const base = rangoFechaEgreso.value;
+  const fechaUltimoEgreso = ultimoEgreso.value?.fechaIso || null;
+  const minCalculada = maxIso(base.min, fechaUltimoEgreso)
+    || base.min
+    || fechaUltimoEgreso;
+  return {
+    ...base,
+    min: minCalculada || base.min,
+    fechaUltimoEgreso,
+  };
+});
 
 // Estados
 const movimientos = ref([]);
@@ -638,10 +728,19 @@ const pacienteSeleccionado = ref(null);
 const pacienteSeleccionadoEgresar = ref(null);
 const condicionAutomatica = ref('');
 const mensajeCondicion = ref('');
-const ultimoEgreso = ref(null);
 const paginaActual = ref(1);
 const itemsPorPagina = 10;
 const mostrarModalMorbilidadHospitalaria = ref(false);
+const contextoEgresoHospitalizacion = ref(null);
+const movimientoEnEdicion = ref(null);
+
+const TIPOS_EGRESO_PREDEFINIDOS = [
+    'Hospitalización',
+    'Fallecimiento',
+    'Trasplante',
+    'Cambio de Unidad',
+    'Cambio de Modalidad',
+];
 
 // Filtros
 const filtros = reactive({
@@ -744,6 +843,7 @@ const filaListadoAPacienteEgresar = (row, idIpress) => {
         id_ipress: idIpress,
         nombre_clinica: clinica?.nombre_corto || clinica?.ipress || '',
         id_paciente_atencion: row.id_paciente_atencion,
+        fecha_primer_ingreso: row.fecha_primer_ingreso ?? '',
     };
 };
 
@@ -885,14 +985,23 @@ const handleSelectPaciente = async (item) => {
     await determinarCondicionPaciente(item.id_paciente);
 };
 
-const handleSelectPacienteEgresar = (item) => {
+const handleSelectPacienteEgresar = async (item) => {
     pacienteSeleccionadoEgresar.value = item;
     formEgresar.paciente = item.id_paciente;
     if (item.id_ipress != null && item.id_ipress !== '') {
         formEgresar.clinica = item.id_ipress;
         formEgresar.clinicaNombre = item.nombre_clinica || '';
     }
+    await actualizarLimitesFechaEgresarPaciente(item);
 };
+
+function limpiarFechaEgresoSiInvalida() {
+    if (movimientoEnEdicion.value) return;
+    const minFecha = rangoFechaEgresoPaciente.value.min;
+    if (formEgresar.fecha && minFecha && String(formEgresar.fecha) < String(minFecha)) {
+        formEgresar.fecha = '';
+    }
+}
 
 const filtrarMovimientos = () => {
     paginaActual.value = 1;
@@ -1019,6 +1128,7 @@ const onCerrarFormularioPacienteMovimientos = () => {
 // Funciones de Modal Captar (ingreso en periodo; también deep-link captarDni)
 const abrirModalCaptarFormulario = async (precargaPaciente = null) => {
     await fetchPacientes();
+    movimientoEnEdicion.value = null;
     formCaptar.paciente = null;
     formCaptar.pacienteBusqueda = '';
     formCaptar.fecha = '';
@@ -1038,7 +1148,7 @@ const abrirModalCaptarFormulario = async (precargaPaciente = null) => {
             item = { ...precargaPaciente };
         }
         await handleSelectPaciente(item);
-        const r = rangoFechaCaptura.value;
+        const r = rangoFechaCapturaPaciente.value;
         if (r.min) {
             formCaptar.fecha = r.min;
         }
@@ -1058,7 +1168,7 @@ const abrirCaptacionConDni = async (dni) => {
     const paciente = pacientes.value.find((item) => String(item.documento || '') === String(dni));
     if (paciente) {
         await handleSelectPaciente(paciente);
-        const r = rangoFechaCaptura.value;
+        const r = rangoFechaCapturaPaciente.value;
         if (r.min) {
             formCaptar.fecha = r.min;
         }
@@ -1076,19 +1186,112 @@ const procesarCaptacionDesdeRuta = async () => {
 
 const cerrarModalCaptar = () => {
     mostrarModalCaptar.value = false;
+    movimientoEnEdicion.value = null;
 };
 
-const resolverAtencionParaCaptacion = (listaAtenciones) => {
+const parseTipoEgresoParaForm = (tipoEgresoStr) => {
+    const t = String(tipoEgresoStr || '').trim();
+    if (TIPOS_EGRESO_PREDEFINIDOS.includes(t)) {
+        return { tipo_egreso: t, motivo_especifico: '' };
+    }
+    if (t) {
+        return { tipo_egreso: 'Otros', motivo_especifico: t };
+    }
+    return { tipo_egreso: '', motivo_especifico: '' };
+};
+
+const extraerObservacionesEgreso = (observaciones) => {
+    const obs = String(observaciones || '').trim();
+    const match = obs.match(/^Egreso:\s*[^.]+\.\s*(.*)$/s);
+    if (match) return match[1].trim();
+    if (/^Egreso:/i.test(obs)) return '';
+    return obs;
+};
+
+const abrirModalCaptarEdicion = async (mov) => {
+    await fetchPacientes();
+    const pacienteItem = {
+        id_paciente: mov.id_paciente,
+        paciente: mov.paciente_nombre,
+        documento: mov.paciente_dni,
+        id_modalidad: mov.id_modalidad,
+    };
+    formCaptar.paciente = mov.id_paciente;
+    formCaptar.pacienteBusqueda = mov.paciente_nombre;
+    formCaptar.fecha = mov.fecha !== 'N/A' ? mov.fecha : '';
+    formCaptar.observaciones = mov.observaciones || '';
+    pacienteSeleccionado.value = pacienteItem;
+    condicionAutomatica.value = mov.tipo_atencion || mov.condicion || 'CONTINUADOR';
+    mensajeCondicion.value = 'Editando movimiento existente.';
+    ultimoEgreso.value = await obtenerUltimoEgresoPaciente(mov.id_paciente);
+    movimientoEnEdicion.value = mov;
+    mostrarModalCaptar.value = true;
+};
+
+const abrirModalEgresarEdicion = async (mov) => {
+    const { tipo_egreso, motivo_especifico } = parseTipoEgresoParaForm(mov.tipo_egreso);
+    const fechaEdicion = mov.fecha !== 'N/A' ? mov.fecha : '';
+    const pacienteItem = {
+        id_paciente: mov.id_paciente,
+        paciente: mov.paciente_nombre,
+        documento: mov.paciente_dni,
+        id_modalidad: mov.id_modalidad,
+        id_ipress: mov.id_ipress,
+        nombre_clinica: mov.clinica,
+        id_paciente_atencion: mov.id,
+    };
+    formEgresar.paciente = mov.id_paciente;
+    formEgresar.pacienteBusqueda = mov.paciente_nombre;
+    formEgresar.clinica = mov.id_ipress ?? clinicaGlobal.value ?? null;
+    formEgresar.clinicaNombre = mov.clinica || nombreClinicaGlobal.value;
+    formEgresar.periodo = mov.id_periodo ?? periodoGlobal.value ?? '';
+    formEgresar.fecha = fechaEdicion;
+    formEgresar.tipo_egreso = tipo_egreso;
+    formEgresar.motivo_especifico = motivo_especifico;
+    formEgresar.observaciones = extraerObservacionesEgreso(mov.observaciones);
+    pacienteSeleccionadoEgresar.value = pacienteItem;
+    movimientoEnEdicion.value = mov;
+    await actualizarLimitesFechaEgresarPaciente(pacienteItem);
+    if (fechaEdicion) {
+        formEgresar.fecha = fechaEdicion;
+    }
+    mostrarModalEgresar.value = true;
+};
+
+const editarMovimiento = async (mov) => {
+    if (mov.tipo === 'CAMBIO_MODALIDAD') {
+        ElMessage({
+            message: 'Los cambios de modalidad no se editan desde esta pantalla.',
+            type: 'info',
+            plain: true,
+        });
+        return;
+    }
+    if (mov.tipo === 'EGRESO') {
+        await abrirModalEgresarEdicion(mov);
+        return;
+    }
+    await abrirModalCaptarEdicion(mov);
+};
+
+const resolverAtencionParaCaptacion = (listaAtenciones, idIpressObjetivo = null) => {
     const lista = Array.isArray(listaAtenciones) ? listaAtenciones : [];
-    const activa = lista.find((a) => String(a.estado || '').toUpperCase() === 'ACTIVO');
+    const activaEnClinica = lista.find(
+        (a) => String(a.estado || '').toUpperCase() === 'ACTIVO'
+            && a.id_ipress != null
+            && idIpressObjetivo != null
+            && String(a.id_ipress) === String(idIpressObjetivo),
+    );
+    const activaSinIpress = lista.find(
+        (a) => String(a.estado || '').toUpperCase() === 'ACTIVO' && a.id_ipress == null,
+    );
     const egresadas = lista
         .filter((a) => String(a.estado || '').toUpperCase() === 'EGRESADO')
         .sort((a, b) => (Number(b.id_paciente_atencion) || 0) - (Number(a.id_paciente_atencion) || 0));
-    const pendiente = lista.find((a) => a.id_ipress == null);
     return {
-        activa: activa || null,
+        activaEnClinica: activaEnClinica || null,
+        activaSinIpress: activaSinIpress || null,
         atencionEgresada: egresadas[0] || null,
-        atencionPendiente: pendiente || null,
     };
 };
 
@@ -1105,17 +1308,14 @@ const determinarCondicionPaciente = async (pacienteId) => {
                 id_periodo: String(idPeriodo),
                 id_modalidad: String(idModalidad),
             });
-            if (idIpress != null && idIpress !== '') {
-                paramsAt.set('id_ipress', String(idIpress));
-            }
             const atRes = await getAllIpress(`/pacienteAtencion/?${paramsAt}`);
             const atList = Array.isArray(atRes) ? atRes : (atRes?.results || []);
-            const { activa, atencionEgresada } = resolverAtencionParaCaptacion(atList);
+            const { activaEnClinica, activaSinIpress, atencionEgresada } = resolverAtencionParaCaptacion(atList, idIpress);
 
-            if (activa) {
+            if (activaEnClinica) {
                 condicionAutomatica.value = 'YA_ACTIVO';
                 mensajeCondicion.value = 'El paciente ya tiene atención activa en este periodo, clínica y modalidad.';
-                formCaptar.condicion = activa.tipo_atencion || 'CONTINUADOR';
+                formCaptar.condicion = activaEnClinica.tipo_atencion || 'CONTINUADOR';
                 return;
             }
 
@@ -1123,40 +1323,56 @@ const determinarCondicionPaciente = async (pacienteId) => {
                 condicionAutomatica.value = 'REINGRESO';
                 mensajeCondicion.value = 'El paciente fue egresado en este periodo. El ingreso se registrará como REINGRESO.';
                 formCaptar.condicion = 'REINGRESO';
-                ultimoEgreso.value = {
-                    tipo_egreso: extraerTipoEgresoDesdeObs(atencionEgresada.observaciones) || 'No especificado',
-                    fecha: atencionEgresada.fecha_fin
-                        || atencionEgresada.fecha_atencion
-                        || (atencionEgresada.created_at ? new Date(atencionEgresada.created_at).toLocaleDateString() : '—'),
-                };
-                return;
+            } else {
+                const respuesta = await getAllIpress(`/PacienteRegistro/?paciente=${pacienteId}`);
+
+                if (!respuesta || respuesta.length === 0) {
+                    condicionAutomatica.value = 'NUEVO';
+                    mensajeCondicion.value = 'Este es el primer registro del paciente en el sistema.';
+                    formCaptar.condicion = 'NUEVO';
+                } else {
+                    const egresos = respuesta.filter((r) => r.condicion === 'EGRESADO').sort((a, b) =>
+                        new Date(b.fecha_created) - new Date(a.fecha_created)
+                    );
+
+                    if (egresos.length > 0) {
+                        condicionAutomatica.value = 'REINGRESO';
+                        mensajeCondicion.value = 'El paciente tiene un egreso previo registrado.';
+                        formCaptar.condicion = 'REINGRESO';
+                    } else {
+                        condicionAutomatica.value = 'CONTINUADOR';
+                        mensajeCondicion.value = 'El paciente no tiene egreso registrado en la unidad.';
+                        formCaptar.condicion = 'CONTINUADOR';
+                    }
+                }
+            }
+        } else {
+            const respuesta = await getAllIpress(`/PacienteRegistro/?paciente=${pacienteId}`);
+
+            if (!respuesta || respuesta.length === 0) {
+                condicionAutomatica.value = 'NUEVO';
+                mensajeCondicion.value = 'Este es el primer registro del paciente en el sistema.';
+                formCaptar.condicion = 'NUEVO';
+            } else {
+                const egresos = respuesta.filter((r) => r.condicion === 'EGRESADO').sort((a, b) =>
+                    new Date(b.fecha_created) - new Date(a.fecha_created)
+                );
+
+                if (egresos.length > 0) {
+                    condicionAutomatica.value = 'REINGRESO';
+                    mensajeCondicion.value = 'El paciente tiene un egreso previo registrado.';
+                    formCaptar.condicion = 'REINGRESO';
+                } else {
+                    condicionAutomatica.value = 'CONTINUADOR';
+                    mensajeCondicion.value = 'El paciente no tiene egreso registrado en la unidad.';
+                    formCaptar.condicion = 'CONTINUADOR';
+                }
             }
         }
 
-        const respuesta = await getAllIpress(`/PacienteRegistro/?paciente=${pacienteId}`);
-
-        if (!respuesta || respuesta.length === 0) {
-            condicionAutomatica.value = 'NUEVO';
-            mensajeCondicion.value = 'Este es el primer registro del paciente en el sistema.';
-            formCaptar.condicion = 'NUEVO';
-        } else {
-            const egresos = respuesta.filter((r) => r.condicion === 'EGRESADO').sort((a, b) =>
-                new Date(b.fecha_created) - new Date(a.fecha_created)
-            );
-
-            if (egresos.length > 0) {
-                condicionAutomatica.value = 'REINGRESO';
-                mensajeCondicion.value = 'El paciente tiene un egreso previo registrado.';
-                formCaptar.condicion = 'REINGRESO';
-                ultimoEgreso.value = {
-                    tipo_egreso: egresos[0].tipo_egreso || 'No especificado',
-                    fecha: new Date(egresos[0].fecha_created).toLocaleDateString(),
-                };
-            } else {
-                condicionAutomatica.value = 'CONTINUADOR';
-                mensajeCondicion.value = 'El paciente no tiene egreso registrado en la unidad.';
-                formCaptar.condicion = 'CONTINUADOR';
-            }
+        if (condicionAutomatica.value !== 'YA_ACTIVO') {
+            ultimoEgreso.value = await obtenerUltimoEgresoPaciente(pacienteId);
+            limpiarFechaCapturaSiInvalida();
         }
     } catch (error) {
         console.error('Error al determinar condición del paciente:', error);
@@ -1214,7 +1430,19 @@ const captarPaciente = async () => {
         return;
     }
 
-    if (condicionAutomatica.value === 'YA_ACTIVO') {
+    const fechaUltimoEgreso = ultimoEgreso.value?.fechaIso
+        || (await obtenerUltimoEgresoPaciente(formCaptar.paciente))?.fechaIso;
+    if (fechaUltimoEgreso && String(formCaptar.fecha) < String(fechaUltimoEgreso)) {
+        ElMessage({
+            message: `La fecha de ingreso/reingreso no puede ser anterior al último egreso del paciente (${fechaUltimoEgreso}).`,
+            type: 'error',
+            plain: true,
+            duration: 6000,
+        });
+        return;
+    }
+
+    if (condicionAutomatica.value === 'YA_ACTIVO' && !movimientoEnEdicion.value) {
         ElMessage({
             message: 'El paciente ya tiene atención activa en este periodo. Use egreso si corresponde.',
             type: 'warning',
@@ -1223,12 +1451,38 @@ const captarPaciente = async () => {
         return;
     }
 
-    if (condicionAutomatica.value === 'REINGRESO' && !ultimoEgreso.value) {
+    if (condicionAutomatica.value === 'REINGRESO' && !ultimoEgreso.value && !movimientoEnEdicion.value) {
         ElMessage({
             message: 'No se puede registrar un reingreso sin un egreso previo',
             type: 'error',
             plain: true,
         });
+        return;
+    }
+
+    if (movimientoEnEdicion.value) {
+        try {
+            await patchAllIpress(`/pacienteAtencion/${movimientoEnEdicion.value.id}/`, {
+                fecha_atencion: formCaptar.fecha,
+                fecha_inicio: formCaptar.fecha,
+                observaciones: formCaptar.observaciones || '',
+                tipo_atencion: movimientoEnEdicion.value.tipo_atencion || condicionAutomatica.value,
+            });
+            ElMessage({
+                message: 'Movimiento actualizado correctamente',
+                type: 'success',
+                plain: true,
+            });
+            cerrarModalCaptar();
+            await fetchMovimientos();
+        } catch (error) {
+            console.error('Error al editar movimiento:', error);
+            ElMessage({
+                message: error?.error || 'Error al actualizar el movimiento. Intente nuevamente.',
+                type: 'error',
+                plain: true,
+            });
+        }
         return;
     }
 
@@ -1267,13 +1521,12 @@ const captarPaciente = async () => {
             id_paciente: String(formCaptar.paciente),
             id_periodo: String(idPeriodo),
             id_modalidad: String(idModalidad),
-            id_ipress: String(idIpress),
         });
         const atencionesExistentes = await getAllIpress(`/pacienteAtencion/?${paramsAtencion}`);
         const listaAtenciones = Array.isArray(atencionesExistentes) ? atencionesExistentes : (atencionesExistentes?.results || []);
-        const { activa, atencionEgresada, atencionPendiente } = resolverAtencionParaCaptacion(listaAtenciones);
+        const { activaEnClinica, activaSinIpress, atencionEgresada } = resolverAtencionParaCaptacion(listaAtenciones, idIpress);
 
-        if (activa) {
+        if (activaEnClinica) {
             ElMessage({
                 message: 'El paciente ya tiene atención activa en este periodo, clínica y modalidad.',
                 type: 'warning',
@@ -1296,16 +1549,20 @@ const captarPaciente = async () => {
             created_at: now,
         };
 
-        const idReactivar = atencionEgresada?.id_paciente_atencion ?? atencionPendiente?.id_paciente_atencion;
+        const idReactivar = atencionEgresada?.id_paciente_atencion ?? activaSinIpress?.id_paciente_atencion;
+        let idPacienteAtencionCapturado = idReactivar ?? null;
         if (idReactivar) {
             await patchAllIpress(`/pacienteAtencion/${idReactivar}/`, payload);
         } else {
-            await postAllIpress('/pacienteAtencion/', payload);
+            const resAtencion = await postAllIpress('/pacienteAtencion/', payload);
+            idPacienteAtencionCapturado = resAtencion?.id_paciente_atencion ?? resAtencion?.id ?? null;
         }
 
         const estadoPaciente = condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'REINGRESO';
         await patchPacienteEstado(formCaptar.paciente, estadoPaciente);
         await actualizarPeriodoIpressPaciente(formCaptar.paciente, idPeriodo, idIpress);
+
+        const idPacienteCapturado = formCaptar.paciente;
 
         ElMessage({
             message: tipoAtencion === 'REINGRESO' ? 'Reingreso registrado exitosamente' : 'Paciente captado exitosamente',
@@ -1315,6 +1572,10 @@ const captarPaciente = async () => {
 
         cerrarModalCaptar();
         await fetchMovimientos();
+        irAAccessoVascular({
+            idPaciente: idPacienteCapturado,
+            idPacienteAtencion: idPacienteAtencionCapturado,
+        });
     } catch (error) {
         console.error('Error al captar paciente:', error);
         ElMessage({
@@ -1336,6 +1597,7 @@ const abrirModalEgresar = async () => {
         return;
     }
     await fetchPacientesParaEgresar();
+    movimientoEnEdicion.value = null;
     formEgresar.paciente = null;
     formEgresar.pacienteBusqueda = '';
     formEgresar.clinica = clinicaGlobal.value ?? null;
@@ -1346,28 +1608,100 @@ const abrirModalEgresar = async () => {
     formEgresar.motivo_especifico = '';
     formEgresar.observaciones = '';
     pacienteSeleccionadoEgresar.value = null;
+    fechaPrimerIngresoEgresar.value = null;
+    ultimaFechaRegistrosEgresar.value = null;
     mostrarModalEgresar.value = true;
 };
 
 const cerrarModalEgresar = () => {
     mostrarModalEgresar.value = false;
+    fechaPrimerIngresoEgresar.value = null;
+    ultimaFechaRegistrosEgresar.value = null;
+    movimientoEnEdicion.value = null;
 };
 
 const cerrarModalMorbilidadHospitalaria = () => {
     mostrarModalMorbilidadHospitalaria.value = false;
+    contextoEgresoHospitalizacion.value = null;
 };
 
-const irAMorbilidadHospitalaria = () => {
-    // Abrir en nueva pestaña para no perder la vista de movimientos
-    const href = router.resolve({ name: 'MorbilidadHospitalaria' }).href;
+async function tieneMorbilidadHospitalariaRegistrada(idPacienteAtencion) {
+    if (idPacienteAtencion == null || idPacienteAtencion === '') return false;
     try {
-        window.open(href, '_blank');
+        const res = await getAllIpress(`/morbilidadesHospitalarias/?id_paciente_atencion=${idPacienteAtencion}`);
+        const lista = Array.isArray(res) ? res : (res?.results || []);
+        return lista.length > 0;
     } catch (e) {
-        // fallback: navegación en la misma pestaña
-        router.push({ name: 'MorbilidadHospitalaria' });
-    } finally {
-        cerrarModalMorbilidadHospitalaria();
+        console.warn('No se pudo verificar morbilidad hospitalaria:', e);
+        return false;
     }
+}
+
+async function procesarEgresoHospitalizacion(idPacienteAtencion) {
+    const tieneMorbilidad = await tieneMorbilidadHospitalariaRegistrada(idPacienteAtencion);
+    contextoEgresoHospitalizacion.value = {
+        idPacienteAtencion,
+        idPaciente: formEgresar.paciente,
+        tieneMorbilidad,
+    };
+
+    if (!tieneMorbilidad) {
+        ElMessage({
+            message: 'Debe registrar la morbilidad hospitalaria del paciente.',
+            type: 'warning',
+            plain: true,
+            duration: 6000,
+        });
+        irAMorbilidadHospitalaria();
+        return;
+    }
+
+    mostrarModalMorbilidadHospitalaria.value = true;
+}
+
+async function confirmarMorbilidadYaRegistrada() {
+    const ctx = contextoEgresoHospitalizacion.value;
+    if (!ctx?.idPacienteAtencion) {
+        cerrarModalMorbilidadHospitalaria();
+        return;
+    }
+
+    const tiene = await tieneMorbilidadHospitalariaRegistrada(ctx.idPacienteAtencion);
+    if (!tiene) {
+        ElMessage({
+            message: 'No hay registro de hospitalización. Debe completarlo antes de continuar.',
+            type: 'warning',
+            plain: true,
+            duration: 6000,
+        });
+        irAMorbilidadHospitalaria();
+        return;
+    }
+
+    cerrarModalMorbilidadHospitalaria();
+}
+
+const irAMorbilidadHospitalaria = () => {
+    const ctx = contextoEgresoHospitalizacion.value;
+    const query = { abrirFormulario: '1' };
+    if (ctx?.idPacienteAtencion != null) query.idPacienteAtencion = String(ctx.idPacienteAtencion);
+    if (ctx?.idPaciente != null) query.idPaciente = String(ctx.idPaciente);
+
+    const destino = { name: 'MorbilidadHospitalaria', query };
+    mostrarModalMorbilidadHospitalaria.value = false;
+
+    try {
+        window.open(router.resolve(destino).href, '_blank');
+    } catch (e) {
+        router.push(destino);
+    }
+};
+
+const irAAccessoVascular = ({ idPaciente, idPacienteAtencion }) => {
+    const query = { abrirFormulario: '1' };
+    if (idPacienteAtencion != null) query.idPacienteAtencion = String(idPacienteAtencion);
+    if (idPaciente != null) query.idPaciente = String(idPaciente);
+    router.push({ name: 'AccesoVascular', query });
 };
 
 function isoDesdeValorApi(valor) {
@@ -1386,7 +1720,130 @@ function maxIso(a, b) {
     return a > b ? a : b;
 }
 
-async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPaciente, idPacienteAtencion, rango }) {
+function limpiarFechaCapturaSiInvalida() {
+    const minFecha = rangoFechaCapturaPaciente.value.min;
+    if (formCaptar.fecha && minFecha && String(formCaptar.fecha) < String(minFecha)) {
+        formCaptar.fecha = '';
+    }
+}
+
+async function obtenerUltimoEgresoPaciente(pacienteId) {
+    if (pacienteId == null || pacienteId === '') return null;
+
+    let ultimaFecha = null;
+    let tipoEgreso = null;
+
+    try {
+        const atRes = await getAllIpress(`/pacienteAtencion/?id_paciente=${pacienteId}`);
+        const atList = Array.isArray(atRes) ? atRes : (atRes?.results || []);
+        for (const atencion of atList) {
+            const estado = String(atencion.estado || '').toUpperCase();
+            const tipo = String(atencion.tipo_atencion || '').toUpperCase();
+            if (estado !== 'EGRESADO' && tipo !== 'EGRESO') continue;
+            const iso = isoDesdeValorApi(atencion.fecha_fin) || isoDesdeValorApi(atencion.fecha_atencion);
+            if (iso && (!ultimaFecha || iso > ultimaFecha)) {
+                ultimaFecha = iso;
+                tipoEgreso = extraerTipoEgresoDesdeObs(atencion.observaciones) || tipoEgreso;
+            }
+        }
+    } catch (e) {
+        console.warn('No se pudo consultar egresos en pacienteAtencion:', e);
+    }
+
+    try {
+        const pr = await getAllIpress(`/PacienteRegistro/?paciente=${pacienteId}`);
+        const lista = Array.isArray(pr) ? pr : (pr?.results || []);
+        for (const registro of lista) {
+            if (String(registro.condicion || '').toUpperCase() !== 'EGRESADO') continue;
+            const iso = isoDesdeValorApi(registro.fecha_egreso) || isoDesdeValorApi(registro.fecha_created);
+            if (iso && (!ultimaFecha || iso > ultimaFecha)) {
+                ultimaFecha = iso;
+                tipoEgreso = registro.tipo_egreso || tipoEgreso;
+            }
+        }
+    } catch (e) {
+        console.warn('No se pudo consultar egresos en PacienteRegistro:', e);
+    }
+
+    if (!ultimaFecha) return null;
+    return {
+        tipo_egreso: tipoEgreso || 'No especificado',
+        fecha: ultimaFecha,
+        fechaIso: ultimaFecha,
+    };
+}
+
+async function obtenerFechaPrimerIngresoPaciente(pacienteId, atencionActiva = null) {
+    if (pacienteId == null || pacienteId === '') return null;
+    try {
+        const res = await getAllIpress(`/pacientesDialisis/?id_paciente=${pacienteId}`);
+        const lista = Array.isArray(res) ? res : (res?.results || []);
+        const dial = [...lista].sort(
+            (a, b) => (Number(b.id_paciente_dialisis) || 0) - (Number(a.id_paciente_dialisis) || 0),
+        )[0];
+        const desdeDial = isoDesdeValorApi(dial?.fecha_primer_ingreso);
+        if (desdeDial) return desdeDial;
+    } catch (e) {
+        console.warn('No se pudo obtener fecha de primer ingreso:', e);
+    }
+    if (atencionActiva) {
+        return isoDesdeValorApi(atencionActiva.fecha_atencion)
+            || isoDesdeValorApi(atencionActiva.fecha_inicio);
+    }
+    return null;
+}
+
+async function actualizarLimitesFechaEgresarPaciente(item) {
+    if (!item?.id_paciente) {
+        fechaPrimerIngresoEgresar.value = null;
+        ultimaFechaRegistrosEgresar.value = null;
+        return;
+    }
+
+    const desdeItem = isoDesdeValorApi(item.fecha_primer_ingreso);
+    fechaPrimerIngresoEgresar.value = desdeItem || await obtenerFechaPrimerIngresoPaciente(item.id_paciente);
+
+    let idPacienteAtencion = item.id_paciente_atencion ?? null;
+    if (!idPacienteAtencion) {
+        const modalidadActual = item.id_modalidad ?? modalidadGlobal.value;
+        const atencion = await obtenerAtencionActivaParaEgreso({
+            pacienteId: item.id_paciente,
+            periodoId: formEgresar.periodo ?? periodoGlobal.value,
+            ipressId: item.id_ipress ?? formEgresar.clinica ?? clinicaGlobal.value,
+            modalidadId: modalidadActual,
+        });
+        idPacienteAtencion = atencion?.id_paciente_atencion ?? null;
+    }
+
+    ultimaFechaRegistrosEgresar.value = idPacienteAtencion
+        ? await obtenerUltimaFechaRegistrosPacientePeriodo({
+            idPacienteAtencion,
+            rango: rangoFechaEgreso.value,
+        })
+        : null;
+
+    limpiarFechaEgresoSiInvalida();
+}
+
+async function fetchRegistrosPorAtencion(endpoint, idPacienteAtencion) {
+    const res = await getAllIpress(`${endpoint}?id_paciente_atencion=${idPacienteAtencion}`);
+    return Array.isArray(res) ? res : (res?.results || []);
+}
+
+function acumularFechasDesdeRegistros(ultima, registros, campos, within) {
+    let resultado = ultima;
+    for (const registro of registros) {
+        for (const campo of campos) {
+            const iso = isoDesdeValorApi(registro[campo]);
+            if (within(iso)) resultado = maxIso(resultado, iso);
+        }
+    }
+    return resultado;
+}
+
+async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPacienteAtencion, rango }) {
+    if (!idPacienteAtencion) return null;
+
     const min = rango?.min;
     const max = rango?.max;
 
@@ -1399,36 +1856,18 @@ async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPaciente, idPacien
 
     let ultima = null;
 
-    // Acceso vascular (unidades actuales): usa id_paciente
-    try {
-        const res = await getAllIpress(`/unidadesActuales/?id_paciente=${idPaciente}`);
-        const lista = Array.isArray(res) ? res : (res?.results || []);
-        for (const r of lista) {
-            const iso = isoDesdeValorApi(r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual);
-            if (within(iso)) ultima = maxIso(ultima, iso);
-        }
-    } catch (e) {
-        console.warn('No se pudo obtener unidadesActuales:', e);
-    }
-
-    // Eventos infecciosos acceso vascular: usa id_paciente_atencion
-    if (idPacienteAtencion) {
-        try {
-            const res = await getAllIpress(`/eventosAccesosVasculares/?id_paciente_atencion=${idPacienteAtencion}`);
-            const lista = Array.isArray(res) ? res : (res?.results || []);
-            for (const r of lista) {
-                const iso = isoDesdeValorApi(r.fecha_evento);
-                if (within(iso)) ultima = maxIso(ultima, iso);
-            }
-        } catch (e) {
-            console.warn('No se pudo obtener eventosAccesosVasculares:', e);
-        }
-
-        // Vacunación: usa id_paciente_atencion
-        try {
-            const res = await getAllIpress(`/vacunaciones/?id_paciente_atencion=${idPacienteAtencion}`);
-            const lista = Array.isArray(res) ? res : (res?.results || []);
-            const campos = [
+    const consultas = [
+        {
+            endpoint: '/unidadesActuales/',
+            campos: ['fecha_creacion_acceso', 'fecha_creacion_acceso_actual', 'fecha_evaluacion', 'fecha_edicion_supervisor'],
+        },
+        {
+            endpoint: '/eventosAccesosVasculares/',
+            campos: ['fecha_evento'],
+        },
+        {
+            endpoint: '/vacunaciones/',
+            campos: [
                 'fecha_vhb',
                 'fecha_antiHbc',
                 'fecha_vhc',
@@ -1438,19 +1877,64 @@ async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPaciente, idPacien
                 'fecha_covid',
                 'fecha_influenza',
                 'fecha_neumococo',
-            ];
-            for (const r of lista) {
-                for (const c of campos) {
-                    const iso = isoDesdeValorApi(r[c]);
-                    if (within(iso)) ultima = maxIso(ultima, iso);
-                }
+            ],
+        },
+        {
+            endpoint: '/morbilidadesHospitalarias/',
+            campos: ['fecha_hospitalizacion', 'fecha_alta_hospitalizacion'],
+        },
+        {
+            endpoint: '/resultadosClinicos/',
+            campos: ['fecha_evaluacion', 'fecha_edicion_supervisor', 'created_at'],
+        },
+    ];
+
+    const parciales = await Promise.all(
+        consultas.map(async ({ endpoint, campos }) => {
+            try {
+                const lista = await fetchRegistrosPorAtencion(endpoint, idPacienteAtencion);
+                return acumularFechasDesdeRegistros(null, lista, campos, within);
+            } catch (e) {
+                console.warn(`No se pudo obtener registros desde ${endpoint}:`, e);
+                return null;
             }
-        } catch (e) {
-            console.warn('No se pudo obtener vacunaciones:', e);
-        }
+        }),
+    );
+
+    for (const parcial of parciales) {
+        ultima = maxIso(ultima, parcial);
     }
 
     return ultima;
+}
+
+function validarFechaMinimaEgresoPaciente(fechaEgreso, { fechaPrimerIngreso, ultimaFechaRegistros }) {
+    if (fechaPrimerIngreso && String(fechaEgreso) < String(fechaPrimerIngreso)) {
+        return {
+            valido: false,
+            mensaje: `La fecha de egreso no puede ser anterior al primer ingreso a la unidad (${fechaPrimerIngreso}).`,
+        };
+    }
+    if (ultimaFechaRegistros && String(fechaEgreso) < String(ultimaFechaRegistros)) {
+        return {
+            valido: false,
+            mensaje: `La fecha de egreso no puede ser anterior al último registro del paciente en el periodo, clínica y modalidad actuales (${ultimaFechaRegistros}).`,
+        };
+    }
+    return { valido: true };
+}
+
+async function resolverIdPacienteAtencionEgreso(modalidadActual) {
+    if (pacienteSeleccionadoEgresar.value?.id_paciente_atencion) {
+        return pacienteSeleccionadoEgresar.value.id_paciente_atencion;
+    }
+    const atencion = await obtenerAtencionActivaParaEgreso({
+        pacienteId: formEgresar.paciente,
+        periodoId: formEgresar.periodo,
+        ipressId: formEgresar.clinica,
+        modalidadId: modalidadActual,
+    });
+    return atencion?.id_paciente_atencion ?? null;
 }
 
 const egresarPaciente = async () => {
@@ -1483,8 +1967,89 @@ const egresarPaciente = async () => {
         return;
     }
 
-    // Validar consistencia con cierre del mes anterior
+    const fechaPrimerIngreso = fechaPrimerIngresoEgresar.value
+        || await obtenerFechaPrimerIngresoPaciente(formEgresar.paciente);
+
+    const modalidadParaValidacion = pacienteSeleccionadoEgresar.value?.id_modalidad
+        ?? modalidadGlobal.value
+        ?? await obtenerModalidadActualPaciente(formEgresar.paciente);
+    const idPacienteAtencionValidacion = await resolverIdPacienteAtencionEgreso(modalidadParaValidacion);
+    const ultimaFechaRegistros = idPacienteAtencionValidacion
+        ? await obtenerUltimaFechaRegistrosPacientePeriodo({
+            idPacienteAtencion: idPacienteAtencionValidacion,
+            rango: rangoFechaEgreso.value,
+        })
+        : null;
+
+    const esFechaOriginalEdicion = movimientoEnEdicion.value
+        && formEgresar.fecha === movimientoEnEdicion.value.fecha;
+
+    const validacionFechaMinima = validarFechaMinimaEgresoPaciente(formEgresar.fecha, {
+        fechaPrimerIngreso,
+        ultimaFechaRegistros: esFechaOriginalEdicion ? null : ultimaFechaRegistros,
+    });
+    if (!validacionFechaMinima.valido) {
+        ElMessage({
+            message: validacionFechaMinima.mensaje,
+            type: 'error',
+            plain: true,
+            duration: 6000,
+        });
+        return;
+    }
+
     const validacionCierre = await validarCierreMesAnterior(formEgresar.paciente, formEgresar.periodo);
+
+    if (movimientoEnEdicion.value) {
+        try {
+            const tipoEgresoTexto = formEgresar.tipo_egreso === 'Otros'
+                ? formEgresar.motivo_especifico
+                : formEgresar.tipo_egreso;
+            const obsEgreso = truncarObservaciones(
+                formEgresar.observaciones
+                    ? `Egreso: ${tipoEgresoTexto}. ${formEgresar.observaciones}`
+                    : `Egreso: ${tipoEgresoTexto}`
+            );
+
+            await patchAllIpress(`/pacienteAtencion/${movimientoEnEdicion.value.id}/`, {
+                estado: 'EGRESADO',
+                tipo_atencion: 'EGRESO',
+                fecha_fin: formEgresar.fecha,
+                fecha_atencion: formEgresar.fecha,
+                observaciones: obsEgreso,
+            });
+
+            await actualizarPacienteRegistroEgreso({
+                pacienteId: formEgresar.paciente,
+                periodoId: formEgresar.periodo,
+                fecha: formEgresar.fecha,
+                tipoEgreso: tipoEgresoTexto,
+                observaciones: formEgresar.observaciones,
+            });
+
+            ElMessage({
+                message: 'Egreso actualizado correctamente',
+                type: 'success',
+                plain: true,
+            });
+
+            cerrarModalEgresar();
+            await fetchMovimientos({
+                idPeriodo: formEgresar.periodo,
+                idIpress: formEgresar.clinica,
+                idModalidad: pacienteSeleccionadoEgresar.value?.id_modalidad ?? modalidadGlobal.value,
+            });
+        } catch (error) {
+            console.error('Error al editar egreso:', error);
+            ElMessage({
+                message: 'Error al actualizar el egreso. Intente nuevamente.',
+                type: 'error',
+                plain: true,
+            });
+        }
+        return;
+    }
+
     if (validacionCierre.mensaje) {
         ElMessage({
             message: validacionCierre.mensaje,
@@ -1512,37 +2077,15 @@ const egresarPaciente = async () => {
             });
         }
 
-        const atencionActiva =
-            pacienteSeleccionadoEgresar.value?.id_paciente_atencion
-                ? { id_paciente_atencion: pacienteSeleccionadoEgresar.value.id_paciente_atencion }
-                : await obtenerAtencionActivaParaEgreso({
-                    pacienteId: formEgresar.paciente,
-                    periodoId: formEgresar.periodo,
-                    ipressId: formEgresar.clinica,
-                    modalidadId: modalidadActual,
-                });
+        const atencionActiva = idPacienteAtencionValidacion
+            ? { id_paciente_atencion: idPacienteAtencionValidacion }
+            : null;
 
         if (!atencionActiva?.id_paciente_atencion) {
             ElMessage({
                 message: 'No se encontró una atención activa del paciente en la clínica y periodo indicados.',
                 type: 'error',
                 plain: true,
-            });
-            return;
-        }
-
-        // La fecha de egreso debe ser posterior al último registro clínico del periodo (excepto calidad de agua)
-        const ultimaFecha = await obtenerUltimaFechaRegistrosPacientePeriodo({
-            idPaciente: formEgresar.paciente,
-            idPacienteAtencion: atencionActiva.id_paciente_atencion,
-            rango: rangoFechaEgreso.value,
-        });
-        if (ultimaFecha && String(formEgresar.fecha) <= String(ultimaFecha)) {
-            ElMessage({
-                message: `La Fecha de Egreso debe ser posterior al último registro del paciente en el periodo (${ultimaFecha}).`,
-                type: 'error',
-                plain: true,
-                duration: 6000,
             });
             return;
         }
@@ -1595,7 +2138,7 @@ const egresarPaciente = async () => {
         });
 
         if (formEgresar.tipo_egreso === 'Hospitalización') {
-            mostrarModalMorbilidadHospitalaria.value = true;
+            await procesarEgresoHospitalizacion(idPacienteAtencionValidacion);
         }
     } catch (error) {
         console.error('Error al egresar paciente:', error);
@@ -1625,7 +2168,6 @@ const fetchMovimientos = async (filtrosOverride = null) => {
         const lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
 
         movimientos.value = lista.map((mov) => {
-            const fechaStr = mov.fecha_atencion || (mov.created_at ? new Date(mov.created_at).toLocaleDateString() : 'N/A');
             const tipoAtencion = String(mov.tipo_atencion || '').toUpperCase();
             const estadoAtencion = String(mov.estado || '').toUpperCase();
             let tipo = 'INGRESO';
@@ -1635,12 +2177,19 @@ const fetchMovimientos = async (filtrosOverride = null) => {
             const modalidadLabel = mov.datosModalidad?.modalidad
                 || etiquetaModalidad(mov.id_modalidad ?? mov.datosModalidad?.id_modalidad);
 
-            const fechaMov = tipo === 'EGRESO'
-                ? (mov.fecha_fin || mov.fecha_atencion || (typeof mov.created_at === 'string' ? mov.created_at.slice(0, 10) : null) || fechaStr)
-                : (typeof mov.created_at === 'string' ? (mov.created_at.slice(0, 10) || fechaStr) : (mov.fecha_atencion || 'N/A'));
+            const fechaMov = isoDesdeValorApi(mov.fecha_atencion)
+                || isoDesdeValorApi(mov.fecha_fin)
+                || isoDesdeValorApi(mov.created_at)
+                || 'N/A';
 
             return {
                 id: mov.id_paciente_atencion,
+                id_paciente: mov.id_paciente ?? mov.datosPaciente?.id_paciente,
+                id_periodo: mov.id_periodo ?? mov.datosPeriodo?.id_periodo,
+                id_ipress: mov.id_ipress ?? mov.datosIpress?.id_ipress,
+                id_modalidad: mov.id_modalidad ?? mov.datosModalidad?.id_modalidad,
+                tipo_atencion: mov.tipo_atencion,
+                estado: mov.estado,
                 tipo,
                 condicion: tipo === 'EGRESO'
                     ? 'EGRESADO'
@@ -1815,6 +2364,25 @@ function extraerTipoEgresoDesdeObs(observaciones) {
     if (!obs) return null;
     const match = obs.match(/^Egreso:\s*([^.]+)/i);
     return match ? match[1].trim() : obs;
+}
+
+async function actualizarPacienteRegistroEgreso({ pacienteId, periodoId, fecha, tipoEgreso, observaciones }) {
+    try {
+        const res = await getAllIpress(`/PacienteRegistro/?paciente=${pacienteId}&periodo=${periodoId}`);
+        const lista = Array.isArray(res) ? res : (res?.results || []);
+        const egresoReg = lista
+            .filter((r) => String(r.condicion || '').toUpperCase() === 'EGRESADO')
+            .sort((a, b) => new Date(b.fecha_created) - new Date(a.fecha_created))[0];
+        if (!egresoReg?.id) return;
+
+        await patchAllIpress(`/PacienteRegistro/${egresoReg.id}/`, {
+            fecha_egreso: fecha,
+            tipo_egreso: tipoEgreso,
+            observaciones,
+        });
+    } catch (e) {
+        console.warn('No se actualizó PacienteRegistro del egreso:', e);
+    }
 }
 
 async function obtenerAtencionActivaParaEgreso({ pacienteId, periodoId, ipressId, modalidadId }) {

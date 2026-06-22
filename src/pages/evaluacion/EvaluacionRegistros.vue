@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen bg-gray-50/50 p-6">
-    <div class="max-w-7xl mx-auto">
+  <div class="min-h-screen bg-gray-50/50 p-4">
+    <div class="w-full max-w-full mx-auto">
       <div class="mb-6">
         <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
           <span class="w-1.5 h-8 bg-violet-500 rounded-full"></span>
@@ -90,276 +90,125 @@
         </div>
         </template>
 
-        <!-- Acceso vascular -->
-        <div v-if="modulo === 'acceso'" class="overflow-x-auto">
-          <div v-if="listaMostrada.length === 0" class="p-12 text-center text-slate-500 italic">No hay registros de acceso vascular.</div>
-          <template v-else>
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Paciente</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">DNI</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Tipo acceso</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Localización</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Estado</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Evaluado por</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Editado sup.</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Comentario</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="r in listaMostradaPaginada" :key="r.id_unidad_actual" class="hover:bg-slate-50">
-                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_acceso || '—' }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.localizacion_acceso || '—' }}</td>
-                <td class="px-4 py-3 text-sm"><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="claseEstado(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span></td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <span v-if="r.supervisor_edito_registro" class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800">Sí</span>
-                  <span v-else class="text-slate-400">—</span>
-                </td>
-                <td class="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate" :title="r.comentario_evaluacion || ''">{{ comentarioCorto(r.comentario_evaluacion) }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                      :disabled="guardandoEdicion === claveFila('acceso', r.id_unidad_actual)"
-                      @click="abrirModalEditar('acceso', r)"
-                    >Editar</button>
-                    <button
-                      v-if="mostrarBotonAprobar(r.estado_aprobacion)"
-                      type="button"
-                      class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                      :disabled="evaluando === claveFila('acceso', r.id_unidad_actual)"
-                      @click="evaluar('acceso', r, 'APROBADO')"
-                    >Aprobar</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <TablaPaginacion v-model:page="paginaRegistros" v-model:page-size="pageSizeTablas" :total="listaMostrada.length" />
-          </template>
+        <div
+          v-if="modulo !== 'resumen_notif' && filtroContenidoListo && !cargandoVistaActual"
+          class="px-4 pt-4 pb-3 border-b border-slate-100"
+        >
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 class="text-sm font-semibold text-slate-800">Registros de pacientes — {{ etiquetaModuloActual }}</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Último registro por paciente. Seleccione Editar para corregir o Aprobar para revisar.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                v-if="pendientesAprobacion.length"
+                type="button"
+                class="text-xs px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold disabled:opacity-50"
+                :disabled="aprobandoTodos"
+                @click="aprobarTodosPendientes"
+              >
+                {{ aprobandoTodos ? 'Aprobando…' : `Aprobar todos (${pendientesAprobacion.length})` }}
+              </button>
+              <button
+                type="button"
+                class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                :disabled="cargando"
+                @click="cargarModuloActual"
+              >
+                {{ cargando ? 'Actualizando…' : 'Actualizar lista' }}
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <input
+              v-model="filtroListadoNombre"
+              type="text"
+              placeholder="Filtrar por nombre…"
+              class="flex-1 min-w-[160px] border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            />
+            <input
+              v-model="filtroListadoDocumento"
+              type="text"
+              placeholder="Filtrar por documento…"
+              class="flex-1 min-w-[140px] border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <p v-if="modulo === 'acceso'" class="text-[10px] text-amber-800 mt-2">
+            Filas resaltadas en ámbar: acceso temporal (CVCT) o con más de 90 días desde su creación.
+          </p>
         </div>
 
-        <!-- Eventos infecciosos -->
-        <div v-else-if="modulo === 'eventos'" class="overflow-x-auto">
-          <div v-if="listaMostrada.length === 0" class="p-12 text-center text-slate-500 italic">No hay eventos infecciosos.</div>
+        <!-- Tabla unificada formularios 1–5 -->
+        <div v-if="esModuloRegistros" class="p-3">
+          <div v-if="listaMostradaFiltrada.length === 0" class="py-10 text-center text-slate-500 text-[11px]">
+            No hay registros con el filtro actual.
+          </div>
           <template v-else>
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Paciente</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">DNI</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Tipo infección</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Fecha evento</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Estado</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Evaluado por</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Editado sup.</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Comentario</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="r in listaMostradaPaginada" :key="r.id_evento_acceso_vascular" class="hover:bg-slate-50">
-                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.tipo_infeccion || '—' }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_evento || '—' }}</td>
-                <td class="px-4 py-3 text-sm"><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="claseEstado(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span></td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <span v-if="r.supervisor_edito_registro" class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800">Sí</span>
-                  <span v-else class="text-slate-400">—</span>
-                </td>
-                <td class="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate" :title="r.comentario_evaluacion || ''">{{ comentarioCorto(r.comentario_evaluacion) }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                      :disabled="guardandoEdicion === claveFila('eventos', r.id_evento_acceso_vascular)"
-                      @click="abrirModalEditar('eventos', r)"
-                    >Editar</button>
-                    <button
-                      v-if="mostrarBotonAprobar(r.estado_aprobacion)"
-                      type="button"
-                      class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                      :disabled="evaluando === claveFila('eventos', r.id_evento_acceso_vascular)"
-                      @click="evaluar('eventos', r, 'APROBADO')"
-                    >Aprobar</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <TablaPaginacion v-model:page="paginaRegistros" v-model:page-size="pageSizeTablas" :total="listaMostrada.length" />
-          </template>
-        </div>
-
-        <!-- Morbilidad -->
-        <div v-else-if="modulo === 'morbilidad'" class="overflow-x-auto">
-          <div v-if="listaMostrada.length === 0" class="p-12 text-center text-slate-500 italic">No hay registros de morbilidad hospitalaria.</div>
-          <template v-else>
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Paciente</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">DNI</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Diagnóstico</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">F. hospitalización</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Estado</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Evaluado por</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Editado sup.</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Comentario</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="r in listaMostradaPaginada" :key="r.id_morbilidad_hospitalaria" class="hover:bg-slate-50">
-                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.diagnostico || '—' }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.fecha_hospitalizacion || '—' }}</td>
-                <td class="px-4 py-3 text-sm"><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="claseEstado(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span></td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <span v-if="r.supervisor_edito_registro" class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800">Sí</span>
-                  <span v-else class="text-slate-400">—</span>
-                </td>
-                <td class="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate" :title="r.comentario_evaluacion || ''">{{ comentarioCorto(r.comentario_evaluacion) }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                      :disabled="guardandoEdicion === claveFila('morbilidad', r.id_morbilidad_hospitalaria)"
-                      @click="abrirModalEditar('morbilidad', r)"
-                    >Editar</button>
-                    <button
-                      v-if="mostrarBotonAprobar(r.estado_aprobacion)"
-                      type="button"
-                      class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                      :disabled="evaluando === claveFila('morbilidad', r.id_morbilidad_hospitalaria)"
-                      @click="evaluar('morbilidad', r, 'APROBADO')"
-                    >Aprobar</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <TablaPaginacion v-model:page="paginaRegistros" v-model:page-size="pageSizeTablas" :total="listaMostrada.length" />
-          </template>
-        </div>
-
-        <!-- Resultados clínicos -->
-        <div v-else-if="modulo === 'resultados'" class="overflow-x-auto">
-          <div v-if="listaMostrada.length === 0" class="p-12 text-center text-slate-500 italic">No hay resultados clínicos.</div>
-          <template v-else>
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Paciente</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">DNI</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Hb</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Kt/V</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Estado</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Evaluado por</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Editado sup.</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Comentario</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="r in listaMostradaPaginada" :key="r.id_resultado_clinico" class="hover:bg-slate-50">
-                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.Hb ?? r.hb ?? '—' }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.ktv ?? '—' }}</td>
-                <td class="px-4 py-3 text-sm"><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="claseEstado(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span></td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <span v-if="r.supervisor_edito_registro" class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800">Sí</span>
-                  <span v-else class="text-slate-400">—</span>
-                </td>
-                <td class="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate" :title="r.comentario_evaluacion || ''">{{ comentarioCorto(r.comentario_evaluacion) }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                      :disabled="guardandoEdicion === claveFila('resultados', r.id_resultado_clinico)"
-                      @click="abrirModalEditar('resultados', r)"
-                    >Editar</button>
-                    <button
-                      v-if="mostrarBotonAprobar(r.estado_aprobacion)"
-                      type="button"
-                      class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                      :disabled="evaluando === claveFila('resultados', r.id_resultado_clinico)"
-                      @click="evaluar('resultados', r, 'APROBADO')"
-                    >Aprobar</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <TablaPaginacion v-model:page="paginaRegistros" v-model:page-size="pageSizeTablas" :total="listaMostrada.length" />
-          </template>
-        </div>
-
-        <!-- Vacunación -->
-        <div v-else-if="modulo === 'vacunacion'" class="overflow-x-auto">
-          <div v-if="listaMostrada.length === 0" class="p-12 text-center text-slate-500 italic">No hay registros de vacunación.</div>
-          <template v-else>
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
-              <tr>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Paciente</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">DNI</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Resumen</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Estado</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Evaluado por</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Editado sup.</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Comentario</th>
-                <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="r in listaMostradaPaginada" :key="r.id_vacunacion" class="hover:bg-slate-50">
-                <td class="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ documentoPaciente(r) }}</td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ resumenVacuna(r) }}</td>
-                <td class="px-4 py-3 text-sm"><span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="claseEstado(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span></td>
-                <td class="px-4 py-3 text-sm text-slate-600">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <span v-if="r.supervisor_edito_registro" class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-800">Sí</span>
-                  <span v-else class="text-slate-400">—</span>
-                </td>
-                <td class="px-4 py-3 text-sm text-slate-600 max-w-[200px] truncate" :title="r.comentario_evaluacion || ''">{{ comentarioCorto(r.comentario_evaluacion) }}</td>
-                <td class="px-4 py-3 text-sm">
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      class="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
-                      :disabled="guardandoEdicion === claveFila('vacunacion', r.id_vacunacion)"
-                      @click="abrirModalEditar('vacunacion', r)"
-                    >Editar</button>
-                    <button
-                      v-if="mostrarBotonAprobar(r.estado_aprobacion)"
-                      type="button"
-                      class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                      :disabled="evaluando === claveFila('vacunacion', r.id_vacunacion)"
-                      @click="evaluar('vacunacion', r, 'APROBADO')"
-                    >Aprobar</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <TablaPaginacion v-model:page="paginaRegistros" v-model:page-size="pageSizeTablas" :total="listaMostrada.length" />
+            <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-[min(32rem,70vh)] overflow-y-auto w-full">
+              <table class="min-w-full text-[11px] leading-tight">
+                <thead class="bg-slate-100 text-slate-700 sticky top-0 z-10">
+                  <tr>
+                    <th class="text-left px-2 py-1.5 font-semibold whitespace-nowrap">Documento</th>
+                    <th class="text-left px-2 py-1.5 font-semibold whitespace-nowrap">Paciente</th>
+                    <th
+                      v-for="col in columnasDatosActuales"
+                      :key="col.key"
+                      class="text-left px-2 py-1.5 font-semibold whitespace-nowrap"
+                    >{{ col.label }}</th>
+                    <th class="text-left px-2 py-1.5 font-semibold whitespace-nowrap">Estado</th>
+                    <th class="text-left px-2 py-1.5 font-semibold whitespace-nowrap">Evaluado por</th>
+                    <th class="text-left px-2 py-1.5 font-semibold whitespace-nowrap">Edit. sup.</th>
+                    <th class="text-left px-2 py-1.5 font-semibold whitespace-nowrap min-w-[100px]">Comentario</th>
+                    <th class="text-left px-2 py-1.5 font-semibold whitespace-nowrap">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="r in listaMostradaPaginada"
+                    :key="idFilaRegistro(r)"
+                    class="border-t border-slate-100 hover:bg-slate-50"
+                    :class="claseFilaEvaluacion(r)"
+                    :title="modulo === 'acceso' ? motivoAccesoAntiguo(r) : ''"
+                  >
+                    <td class="px-2 py-1.5 font-mono text-[10px] whitespace-nowrap">{{ documentoPaciente(r) }}</td>
+                    <td class="px-2 py-1.5 font-medium text-slate-800 whitespace-nowrap">{{ nombrePaciente(r) }}</td>
+                    <td
+                      v-for="col in columnasDatosActuales"
+                      :key="`${idFilaRegistro(r)}-${col.key}`"
+                      class="px-2 py-1.5 text-slate-600 whitespace-nowrap max-w-[140px] truncate"
+                      :title="String(valorCeldaTabla(r, col) || '')"
+                    >{{ valorCeldaTabla(r, col) }}</td>
+                    <td class="px-2 py-1.5">
+                      <span class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold" :class="claseEstado(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span>
+                    </td>
+                    <td class="px-2 py-1.5 text-slate-600 whitespace-nowrap">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
+                    <td class="px-2 py-1.5">
+                      <span v-if="r.supervisor_edito_registro" class="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-800">Sí</span>
+                      <span v-else class="text-slate-400">—</span>
+                    </td>
+                    <td class="px-2 py-1.5 text-slate-600 max-w-[120px] truncate" :title="r.comentario_evaluacion || ''">{{ comentarioCorto(r.comentario_evaluacion, 40) }}</td>
+                    <td class="px-2 py-1.5 whitespace-nowrap">
+                      <div class="flex flex-wrap gap-1">
+                        <button
+                          type="button"
+                          class="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40"
+                          :disabled="guardandoEdicion === claveFila(modulo, idFilaRegistro(r))"
+                          @click="abrirModalEditar(modulo, r)"
+                        >Editar</button>
+                        <button
+                          v-if="mostrarBotonAprobar(r.estado_aprobacion)"
+                          type="button"
+                          class="text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-semibold disabled:opacity-40"
+                          :disabled="evaluando === claveFila(modulo, idFilaRegistro(r))"
+                          @click="evaluar(modulo, r, 'APROBADO')"
+                        >Aprobar</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <TablaPaginacion v-model:page="paginaRegistros" v-model:page-size="pageSizeTablas" :total="listaMostradaFiltrada.length" />
           </template>
         </div>
 
@@ -488,6 +337,12 @@ import { ref, computed, watch, inject, onMounted, onUnmounted } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
+import {
+  claseFilaAccesoAntiguo,
+  esAccesoVascularAntiguo,
+  motivoAccesoAntiguo,
+  idsAccesosMasAntiguosPorPaciente,
+} from '@/utils/accesoVascularValidacion';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
@@ -513,6 +368,7 @@ const estadoPasarPorIpress = ref({});
 const cargandoEstadoPasar = ref(false);
 const pasandoPacientesIpress = ref(null);
 const evaluando = ref(null);
+const aprobandoTodos = ref(false);
 const cerrandoFormulario = ref(false);
 const abriendoFormulario = ref(false);
 /** null = aún no consultado; true/false según rf_estado_formulario_periodo */
@@ -529,6 +385,8 @@ const paginaRegistros = ref(1);
 const pageSizeTablas = ref(15);
 const paginaResumen = ref(1);
 const pageSizeResumen = ref(15);
+const filtroListadoNombre = ref('');
+const filtroListadoDocumento = ref('');
 
 /** Aviso cuando la clínica usó «Notificar» en los módulos de registros. */
 const notificacionClinica = ref({
@@ -784,6 +642,81 @@ const CAMPOS_EDICION = {
 
 const camposEdicionActuales = computed(() => CAMPOS_EDICION[moduloEdicion.value] || []);
 
+const MODULOS_REGISTROS = ['acceso', 'eventos', 'morbilidad', 'resultados', 'vacunacion'];
+
+const esModuloRegistros = computed(() => MODULOS_REGISTROS.includes(modulo.value));
+
+const columnasDatosActuales = computed(() => CAMPOS_EDICION[modulo.value] || []);
+
+const accesosMasAntiguosIds = computed(() => {
+  if (modulo.value !== 'acceso') return new Set();
+  return idsAccesosMasAntiguosPorPaciente(rawListaPorModulo('acceso'), ENDPOINTS.acceso.idKey);
+});
+
+function idFilaRegistro(r) {
+  const cfg = ENDPOINTS[modulo.value];
+  return cfg ? r?.[cfg.idKey] : null;
+}
+
+function valorCeldaTabla(r, col) {
+  const raw = r[col.key];
+  if (col.type === 'bool') {
+    if (raw === true || raw === 1 || raw === '1' || String(raw).toLowerCase() === 'true') return 'Sí';
+    if (raw === false || raw === 0 || raw === '0' || String(raw).toLowerCase() === 'false') return 'No';
+    return raw != null && raw !== '' ? String(raw) : '—';
+  }
+  if (raw === 0 || raw === '0') return raw;
+  return raw != null && raw !== '' ? raw : '—';
+}
+
+function claseFilaEvaluacion(r) {
+  if (modulo.value !== 'acceso') return '';
+  const cfg = ENDPOINTS.acceso;
+  const id = r?.[cfg.idKey];
+  if (id != null && accesosMasAntiguosIds.value.has(id)) {
+    return claseFilaAccesoAntiguo(r);
+  }
+  if (esAccesoVascularAntiguo(r)) return claseFilaAccesoAntiguo(r);
+  return '';
+}
+
+const pendientesAprobacion = computed(() =>
+  listaMostradaFiltrada.value.filter((r) => mostrarBotonAprobar(r.estado_aprobacion)),
+);
+
+async function aprobarTodosPendientes() {
+  const pendientes = pendientesAprobacion.value;
+  if (!pendientes.length) return;
+  try {
+    await ElMessageBox.confirm(
+      `¿Aprobar ${pendientes.length} registro(s) pendientes de «${etiquetaModuloActual.value}»?`,
+      'Aprobar todos',
+      { type: 'info', confirmButtonText: 'Aprobar todos', cancelButtonText: 'Cancelar' },
+    );
+  } catch {
+    return;
+  }
+  aprobandoTodos.value = true;
+  const mod = modulo.value;
+  let ok = 0;
+  let fail = 0;
+  for (const r of pendientes) {
+    try {
+      const cfg = ENDPOINTS[mod];
+      const id = r[cfg.idKey];
+      if (id == null) continue;
+      await postAllIpress(`/${cfg.path}/${id}/evaluar/`, { estado_aprobacion: 'APROBADO' });
+      ok += 1;
+    } catch {
+      fail += 1;
+    }
+  }
+  aprobandoTodos.value = false;
+  if (ok) ElMessage.success(`Se aprobaron ${ok} registro(s).`);
+  if (fail) ElMessage.warning(`No se pudieron aprobar ${fail} registro(s).`);
+  await cargarModuloActual();
+}
+
 const filtroListo = computed(() => {
   return (
     periodoGlobal.value != null &&
@@ -963,9 +896,22 @@ const listaMostrada = computed(() => {
   return ultimosRegistrosPorPaciente(rawListaPorModulo(modulo.value), cfg.idKey);
 });
 
+const listaMostradaFiltrada = computed(() => {
+  const nombre = filtroListadoNombre.value.trim().toLowerCase();
+  const doc = filtroListadoDocumento.value.trim().toLowerCase();
+  let lista = listaMostrada.value;
+  if (nombre) {
+    lista = lista.filter((r) => nombrePaciente(r).toLowerCase().includes(nombre));
+  }
+  if (doc) {
+    lista = lista.filter((r) => String(documentoPaciente(r)).toLowerCase().includes(doc));
+  }
+  return lista;
+});
+
 /** Paginación en cliente sobre filas ya deduplicadas (último registro por paciente). */
 const listaMostradaPaginada = computed(() => {
-  const all = listaMostrada.value;
+  const all = listaMostradaFiltrada.value;
   const size = pageSizeTablas.value;
   const start = (paginaRegistros.value - 1) * size;
   return all.slice(start, start + size);
@@ -979,7 +925,7 @@ const listaIpressPaginada = computed(() => {
 });
 
 function clampPaginaRegistros() {
-  const total = listaMostrada.value.length;
+  const total = listaMostradaFiltrada.value.length;
   const size = pageSizeTablas.value;
   const maxP = Math.max(1, Math.ceil(total / size) || 1);
   if (paginaRegistros.value > maxP) paginaRegistros.value = maxP;
@@ -992,8 +938,11 @@ function clampPaginaResumen() {
   if (paginaResumen.value > maxP) paginaResumen.value = maxP;
 }
 
-watch(listaMostrada, clampPaginaRegistros, { deep: true });
+watch(listaMostradaFiltrada, clampPaginaRegistros, { deep: true });
 watch(pageSizeTablas, clampPaginaRegistros);
+watch([filtroListadoNombre, filtroListadoDocumento], () => {
+  paginaRegistros.value = 1;
+});
 watch(listaIpressNotificaciones, clampPaginaResumen, { deep: true });
 watch(pageSizeResumen, clampPaginaResumen);
 
@@ -1177,6 +1126,8 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   }
 }, { deep: true });
 watch(modulo, () => {
+  filtroListadoNombre.value = '';
+  filtroListadoDocumento.value = '';
   paginaRegistros.value = 1;
   paginaResumen.value = 1;
   if (modulo.value === 'resumen_notif') {

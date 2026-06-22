@@ -83,6 +83,12 @@ const routes = [
         meta: { requiresAuth: true, requiresEvaluador: true },
       },
       {
+        path: 'reporte-supervisor',
+        name: 'ReporteSupervisor',
+        component: () => import('@/pages/reporte/ReporteSupervisor.vue'),
+        meta: { requiresAuth: true, requiresEvaluador: true },
+      },
+      {
         path: 'notificaciones',
         name: 'Notificaciones',
         component: () => import('@/pages/notificaciones/Notificaciones.vue'),

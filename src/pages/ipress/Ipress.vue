@@ -41,7 +41,11 @@
                     <tr>
                         <th class="border p-3">ID</th>
                         <th class="border p-3">IPRESS</th>
+                        <th class="border p-3">Nombre corto</th>
+                        <th class="border p-3">Modalidad</th>
                         <th class="border p-3">Red</th>
+                        <th class="border p-3">Estado</th>
+                        <th class="border p-3 min-w-[180px]">Responsables LIC</th>
                         <th class="border p-3 min-w-[200px]">Supervisores asignados</th>
                         <th class="border p-3">Acciones</th>
                     </tr>
@@ -50,7 +54,23 @@
                     <tr v-for="ipress in filteredIpress" :key="ipress.id_ipress" class="hover:bg-gray-50">
                         <td class="border p-3 font-medium">{{ ipress.id_ipress }}</td>
                         <td class="border p-3">{{ ipress.ipress }}</td>
+                        <td class="border p-3">{{ ipress.nombre_corto || '—' }}</td>
+                        <td class="border p-3 text-xs">{{ ipress.datosModalidad?.modalidad ?? '—' }}</td>
                         <td class="border p-3">{{ ipress.datosRed?.red ?? '' }}</td>
+                        <td class="border p-3 text-xs">{{ ipress.estado || '—' }}</td>
+                        <td class="border p-3 text-xs align-top text-gray-700">
+                          <div v-if="ipress.responsable_lic1_nombre" class="mb-1">
+                            <span class="font-medium">LIC 1:</span> {{ ipress.responsable_lic1_nombre }}
+                            <span v-if="ipress.responsable_lic1_correo" class="block text-gray-500">{{ ipress.responsable_lic1_correo }}</span>
+                            <span v-if="ipress.responsable_lic1_telefono" class="block text-gray-500">{{ ipress.responsable_lic1_telefono }}</span>
+                          </div>
+                          <div v-if="ipress.responsable_lic2_nombre">
+                            <span class="font-medium">LIC 2:</span> {{ ipress.responsable_lic2_nombre }}
+                            <span v-if="ipress.responsable_lic2_correo" class="block text-gray-500">{{ ipress.responsable_lic2_correo }}</span>
+                            <span v-if="ipress.responsable_lic2_telefono" class="block text-gray-500">{{ ipress.responsable_lic2_telefono }}</span>
+                          </div>
+                          <span v-if="!ipress.responsable_lic1_nombre && !ipress.responsable_lic2_nombre" class="text-gray-400">—</span>
+                        </td>
                         <td class="border p-3 text-gray-700 align-top">
                             <template v-if="cargandoSupervisores && !supervisoresPorIdIpress[String(ipress.id_ipress)]?.length">
                                 <span class="text-gray-400 text-xs">…</span>
@@ -65,9 +85,10 @@
                             </template>
                             <span v-else class="text-gray-400 text-xs">—</span>
                         </td>
-                        <td class="flex border p-3 gap-5">
-                            <button @click="showEditModal(ipress)" class="text-[#007BFF] hover:underline">Editar</button>
-                            <button @click="deletePaciente(ipress.id_ipress)" class="text-[#007BFF] hover:underline">Eliminar</button>
+                        <td class="flex border p-3 gap-3 flex-wrap">
+                            <button type="button" @click="showDetailModal(ipress)" class="text-slate-600 hover:underline text-sm">Ver</button>
+                            <button @click="showEditModal(ipress)" class="text-[#007BFF] hover:underline text-sm">Editar</button>
+                            <button @click="deletePaciente(ipress.id_ipress)" class="text-[#007BFF] hover:underline text-sm">Eliminar</button>
                         </td>
                     </tr>
                 </tbody>
@@ -75,8 +96,8 @@
         </div>
 
         <!-- Modal flotante para crear/editar IPRESS -->
-        <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-lg relative">
+        <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-2xl relative my-4">
             <h3 class="text-lg font-bold mb-4">{{ editingPaciente ? 'Editar IPRESS' : 'Registrar nueva IPRESS' }}</h3>
             <form @submit.prevent="submitForm">
               <div class="mb-3">
@@ -125,11 +146,69 @@
                   </option>
                 </select>
               </div>
+              <div class="border-t border-gray-200 pt-4 mt-2">
+                <h4 class="text-sm font-bold text-gray-800 mb-3">Responsable LIC 1</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                  <div>
+                    <label class="block text-xs font-medium mb-1">Nombre</label>
+                    <input v-model="form.responsable_lic1_nombre" class="w-full border px-2 py-1 rounded text-sm" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium mb-1">Correo</label>
+                    <input v-model="form.responsable_lic1_correo" type="email" class="w-full border px-2 py-1 rounded text-sm" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium mb-1">Teléfono</label>
+                    <input v-model="form.responsable_lic1_telefono" class="w-full border px-2 py-1 rounded text-sm" />
+                  </div>
+                </div>
+                <h4 class="text-sm font-bold text-gray-800 mb-3">Responsable LIC 2</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs font-medium mb-1">Nombre</label>
+                    <input v-model="form.responsable_lic2_nombre" class="w-full border px-2 py-1 rounded text-sm" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium mb-1">Correo</label>
+                    <input v-model="form.responsable_lic2_correo" type="email" class="w-full border px-2 py-1 rounded text-sm" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium mb-1">Teléfono</label>
+                    <input v-model="form.responsable_lic2_telefono" class="w-full border px-2 py-1 rounded text-sm" />
+                  </div>
+                </div>
+              </div>
               <div class="flex justify-end gap-2 mt-6">
                 <button type="button" @click="showModal = false" class="px-4 py-2 rounded bg-gray-300 text-gray-700">Cancelar</button>
                 <button type="submit" class="px-4 py-2 rounded bg-[#007BFF] text-white">{{ editingPaciente ? 'Guardar Cambios' : 'Registrar' }}</button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <!-- Modal detalle IPRESS -->
+        <div v-if="detalleIpress" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4 overflow-y-auto" @click.self="detalleIpress = null">
+          <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl my-4">
+            <div class="flex justify-between items-start mb-4">
+              <h3 class="text-lg font-bold text-gray-800">Datos de la clínica</h3>
+              <button type="button" class="text-gray-500 hover:text-gray-800" @click="detalleIpress = null">✕</button>
+            </div>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div><dt class="text-gray-500">ID</dt><dd class="font-medium">{{ detalleIpress.id_ipress }}</dd></div>
+              <div><dt class="text-gray-500">Estado</dt><dd>{{ detalleIpress.estado || '—' }}</dd></div>
+              <div class="sm:col-span-2"><dt class="text-gray-500">IPRESS</dt><dd class="font-medium">{{ detalleIpress.ipress }}</dd></div>
+              <div><dt class="text-gray-500">Nombre corto</dt><dd>{{ detalleIpress.nombre_corto || '—' }}</dd></div>
+              <div><dt class="text-gray-500">Modalidad</dt><dd>{{ detalleIpress.datosModalidad?.modalidad || '—' }}</dd></div>
+              <div><dt class="text-gray-500">Red</dt><dd>{{ detalleIpress.datosRed?.red || '—' }}</dd></div>
+              <div class="sm:col-span-2"><dt class="text-gray-500">Ubigeo</dt><dd>{{ detalleIpress.datosUbigeo?.ubigeo_reniec || '—' }}</dd></div>
+              <div class="sm:col-span-2 border-t pt-2 mt-1"><dt class="font-semibold text-gray-700">Responsable LIC 1</dt>
+                <dd>{{ detalleIpress.responsable_lic1_nombre || '—' }} · {{ detalleIpress.responsable_lic1_correo || '—' }} · {{ detalleIpress.responsable_lic1_telefono || '—' }}</dd></div>
+              <div class="sm:col-span-2"><dt class="font-semibold text-gray-700">Responsable LIC 2</dt>
+                <dd>{{ detalleIpress.responsable_lic2_nombre || '—' }} · {{ detalleIpress.responsable_lic2_correo || '—' }} · {{ detalleIpress.responsable_lic2_telefono || '—' }}</dd></div>
+            </dl>
+            <div class="mt-4 flex justify-end">
+              <button type="button" class="px-4 py-2 rounded bg-gray-200 text-gray-700" @click="detalleIpress = null">Cerrar</button>
+            </div>
           </div>
         </div>
 
@@ -180,6 +259,7 @@ const modalidades = ref([]);
 const currentPage = ref(1);
 const showModal = ref(false);
 const editingPaciente = ref(null);
+const detalleIpress = ref(null);
 
 const form = reactive({
   ipress: '',
@@ -189,6 +269,12 @@ const form = reactive({
   id_modalidad: '',
   id_ubigeo: '',
   id_red: '',
+  responsable_lic1_nombre: '',
+  responsable_lic1_correo: '',
+  responsable_lic1_telefono: '',
+  responsable_lic2_nombre: '',
+  responsable_lic2_correo: '',
+  responsable_lic2_telefono: '',
 });
 
 const filters = reactive({
@@ -341,8 +427,18 @@ const showCreateModal = () => {
   form.id_modalidad = modalidades.value.length ? modalidades.value[0].id_modalidad : '';
   form.id_ubigeo = '';
   form.id_red = '';
+  form.responsable_lic1_nombre = '';
+  form.responsable_lic1_correo = '';
+  form.responsable_lic1_telefono = '';
+  form.responsable_lic2_nombre = '';
+  form.responsable_lic2_correo = '';
+  form.responsable_lic2_telefono = '';
   showModal.value = true;
 };
+
+function showDetailModal(row) {
+  detalleIpress.value = row;
+}
 
 const showEditModal = (ipress) => {
   editingPaciente.value = ipress;
@@ -353,6 +449,12 @@ const showEditModal = (ipress) => {
   form.id_modalidad = ipress.id_modalidad ?? (modalidades.value[0]?.id_modalidad ?? '');
   form.id_ubigeo = ipress.id_ubigeo ?? '';
   form.id_red = ipress.id_red ?? '';
+  form.responsable_lic1_nombre = ipress.responsable_lic1_nombre || '';
+  form.responsable_lic1_correo = ipress.responsable_lic1_correo || '';
+  form.responsable_lic1_telefono = ipress.responsable_lic1_telefono || '';
+  form.responsable_lic2_nombre = ipress.responsable_lic2_nombre || '';
+  form.responsable_lic2_correo = ipress.responsable_lic2_correo || '';
+  form.responsable_lic2_telefono = ipress.responsable_lic2_telefono || '';
   showModal.value = true;
 };
 
@@ -364,6 +466,12 @@ const payloadFromForm = () => ({
   id_modalidad: form.id_modalidad != null && form.id_modalidad !== '' ? parseInt(form.id_modalidad, 10) : (modalidades.value[0]?.id_modalidad ?? null),
   id_ubigeo: parseInt(form.id_ubigeo, 10) || (ubigeos.value[0]?.id_ubigeo ?? 1),
   id_red: parseInt(form.id_red, 10) || (redes.value[0]?.id_red ?? 1),
+  responsable_lic1_nombre: form.responsable_lic1_nombre || null,
+  responsable_lic1_correo: form.responsable_lic1_correo || null,
+  responsable_lic1_telefono: form.responsable_lic1_telefono || null,
+  responsable_lic2_nombre: form.responsable_lic2_nombre || null,
+  responsable_lic2_correo: form.responsable_lic2_correo || null,
+  responsable_lic2_telefono: form.responsable_lic2_telefono || null,
 });
 
 const submitForm = async () => {

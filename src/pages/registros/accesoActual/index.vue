@@ -96,6 +96,9 @@
               No hay resultados con el filtro actual<span v-if="filtroRegistrosNombre.trim() || filtroRegistrosDni.trim()">; pruebe otro nombre o documento</span>.
             </div>
             <template v-else>
+              <p class="text-[10px] text-amber-800 mb-2">
+                Filas en ámbar: acceso temporal (CVCT) o con más de 90 días desde su creación.
+              </p>
               <div class="overflow-x-auto border border-slate-200 rounded-lg">
                 <table class="tabla-av divide-y divide-slate-200">
                   <thead class="bg-slate-50">
@@ -113,7 +116,13 @@
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-100">
-                    <tr v-for="r in registrosPaginados" :key="r.id_unidad_actual" class="hover:bg-slate-50 transition-colors">
+                    <tr
+                      v-for="r in registrosPaginados"
+                      :key="r.id_unidad_actual"
+                      class="hover:bg-slate-50 transition-colors"
+                      :class="claseFilaAccesoRegistro(r)"
+                      :title="motivoAccesoAntiguo(r)"
+                    >
                       <td class="tabla-av-td font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                       <td class="tabla-av-td text-slate-600">{{ documentoPaciente(r) }}</td>
                       <td class="tabla-av-td text-slate-600">{{ r.tipo_acceso || r.tipo_acceso_actual || '—' }}</td>
@@ -201,7 +210,16 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                  <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
+                  <tr
+                    v-for="fila in todosPacientesPaginados"
+                    :key="fila.id_paciente_atencion"
+                    class="hover:bg-slate-50 transition-colors"
+                    :class="[
+                      { 'bg-amber-50/50': !fila.tieneRegistro },
+                      fila.tieneRegistro ? claseFilaAccesoRegistro(fila.registro || fila) : '',
+                    ]"
+                    :title="fila.tieneRegistro ? motivoAccesoAntiguo(fila.registro || fila) : ''"
+                  >
                     <td class="tabla-av-td font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.documento || '—' }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.tipo_acceso || '—' }}</td>
@@ -346,7 +364,7 @@
 
     <!-- Modal Nuevo: selector de paciente + Form2Hemodialisis -->
     <div v-if="mostrarModalNuevo" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" :class="registroEdicion ? 'max-w-3xl' : 'max-w-6xl'">
         <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center">
           <h3 class="font-bold text-white flex items-center gap-2">{{ tituloModalFormulario }}</h3>
           <button type="button" class="text-white/80 hover:text-white" @click="cerrarModalNuevo">✕</button>
@@ -555,16 +573,25 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
 import { prepararPayloadUnidadesActuales } from '@/utils/unidadesActualesPayload';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
 import { ElMessage } from 'element-plus';
+import {
+  claseFilaAccesoAntiguo,
+  esAccesoVascularAntiguo,
+  motivoAccesoAntiguo,
+  idsAccesosMasAntiguosPorPaciente,
+} from '@/utils/accesoVascularValidacion';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const route = useRoute();
+const router = useRouter();
 const HISTORIAL_CARGAS_KEY = 'acceso_vascular_historial_cargas';
 const NUMERO_FORMULARIO_ACCESO_VASCULAR = 1;
 
@@ -809,14 +836,19 @@ const todosPacientesLista = computed(() => {
   const atenciones = Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
   const regs = Array.isArray(registros.value) ? registros.value : [];
   const porAtencion = {};
+  const porPaciente = {};
   // Registros vienen ordenados por -id_unidad_actual (más reciente primero). Quedarse con el primero por paciente = último registro.
   regs.forEach(r => {
     const id = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
     if (id != null && porAtencion[String(id)] == null) porAtencion[String(id)] = r;
+    const pid = r.datosPacienteAtencion?.id_paciente ?? r.datosPaciente?.id_paciente;
+    if (pid != null && porPaciente[String(pid)] == null) porPaciente[String(pid)] = r;
   });
   return atenciones.map(a => {
     const id = a.id_paciente_atencion;
-    const r = id != null ? porAtencion[String(id)] : null;
+    const pid = a.id_paciente ?? a.datosPaciente?.id_paciente;
+    const r = (id != null ? porAtencion[String(id)] : null)
+      ?? (pid != null ? porPaciente[String(pid)] : null);
     const paciente = a.datosPaciente?.paciente ?? '—';
     const documento = a.datosPaciente?.documento ?? '—';
     if (r) {
@@ -860,6 +892,18 @@ const registrosFiltrados = computed(() => {
   if (d) list = list.filter((r) => String(documentoPaciente(r) || '').toLowerCase().includes(d));
   return list;
 });
+
+const idsAccesosAntiguos = computed(() =>
+  idsAccesosMasAntiguosPorPaciente(registros.value, 'id_unidad_actual'),
+);
+
+function claseFilaAccesoRegistro(r) {
+  if (!r) return '';
+  const id = r.id_unidad_actual;
+  if (id != null && idsAccesosAntiguos.value.has(id)) return claseFilaAccesoAntiguo(r);
+  if (esAccesoVascularAntiguo(r)) return claseFilaAccesoAntiguo(r);
+  return '';
+}
 
 const totalPaginasRegistros = computed(() => {
   const n = registrosFiltrados.value.length;
@@ -1051,14 +1095,35 @@ async function fetchRegistros() {
   }
   cargando.value = true;
   try {
+    const paramsUnidades = new URLSearchParams();
+    if (idPeriodo != null && idPeriodo !== '') paramsUnidades.set('id_periodo', idPeriodo);
+    if (idModalidad != null && idModalidad !== '') paramsUnidades.set('id_modalidad', idModalidad);
+
     const [resRegistros, resAtenciones] = await Promise.all([
-      getAllIpress(`/unidadesActuales/?${qs}`),
+      getAllIpress(`/unidadesActuales/?${paramsUnidades}`),
       getAllIpress(`/pacienteAtencion/?${qs}`),
     ]);
-    registros.value = Array.isArray(resRegistros) ? resRegistros : (resRegistros?.results || []);
-    listadoAtenciones.value = atencionesParaListadoRegistros(
+    const atenciones = atencionesParaListadoRegistros(
       Array.isArray(resAtenciones) ? resAtenciones : (resAtenciones?.results || [])
     );
+    listadoAtenciones.value = atenciones;
+
+    const idsAtencion = new Set(
+      atenciones.map((a) => String(a.id_paciente_atencion)).filter((id) => id !== 'undefined')
+    );
+    const idsPaciente = new Set(
+      atenciones
+        .map((a) => a.id_paciente ?? a.datosPaciente?.id_paciente)
+        .filter((id) => id != null)
+        .map(String)
+    );
+    const todosRegistros = Array.isArray(resRegistros) ? resRegistros : (resRegistros?.results || []);
+    registros.value = todosRegistros.filter((r) => {
+      const idA = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
+      if (idA != null && idsAtencion.has(String(idA))) return true;
+      const idP = r.datosPacienteAtencion?.id_paciente ?? r.datosPaciente?.id_paciente;
+      return idP != null && idsPaciente.has(String(idP));
+    });
   } catch (e) {
     console.error('Error al cargar registros de acceso vascular:', e);
     registros.value = [];
@@ -1197,6 +1262,91 @@ function confirmarPacienteYMostrarFormulario() {
     idPacienteAtencionParaForm.value = atencion.id_paciente_atencion ?? id;
     form2ModalKey.value += 1;
   }
+}
+
+function registroPorAtencion(idAtencion) {
+  const id = String(idAtencion);
+  const lista = (Array.isArray(registros.value) ? registros.value : [])
+    .filter((r) => String(r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion) === id)
+    .sort((a, b) => (Number(b.id_unidad_actual) || 0) - (Number(a.id_unidad_actual) || 0));
+  return lista[0] || null;
+}
+
+async function resolverIdPacienteAtencionCaptacion(idPacienteAtencion, idPaciente) {
+  if (idPacienteAtencion != null && idPacienteAtencion !== '') return Number(idPacienteAtencion);
+  if (idPaciente == null || idPaciente === '') return null;
+
+  const idPeriodo = periodoGlobal.value;
+  const idIpress = clinicaGlobal.value;
+  const idModalidad = modalidadGlobal.value;
+  const params = new URLSearchParams({ id_paciente: String(idPaciente) });
+  if (idPeriodo != null && idPeriodo !== '') params.set('id_periodo', String(idPeriodo));
+  if (idIpress != null && idIpress !== '') params.set('id_ipress', String(idIpress));
+  if (idModalidad != null && idModalidad !== '') params.set('id_modalidad', String(idModalidad));
+
+  const res = await getAllIpress(`/pacienteAtencion/?${params.toString()}`);
+  const lista = Array.isArray(res) ? res : (res?.results || []);
+  const activa = lista.find((a) => String(a.estado || '').toUpperCase() === 'ACTIVO');
+  const candidata = activa || [...lista].sort(
+    (a, b) => (Number(b.id_paciente_atencion) || 0) - (Number(a.id_paciente_atencion) || 0),
+  )[0];
+  return candidata?.id_paciente_atencion ?? null;
+}
+
+async function abrirFormularioDesdeCaptacion(idPacienteAtencion, idPaciente) {
+  if (!formularioAbierto.value) {
+    ElMessage.warning('El formulario de Acceso Vascular está cerrado para este periodo.');
+    return;
+  }
+
+  const idAtencion = await resolverIdPacienteAtencionCaptacion(idPacienteAtencion, idPaciente);
+  if (idAtencion == null) {
+    ElMessage.error('No se encontró la atención activa del paciente capturado.');
+    return;
+  }
+
+  await Promise.all([fetchRegistros(), fetchPacientesAtencion(), fetchPeriodoIpress()]);
+
+  const registroExistente = registroPorAtencion(idAtencion);
+  if (registroExistente) {
+    abrirModalEditar(registroExistente);
+    return;
+  }
+
+  let paciente = listadoAtenciones.value.find(
+    (a) => String(a.id_paciente_atencion) === String(idAtencion),
+  )?.datosPaciente;
+
+  if (!paciente) {
+    const atencion = await getAllIpress(`/pacienteAtencion/${idAtencion}/`);
+    paciente = atencion?.datosPaciente ?? null;
+  }
+
+  if (!paciente) {
+    ElMessage.error('No se pudo cargar el paciente para acceso vascular.');
+    return;
+  }
+
+  registroEdicion.value = null;
+  pacienteParaFormulario.value = paciente;
+  idPacienteAtencionParaForm.value = Number(idAtencion);
+  idPacienteSeleccionado.value = '';
+  busquedaPaciente.value = '';
+  form2ModalKey.value += 1;
+  mostrarModalNuevo.value = true;
+}
+
+async function procesarQueryCaptacionAccesoVascular() {
+  const abrir = route.query.abrirFormulario === '1';
+  if (!abrir) return;
+
+  await abrirFormularioDesdeCaptacion(route.query.idPacienteAtencion, route.query.idPaciente);
+
+  const query = { ...route.query };
+  delete query.abrirFormulario;
+  delete query.idPacienteAtencion;
+  delete query.idPaciente;
+  router.replace({ query });
 }
 
 function cerrarModalNuevo() {
@@ -1455,11 +1605,18 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   fetchEstadoFormulario();
 }, { deep: true });
 
-onMounted(() => {
+watch(
+  () => [route.query.abrirFormulario, route.query.idPacienteAtencion, route.query.idPaciente],
+  () => {
+    procesarQueryCaptacionAccesoVascular();
+  },
+);
+
+onMounted(async () => {
   cargarHistorialCargas();
   fetchPeriodos();
-  fetchRegistros();
-  fetchEstadoFormulario();
+  await Promise.all([fetchRegistros(), fetchEstadoFormulario()]);
+  await procesarQueryCaptacionAccesoVascular();
 });
 </script>
 

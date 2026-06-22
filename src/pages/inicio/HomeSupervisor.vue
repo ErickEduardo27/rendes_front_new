@@ -7,7 +7,17 @@
           Resumen de clínicas asignadas · {{ authStore.user?.nombre || authStore.user?.usuario || 'Supervisor' }}
         </p>
       </div>
-      <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
+      <div class="flex items-center gap-2">
+        <button
+          v-if="datos?.clinicas?.length"
+          type="button"
+          class="bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs font-semibold shadow-sm hover:bg-slate-50 transition"
+          :disabled="exportandoReporte"
+          @click="exportarReporteSupervisor"
+        >
+          {{ exportandoReporte ? 'Exportando…' : 'Exportar reporte' }}
+        </button>
+        <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
         <span class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Periodo</span>
         <el-config-provider :locale="locale">
           <el-date-picker
@@ -23,6 +33,7 @@
             @change="procesarCambioPeriodo"
           />
         </el-config-provider>
+        </div>
       </div>
     </header>
 
@@ -128,7 +139,7 @@
       <!-- Tabla detalle -->
       <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
-          <h2 class="text-sm font-bold text-slate-700">Detalle por clínica — {{ datos.periodo }}</h2>
+          <h2 class="text-sm font-bold text-slate-700">Reporte de supervisor por IPRESS — {{ datos.periodo }}</h2>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-xs text-left">
@@ -144,6 +155,7 @@
                 <th class="px-3 py-2 font-semibold text-center">Res. Clín.</th>
                 <th class="px-3 py-2 font-semibold text-center">Vacun.</th>
                 <th class="px-3 py-2 font-semibold text-center">Revisión</th>
+                <th class="px-3 py-2 font-semibold text-center whitespace-nowrap">Fecha de notificación</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -167,6 +179,9 @@
                     {{ c.notificado ? 'Notificado' : 'Pendiente' }}
                   </span>
                 </td>
+                <td class="px-3 py-2 text-center text-slate-600 whitespace-nowrap">
+                  {{ formatoFechaNotificacion(c.notificado_en) }}
+                </td>
               </tr>
             </tbody>
             <tfoot v-if="datos.clinicas.length" class="bg-slate-50 font-semibold text-slate-700">
@@ -180,6 +195,7 @@
                 <td class="px-3 py-2 text-center">{{ datos.por_formulario.resultados }}</td>
                 <td class="px-3 py-2 text-center">{{ datos.por_formulario.vacunacion }}</td>
                 <td class="px-3 py-2 text-center">{{ datos.resumen.total_notificados }}/{{ datos.resumen.total_clinicas }}</td>
+                <td class="px-3 py-2 text-center">—</td>
               </tr>
             </tfoot>
           </table>
@@ -193,7 +209,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { getAllIpress } from '@/services/ipress/Ipress.service';
 import { useAuthStore } from '@/store/auth';
-import { ElConfigProvider } from 'element-plus';
+import { ElConfigProvider, ElMessage } from 'element-plus';
+import * as XLSX from 'xlsx';
 import es from 'element-plus/dist/locale/es.mjs';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -208,6 +225,7 @@ const idPeriodo = ref(null);
 const datos = ref(null);
 const cargando = ref(false);
 const error = ref('');
+const exportandoReporte = ref(false);
 
 const FORMULARIOS_META = [
   { key: 'acceso_vascular', label: 'Acceso vascular', opacity: 1 },
@@ -248,6 +266,55 @@ function segmentosClinica(c) {
     valor: r[f.key] ?? 0,
     opacity: f.opacity,
   })).filter((s) => s.valor > 0);
+}
+
+function formatoFechaNotificacion(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
+  } catch {
+    return String(iso);
+  }
+}
+
+function filasReporteSupervisorExcel() {
+  if (!datos.value?.clinicas?.length) return [];
+  return datos.value.clinicas.map((c) => ({
+    IPRESS: c.ipress || '',
+    'Nombre corto': c.nombre_corto || '',
+    Modalidad: c.modalidad || '',
+    Pacientes: c.total_pacientes ?? 0,
+    Activos: c.pacientes_activos ?? 0,
+    'Acceso vascular': c.registros?.acceso_vascular ?? 0,
+    Infecciones: c.registros?.infecciones ?? 0,
+    Morbilidad: c.registros?.morbilidad ?? 0,
+    'Resultados clínicos': c.registros?.resultados ?? 0,
+    Vacunación: c.registros?.vacunacion ?? 0,
+    Revisión: c.notificado ? 'Notificado' : 'Pendiente',
+    'Fecha de notificación': c.notificado_en ? formatoFechaNotificacion(c.notificado_en) : '',
+  }));
+}
+
+function exportarReporteSupervisor() {
+  if (!datos.value?.clinicas?.length) {
+    ElMessage.warning('No hay datos para exportar.');
+    return;
+  }
+  exportandoReporte.value = true;
+  try {
+    const rows = filasReporteSupervisorExcel();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Supervisor por IPRESS');
+    const periodo = datos.value.periodo || fechaVisual.value || 'periodo';
+    XLSX.writeFile(wb, `reporte_supervisor_ipress_${periodo}.xlsx`);
+    ElMessage.success(`Se exportaron ${rows.length} clínica(s).`);
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('No se pudo generar el reporte.');
+  } finally {
+    exportandoReporte.value = false;
+  }
 }
 
 const esFechaDeshabilitada = (time) => {

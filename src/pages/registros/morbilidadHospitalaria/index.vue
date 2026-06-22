@@ -343,6 +343,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
@@ -353,6 +354,8 @@ import TablaPaginacion from '@/components/TablaPaginacion.vue';
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const route = useRoute();
+const router = useRouter();
 
 const NUMERO_FORMULARIO_MORBILIDAD = 3;
 
@@ -764,6 +767,56 @@ function onGuardado() {
   cerrarModalNuevo();
 }
 
+async function abrirFormularioDesdeEgreso(idPacienteAtencion) {
+  if (idPacienteAtencion == null || idPacienteAtencion === '') return;
+  if (!formularioAbierto.value) {
+    ElMessage.warning('El formulario de Morbilidad Hospitalaria está cerrado para este periodo.');
+    return;
+  }
+
+  try {
+    await fetchRegistros();
+
+    const pendiente = registroPendienteAltaPorAtencion(idPacienteAtencion);
+    if (pendiente) {
+      abrirModalEditar(pendiente);
+      return;
+    }
+
+    const atencion = await getAllIpress(`/pacienteAtencion/${idPacienteAtencion}/`);
+    const paciente = atencion?.datosPaciente;
+    if (!paciente) {
+      ElMessage.error('No se encontró la atención del paciente.');
+      return;
+    }
+
+    registroEdicion.value = null;
+    pacienteParaFormulario.value = paciente;
+    idPacienteAtencionParaForm.value = Number(idPacienteAtencion);
+    idPacienteSeleccionado.value = '';
+    busquedaPaciente.value = '';
+    form4ModalKey.value += 1;
+    mostrarModalNuevo.value = true;
+  } catch (e) {
+    console.error('Error al abrir formulario desde egreso:', e);
+    ElMessage.error('No se pudo abrir el formulario de hospitalización.');
+  }
+}
+
+async function procesarQueryEgresoHospitalizacion() {
+  const abrir = route.query.abrirFormulario === '1';
+  const idAtencion = route.query.idPacienteAtencion;
+  if (!abrir || idAtencion == null || idAtencion === '') return;
+
+  await abrirFormularioDesdeEgreso(idAtencion);
+
+  const query = { ...route.query };
+  delete query.abrirFormulario;
+  delete query.idPacienteAtencion;
+  delete query.idPaciente;
+  router.replace({ query });
+}
+
 function abrirModalImportar() {
   archivoSeleccionado.value = null;
   resultadoImportacion.value = null;
@@ -866,9 +919,17 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   fetchRegistros();
   fetchEstadoFormulario();
 }, { deep: true });
-onMounted(() => {
-  fetchRegistros();
-  fetchEstadoFormulario();
+
+watch(
+  () => [route.query.abrirFormulario, route.query.idPacienteAtencion],
+  () => {
+    procesarQueryEgresoHospitalizacion();
+  },
+);
+
+onMounted(async () => {
+  await Promise.all([fetchRegistros(), fetchEstadoFormulario()]);
+  await procesarQueryEgresoHospitalizacion();
 });
 </script>
 

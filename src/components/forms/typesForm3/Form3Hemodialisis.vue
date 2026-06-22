@@ -38,7 +38,7 @@
             <span>{{ paciente.documento || '—' }}</span>
           </div>
 
-          <div class="bg-white border border-slate-200 rounded-lg shadow-sm p-3 flex flex-col md:flex-row items-center justify-between gap-3">
+          <div v-if="!iniciarConInfeccion" class="bg-white border border-slate-200 rounded-lg shadow-sm p-3 flex flex-col md:flex-row items-center justify-between gap-3">
             <div>
               <h2 class="text-sm font-bold text-slate-800">Evento de Infección</h2>
               <p class="text-xs text-slate-500">¿El paciente presentó algún evento infeccioso en este periodo?</p>
@@ -58,7 +58,7 @@
           </div>
 
           <transition enter-active-class="transition ease-out duration-300" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0">
-            <div v-if="tieneInfeccion" class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+            <div v-if="tieneInfeccion || iniciarConInfeccion" class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
               
               <div class="bg-cyan-600 px-4 py-2.5 flex justify-between items-center">
                 <h3 class="text-white font-bold text-sm flex items-center gap-1.5">
@@ -161,7 +161,7 @@
                        </div>
                     </div>
 
-                    <div class="lg:col-span-4 pt-4 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div v-if="!iniciarConInfeccion" class="lg:col-span-4 pt-4 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
                        <div>
                          <p class="text-sm font-bold text-slate-700">Impacto en el Acceso Vascular</p>
                          <p class="text-xs text-slate-500">¿Esta infección obligó a realizar un cambio de acceso?</p>
@@ -198,6 +198,8 @@
                         :periodo="periodoNumero"
                         :periodo-ipress="idPeriodoIpress"
                         :id-paciente-atencion="idPacienteAtencion"
+                        :desde-formulario-infeccion="true"
+                        motivo-cambio-inicial="Complicación infecciosa"
                         @cancelar="cerrarModalAccesoVascular"
                         @guardado="onGuardadoAccesoVascular"
                       />
@@ -601,10 +603,10 @@ function cerrarModalAccesoVascular() {
 function onGuardadoAccesoVascular() {
   cerrarModalAccesoVascular();
   fetchUnidadesActualesPaciente();
-  emit('guardado');
 }
 
 watch(() => form.obligoCambioAcceso, async (val) => {
+  if (props.iniciarConInfeccion) return;
   if (val === true) {
     mostrarModalAccesoVascular.value = true;
   }

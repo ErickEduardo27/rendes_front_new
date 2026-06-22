@@ -389,7 +389,7 @@
         </div>
         <div class="p-6 space-y-4 overflow-y-auto">
           <p class="text-sm text-slate-600">
-            Cargue el Excel completado. La importación valida rangos clínicos, el DNI del paciente según el filtro actual y el
+            Cargue el Excel completado. La importación valida rangos clínicos, valores numéricos (sin letras), el DNI del paciente según el filtro actual y el
             <strong>tiempo de diálisis</strong> en <strong>horas o fracción de hora</strong>, usando incrementos de <strong>0,25</strong>
             (ej.: 1, 1,25, 1,5, 1,75, 2, 2,25…) entre <strong>0,25</strong> y <strong>8</strong>.
             Eritropoyetina, hierro y calcitriol: <strong>Sí</strong> o <strong>No</strong> (deje vacío si no aplica).
@@ -593,7 +593,7 @@ const claseResultadoImportacion = computed(() => {
   return 'bg-red-50 text-red-800 border border-red-200';
 });
 
-const MENSAJE_TIEMPO_DIALISIS_IMPORT = 'Tiempo de diálisis inválido. Registre horas o fracciones de hora en incrementos de 0,25 (ej.: 1, 1,25, 1,5, 1,75, 2). Rango permitido: 0,25 a 8.';
+const MENSAJE_TIEMPO_DIALISIS_IMPORT = 'Tiempo de diálisis inválido. Registre horas o fracciones de hora en incrementos de 0,25';
 
 const COLUMNAS_FORMATO = [
   'dni',
@@ -606,10 +606,20 @@ const COLUMNAS_FORMATO = [
   'calcio_corregido',
   'ktv',
   'tiempo_dialisis',
-  'eritropoyetina',
-  'hierro',
-  'calcitriol',
+  'eritropoyetina (Si/No)',
+  'hierro (Si/No)',
+  'calcitriol (Si/No)',
 ];
+function normalizarEncabezadoImportacion(encabezado) {
+  let key = String(encabezado ?? '').trim().toLowerCase().replace(/\s+/g, '_');
+  key = key.replace(/_?\((si|sí)\/no\)$/i, '');
+  return key;
+}
+
+function valorSiNoPlantilla(val) {
+  const texto = siNo(val);
+  return texto === '—' ? '' : texto;
+}
 /** Horas de sesión (entero o decimal); mismo criterio que Form5. */
 const TIEMPO_DIALISIS_MIN = 0.25;
 const TIEMPO_DIALISIS_MAX = 8;
@@ -787,6 +797,21 @@ const normalizarNumero = (valor) => {
   const numero = Number(texto);
   return Number.isNaN(numero) ? null : numero;
 };
+
+/** Rechaza letras y otros caracteres no numéricos al importar Excel. */
+function parseValorNumericoImportacion(valor) {
+  const raw = String(valor ?? '').trim();
+  if (!raw) return { vacio: true };
+  const texto = raw.replace(',', '.');
+  if (/[a-zA-Z]/.test(texto)) {
+    return { vacio: false, valido: false };
+  }
+  const numero = Number(texto);
+  if (Number.isNaN(numero)) {
+    return { vacio: false, valido: false };
+  }
+  return { vacio: false, valido: true, numero };
+}
 
 function calcularCalcioCorregido(calcio, alb) {
   const c = normalizarNumero(calcio);
@@ -1056,12 +1081,16 @@ const validarFilaImportacion = (obj) => {
   };
 
   for (const campo of camposResultados) {
-    const valor = normalizarNumero(obj[campo.key.toLowerCase()] ?? obj[campo.key]);
-    if (valor === null) continue;
-    if (valor < campo.min || valor > campo.max) {
+    const raw = obj[campo.key.toLowerCase()] ?? obj[campo.key];
+    const parsed = parseValorNumericoImportacion(raw);
+    if (parsed.vacio) continue;
+    if (!parsed.valido) {
+      return { ok: false, mensaje: `${campo.key} debe ser un valor numérico (no se permiten letras).` };
+    }
+    if (parsed.numero < campo.min || parsed.numero > campo.max) {
       return { ok: false, mensaje: `${campo.key} debe estar entre ${campo.min} y ${campo.max}.` };
     }
-    payload[campo.key] = String(valor);
+    payload[campo.key] = String(parsed.numero);
   }
 
   /** Si no vino calcio_corregido en Excel pero sí calcio y Alb, misma fórmula que Form5. */
@@ -1076,6 +1105,12 @@ const validarFilaImportacion = (obj) => {
   const rawTiempo = obj.tiempo_dialisis;
   const tiempoStrParaValidar =
     rawTiempo != null && rawTiempo !== '' ? String(rawTiempo).trim().replace(',', '.') : '';
+  if (tiempoStrParaValidar && /[a-zA-Z]/.test(tiempoStrParaValidar)) {
+    return {
+      ok: false,
+      mensaje: 'tiempo_dialisis debe ser un valor numérico (no se permiten letras).',
+    };
+  }
   if (tiempoStrParaValidar && !esTiempoDialisisValorValido(rawTiempo)) {
     return {
       ok: false,
@@ -1306,9 +1341,9 @@ function descargarFormatoExcel() {
     '', // calcio_corregido (opcional; con calcio+Alb se calcula al importar)
     '', // ktv
     '', // tiempo_dialisis
-    '', // eritropoyetina
-    '', // hierro
-    '', // calcitriol
+    valorSiNoPlantilla(fila.eritoproyetina),
+    valorSiNoPlantilla(fila.hierro),
+    valorSiNoPlantilla(fila.calcitriol),
   ]);
   const ws = XLSX.utils.aoa_to_sheet([COLUMNAS_FORMATO, ...filasBase]);
   const wb = XLSX.utils.book_new();
@@ -1366,7 +1401,7 @@ async function ejecutarImportacion() {
       importando.value = false;
       return;
     }
-    const headers = rows[0].map((h) => String(h ?? '').trim().toLowerCase().replace(/\s+/g, '_'));
+    const headers = rows[0].map((h) => normalizarEncabezadoImportacion(h));
     const dataRows = rows.slice(1).filter((r) => r.some((c) => c != null && String(c).trim() !== ''));
     let creados = 0,
       errores = 0;
