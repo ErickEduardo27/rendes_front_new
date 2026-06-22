@@ -86,10 +86,11 @@
                         {{ erroresNuevoAcceso.localizacion_acceso_nuevo }}
                     </p>
                 </div>
-                <div v-if="form.motivo_cambio">
+                <div v-if="form.motivo_cambio || desdeFormularioInfeccion">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Motivo del cambio</label>
                     <select v-model="form.motivo_cambio"
-                        class="w-full border text-slate-800 text-sm rounded-lg p-2.5 bg-white border-slate-300">
+                        class="w-full border text-slate-800 text-sm rounded-lg p-2.5 bg-white border-slate-300 disabled:bg-slate-100 disabled:text-slate-700 disabled:cursor-not-allowed"
+                        :disabled="desdeFormularioInfeccion">
                         <option :value="null">Seleccione…</option>
                         <option value="Complicación mecánica">Complicación mecánica</option>
                         <option value="Complicación infecciosa">Complicación infecciosa</option>
@@ -97,6 +98,7 @@
                     </select>
                 </div>
             </div>
+            <ComentarioSupervisorEvaluacion v-if="modoSupervisor" v-model="comentarioSupervisor" />
             <div class="flex flex-wrap gap-2 justify-end border-t border-slate-100 pt-4 mt-4">
                 <button type="button"
                     class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 rounded-lg"
@@ -204,7 +206,7 @@
                         </div>
                     </div>
                     <p v-else class="px-6 pt-4 pb-2 text-xs text-cyan-800 bg-cyan-50/80 border-b border-cyan-100">
-                        Registre el cambio de acceso por <strong>complicación infecciosa</strong> asociado al evento infeccioso.
+                        Complete el nuevo acceso vascular. El motivo del cambio queda registrado como <strong>complicación infecciosa</strong>.
                     </p>
                     <template v-if="deseaRegistrarCambioAcceso === 'si' || desdeFormularioInfeccion">
                         <div class="p-6 pt-2 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -262,18 +264,22 @@
                                 </p>
                             </div>
                         </div>
-                        <div v-if="tieneHistorialAcceso" class="px-6 pb-4">
+                        <div v-if="tieneHistorialAcceso || desdeFormularioInfeccion" class="px-6 pb-4">
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Motivo del
                                 cambio *</label>
                             <select v-model="form.motivo_cambio"
-                                class="w-full max-w-md border text-slate-800 text-sm rounded-lg p-2.5 bg-white"
+                                class="w-full max-w-md border text-slate-800 text-sm rounded-lg p-2.5 bg-white disabled:bg-slate-100 disabled:text-slate-700 disabled:cursor-not-allowed"
                                 :class="erroresNuevoAcceso.motivo_cambio ? 'border-red-500' : 'border-slate-300'"
+                                :disabled="desdeFormularioInfeccion"
                                 @change="erroresNuevoAcceso.motivo_cambio = ''">
                                 <option :value="null">Seleccione…</option>
                                 <option value="Complicación mecánica">Complicación mecánica</option>
                                 <option value="Complicación infecciosa">Complicación infecciosa</option>
                                 <option value="Prescripción médica">Prescripción médica</option>
                             </select>
+                            <p v-if="desdeFormularioInfeccion" class="text-[11px] text-slate-500 mt-1">
+                                Motivo fijado automáticamente por el evento infeccioso.
+                            </p>
                             <p v-if="erroresNuevoAcceso.motivo_cambio"
                                 class="text-[11px] text-red-500 mt-1 font-medium">
                                 {{ erroresNuevoAcceso.motivo_cambio }}
@@ -499,6 +505,8 @@ import { ref, onMounted, reactive, computed, watch, inject, defineAsyncComponent
 import { getAllIpress, patchAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import { ElMessage } from 'element-plus';
+import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
+import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
 
 const Form3Hemodialisis = defineAsyncComponent(() => import('@/components/forms/typesForm3/Form3Hemodialisis.vue'));
 
@@ -512,9 +520,12 @@ const props = defineProps({
     desdeFormularioInfeccion: { type: Boolean, default: false },
     /** Preselección de motivo al abrir desde infección (p. ej. Complicación infecciosa). */
     motivoCambioInicial: { type: String, default: '' },
+    modoSupervisor: { type: Boolean, default: false },
 })
 const { paciente, periodo, periodoIpress, idPacienteAtencion } = props
 const emit = defineEmits(['cancelar', 'guardado'])
+
+const { comentarioSupervisor, guardarComoSupervisor } = useEdicionSupervisor(props);
 
 const esEdicionDirecta = computed(() => !!props.registroEdicion)
 
@@ -649,7 +660,9 @@ const limpiarCamposNuevoAcceso = () => {
     form.fecha_creacion_acceso_nuevo = null;
     form.tipo_acceso_nuevo = null;
     form.localizacion_acceso_nuevo = null;
-    form.motivo_cambio = null;
+    if (!props.desdeFormularioInfeccion) {
+        form.motivo_cambio = null;
+    }
     limpiarErroresNuevoAcceso();
 };
 
@@ -672,10 +685,6 @@ const limpiarErroresNuevoAcceso = () => {
         erroresNuevoAcceso[key] = '';
     }
 };
-
-watch(deseaRegistrarCambioAcceso, (v) => {
-    if (v !== 'si') limpiarCamposNuevoAcceso();
-});
 
 const historicoOrdenado = computed(() => {
     return [...(historico.value || [])].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
@@ -764,7 +773,7 @@ const validarFormulario = () => {
         'tipo_acceso_nuevo',
         'localizacion_acceso_nuevo',
     ];
-    if (!esEdicionDirecta.value && tieneHistorialAcceso.value) {
+    if ((!esEdicionDirecta.value && tieneHistorialAcceso.value) || props.desdeFormularioInfeccion) {
         camposObligatorios.push('motivo_cambio');
     }
 
@@ -829,6 +838,13 @@ const esComplicacionInfecciosa = (motivo) => {
     const normalizado = motivoDesdeRegistro(motivo);
     return normalizado === 'Complicación infecciosa';
 };
+
+function aplicarMotivoDesdeInfeccion() {
+    if (!props.desdeFormularioInfeccion || props.registroEdicion) return;
+    deseaRegistrarCambioAcceso.value = 'si';
+    const motivoIni = props.motivoCambioInicial || 'Complicación infecciosa';
+    form.motivo_cambio = motivoDesdeRegistro(motivoIni) || motivoIni;
+}
 
 const finalizarFlujoGuardado = () => {
     emit('guardado');
@@ -911,8 +927,19 @@ const guardarRegistro = async () => {
         });
         const idEdicion = props.registroEdicion?.id_unidad_actual;
         if (idEdicion) {
-            await patchAllIpress(`/unidadesActuales/${idEdicion}/`, payload);
+            if (props.modoSupervisor) {
+                await guardarComoSupervisor('unidadesActuales', idEdicion, {
+                    tipo_acceso: payload.tipo_acceso,
+                    localizacion_acceso: payload.localizacion_acceso,
+                    fecha_creacion_acceso: payload.fecha_creacion_acceso,
+                    motivo_cambio: payload.motivo_cambio,
+                });
+            } else {
+                await patchAllIpress(`/unidadesActuales/${idEdicion}/`, payload);
+            }
             ElMessage({ message: 'Registro actualizado correctamente.', type: 'success', plain: true });
+            finalizarFlujoGuardado();
+            return;
         } else {
             await postAllIpress('/unidadesActuales/', payload);
             ElMessage({ message: 'Registro guardado correctamente.', type: 'success', plain: true });
@@ -923,7 +950,7 @@ const guardarRegistro = async () => {
             await sincronizarPacienteDialisisAccesoInicio();
         }
         await fetchUnidadesActualesPaciente();
-        if (!idEdicion) {
+        if (!props.registroEdicion?.id_unidad_actual) {
             limpiarCamposNuevoAcceso();
             deseaRegistrarCambioAcceso.value = 'no';
             if (!tieneHistorialAcceso.value) form.cambio_acceso = 'false';
@@ -1093,19 +1120,21 @@ watch(() => props.registroEdicion, (registro) => {
     if (registro) cargarRegistroEdicion(registro);
 }, { immediate: true });
 
+watch(deseaRegistrarCambioAcceso, (v) => {
+    if (v !== 'si') limpiarCamposNuevoAcceso();
+    else if (props.desdeFormularioInfeccion) aplicarMotivoDesdeInfeccion();
+});
+
 onMounted(() => {
     fetchPaciente();
     fetchPeriodo();
     fetchClinicas();
-    if (props.desdeFormularioInfeccion && !props.registroEdicion) {
-        deseaRegistrarCambioAcceso.value = 'si';
-        const motivoIni = props.motivoCambioInicial || 'Complicación infecciosa';
-        form.motivo_cambio = motivoDesdeRegistro(motivoIni) || motivoIni;
-    }
+    aplicarMotivoDesdeInfeccion();
     if (esEdicionDirecta.value) {
         if (props.registroEdicion) cargarRegistroEdicion(props.registroEdicion);
     } else {
         fetchUnidadesActualesPaciente().then(() => {
+            aplicarMotivoDesdeInfeccion();
             if (props.registroEdicion) cargarRegistroEdicion(props.registroEdicion);
         });
         fetchHistorialMovimientos();

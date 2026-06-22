@@ -68,186 +68,7 @@
 
     </div>
 
-    <!-- Lista: rf_pacientes_dialisis filtrada por IPRESS + periodo (+ modalidad global), con búsqueda por nombre y documento -->
-    <div class="bg-white border rounded-xl shadow-sm p-4 mb-4">
-      <h3 class="text-sm font-semibold text-slate-700 mb-3">Pacientes en atención (clínica y periodo) — incluye sin ficha de diálisis aún</h3>
-      <div class="flex flex-wrap gap-3 mb-4">
-        <div class="flex-1 min-w-[200px]">
-          <label class="block text-xs font-medium text-gray-600 mb-1">Filtrar por nombre</label>
-          <input
-            v-model="filtroNombre"
-            type="text"
-            placeholder="Apellidos y nombres..."
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            @input="aplicarFiltrosBusqueda"
-          />
-        </div>
-        <div class="flex-1 min-w-[160px]">
-          <label class="block text-xs font-medium text-gray-600 mb-1">Filtrar por documento</label>
-          <input
-            v-model="filtroDni"
-            type="text"
-            placeholder="DNI / CE / pasaporte..."
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            @input="aplicarFiltrosBusqueda"
-          />
-        </div>
-      </div>
-      <p v-if="idIpress == null || idPerido == null" class="text-sm text-amber-600">
-        Seleccione clínica (IPRESS) y periodo en el encabezado para cargar la lista.
-      </p>
-      <div v-else class="overflow-x-auto border rounded-lg relative">
-        <p v-if="cargandoPacientes" class="text-xs text-slate-500 px-3 py-2 bg-slate-50 border-b border-slate-100">
-          Buscando en el servidor…
-        </p>
-        <table class="min-w-full text-xs tabla-pacientes">
-          <thead class="bg-slate-100 text-slate-700">
-            <tr>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. 1er ingreso</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">T. doc.</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Documento</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap min-w-[140px]">Paciente</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. nac.</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Sexo</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Grado</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Mod. TRR</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. inicio TRR</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Subsistema</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Tipo acceso</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Localización</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. creac. acceso</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. ingreso hosp.</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Hosp. proced.</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Etiología</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Comorb.</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap sticky right-0 bg-slate-100">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="row in pacientesPaginados"
-              :key="row.id_paciente_dialisis ?? `at-${row.id_paciente_atencion}`"
-              class="border-t border-slate-100 hover:bg-slate-50 group"
-            >
-              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_primer_ingreso) }}</td>
-              <td class="px-2 py-2">{{ celda(row.datosPaciente?.tipo_documento) }}</td>
-              <td class="px-2 py-2 font-mono">{{ celda(row.datosPaciente?.documento) }}</td>
-              <td class="px-2 py-2 whitespace-nowrap">
-                <span :title="celda(row.datosPaciente?.paciente)">{{ celda(row.datosPaciente?.paciente) }}</span>
-                <span
-                  v-if="row.sin_registro_dialisis"
-                  class="ml-1 inline text-[10px] font-semibold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded align-middle"
-                  title="Tiene atención en el periodo pero aún no tiene ficha en diálisis"
-                >Sin ficha diálisis</span>
-              </td>
-              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.datosPaciente?.fecha_nacimiento) }}</td>
-              <td class="px-2 py-2 whitespace-nowrap">{{ generoTexto(row.datosPaciente?.genero) }}</td>
-              <td class="px-2 py-2 max-w-[90px] truncate" :title="row.datosPaciente?.grado_instruccion">{{ celda(row.datosPaciente?.grado_instruccion) }}</td>
-              <td class="px-2 py-2 max-w-[110px] truncate" :title="row.modalidad_inicio_trr">{{ celda(row.modalidad_inicio_trr) }}</td>
-              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_inicio_trr) }}</td>
-              <td class="px-2 py-2 max-w-[100px] truncate" :title="row.subsistema_salud">{{ celda(row.subsistema_salud) }}</td>
-              <td class="px-2 py-2 max-w-[130px] truncate" :title="tipoAccesoTexto(row.tipo_acceso)">{{ tipoAccesoTexto(row.tipo_acceso) }}</td>
-              <td class="px-2 py-2 max-w-[130px] truncate" :title="row.localizacion_acceso_inicio">{{ celda(row.localizacion_acceso_inicio) }}</td>
-              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_creacion_acceso) }}</td>
-              <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_ingreso_hospital) }}</td>
-              <td class="px-2 py-2 max-w-[120px] truncate" :title="row.hospital_procedencia_trr">{{ celda(row.hospital_procedencia_trr) }}</td>
-              <td class="px-2 py-2 max-w-[140px] truncate" :title="etiologiaTexto(row)">{{ etiologiaTexto(row) }}</td>
-              <td class="px-2 py-2 max-w-[120px] truncate" :title="comorbilidadesTexto(row)">{{ comorbilidadesTexto(row) }}</td>
-              <td class="px-2 py-2 sticky right-0 bg-white group-hover:bg-slate-50">
-                <div class="flex flex-wrap gap-1 items-center">
-                  <button
-                    type="button"
-                    class="text-xs px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-                    :disabled="row.sin_registro_dialisis || !row.id_paciente_dialisis"
-                    :title="row.sin_registro_dialisis ? 'Sin ficha de diálisis: complete el registro antes de editar' : 'Editar datos del paciente y ficha de diálisis'"
-                    @click="abrirEdicionSupervisor(row)"
-                  >
-                    Editar
-                  </button>
-                 <!--  <button type="button" class="text-xs px-2 py-0.5 rounded bg-sky-100 text-sky-800 hover:bg-sky-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 1)" @click="abrirFormulario(row, 1)">
-                    Acceso
-                    <span v-if="metaFormulario(row, 1)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
-                  </button>
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-rose-100 text-rose-800 hover:bg-rose-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 2)" @click="abrirFormulario(row, 2)">
-                    Infecc.
-                    <span v-if="metaFormulario(row, 2)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
-                  </button>
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 3)" @click="abrirFormulario(row, 3)">
-                    Morb.
-                    <span v-if="metaFormulario(row, 3)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
-                  </button>
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 hover:bg-indigo-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 4)" @click="abrirFormulario(row, 4)">
-                    Result.
-                    <span v-if="metaFormulario(row, 4)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
-                  </button>
-                  <button type="button" class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 inline-flex items-center gap-1" :title="tooltipFormulario(row, 5)" @click="abrirFormulario(row, 5)">
-                    Vacun.
-                    <span v-if="metaFormulario(row, 5)?.supervisor_edito_registro" class="h-1.5 w-1.5 rounded-full bg-violet-600 shrink-0" title="Registro corregido por supervisor" />
-                  </button> -->
-                </div>
-              </td>
-            </tr>
-            <tr v-if="!pacientes.length">
-              <td colspan="18" class="px-3 py-8 text-center text-gray-500">
-                No hay pacientes con atención en esta clínica y periodo
-                <span v-if="filtroNombre.trim() || filtroDni.trim()"> (pruebe otro filtro)</span>.
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div v-if="pacientes.length" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 text-sm border-t border-slate-100 pt-3">
-        <div class="flex flex-wrap items-center gap-3 text-slate-600">
-          <span>{{ rangoPacientesLabel }}</span>
-          <label class="inline-flex items-center gap-2 text-xs text-slate-600">
-            <span>Por página</span>
-            <select
-              v-model.number="pacientesPorPagina"
-              class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white"
-            >
-              <option :value="10">10</option>
-              <option :value="25">25</option>
-              <option :value="50">50</option>
-            </select>
-          </label>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium"
-            :disabled="paginaActual <= 1"
-            @click="paginaActual = 1"
-          >
-            Primera
-          </button>
-          <button
-            type="button"
-            class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium"
-            :disabled="paginaActual <= 1"
-            @click="paginaActual--"
-          >
-            Anterior
-          </button>
-          <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaActual }} / {{ totalPaginas }}</span>
-          <button
-            type="button"
-            class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium"
-            :disabled="paginaActual >= totalPaginas"
-            @click="paginaActual++"
-          >
-            Siguiente
-          </button>
-          <button
-            type="button"
-            class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium"
-            :disabled="paginaActual >= totalPaginas"
-            @click="paginaActual = totalPaginas"
-          >
-            Última
-          </button>
-        </div>
-      </div>
-    </div>
+    <TablaPacientesAtencion class="mb-4" />
 
     <div class="flex items-center gap-4 my-4 border-t pt-4">
       <button
@@ -390,19 +211,17 @@
       </div>
     </div>
 
-    <!-- Modal: registro nuevo o edición supervisor (ficha diálisis) -->
-    <div v-if="mostrarModalNuevo || mostrarModalEdicionSupervisor" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+    <!-- Modal: registro nuevo paciente -->
+    <div v-if="mostrarModalNuevo" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
       <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
         <FormularioPaciente
-          :key="claveModalFormularioPaciente"
+          :key="`nuevo-${documentoPrefillRegistro || 'vacío'}`"
           :periodo-inicial="periodoSeleccionado"
           :id-periodo-ipress-inicial="idPeriodoIpress"
           :id-clinica-inicial="idClinicaSeleccionada"
           :nombre-clinica-inicial="clinicaSeleccionada"
           :mostrar-tabla-edicion="false"
-          :numero-documento-inicial="mostrarModalEdicionSupervisor ? '' : documentoPrefillRegistro"
-          :id-paciente-edicion-supervisor="mostrarModalEdicionSupervisor ? (filaEdicionSupervisor?.datosPaciente?.id_paciente ?? null) : null"
-          :id-paciente-dialisis-edicion-supervisor="mostrarModalEdicionSupervisor ? (filaEdicionSupervisor?.id_paciente_dialisis ?? null) : null"
+          :numero-documento-inicial="documentoPrefillRegistro"
           @cancelar="cerrarModalFormularioPaciente"
           @guardado="onGuardadoFormularioPaciente"
         />
@@ -418,87 +237,8 @@ import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
-import { tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import FormularioPaciente from './FormularioPaciente.vue';
-
-const LISTA_TIPOS_ACCESO = [
-  { id: '1', label: 'Catéter Venoso Central Temporal' },
-  { id: '2', label: 'Catéter Venoso Central de Larga Permanencia' },
-  { id: '3', label: 'Fístula Arteriovenosa' },
-  { id: '4', label: 'Injerto Autólogo' },
-  { id: '5', label: 'Injerto Protésico' },
-  { id: '6', label: 'Catéter peritoneal' },
-];
-
-const COMORBILIDADES_CAMPOS = [
-  ['enf_insuficiencia_cardiaca_congestiva', 'ICC'],
-  ['enf_diabetes', 'Diabetes'],
-  ['enf_ateroesclerotica_cardiaca', 'Aterosclerosis'],
-  ['enf_hipertension', 'HTA'],
-  ['enf_vascular_periferica', 'Vasc. perif.'],
-  ['enf_tuberculosis', 'TBC'],
-  ['enf_cerebro_vascular', 'ACV'],
-  ['enf_cancer', 'Cáncer'],
-  ['enf_otra', 'Otra'],
-];
-
-function celda(val) {
-  const s = val != null && String(val).trim() !== '' ? String(val).trim() : '';
-  return s || '—';
-}
-
-function parseFechaAISO(value) {
-  const s = String(value ?? '').trim();
-  if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  const dmY = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-  if (dmY) {
-    const d = dmY[1].padStart(2, '0');
-    const m = dmY[2].padStart(2, '0');
-    const y = dmY[3];
-    return `${y}-${m}-${d}`;
-  }
-  return null;
-}
-
-function formatFechaDDMMAAAA(value) {
-  const iso = parseFechaAISO(value);
-  if (!iso) return null;
-  const [y, m, d] = iso.split('-');
-  return `${d}-${m}-${y}`;
-}
-
-function fechaCelda(val) {
-  if (val == null || String(val).trim() === '') return '—';
-  return formatFechaDDMMAAAA(val) || String(val).trim();
-}
-
-function esSiComorb(v) {
-  const s = String(v || '').trim().toLowerCase();
-  return s === 'sí' || s === 'si' || s === 's';
-}
-
-function tipoAccesoTexto(valor) {
-  if (valor == null || String(valor).trim() === '') return '—';
-  const texto = String(valor).trim();
-  const desdeDb = tipoAccesoDesdeDb(texto);
-  const found = LISTA_TIPOS_ACCESO.find(
-    (t) => String(t.id) === texto || t.label === texto || t.label === desdeDb,
-  );
-  return found?.label || desdeDb || texto;
-}
-
-function generoTexto(g) {
-  const u = String(g || '').trim().toUpperCase();
-  if (u === 'M' || u.startsWith('MASC')) return 'M';
-  if (u === 'F' || u.startsWith('FEM')) return 'F';
-  return celda(g);
-}
-
-function comorbilidadesTexto(row) {
-  const items = COMORBILIDADES_CAMPOS.filter(([campo]) => esSiComorb(row?.[campo])).map(([, label]) => label);
-  return items.length ? items.join(', ') : '—';
-}
+import TablaPacientesAtencion from '@/components/pacientes/TablaPacientesAtencion.vue';
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
 const router = useRouter();
@@ -506,10 +246,6 @@ const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
 
-const filtroNombre = ref("");
-const filtroDni = ref("");
-const cargandoPacientes = ref(false);
-let debounceFiltrosTimer = null;
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 
@@ -518,22 +254,6 @@ const esSupervisor = computed(() => {
   const p = String(user.value?.datosPerfil?.perfil ?? localStorage.getItem('perfil') ?? '').trim();
   return p === 'Supervisor';
 });
-
-const pacientes = ref([])
-
-// --- Paginación ---
-const paginaActual = ref(1)
-const pacientesPorPagina = ref(10)
-
-// Lista desde API (filtros nombre/documento en servidor con debounce)
-const pacientesFiltrados = computed(() => pacientes.value);
-
-const etiologiaTexto = (row) => {
-  const e = row?.datosEti;
-  if (!e) return '—';
-  const partes = [e.general, e.especifica || e.codigo].filter((x) => x != null && String(x).trim() !== '');
-  return partes.length ? partes.join(' — ') : '—';
-};
 
 // Estadísticas de pacientes desde tabla paciente_atencion (por periodo, ipress, modalidad)
 const estadisticasAtencion = ref({ total: 0, egresados: 0, reingresos: 0 });
@@ -741,42 +461,6 @@ const obtenerTitulo = (n) => {
   return titulos[n] || 'Formulario';
 }
 
-const totalPaginas = computed(() => {
-  const n = pacientesFiltrados.value.length;
-  const pp = Number(pacientesPorPagina.value) || 10;
-  return Math.max(1, Math.ceil(n / pp));
-});
-
-const pacientesPaginados = computed(() => {
-  const pp = Number(pacientesPorPagina.value) || 10;
-  const inicio = (paginaActual.value - 1) * pp;
-  return pacientesFiltrados.value.slice(inicio, inicio + pp);
-});
-
-const rangoPacientesLabel = computed(() => {
-  const total = pacientesFiltrados.value.length;
-  if (total === 0) return 'Sin registros';
-  const pp = Number(pacientesPorPagina.value) || 10;
-  const ini = (paginaActual.value - 1) * pp + 1;
-  const fin = Math.min(paginaActual.value * pp, total);
-  return `Mostrando ${ini}–${fin} de ${total}`;
-});
-
-watch(pacientes, () => {
-  paginaActual.value = 1;
-});
-
-watch(pacientesPorPagina, () => {
-  paginaActual.value = 1;
-});
-
-watch(totalPaginas, (tp) => {
-  if (paginaActual.value > tp) paginaActual.value = tp;
-});
-
-const state1 = ref('')
-const aplicaTodos = ref(true)
-
 // Variables conectadas al FiltroSuperior
 const modalidadSeleccionada = ref(null) 
 const clinicaSeleccionada = ref('') 
@@ -866,53 +550,8 @@ async function searchPeriodoIpress() {
     idPeriodoIpress.value = null;
   }
 
-  fetchPacientes();
   fetchMetaFormulariosPorAtencion();
 }
-
-const fetchPacientes = async () => {
-  const ipressId = clinicaGlobal.value ?? idIpress.value;
-  const periodoId = periodoGlobal.value ?? idPerido.value;
-  if (ipressId == null || ipressId === '' || periodoId == null || periodoId === '') {
-    pacientes.value = [];
-    return;
-  }
-  cargandoPacientes.value = true;
-  try {
-    const params = new URLSearchParams({
-      id_ipress: String(ipressId),
-      id_periodo: String(periodoId),
-    });
-    const mod = modalidadGlobal.value;
-    if (mod != null && mod !== '') {
-      params.set('id_modalidad', String(mod));
-    }
-    const n = filtroNombre.value.trim();
-    const d = filtroDni.value.trim();
-    if (n) params.set('nombre', n);
-    if (d) params.set('documento', d);
-    const respuesta = await getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${params.toString()}`);
-    pacientes.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
-  } catch (error) {
-    console.error('Error al obtener lista de pacientes diálisis:', error);
-    pacientes.value = [];
-  } finally {
-    cargandoPacientes.value = false;
-  }
-};
-
-/** Consulta al backend con debounce al escribir en los filtros. */
-const aplicarFiltrosBusqueda = () => {
-  const ipressId = clinicaGlobal.value ?? idIpress.value;
-  const periodoId = periodoGlobal.value ?? idPerido.value;
-  if (ipressId == null || ipressId === '' || periodoId == null || periodoId === '') return;
-
-  paginaActual.value = 1;
-  clearTimeout(debounceFiltrosTimer);
-  debounceFiltrosTimer = setTimeout(() => {
-    fetchPacientes();
-  }, 350);
-};
 
 const fetchPeriodoIpress = async (url = null) => {
   try {
@@ -951,20 +590,9 @@ const fetchPeriodo = async (url = null) => {
 };
 
 const mostrarModalNuevo = ref(false);
-const mostrarModalEdicionSupervisor = ref(false);
-const filaEdicionSupervisor = ref(null);
 
 /** Precarga documento en FormularioPaciente al abrir tras “no encontrado”. */
 const documentoPrefillRegistro = ref('');
-
-const claveModalFormularioPaciente = computed(() => {
-  if (mostrarModalEdicionSupervisor.value && filaEdicionSupervisor.value) {
-    const idp = filaEdicionSupervisor.value?.datosPaciente?.id_paciente ?? 'x';
-    const idd = filaEdicionSupervisor.value?.id_paciente_dialisis ?? 'x';
-    return `ed-sup-${idp}-${idd}`;
-  }
-  return `nuevo-${documentoPrefillRegistro.value || 'vacío'}`;
-});
 
 const mostrarModalConsultaDocumento = ref(false);
 const docConsulta = ref('');
@@ -995,8 +623,6 @@ const pacienteTieneAtencionActivaConIpress = async (idPaciente) => {
 
 const cerrarModalFormularioPaciente = () => {
   mostrarModalNuevo.value = false;
-  mostrarModalEdicionSupervisor.value = false;
-  filaEdicionSupervisor.value = null;
   documentoPrefillRegistro.value = '';
 };
 
@@ -1004,17 +630,8 @@ const cerrarModalNuevo = () => {
   cerrarModalFormularioPaciente();
 };
 
-const abrirEdicionSupervisor = (row) => {
-  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return;
-  documentoPrefillRegistro.value = '';
-  mostrarModalNuevo.value = false;
-  filaEdicionSupervisor.value = row;
-  mostrarModalEdicionSupervisor.value = true;
-};
-
 const onGuardadoFormularioPaciente = async () => {
   cerrarModalFormularioPaciente();
-  await fetchPacientes();
   await fetchMetaFormulariosPorAtencion();
 };
 
@@ -1097,8 +714,6 @@ const abrirFormularioRegistroNuevo = () => {
   errorConsultaDoc.value = '';
   pacienteConsultaResultado.value = null;
   busquedaDocumentoEjecutada.value = false;
-  mostrarModalEdicionSupervisor.value = false;
-  filaEdicionSupervisor.value = null;
   mostrarModalNuevo.value = true;
 };
 

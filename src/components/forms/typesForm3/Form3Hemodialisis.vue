@@ -194,6 +194,7 @@
                     </div>
                     <div class="p-4 overflow-y-auto flex-1">
                       <Form2Hemodialisis
+                        :key="form2AccesoKey"
                         :paciente="paciente"
                         :periodo="periodoNumero"
                         :periodo-ipress="idPeriodoIpress"
@@ -207,6 +208,7 @@
                   </div>
                 </div>
 
+                <ComentarioSupervisorEvaluacion v-if="modoSupervisor" v-model="comentarioSupervisor" />
                 <div class="flex justify-end pt-2">
                   <button type="button" @click="guardarInfeccion" class="form3-btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -286,6 +288,8 @@ import { ElMessage, ElConfigProvider } from 'element-plus';
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
+import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
+import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
 import es from 'element-plus/dist/locale/es.mjs';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -297,8 +301,10 @@ const props = defineProps({
   registroEdicion: { type: Object, default: null },
   iniciarConInfeccion: { type: Boolean, default: false },
   fechaEventoInicial: { type: String, default: '' },
+  modoSupervisor: { type: Boolean, default: false },
 });
 const emit = defineEmits(['cancelar', 'guardado']);
+const { comentarioSupervisor, guardarComoSupervisor } = useEdicionSupervisor(props);
 const enModal = computed(() => props.idPacienteAtencion != null && props.idPacienteAtencion !== '');
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
@@ -363,6 +369,7 @@ const rangoFechasPeriodo = computed(() => {
   };
 });
 const mostrarModalAccesoVascular = ref(false);
+const form2AccesoKey = ref(0);
 const unidadesPaciente = ref([]);
 
 const router = useRouter();
@@ -608,6 +615,7 @@ function onGuardadoAccesoVascular() {
 watch(() => form.obligoCambioAcceso, async (val) => {
   if (props.iniciarConInfeccion) return;
   if (val === true) {
+    form2AccesoKey.value += 1;
     mostrarModalAccesoVascular.value = true;
   }
 });
@@ -660,7 +668,11 @@ const guardarInfeccion = async () => {
       };
       const idEdicion = props.registroEdicion?.id_evento_acceso_vascular;
       if (idEdicion) {
-        await patchAllIpress(`/eventosAccesosVasculares/${idEdicion}/`, payload);
+        if (props.modoSupervisor) {
+          await guardarComoSupervisor('eventosAccesosVasculares', idEdicion, payload);
+        } else {
+          await patchAllIpress(`/eventosAccesosVasculares/${idEdicion}/`, payload);
+        }
         ElMessage.success('Evento infeccioso actualizado.');
       } else {
         await postAllIpress('/eventosAccesosVasculares/', payload);

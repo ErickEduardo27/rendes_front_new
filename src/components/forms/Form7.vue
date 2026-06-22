@@ -224,6 +224,7 @@
       </div>
 
       <div class="flex justify-end gap-2 pt-2">
+        <ComentarioSupervisorEvaluacion v-if="modoSupervisor" v-model="comentarioSupervisor" />
         <button type="button" class="form7-btn form7-btn--secondary" @click="$emit('cancelar')">Cancelar</button>
         <button type="button" class="form7-btn form7-btn--primary" @click="postForm()">{{ idVacunacionEdicion ? 'Guardar cambios' : 'Registrar' }}</button>
       </div>
@@ -235,6 +236,8 @@
 import { useRouter } from 'vue-router'
 import { ref, onMounted, computed, reactive, watch, inject } from 'vue'
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
+import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
+import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
 // Importamos la librería de confeti
 //import confetti from 'canvas-confetti';
 
@@ -267,9 +270,12 @@ const props = defineProps({
   clinicaNombre: { type: String, default: '' },
   periodoLabel: { type: String, default: '' },
   modalidadNombre: { type: String, default: '' },
+  modoSupervisor: { type: Boolean, default: false },
 })
 const { paciente, periodo } = props
 const emit = defineEmits(['cancelar', 'guardado'])
+
+const { comentarioSupervisor, guardarComoSupervisor } = useEdicionSupervisor(props);
 
 const periodoGlobal = inject('periodoGlobal', ref(null))
 const clinicaGlobal = inject('clinicaGlobal', ref(null))
@@ -741,7 +747,11 @@ const postForm = async () => {
   const payload = buildPayload();
   try {
     if (idVacunacionEdicion.value != null) {
-      await patchAllIpress(`/vacunaciones/${idVacunacionEdicion.value}/`, payload);
+      if (props.modoSupervisor) {
+        await guardarComoSupervisor('vacunaciones', idVacunacionEdicion.value, payload);
+      } else {
+        await patchAllIpress(`/vacunaciones/${idVacunacionEdicion.value}/`, payload);
+      }
       emit('guardado');
       return;
     }

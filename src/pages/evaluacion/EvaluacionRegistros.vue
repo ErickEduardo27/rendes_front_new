@@ -54,7 +54,11 @@
         <div v-else-if="cargandoVistaActual" class="p-12 text-center text-slate-500">Cargando...</div>
 
         <template v-else>
-        <template v-if="modulo !== 'resumen_notif'">
+        <div v-if="modulo === 'pacientes'" class="p-4">
+          <TablaPacientesAtencion />
+        </div>
+
+        <template v-else-if="esModuloRegistros">
         <div
           v-if="mostrarBannerAbrir"
           class="px-4 py-3 border-b border-amber-100 bg-amber-50/90 flex flex-wrap items-center justify-between gap-3"
@@ -88,12 +92,8 @@
             {{ cerrandoFormulario ? 'Cerrando…' : 'Cerrar formulario' }}
           </button>
         </div>
-        </template>
 
-        <div
-          v-if="modulo !== 'resumen_notif' && filtroContenidoListo && !cargandoVistaActual"
-          class="px-4 pt-4 pb-3 border-b border-slate-100"
-        >
+        <div class="px-4 pt-4 pb-3 border-b border-slate-100">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
               <h3 class="text-sm font-semibold text-slate-800">Registros de pacientes — {{ etiquetaModuloActual }}</h3>
@@ -139,7 +139,7 @@
         </div>
 
         <!-- Tabla unificada formularios 1–5 -->
-        <div v-if="esModuloRegistros" class="p-3">
+        <div class="p-3">
           <div v-if="listaMostradaFiltrada.length === 0" class="py-10 text-center text-slate-500 text-[11px]">
             No hay registros con el filtro actual.
           </div>
@@ -191,8 +191,7 @@
                       <div class="flex flex-wrap gap-1">
                         <button
                           type="button"
-                          class="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40"
-                          :disabled="guardandoEdicion === claveFila(modulo, idFilaRegistro(r))"
+                          class="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold"
                           @click="abrirModalEditar(modulo, r)"
                         >Editar</button>
                         <button
@@ -211,6 +210,7 @@
             <TablaPaginacion v-model:page="paginaRegistros" v-model:page-size="pageSizeTablas" :total="listaMostradaFiltrada.length" />
           </template>
         </div>
+        </template>
 
         <!-- Resumen: notificación envío a revisión por IPRESS (periodo + modalidad del selector) -->
         <div v-else-if="modulo === 'resumen_notif'" class="overflow-x-auto">
@@ -225,7 +225,32 @@
                 La acción <strong>Pasar pacientes al periodo siguiente</strong> solo se habilita cuando la clínica ha usado <strong>Notificar</strong>, todos los formularios con datos están <strong>cerrados</strong> y no se está consultando el estado ni ejecutando el traslado.
               </p>
             </div>
+            <div v-if="listaIpressNotificaciones.length" class="px-4 py-3 border-b border-slate-100 flex flex-wrap gap-3">
+              <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-medium text-slate-600 mb-1">Buscar por nombre</label>
+                <input
+                  v-model="filtroResumenNombre"
+                  type="text"
+                  placeholder="IPRESS o nombre corto…"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div class="min-w-[160px]">
+                <label class="block text-xs font-medium text-slate-600 mb-1">Estado notificado</label>
+                <select
+                  v-model="filtroResumenNotificado"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white"
+                >
+                  <option value="">Todos</option>
+                  <option value="si">Sí — notificó</option>
+                  <option value="no">No — sin notificar</option>
+                </select>
+              </div>
+            </div>
             <div v-if="listaIpressNotificaciones.length === 0" class="p-12 text-center text-slate-500 italic">No hay IPRESS registradas.</div>
+            <div v-else-if="listaIpressNotificacionesFiltrada.length === 0" class="p-12 text-center text-slate-500 italic">
+              No hay IPRESS con el filtro actual.
+            </div>
             <template v-else>
             <table class="min-w-full divide-y divide-slate-200">
               <thead class="bg-slate-50">
@@ -276,7 +301,7 @@
                 </tr>
               </tbody>
             </table>
-            <TablaPaginacion v-model:page="paginaResumen" v-model:page-size="pageSizeResumen" :total="listaIpressNotificaciones.length" />
+            <TablaPaginacion v-model:page="paginaResumen" v-model:page-size="pageSizeResumen" :total="listaIpressNotificacionesFiltrada.length" />
             </template>
           </template>
         </div>
@@ -284,47 +309,77 @@
       </div>
 
       <div
-        v-if="modalEditarAbierto"
+        v-if="mostrarModalFormulario"
         class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4"
-        @click.self="cerrarModalEditar"
+        @click.self="cerrarModalFormulario"
       >
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-200">
-          <div class="px-5 py-4 border-b border-slate-200 flex justify-between items-center bg-violet-50">
-            <h3 class="font-bold text-slate-800">Editar registro (supervisor)</h3>
-            <button type="button" class="text-slate-500 hover:text-slate-800 text-lg leading-none" aria-label="Cerrar" @click="cerrarModalEditar">✕</button>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-200">
+          <div class="bg-violet-600 px-6 py-4 flex justify-between items-center shrink-0">
+            <h3 class="font-bold text-white">{{ tituloModalFormulario }}</h3>
+            <button type="button" class="text-white/80 hover:text-white text-lg leading-none" aria-label="Cerrar" @click="cerrarModalFormulario">✕</button>
           </div>
-          <div class="p-5 overflow-y-auto flex-1 space-y-3">
-            <div v-for="campo in camposEdicionActuales" :key="campo.key" class="space-y-1">
-              <label class="text-xs font-semibold text-slate-600">{{ campo.label }}</label>
-              <input
-                v-if="campo.type !== 'bool'"
-                v-model="formEdicion[campo.key]"
-                type="text"
-                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-              />
-              <label v-else class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-                <input v-model="formEdicion[campo.key]" type="checkbox" class="rounded border-slate-300 text-violet-600" />
-                Activo / Sí
-              </label>
-            </div>
-            <div class="space-y-1 pt-2 border-t border-slate-100">
-              <label class="text-xs font-semibold text-slate-600">Comentario para la clínica</label>
-              <textarea
-                v-model="formEdicion.comentario_evaluacion"
-                rows="3"
-                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                placeholder="Observaciones visibles en la vista de registros de la clínica…"
-              />
-            </div>
-          </div>
-          <div class="px-5 py-3 border-t border-slate-200 flex justify-end gap-2 bg-slate-50">
-            <button type="button" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalEditar">Cancelar</button>
-            <button
-              type="button"
-              class="px-4 py-2 text-sm font-semibold text-white bg-violet-600 rounded-lg hover:bg-violet-700 disabled:opacity-50"
-              :disabled="!!guardandoEdicion"
-              @click="guardarEdicion"
-            >{{ guardandoEdicion ? 'Guardando…' : 'Guardar cambios' }}</button>
+          <div class="p-4 overflow-y-auto flex-1">
+            <Form2Hemodialisis
+              v-if="moduloFormulario === 'acceso'"
+              :key="`acceso-${formModalKey}`"
+              :paciente="pacienteParaFormulario"
+              :periodo="periodoNumeroForm"
+              :periodo-ipress="idPeriodoIpressForm || 0"
+              :id-paciente-atencion="idPacienteAtencionParaForm"
+              :registro-edicion="registroEdicion"
+              modo-supervisor
+              @cancelar="cerrarModalFormulario"
+              @guardado="onGuardadoFormulario"
+            />
+            <Form3Hemodialisis
+              v-else-if="moduloFormulario === 'eventos'"
+              :key="`eventos-${formModalKey}`"
+              :paciente="pacienteParaFormulario"
+              :id-paciente-atencion="idPacienteAtencionParaForm"
+              :registro-edicion="registroEdicion"
+              modo-supervisor
+              @cancelar="cerrarModalFormulario"
+              @guardado="onGuardadoFormulario"
+            />
+            <Form4
+              v-else-if="moduloFormulario === 'morbilidad'"
+              :key="`morbilidad-${formModalKey}`"
+              :paciente="pacienteParaFormulario"
+              :periodo="periodoNumeroForm"
+              :id-paciente-atencion="idPacienteAtencionParaForm"
+              :registro-edicion="registroEdicion"
+              modo-supervisor
+              @cancelar="cerrarModalFormulario"
+              @guardado="onGuardadoFormulario"
+            />
+            <Form5
+              v-else-if="moduloFormulario === 'resultados'"
+              :key="`resultados-${formModalKey}`"
+              :paciente="pacienteParaFormulario"
+              :periodo="periodoNumeroForm"
+              :id-paciente-atencion="idPacienteAtencionParaForm"
+              :registro-edicion="registroEdicion"
+              :clinica-nombre="clinicaActualTexto"
+              :periodo-label="periodoActualTexto"
+              modo-supervisor
+              @cancelar="cerrarModalFormulario"
+              @guardado="onGuardadoFormulario"
+            />
+            <Form7
+              v-else-if="moduloFormulario === 'vacunacion'"
+              :key="`vacunacion-${formModalKey}`"
+              :paciente="pacienteParaFormulario"
+              :periodo="periodoNumeroForm"
+              :id-periodo-ipress="idPeriodoIpressForm"
+              :id-red="1"
+              :id-paciente-atencion="idPacienteAtencionParaForm"
+              :registro-edicion="registroEdicion"
+              :clinica-nombre="clinicaActualTexto"
+              :periodo-label="periodoActualTexto"
+              modo-supervisor
+              @cancelar="cerrarModalFormulario"
+              @guardado="onGuardadoFormulario"
+            />
           </div>
         </div>
       </div>
@@ -334,9 +389,15 @@
 
 <script setup>
 import { ref, computed, watch, inject, onMounted, onUnmounted } from 'vue';
-import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
+import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
+import TablaPacientesAtencion from '@/components/pacientes/TablaPacientesAtencion.vue';
+import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
+import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue';
+import Form4 from '@/components/forms/Form4.vue';
+import Form5 from '@/components/forms/Form5.vue';
+import Form7 from '@/components/forms/Form7.vue';
 import {
   claseFilaAccesoAntiguo,
   esAccesoVascularAntiguo,
@@ -349,6 +410,7 @@ const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
 
 const tabs = [
+  { key: 'pacientes', label: 'Pacientes' },
   { key: 'acceso', label: 'Acceso Vascular' },
   { key: 'eventos', label: 'Eventos Infecciosos' },
   { key: 'morbilidad', label: 'Morbilidad Hospitalaria' },
@@ -357,7 +419,7 @@ const tabs = [
   { key: 'resumen_notif', label: 'Notificación clínicas' },
 ];
 
-const modulo = ref('acceso');
+const modulo = ref('pacientes');
 const cargando = ref(false);
 const cargandoResumenNotif = ref(false);
 const listaIpressNotificaciones = ref([]);
@@ -387,6 +449,8 @@ const paginaResumen = ref(1);
 const pageSizeResumen = ref(15);
 const filtroListadoNombre = ref('');
 const filtroListadoDocumento = ref('');
+const filtroResumenNombre = ref('');
+const filtroResumenNotificado = ref('');
 
 /** Aviso cuando la clínica usó «Notificar» en los módulos de registros. */
 const notificacionClinica = ref({
@@ -578,11 +642,104 @@ async function confirmarPasarPacientesSiguientePeriodo(row) {
   }
 }
 
-const modalEditarAbierto = ref(false);
-const moduloEdicion = ref('acceso');
-const filaEdicion = ref(null);
-const formEdicion = ref({});
-const guardandoEdicion = ref(null);
+const mostrarModalFormulario = ref(false);
+const moduloFormulario = ref('acceso');
+const registroEdicion = ref(null);
+const pacienteParaFormulario = ref(null);
+const idPacienteAtencionParaForm = ref(null);
+const idPeriodoIpressForm = ref(null);
+const formModalKey = ref(0);
+const periodosLista = ref([]);
+const ipressLista = ref([]);
+
+const periodoNumeroForm = computed(() => {
+  const v = periodoGlobal.value;
+  if (v == null || v === '') return 0;
+  return Number(v);
+});
+
+const periodoActualTexto = computed(() => {
+  const id = periodoGlobal.value;
+  if (id == null) return '';
+  const item = periodosLista.value.find((p) => String(p.id_periodo) === String(id));
+  return item?.periodo || '';
+});
+
+const clinicaActualTexto = computed(() => {
+  const id = clinicaGlobal.value;
+  if (id == null) return '';
+  const item = ipressLista.value.find((i) => String(i.id_ipress) === String(id));
+  return item?.nombre_corto || item?.ipress || '';
+});
+
+const tituloModalFormulario = computed(() => {
+  const labels = {
+    acceso: 'Editar acceso vascular',
+    eventos: 'Editar evento infeccioso',
+    morbilidad: 'Editar morbilidad hospitalaria',
+    resultados: 'Editar resultados clínicos',
+    vacunacion: 'Editar vacunación',
+  };
+  return labels[moduloFormulario.value] || 'Editar registro';
+});
+
+function pacienteDesdeRegistro(registro) {
+  return registro?.datosPacienteAtencion?.datosPaciente
+    || registro?.datosPaciente
+    || null;
+}
+
+function idAtencionDesdeRegistro(registro) {
+  return registro?.id_paciente_atencion
+    ?? registro?.datosPacienteAtencion?.id_paciente_atencion
+    ?? null;
+}
+
+async function resolverIdPeriodoIpressForm() {
+  if (!periodoGlobal.value || !clinicaGlobal.value) {
+    idPeriodoIpressForm.value = null;
+    return;
+  }
+  try {
+    const resp = await postAllIpress('/consulta_periodo_ipress/', {
+      id_periodo: Number(periodoGlobal.value),
+      id_ipress: Number(clinicaGlobal.value),
+      id_estado: 1,
+    });
+    const lista = Array.isArray(resp) ? resp : [];
+    idPeriodoIpressForm.value = lista.length ? lista[0].id_periodo_ipress : null;
+  } catch {
+    idPeriodoIpressForm.value = null;
+  }
+}
+
+async function abrirModalEditar(mod, row) {
+  const paciente = pacienteDesdeRegistro(row);
+  const idAtencion = idAtencionDesdeRegistro(row);
+  if (!paciente || idAtencion == null) {
+    ElMessage.error('No se pudo cargar el paciente del registro.');
+    return;
+  }
+  moduloFormulario.value = mod;
+  registroEdicion.value = row;
+  pacienteParaFormulario.value = paciente;
+  idPacienteAtencionParaForm.value = idAtencion;
+  formModalKey.value += 1;
+  await resolverIdPeriodoIpressForm();
+  mostrarModalFormulario.value = true;
+}
+
+function cerrarModalFormulario() {
+  mostrarModalFormulario.value = false;
+  registroEdicion.value = null;
+  pacienteParaFormulario.value = null;
+  idPacienteAtencionParaForm.value = null;
+}
+
+async function onGuardadoFormulario() {
+  cerrarModalFormulario();
+  await cargarModuloActual();
+}
 
 const CAMPOS_EDICION = {
   acceso: [
@@ -639,8 +796,6 @@ const CAMPOS_EDICION = {
     { key: 'fecha_neumococo', label: 'Fecha neumococo' },
   ],
 };
-
-const camposEdicionActuales = computed(() => CAMPOS_EDICION[moduloEdicion.value] || []);
 
 const MODULOS_REGISTROS = ['acceso', 'eventos', 'morbilidad', 'resultados', 'vacunacion'];
 
@@ -742,7 +897,9 @@ const filtroContenidoListo = computed(() => {
 });
 
 const cargandoVistaActual = computed(() => {
-  return modulo.value === 'resumen_notif' ? cargandoResumenNotif.value : cargando.value;
+  if (modulo.value === 'resumen_notif') return cargandoResumenNotif.value;
+  if (modulo.value === 'pacientes') return false;
+  return cargando.value;
 });
 
 function buildQs() {
@@ -772,61 +929,6 @@ function comentarioCorto(text, max = 56) {
   const s = String(text || '').trim();
   if (!s) return '—';
   return s.length <= max ? s : `${s.slice(0, max)}…`;
-}
-
-function valorBoolModelo(v) {
-  return v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true';
-}
-
-function abrirModalEditar(mod, row) {
-  moduloEdicion.value = mod;
-  filaEdicion.value = row;
-  const cfg = ENDPOINTS[mod];
-  const fields = CAMPOS_EDICION[mod] || [];
-  const o = { comentario_evaluacion: row.comentario_evaluacion || '' };
-  for (const f of fields) {
-    const raw = row[f.key];
-    o[f.key] = f.type === 'bool' ? valorBoolModelo(raw) : (raw ?? '');
-  }
-  formEdicion.value = o;
-  modalEditarAbierto.value = true;
-}
-
-function cerrarModalEditar() {
-  modalEditarAbierto.value = false;
-  filaEdicion.value = null;
-  guardandoEdicion.value = null;
-}
-
-async function guardarEdicion() {
-  const mod = moduloEdicion.value;
-  const row = filaEdicion.value;
-  const cfg = ENDPOINTS[mod];
-  if (!row || !cfg) return;
-  const id = row[cfg.idKey];
-  if (id == null) return;
-  const key = claveFila(mod, id);
-  guardandoEdicion.value = key;
-  const fields = CAMPOS_EDICION[mod] || [];
-  const payload = { comentario_evaluacion: formEdicion.value.comentario_evaluacion ?? '' };
-  for (const f of fields) {
-    if (f.type === 'bool') {
-      payload[f.key] = !!formEdicion.value[f.key];
-    } else {
-      payload[f.key] = formEdicion.value[f.key];
-    }
-  }
-  try {
-    await patchAllIpress(`/${cfg.path}/${id}/edicion-supervisor/`, payload);
-    ElMessage.success('Cambios guardados.');
-    cerrarModalEditar();
-    await cargarModuloActual();
-  } catch (e) {
-    console.error(e);
-    ElMessage.error(e?.detail || e?.error || 'No se pudo guardar la edición.');
-  } finally {
-    guardandoEdicion.value = null;
-  }
 }
 
 function claveFila(mod, id) {
@@ -917,8 +1019,21 @@ const listaMostradaPaginada = computed(() => {
   return all.slice(start, start + size);
 });
 
+const listaIpressNotificacionesFiltrada = computed(() => {
+  const nombre = filtroResumenNombre.value.trim().toLowerCase();
+  const estado = filtroResumenNotificado.value;
+  return listaIpressNotificaciones.value.filter((row) => {
+    if (estado === 'si' && !row.notificado) return false;
+    if (estado === 'no' && row.notificado) return false;
+    if (!nombre) return true;
+    const ipress = String(row.ipress || '').toLowerCase();
+    const corto = String(row.nombre_corto || '').toLowerCase();
+    return ipress.includes(nombre) || corto.includes(nombre);
+  });
+});
+
 const listaIpressPaginada = computed(() => {
-  const all = listaIpressNotificaciones.value;
+  const all = listaIpressNotificacionesFiltrada.value;
   const size = pageSizeResumen.value;
   const start = (paginaResumen.value - 1) * size;
   return all.slice(start, start + size);
@@ -932,7 +1047,7 @@ function clampPaginaRegistros() {
 }
 
 function clampPaginaResumen() {
-  const total = listaIpressNotificaciones.value.length;
+  const total = listaIpressNotificacionesFiltrada.value.length;
   const size = pageSizeResumen.value;
   const maxP = Math.max(1, Math.ceil(total / size) || 1);
   if (paginaResumen.value > maxP) paginaResumen.value = maxP;
@@ -943,8 +1058,11 @@ watch(pageSizeTablas, clampPaginaRegistros);
 watch([filtroListadoNombre, filtroListadoDocumento], () => {
   paginaRegistros.value = 1;
 });
-watch(listaIpressNotificaciones, clampPaginaResumen, { deep: true });
+watch(listaIpressNotificacionesFiltrada, clampPaginaResumen, { deep: true });
 watch(pageSizeResumen, clampPaginaResumen);
+watch([filtroResumenNombre, filtroResumenNotificado], () => {
+  paginaResumen.value = 1;
+});
 
 const etiquetaModuloActual = computed(() => {
   const t = tabs.find((x) => x.key === modulo.value);
@@ -974,7 +1092,7 @@ function mostrarBotonAprobar(estado) {
 }
 
 async function fetchEstadoFormularioActual() {
-  if (!filtroListo.value) {
+  if (!filtroListo.value || !esModuloRegistros.value) {
     formularioEstaAbierto.value = null;
     return;
   }
@@ -1061,7 +1179,7 @@ async function confirmarCerrarFormulario() {
 }
 
 async function cargarModuloActual() {
-  if (!filtroListo.value) {
+  if (!filtroListo.value || !esModuloRegistros.value) {
     listaAcceso.value = [];
     listaEventos.value = [];
     listaMorbilidad.value = [];
@@ -1119,7 +1237,7 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   paginaResumen.value = 1;
   if (modulo.value === 'resumen_notif') {
     fetchListaNotificacionesClinicas();
-  } else {
+  } else if (modulo.value !== 'pacientes') {
     cargarModuloActual();
     fetchEstadoFormularioActual();
     fetchNotificacionEnvioRevision();
@@ -1128,20 +1246,30 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
 watch(modulo, () => {
   filtroListadoNombre.value = '';
   filtroListadoDocumento.value = '';
+  filtroResumenNombre.value = '';
+  filtroResumenNotificado.value = '';
   paginaRegistros.value = 1;
   paginaResumen.value = 1;
   if (modulo.value === 'resumen_notif') {
     fetchListaNotificacionesClinicas();
-  } else {
+  } else if (modulo.value !== 'pacientes') {
     cargarModuloActual();
     fetchEstadoFormularioActual();
   }
 });
 
 onMounted(() => {
-  cargarModuloActual();
-  fetchEstadoFormularioActual();
+  if (esModuloRegistros.value) {
+    cargarModuloActual();
+    fetchEstadoFormularioActual();
+  }
   fetchNotificacionEnvioRevision();
+  getAllIpress('/periodos/').then((res) => {
+    periodosLista.value = Array.isArray(res) ? res : (res?.results || []);
+  }).catch(() => { periodosLista.value = []; });
+  getAllIpress('/ipress/').then((res) => {
+    ipressLista.value = Array.isArray(res) ? res : (res?.results || []);
+  }).catch(() => { ipressLista.value = []; });
   window.addEventListener('notificacion-revision:actualizar', onNotificacionRevisionEvent);
 });
 

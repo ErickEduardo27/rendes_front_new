@@ -143,6 +143,7 @@
             </div>
           </div>
 
+          <ComentarioSupervisorEvaluacion v-if="modoSupervisor" v-model="comentarioSupervisor" />
           <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
             <button
               type="button"
@@ -297,6 +298,8 @@
 import { ref, computed, watch, onMounted, inject } from 'vue'
 import { ChartBarIcon } from '@heroicons/vue/24/outline'
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
+import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
+import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
 
 const props = defineProps({
   paciente: { type: Object, required: true },
@@ -306,11 +309,14 @@ const props = defineProps({
   clinicaNombre: { type: String, default: '' },
   periodoLabel: { type: String, default: '' },
   modalidadNombre: { type: String, default: '' },
+  modoSupervisor: { type: Boolean, default: false },
 })
 
 const { paciente, periodo, idPacienteAtencion } = props
 
 const emit = defineEmits(['cancelar', 'guardado'])
+
+const { comentarioSupervisor, guardarComoSupervisor } = useEdicionSupervisor(props);
 
 const periodoGlobal = inject('periodoGlobal', ref(null))
 const clinicaGlobal = inject('clinicaGlobal', ref(null))
@@ -815,7 +821,11 @@ const postForm = async () => {
         calcitriol: form.value.hiperparatiroidismo === 1 || form.value.hiperparatiroidismo === '1'
       }
       if (idResultadoEdicion.value != null) {
-        await patchAllIpress(`/resultadosClinicos/${idResultadoEdicion.value}/`, payload)
+        if (props.modoSupervisor) {
+          await guardarComoSupervisor('resultadosClinicos', idResultadoEdicion.value, payload)
+        } else {
+          await patchAllIpress(`/resultadosClinicos/${idResultadoEdicion.value}/`, payload)
+        }
         emit('guardado')
         return
       }

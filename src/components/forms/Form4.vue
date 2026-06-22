@@ -78,6 +78,7 @@
                     </div>
                 </div>
 
+                <ComentarioSupervisorEvaluacion v-if="modoSupervisor" v-model="comentarioSupervisor" />
                 <div class="flex justify-end gap-3 mt-4">
                     <button @click="$emit('cancelar')" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
                         Cancelar
@@ -96,6 +97,8 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
+import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
+import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
 
 // 👇 defineProps debe estar fuera de cualquier función
 const props = defineProps({
@@ -114,12 +117,15 @@ const props = defineProps({
     registroEdicion: {
         type: Object,
         default: null
-    }
+    },
+    modoSupervisor: { type: Boolean, default: false },
 })
 
 const { paciente, periodo, idPacienteAtencion } = props
 
 const emit = defineEmits(['cancelar', 'guardado'])
+
+const { comentarioSupervisor, guardarComoSupervisor } = useEdicionSupervisor(props);
 
 const pacienteSeleccionado = paciente
 const periodoSeleccionado = periodo
@@ -1207,7 +1213,11 @@ const postForm = async (url = null) => {
                 fuente: form.value.fuente || ''
             };
             if (idMorbilidadEdicion.value != null) {
-                await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadEdicion.value}/`, payload);
+                if (props.modoSupervisor) {
+                    await guardarComoSupervisor('morbilidadesHospitalarias', idMorbilidadEdicion.value, payload);
+                } else {
+                    await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadEdicion.value}/`, payload);
+                }
                 emit('guardado');
                 return;
             }
