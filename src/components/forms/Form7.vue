@@ -613,26 +613,31 @@ const form = reactive({
   fechaNeumococo: null,
 })
 
+function campoTextoOpcional(val) {
+  if (val == null) return '';
+  return String(val);
+}
+
 function buildPayload() {
   const payload = {
     id_paciente_atencion: props.idPacienteAtencion,
-    vhbEstado: form.vhbEstado,
-    vhbFecha: form.vhbFecha,
-    antiHbcEstado: form.antiHbcEstado,
-    antiHbcFecha: form.antiHbcFecha,
-    vhcEstado: form.vhcEstado,
-    vhcFecha: form.vhcFecha,
-    vihEstado: form.vihEstado,
-    vihFecha: form.vihFecha,
+    vhbEstado: campoTextoOpcional(form.vhbEstado),
+    vhbFecha: campoTextoOpcional(form.vhbFecha),
+    antiHbcEstado: campoTextoOpcional(form.antiHbcEstado),
+    antiHbcFecha: campoTextoOpcional(form.antiHbcFecha),
+    vhcEstado: campoTextoOpcional(form.vhcEstado),
+    vhcFecha: campoTextoOpcional(form.vhcFecha),
+    vihEstado: campoTextoOpcional(form.vihEstado),
+    vihFecha: campoTextoOpcional(form.vihFecha),
     vacunaHepatitis: form.vacunaHepatitis != null && form.vacunaHepatitis !== '' ? String(form.vacunaHepatitis) : '',
-    estadoAcHBs: form.estadoAcHBs,
-    fechaVacHepatitis: form.fechaVacHepatitis,
-    dosisHepatitisB: form.dosisHepatitisB,
-    fechaHepatitisB: form.fechaHepatitisB,
-    dosisCovid: form.dosisCovid,
-    fechaCovid: form.fechaCovid,
-    fechaInfluenza: form.fechaInfluenza,
-    fechaNeumococo: form.fechaNeumococo,
+    estadoAcHBs: campoTextoOpcional(form.estadoAcHBs),
+    fechaVacHepatitis: campoTextoOpcional(form.fechaVacHepatitis),
+    dosisHepatitisB: campoTextoOpcional(form.dosisHepatitisB),
+    fechaHepatitisB: campoTextoOpcional(form.fechaHepatitisB),
+    dosisCovid: campoTextoOpcional(form.dosisCovid),
+    fechaCovid: campoTextoOpcional(form.fechaCovid),
+    fechaInfluenza: campoTextoOpcional(form.fechaInfluenza),
+    fechaNeumococo: campoTextoOpcional(form.fechaNeumococo),
   }
   return payload
 }
@@ -687,9 +692,8 @@ const validarCampos = () => {
   if (!esEstadoDesconocido(form.vhbEstado)) camposRequeridos.push('vhbFecha')
   if (!esEstadoDesconocido(form.antiHbcEstado)) camposRequeridos.push('antiHbcFecha')
   if (!esEstadoDesconocido(form.vhcEstado)) camposRequeridos.push('vhcFecha')
-  if (!esEstadoDesconocido(form.vihEstado)) camposRequeridos.push('vihFecha')
   if (!esEstadoDesconocido(form.estadoAcHBs)) {
-    camposRequeridos.push('vacunaHepatitis', 'fechaVacHepatitis')
+    camposRequeridos.push('vacunaHepatitis')
   }
 
   for (const campo of camposRequeridos) {

@@ -391,7 +391,7 @@
           <p class="text-sm text-slate-600">
             Cargue el Excel completado. La importación valida rangos clínicos, valores numéricos (sin letras), el DNI del paciente según el filtro actual y el
             <strong>tiempo de diálisis</strong> en <strong>horas o fracción de hora</strong>, usando incrementos de <strong>0,25</strong>
-            (ej.: 1, 1,25, 1,5, 1,75, 2, 2,25…) entre <strong>0,25</strong> y <strong>8</strong>.
+            (ej.: 1, 1,25, 1,5, 1,75, 2, 2,25…).
             Eritropoyetina, hierro y calcitriol: <strong>Sí</strong> o <strong>No</strong> (deje vacío si no aplica).
           </p>
           <div>

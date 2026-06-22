@@ -38,8 +38,9 @@
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. 1er ingreso</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">T. doc.</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Documento</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap min-w-[140px]">Paciente</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. nac.</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap min-w-[140px]">Paciente</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Condición</th>
+              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. nac.</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Sexo</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Grado</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Mod. TRR</th>
@@ -70,7 +71,13 @@
                 v-if="row.sin_registro_dialisis"
                 class="ml-1 inline text-[10px] font-semibold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded align-middle"
                 title="Tiene atención en el periodo pero aún no tiene ficha en diálisis"
-              >Sin ficha diálisis</span>
+              >Sin ficha diálisis              </span>
+            </td>
+            <td class="px-2 py-2 whitespace-nowrap">
+              <span
+                class="inline-flex text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded"
+                :class="claseCondicionPaciente(row)"
+              >{{ condicionPacienteTexto(row) }}</span>
             </td>
             <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.datosPaciente?.fecha_nacimiento) }}</td>
             <td class="px-2 py-2 whitespace-nowrap">{{ generoTexto(row.datosPaciente?.genero) }}</td>
@@ -100,7 +107,7 @@
             </td>
           </tr>
           <tr v-if="!pacientes.length">
-            <td :colspan="mostrarAcciones ? 18 : 17" class="px-3 py-8 text-center text-gray-500">
+            <td :colspan="mostrarAcciones ? 19 : 18" class="px-3 py-8 text-center text-gray-500">
               No hay pacientes con atención en esta clínica y periodo
               <span v-if="filtroNombre.trim() || filtroDni.trim()"> (pruebe otro filtro)</span>.
             </td>
@@ -329,6 +336,26 @@ function etiologiaTexto(row) {
   if (!e) return '—';
   const partes = [e.general, e.especifica || e.codigo].filter((x) => x != null && String(x).trim() !== '');
   return partes.length ? partes.join(' — ') : '—';
+}
+
+function condicionPacienteTexto(row) {
+  const estado = String(row?.estado_atencion || row?.estado || '').trim().toUpperCase();
+  const tipo = String(row?.tipo_atencion || '').trim().toUpperCase();
+  if (estado === 'EGRESADO') return 'Egresado';
+  if (tipo.includes('REINGRESO')) return 'Reingresado';
+  if (tipo === 'NUEVO') return 'Nuevo';
+  if (tipo === 'CONTINUADOR') return 'Continuador';
+  if (tipo) return tipo.charAt(0) + tipo.slice(1).toLowerCase();
+  return '—';
+}
+
+function claseCondicionPaciente(row) {
+  const texto = condicionPacienteTexto(row).toUpperCase();
+  if (texto === 'EGRESADO') return 'bg-slate-200 text-slate-700';
+  if (texto === 'REINGRESADO') return 'bg-amber-100 text-amber-800';
+  if (texto === 'NUEVO') return 'bg-violet-100 text-violet-800';
+  if (texto === 'CONTINUADOR') return 'bg-sky-100 text-sky-800';
+  return 'bg-slate-100 text-slate-600';
 }
 
 async function resolverContextoClinica() {

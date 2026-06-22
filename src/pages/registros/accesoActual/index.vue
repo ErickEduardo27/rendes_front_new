@@ -69,7 +69,7 @@
         <div v-if="cargando" class="p-12 text-center text-slate-500">Cargando...</div>
         <template v-else-if="vistaActiva === 'registros'">
           <div v-if="registros.length === 0" class="p-12 text-center text-slate-500 italic">
-            No hay registros de acceso vascular para el periodo, IPRESS y modalidad seleccionados.
+            No hay registros históricos de acceso vascular para los pacientes del periodo, IPRESS y modalidad seleccionados.
           </div>
           <div v-else class="p-4 space-y-4">
             <div class="flex flex-wrap gap-3">
@@ -96,6 +96,9 @@
               No hay resultados con el filtro actual<span v-if="filtroRegistrosNombre.trim() || filtroRegistrosDni.trim()">; pruebe otro nombre o documento</span>.
             </div>
             <template v-else>
+              <p class="text-[10px] text-slate-600 mb-2">
+                Se muestra el último registro de acceso vascular por paciente (cualquier periodo).
+              </p>
               <p class="text-[10px] text-amber-800 mb-2">
                 Filas en ámbar: acceso temporal (CVCT) o con más de 90 días desde su creación.
               </p>
@@ -193,6 +196,9 @@
             No hay pacientes en el periodo, IPRESS y modalidad seleccionados.
           </div>
           <div v-else class="p-4 space-y-4">
+            <p class="text-[10px] text-slate-600 mb-2">
+              Sin historial de acceso vascular: se muestra la ficha de diálisis. Con historial: el último registro (cualquier periodo).
+            </p>
             <div class="overflow-x-auto border border-slate-200 rounded-lg">
               <table class="tabla-av divide-y divide-slate-200">
                 <thead class="bg-slate-50">
@@ -215,10 +221,11 @@
                     :key="fila.id_paciente_atencion"
                     class="hover:bg-slate-50 transition-colors"
                     :class="[
-                      { 'bg-amber-50/50': !fila.tieneRegistro },
+                      { 'bg-amber-50/50': !fila.tieneRegistro && !fila.desdeFichaDialisis },
+                      { 'bg-sky-50/40': fila.desdeFichaDialisis },
                       fila.tieneRegistro ? claseFilaAccesoRegistro(fila.registro || fila) : '',
                     ]"
-                    :title="fila.tieneRegistro ? motivoAccesoAntiguo(fila.registro || fila) : ''"
+                    :title="fila.tieneRegistro ? motivoAccesoAntiguo(fila.registro || fila) : (fila.desdeFichaDialisis ? 'Datos tomados de la ficha de diálisis del paciente' : '')"
                   >
                     <td class="tabla-av-td font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.documento || '—' }}</td>
@@ -577,7 +584,7 @@ import { useRoute, useRouter } from 'vue-router';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
-import { prepararPayloadUnidadesActuales } from '@/utils/unidadesActualesPayload';
+import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
 import { ElMessage } from 'element-plus';
 import {
@@ -596,6 +603,7 @@ const HISTORIAL_CARGAS_KEY = 'acceso_vascular_historial_cargas';
 const NUMERO_FORMULARIO_ACCESO_VASCULAR = 1;
 
 const registros = ref([]);
+const dialisisPorPaciente = ref({});
 const cargando = ref(false);
 const mostrarModalNuevo = ref(false);
 const registroEdicion = ref(null);
@@ -719,6 +727,7 @@ function estadoAprobacionClase(estado) {
   if (valor === 'APROBADO') return 'bg-emerald-100 text-emerald-700';
   if (valor === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
   if (valor === 'SIN REGISTRO') return 'bg-slate-100 text-slate-500';
+  if (valor === 'DESDE FICHA') return 'bg-sky-100 text-sky-800';
   return 'bg-amber-100 text-amber-700';
 }
 
@@ -732,6 +741,95 @@ function idAtencionDesdeRegistro(registro) {
   return registro?.id_paciente_atencion
     ?? registro?.datosPacienteAtencion?.id_paciente_atencion
     ?? null;
+}
+
+function idPacienteDesdeRegistro(registro) {
+  return registro?.datosPacienteAtencion?.id_paciente
+    ?? registro?.datosPaciente?.id_paciente
+    ?? null;
+}
+
+function idIpressDesdeRegistro(registro) {
+  const at = registro?.datosPacienteAtencion;
+  return at?.id_ipress ?? at?.datosIpress?.id_ipress ?? null;
+}
+
+function textoTipoAcceso(valor) {
+  if (valor == null || String(valor).trim() === '') return '';
+  const texto = String(valor).trim();
+  return tipoAccesoDesdeDb(texto) || texto;
+}
+
+function construirUltimoAccesoPorPaciente(regs) {
+  const map = {};
+  (Array.isArray(regs) ? regs : []).forEach((r) => {
+    const pid = idPacienteDesdeRegistro(r);
+    if (pid == null) return;
+    const key = String(pid);
+    if (map[key] == null) map[key] = r;
+  });
+  return map;
+}
+
+function tieneDatosAccesoDialisis(dialisis) {
+  if (!dialisis) return false;
+  return !!(
+    String(dialisis.tipo_acceso || '').trim()
+    || String(dialisis.localizacion_acceso_inicio || '').trim()
+    || String(dialisis.fecha_creacion_acceso || '').trim()
+  );
+}
+
+function camposDesdeUnidad(r) {
+  return {
+    tipo_acceso: r.tipo_acceso || r.tipo_acceso_actual || '',
+    localizacion_acceso: r.localizacion_acceso || r.localizacion_acceso_actual || '',
+    fecha_creacion_acceso: r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
+    motivo_cambio: r.motivo_cambio || '',
+  };
+}
+
+function camposDesdeDialisis(dialisis) {
+  return {
+    tipo_acceso: textoTipoAcceso(dialisis.tipo_acceso),
+    localizacion_acceso: dialisis.localizacion_acceso_inicio || '',
+    fecha_creacion_acceso: dialisis.fecha_creacion_acceso || '',
+    motivo_cambio: '',
+  };
+}
+
+function filaDesdeUnidadHistorica(a, r) {
+  const paciente = a.datosPaciente?.paciente ?? nombrePaciente(r);
+  const documento = a.datosPaciente?.documento ?? documentoPaciente(r);
+  const campos = camposDesdeUnidad(r);
+  return {
+    id_paciente_atencion: a.id_paciente_atencion,
+    id_unidad_actual: r.id_unidad_actual,
+    tieneRegistro: true,
+    desdeFichaDialisis: false,
+    registro: r,
+    paciente,
+    documento,
+    ...campos,
+    estado_aprobacion: r.estado_aprobacion || 'PENDIENTE',
+    supervisor_edito_registro: !!r.supervisor_edito_registro,
+    comentario_evaluacion: r.comentario_evaluacion || '',
+  };
+}
+
+function filaDesdeFichaDialisis(a, dialisis) {
+  const campos = camposDesdeDialisis(dialisis);
+  return {
+    id_paciente_atencion: a.id_paciente_atencion,
+    tieneRegistro: false,
+    desdeFichaDialisis: true,
+    paciente: a.datosPaciente?.paciente ?? '—',
+    documento: a.datosPaciente?.documento ?? '—',
+    ...campos,
+    estado_aprobacion: 'DESDE FICHA',
+    supervisor_edito_registro: false,
+    comentario_evaluacion: '',
+  };
 }
 
 const pacientesDisponibles = computed(() => {
@@ -834,45 +932,20 @@ const validarFilaImportacion = (obj) => {
 
 const todosPacientesLista = computed(() => {
   const atenciones = Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
-  const regs = Array.isArray(registros.value) ? registros.value : [];
-  const porAtencion = {};
-  const porPaciente = {};
-  // Registros vienen ordenados por -id_unidad_actual (más reciente primero). Quedarse con el primero por paciente = último registro.
-  regs.forEach(r => {
-    const id = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
-    if (id != null && porAtencion[String(id)] == null) porAtencion[String(id)] = r;
-    const pid = r.datosPacienteAtencion?.id_paciente ?? r.datosPaciente?.id_paciente;
-    if (pid != null && porPaciente[String(pid)] == null) porPaciente[String(pid)] = r;
-  });
-  return atenciones.map(a => {
-    const id = a.id_paciente_atencion;
+  const ultimoPorPaciente = construirUltimoAccesoPorPaciente(registros.value);
+  const dialisisMap = dialisisPorPaciente.value || {};
+  return atenciones.map((a) => {
     const pid = a.id_paciente ?? a.datosPaciente?.id_paciente;
-    const r = (id != null ? porAtencion[String(id)] : null)
-      ?? (pid != null ? porPaciente[String(pid)] : null);
-    const paciente = a.datosPaciente?.paciente ?? '—';
-    const documento = a.datosPaciente?.documento ?? '—';
-    if (r) {
-      return {
-        id_paciente_atencion: id,
-        id_unidad_actual: r.id_unidad_actual,
-        tieneRegistro: true,
-        registro: r,
-        paciente: nombrePaciente(r),
-        documento: documentoPaciente(r),
-        tipo_acceso: r.tipo_acceso || r.tipo_acceso_actual || '',
-        localizacion_acceso: r.localizacion_acceso || r.localizacion_acceso_actual || '',
-        fecha_creacion_acceso: r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
-        motivo_cambio: r.motivo_cambio || '',
-        estado_aprobacion: r.estado_aprobacion || 'PENDIENTE',
-        supervisor_edito_registro: !!r.supervisor_edito_registro,
-        comentario_evaluacion: r.comentario_evaluacion || '',
-      };
-    }
+    const historico = pid != null ? ultimoPorPaciente[String(pid)] : null;
+    if (historico) return filaDesdeUnidadHistorica(a, historico);
+    const dialisis = pid != null ? dialisisMap[String(pid)] : null;
+    if (tieneDatosAccesoDialisis(dialisis)) return filaDesdeFichaDialisis(a, dialisis);
     return {
-      id_paciente_atencion: id,
+      id_paciente_atencion: a.id_paciente_atencion,
       tieneRegistro: false,
-      paciente,
-      documento,
+      desdeFichaDialisis: false,
+      paciente: a.datosPaciente?.paciente ?? '—',
+      documento: a.datosPaciente?.documento ?? '—',
       tipo_acceso: '',
       localizacion_acceso: '',
       fecha_creacion_acceso: '',
@@ -1096,21 +1169,21 @@ async function fetchRegistros() {
   cargando.value = true;
   try {
     const paramsUnidades = new URLSearchParams();
-    if (idPeriodo != null && idPeriodo !== '') paramsUnidades.set('id_periodo', idPeriodo);
+    if (idIpress != null && idIpress !== '') paramsUnidades.set('id_ipress', idIpress);
     if (idModalidad != null && idModalidad !== '') paramsUnidades.set('id_modalidad', idModalidad);
 
-    const [resRegistros, resAtenciones] = await Promise.all([
+    const paramsDialisis = new URLSearchParams(qs);
+
+    const [resRegistros, resAtenciones, resDialisis] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${paramsUnidades}`),
       getAllIpress(`/pacienteAtencion/?${qs}`),
+      getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${paramsDialisis}`),
     ]);
     const atenciones = atencionesParaListadoRegistros(
       Array.isArray(resAtenciones) ? resAtenciones : (resAtenciones?.results || [])
     );
     listadoAtenciones.value = atenciones;
 
-    const idsAtencion = new Set(
-      atenciones.map((a) => String(a.id_paciente_atencion)).filter((id) => id !== 'undefined')
-    );
     const idsPaciente = new Set(
       atenciones
         .map((a) => a.id_paciente ?? a.datosPaciente?.id_paciente)
@@ -1118,15 +1191,27 @@ async function fetchRegistros() {
         .map(String)
     );
     const todosRegistros = Array.isArray(resRegistros) ? resRegistros : (resRegistros?.results || []);
-    registros.value = todosRegistros.filter((r) => {
-      const idA = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
-      if (idA != null && idsAtencion.has(String(idA))) return true;
-      const idP = r.datosPacienteAtencion?.id_paciente ?? r.datosPaciente?.id_paciente;
-      return idP != null && idsPaciente.has(String(idP));
+    const historialFiltrado = todosRegistros.filter((r) => {
+      const idP = idPacienteDesdeRegistro(r);
+      if (idP == null || !idsPaciente.has(String(idP))) return false;
+      const idIpressReg = idIpressDesdeRegistro(r);
+      if (idIpress != null && idIpressReg != null && String(idIpressReg) !== String(idIpress)) return false;
+      return true;
     });
+    const ultimoPorPaciente = construirUltimoAccesoPorPaciente(historialFiltrado);
+    registros.value = Object.values(ultimoPorPaciente);
+
+    const listaDialisis = Array.isArray(resDialisis) ? resDialisis : (resDialisis?.results || []);
+    const mapDialisis = {};
+    listaDialisis.forEach((d) => {
+      const pid = d.id_paciente ?? d.datosPaciente?.id_paciente;
+      if (pid != null) mapDialisis[String(pid)] = d;
+    });
+    dialisisPorPaciente.value = mapDialisis;
   } catch (e) {
     console.error('Error al cargar registros de acceso vascular:', e);
     registros.value = [];
+    dialisisPorPaciente.value = {};
     listadoAtenciones.value = [];
   } finally {
     cargando.value = false;
@@ -1414,7 +1499,7 @@ function filasExcelVistaTodos() {
   return todosPacientesLista.value.map((fila) => ({
     Paciente: fila.paciente || '',
     DNI: fila.documento || '',
-    'Tiene registro': fila.tieneRegistro ? 'Sí' : 'No',
+    'Tiene registro': fila.tieneRegistro ? 'Sí' : (fila.desdeFichaDialisis ? 'Desde ficha diálisis' : 'No'),
     'Tipo acceso': fila.tipo_acceso || '',
     Localización: fila.localizacion_acceso || '',
     'Fecha creación': fila.fecha_creacion_acceso || '',

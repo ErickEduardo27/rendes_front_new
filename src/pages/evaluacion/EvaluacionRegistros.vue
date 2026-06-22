@@ -218,11 +218,14 @@
           <template v-else>
             <div class="px-4 py-3 text-sm text-slate-600 border-b border-slate-100 bg-slate-50/80">
               Listado de todas las IPRESS para el <strong>periodo</strong> y la <strong>modalidad</strong> elegidos arriba. Indica si la clínica usó «Notificar» en los módulos de registros.
+              <span v-if="soloIpressAsignadas" class="block mt-1 text-xs text-violet-800 font-medium">
+                Solo se muestran las clínicas (IPRESS) asignadas a su usuario.
+              </span>
               <span v-if="resumenTotales.total_ipress > 0" class="block mt-2 font-semibold text-slate-800">
                 Notificaron {{ resumenTotales.total_notificados }} de {{ resumenTotales.total_ipress }} establecimientos.
               </span>
               <p class="mt-2 text-xs text-slate-500 max-w-4xl">
-                La acción <strong>Pasar pacientes al periodo siguiente</strong> solo se habilita cuando la clínica ha usado <strong>Notificar</strong>, todos los formularios con datos están <strong>cerrados</strong> y no se está consultando el estado ni ejecutando el traslado.
+                La acción <strong>pasar pacientes al periodo siguiente</strong> solo se habilita cuando la clínica ha usado <strong>Notificar</strong>, todos los formularios con datos están <strong>cerrados</strong> y no se está consultando el estado ni ejecutando el traslado.
               </p>
             </div>
             <div v-if="listaIpressNotificaciones.length" class="px-4 py-3 border-b border-slate-100 flex flex-wrap gap-3">
@@ -247,7 +250,9 @@
                 </select>
               </div>
             </div>
-            <div v-if="listaIpressNotificaciones.length === 0" class="p-12 text-center text-slate-500 italic">No hay IPRESS registradas.</div>
+            <div v-if="listaIpressNotificaciones.length === 0" class="p-12 text-center text-slate-500 italic">
+              {{ soloIpressAsignadas ? 'No hay clínicas asignadas a su usuario para este periodo y modalidad.' : 'No hay IPRESS registradas.' }}
+            </div>
             <div v-else-if="listaIpressNotificacionesFiltrada.length === 0" class="p-12 text-center text-slate-500 italic">
               No hay IPRESS con el filtro actual.
             </div>
@@ -404,10 +409,16 @@ import {
   motivoAccesoAntiguo,
   idsAccesosMasAntiguosPorPaciente,
 } from '@/utils/accesoVascularValidacion';
+import { useAuthStore } from '@/store/auth';
+import { debeLimitarClinicasAlUsuario } from '@/utils/perfil';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const authStore = useAuthStore();
+
+/** null = sin límite (admin); Set vacío o con ids = solo IPRESS asignadas al usuario. */
+const idsIpressAsignadas = ref(null);
 
 const tabs = [
   { key: 'pacientes', label: 'Pacientes' },
@@ -502,6 +513,36 @@ function formatoFechaNotifRow(iso) {
   }
 }
 
+async function cargarIpressAsignadasUsuario() {
+  if (!debeLimitarClinicasAlUsuario()) {
+    idsIpressAsignadas.value = null;
+    return;
+  }
+  const idUsuario = authStore.user?.id_usuario;
+  if (!idUsuario) {
+    idsIpressAsignadas.value = new Set();
+    return;
+  }
+  try {
+    const res = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${idUsuario}`);
+    const lista = Array.isArray(res) ? res : (res?.results || []);
+    idsIpressAsignadas.value = new Set(
+      lista.map((a) => Number(a.id_ipress)).filter((id) => !Number.isNaN(id) && id > 0),
+    );
+  } catch (e) {
+    console.error(e);
+    idsIpressAsignadas.value = new Set();
+  }
+}
+
+function aplicarFiltroIpressAsignadas(lista) {
+  const ids = idsIpressAsignadas.value;
+  if (ids == null) return lista;
+  return lista.filter((row) => ids.has(Number(row.id_ipress)));
+}
+
+const soloIpressAsignadas = computed(() => idsIpressAsignadas.value != null);
+
 async function fetchListaNotificacionesClinicas() {
   errorResumenNotif.value = '';
   if (modulo.value !== 'resumen_notif') return;
@@ -515,14 +556,17 @@ async function fetchListaNotificacionesClinicas() {
   }
   cargandoResumenNotif.value = true;
   try {
+    await cargarIpressAsignadasUsuario();
     const params = new URLSearchParams();
     params.set('id_periodo', String(periodoGlobal.value));
     params.set('id_modalidad', String(modalidadGlobal.value));
     const r = await getAllIpress(`/lista_notificacion_envio_revision_por_periodo/?${params.toString()}`);
-    listaIpressNotificaciones.value = Array.isArray(r?.results) ? r.results : [];
+    const raw = Array.isArray(r?.results) ? r.results : [];
+    const filtrada = aplicarFiltroIpressAsignadas(raw);
+    listaIpressNotificaciones.value = filtrada;
     resumenTotales.value = {
-      total_ipress: Number(r?.total_ipress) || listaIpressNotificaciones.value.length,
-      total_notificados: Number(r?.total_notificados) || 0,
+      total_ipress: filtrada.length,
+      total_notificados: filtrada.filter((row) => row.notificado).length,
     };
     await fetchEstadoPasarPacientesPeriodo();
   } catch (e) {
@@ -593,7 +637,9 @@ function tituloBotonPasarPacientes(row) {
   if (cargandoEstadoPasar.value) return 'Consultando permisos y periodo destino…';
   const info = infoPasarPacientes(row.id_ipress);
   if (!info.puede_pasar) return info.motivo || 'No se puede pasar de periodo en este momento.';
-  if (info.periodo_destino_label) return `Trasladar al periodo ${info.periodo_destino_label} (confirmar en el diálogo).`;
+  if (info.periodo_destino_label) {
+    return `Trasladar pacientes activos al periodo ${info.periodo_destino_label} (egresados no se trasladan; nuevos pasan como reingresados).`;
+  }
   return 'Pasar pacientes al periodo siguiente';
 }
 
@@ -608,7 +654,8 @@ async function confirmarPasarPacientesSiguientePeriodo(row) {
   try {
     await ElMessageBox.confirm(
       `¿Está seguro de cargar los pacientes del periodo actual al periodo posterior (${destino}) para «${nombre}»? ` +
-        'Se crearán registros de atención en el nuevo periodo solo para pacientes que aún no existan allí.',
+        'Se crearán registros de atención en el nuevo periodo solo para pacientes activos (no egresados) que aún no existan allí. ' +
+        'Los pacientes con condición «Nuevo» pasarán como «Reingresado».',
       'Confirmar paso de pacientes',
       {
         type: 'warning',
@@ -621,12 +668,19 @@ async function confirmarPasarPacientesSiguientePeriodo(row) {
   }
   pasandoPacientesIpress.value = Number(idIpress);
   try {
-    await postAllIpress('/pasar_pacientes_siguiente_periodo/', {
+    const res = await postAllIpress('/pasar_pacientes_siguiente_periodo/', {
       id_periodo: Number(periodoGlobal.value),
       id_ipress: Number(idIpress),
       id_modalidad: Number(modalidadGlobal.value),
     });
-    ElMessage.success('Pacientes actualizados en el periodo siguiente.');
+    const data = res?.data ?? res;
+    const creados = data?.creados ?? 0;
+    const omitidosEgresados = data?.omitidos_egresados ?? 0;
+    let msg = `${creados} paciente(s) pasado(s) al periodo siguiente.`;
+    if (omitidosEgresados > 0) {
+      msg += ` ${omitidosEgresados} egresado(s) no se trasladaron.`;
+    }
+    ElMessage.success(msg);
     await fetchEstadoPasarPacientesPeriodo();
   } catch (e) {
     console.error(e);
@@ -1259,6 +1313,7 @@ watch(modulo, () => {
 });
 
 onMounted(() => {
+  cargarIpressAsignadasUsuario();
   if (esModuloRegistros.value) {
     cargarModuloActual();
     fetchEstadoFormularioActual();
