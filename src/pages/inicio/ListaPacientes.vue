@@ -68,7 +68,7 @@
 
     </div>
 
-    <TablaPacientesAtencion class="mb-4" />
+    <TablaPacientesAtencion ref="tablaPacientesRef" class="mb-4" />
 
     <div class="flex items-center gap-4 my-4 border-t pt-4">
       <button
@@ -590,6 +590,7 @@ const fetchPeriodo = async (url = null) => {
 };
 
 const mostrarModalNuevo = ref(false);
+const tablaPacientesRef = ref(null);
 
 /** Precarga documento en FormularioPaciente al abrir tras “no encontrado”. */
 const documentoPrefillRegistro = ref('');
@@ -632,6 +633,9 @@ const cerrarModalNuevo = () => {
 
 const onGuardadoFormularioPaciente = async () => {
   cerrarModalFormularioPaciente();
+  await tablaPacientesRef.value?.recargar?.();
+  await fetchEstadisticasAtencion();
+  await fetchEstadisticasRegistros();
   await fetchMetaFormulariosPorAtencion();
 };
 

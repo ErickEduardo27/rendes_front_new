@@ -470,6 +470,10 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   sincronizarDesdeFiltrosGlobales();
 }, { deep: true });
 
+defineExpose({
+  recargar: sincronizarDesdeFiltrosGlobales,
+});
+
 onMounted(() => {
   sincronizarDesdeFiltrosGlobales();
 });

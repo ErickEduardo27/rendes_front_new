@@ -412,6 +412,55 @@ const puedeCargarListadoEdicion = computed(() => (
   && idPeriodoListado.value != null && !Number.isNaN(idPeriodoListado.value)
 ))
 
+function idModalidadDesdeTexto(modalidadTexto) {
+  if (modalidadTexto === 'Hemodiálisis') return 1;
+  if (modalidadTexto === 'Diálisis Peritoneal') return 2;
+  if (modalidadTexto === 'Trasplante') return 3;
+  return null;
+}
+
+function modalidadTextoDesdeId(id) {
+  const n = Number(id);
+  if (n === 1) return 'Hemodiálisis';
+  if (n === 2) return 'Diálisis Peritoneal';
+  if (n === 3) return 'Trasplante';
+  return '';
+}
+
+/** Periodo activo en pantalla (barra superior): donde debe listarse el paciente captado. */
+function getIdPeriodoParaAtencion() {
+  if (idPeriodoListado.value != null && !Number.isNaN(Number(idPeriodoListado.value))) {
+    return Number(idPeriodoListado.value);
+  }
+  const v = periodoSeleccionado.value;
+  if (v != null && v !== '') {
+    const n = Number(v);
+    if (!Number.isNaN(n)) return n;
+  }
+  const g = periodoGlobal.value;
+  if (g != null && g !== '') {
+    const n = Number(g);
+    if (!Number.isNaN(n)) return n;
+  }
+  return getIdPeriodoParaPayload();
+}
+
+/** Modalidad activa en pantalla; si no hay, la del formulario TRR. */
+function getIdModalidadParaAtencion() {
+  const mod = modalidadGlobal.value;
+  if (mod != null && mod !== '') {
+    const n = Number(mod);
+    if (!Number.isNaN(n)) return n;
+  }
+  return idModalidadDesdeTexto(form.modalidadTRR);
+}
+
+function aplicarModalidadGlobalAlFormulario() {
+  if (modoEdicionSupervisor.value) return;
+  const texto = modalidadTextoDesdeId(modalidadGlobal.value);
+  if (texto) form.modalidadTRR = texto;
+}
+
 const pacientesListadoEdicionFiltrados = computed(() => {
   const nombre = filtroListadoNombre.value.trim().toLowerCase();
   const documento = filtroListadoDocumento.value.trim().toLowerCase();
@@ -1761,10 +1810,20 @@ const registrarPaciente = async () => {
   }
   if (!validarFormulario()) return;
   calcularEdadInicioTRR();
-  const idPeriodo = getIdPeriodoParaPayload();
+  const idPeriodo = getIdPeriodoParaAtencion();
   if (idPeriodo == null) {
     ElMessage({
-      message: 'Indique la Fecha de Inicio de TRR (periodo válido) o seleccione un periodo registrado en el sistema.',
+      message: 'Seleccione el periodo en la barra superior antes de registrar el paciente.',
+      type: 'warning',
+      plain: true,
+    });
+    return;
+  }
+
+  const idModalidadAtencion = getIdModalidadParaAtencion();
+  if (idModalidadAtencion == null) {
+    ElMessage({
+      message: 'Seleccione la modalidad TRR en el formulario o en la barra superior.',
       type: 'warning',
       plain: true,
     });
@@ -1842,9 +1901,9 @@ const registrarPaciente = async () => {
 
 /** Crea pacienteAtencion y luego unidadesActuales (Fecha creación acceso, Tipo acceso, Localización acceso). */
 const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
-  const idPeriodo = getIdPeriodoParaPayload();
+  const idPeriodo = getIdPeriodoParaAtencion();
   if (idPeriodo == null) {
-    throw { error: 'No se pudo determinar el periodo para la atención del paciente.' };
+    throw { error: 'Seleccione el periodo en la barra superior antes de registrar el paciente.' };
   }
 
   const idIpress = idIpressListado.value;
@@ -1852,7 +1911,10 @@ const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
     throw { error: 'Seleccione la clínica (IPRESS) en la barra superior antes de registrar el paciente.' };
   }
 
-  const idModalidad = form.modalidadTRR === 'Hemodiálisis' ? 1 : form.modalidadTRR === 'Diálisis Peritoneal' ? 2 : 3;
+  const idModalidad = getIdModalidadParaAtencion();
+  if (idModalidad == null) {
+    throw { error: 'Seleccione la modalidad TRR en el formulario o en la barra superior.' };
+  }
   const fechaCaptacion = fechaFormularioParaApi(form.fechaPrimerIngreso);
   if (!fechaCaptacion) {
     throw { error: 'Indique la fecha de primer ingreso a la unidad.' };
@@ -2270,9 +2332,14 @@ watch(
   },
 );
 
+watch(modalidadGlobal, () => {
+  aplicarModalidadGlobalAlFormulario();
+}, { immediate: true });
+
 onMounted(() => {
   fetchPeriodo();
   fetchEtiologias();
+  aplicarModalidadGlobalAlFormulario();
   if (props.mostrarTablaEdicion) {
     fetchPacientesParaEdicion();
   }
