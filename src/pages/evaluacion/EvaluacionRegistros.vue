@@ -13,7 +13,7 @@
           <strong>Editar</strong> guarda correcciones y comentario del supervisor; <strong>Aprobar</strong> marca el registro como revisado favorablemente.
         </p>
         <p class="text-xs text-slate-500 mt-1">
-          Solo se muestra el <strong>último registro</strong> de cada paciente (mayor ID del formulario = fila más reciente en base de datos).
+          En los formularios se listan <strong>todos los pacientes en atención</strong> del periodo, clínica y modalidad; si no hay registro en ese módulo, la fila aparece como <strong>SIN REGISTRO</strong>. Cuando existe registro, se muestra el último (mayor ID).
         </p>
       </div>
 
@@ -97,7 +97,7 @@
           <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
               <h3 class="text-sm font-semibold text-slate-800">Registros de pacientes — {{ etiquetaModuloActual }}</h3>
-              <p class="text-xs text-slate-500 mt-0.5">Último registro por paciente. Seleccione Editar para corregir o Aprobar para revisar.</p>
+              <p class="text-xs text-slate-500 mt-0.5">Todos los pacientes en atención; último registro por paciente cuando existe. Editar y Aprobar solo aplican si hay registro.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <button
@@ -141,7 +141,8 @@
         <!-- Tabla unificada formularios 1–5 -->
         <div class="p-3">
           <div v-if="listaMostradaFiltrada.length === 0" class="py-10 text-center text-slate-500 text-[11px]">
-            No hay registros con el filtro actual.
+            <template v-if="!listaPacientesAtencion.length">No hay pacientes en atención para este periodo, clínica y modalidad.</template>
+            <template v-else>No hay resultados con el filtro actual.</template>
           </div>
           <template v-else>
             <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-[min(32rem,70vh)] overflow-y-auto w-full">
@@ -179,7 +180,7 @@
                       :title="String(valorCeldaTabla(r, col) || '')"
                     >{{ valorCeldaTabla(r, col) }}</td>
                     <td class="px-2 py-1.5">
-                      <span class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold" :class="claseEstado(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span>
+                      <span class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold" :class="claseEstado(r.estado_aprobacion, r)">{{ textoEstadoAprobacion(r) }}</span>
                     </td>
                     <td class="px-2 py-1.5 text-slate-600 whitespace-nowrap">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
                     <td class="px-2 py-1.5">
@@ -191,11 +192,13 @@
                       <div class="flex flex-wrap gap-1">
                         <button
                           type="button"
-                          class="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold"
+                          class="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                          :disabled="r.sin_registro_modulo"
+                          :title="r.sin_registro_modulo ? 'La clínica aún no registró datos en este formulario' : ''"
                           @click="abrirModalEditar(modulo, r)"
                         >Editar</button>
                         <button
-                          v-if="mostrarBotonAprobar(r.estado_aprobacion)"
+                          v-if="mostrarBotonAprobar(r.estado_aprobacion, r)"
                           type="button"
                           class="text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-semibold disabled:opacity-40"
                           :disabled="evaluando === claveFila(modulo, idFilaRegistro(r))"
@@ -225,7 +228,7 @@
                 Notificaron {{ resumenTotales.total_notificados }} de {{ resumenTotales.total_ipress }} establecimientos.
               </span>
               <p class="mt-2 text-xs text-slate-500 max-w-4xl">
-                La acción <strong>pasar pacientes al periodo siguiente</strong> solo se habilita cuando la clínica ha usado <strong>Notificar</strong>, todos los formularios con datos están <strong>cerrados</strong> y no se está consultando el estado ni ejecutando el traslado.
+                La acción <strong>Dar conformidad</strong> solo se habilita cuando la clínica ha usado <strong>Notificar</strong>, todos los formularios con datos están <strong>cerrados</strong> y aún no se registró conformidad. Traslada pacientes activos al periodo siguiente (nuevos y reingresantes como continuador; egresados no pasan).
               </p>
             </div>
             <div v-if="listaIpressNotificaciones.length" class="px-4 py-3 border-b border-slate-100 flex flex-wrap gap-3">
@@ -263,9 +266,10 @@
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">IPRESS</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Nombre corto</th>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Notificado</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Fecha / hora</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Usuario</th>
-                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Siguiente periodo</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Fecha / hora notif.</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Usuario notif.</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Conformidad</th>
+                  <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Acción</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -289,19 +293,31 @@
                   </td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ formatoFechaNotifRow(row.notificado_en) }}</td>
                   <td class="px-4 py-3 text-sm text-slate-600">{{ row.usuario_nombre || '—' }}</td>
+                  <td class="px-4 py-3 text-sm text-slate-600">
+                    <template v-if="row.conformidad_en">
+                      <span class="block">{{ formatoFechaNotifRow(row.conformidad_en) }}</span>
+                      <span v-if="row.conformidad_usuario_nombre" class="block text-xs text-slate-500 mt-0.5">{{ row.conformidad_usuario_nombre }}</span>
+                    </template>
+                    <span v-else class="text-slate-400">—</span>
+                  </td>
                   <td class="px-4 py-3 text-sm">
                     <button
+                      v-if="!row.conformidad_en"
                       type="button"
                       class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45"
-                      :class="puedeActivarBotonPasarPacientes(row)
+                      :class="puedeActivarBotonDarConformidad(row)
                         ? 'border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100'
                         : 'border-slate-200 bg-slate-50 text-slate-500'"
-                      :disabled="pasandoPacientesIpress === Number(row.id_ipress) || !puedeActivarBotonPasarPacientes(row)"
-                      :title="tituloBotonPasarPacientes(row)"
-                      @click="confirmarPasarPacientesSiguientePeriodo(row)"
+                      :disabled="pasandoPacientesIpress === Number(row.id_ipress) || !puedeActivarBotonDarConformidad(row)"
+                      :title="tituloBotonDarConformidad(row)"
+                      @click="confirmarDarConformidad(row)"
                     >
-                      {{ pasandoPacientesIpress === Number(row.id_ipress) ? 'Procesando…' : 'Pasar pacientes' }}
+                      {{ pasandoPacientesIpress === Number(row.id_ipress) ? 'Procesando…' : 'Dar Conformidad' }}
                     </button>
+                    <span
+                      v-else
+                      class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800"
+                    >Conformado</span>
                   </td>
                 </tr>
               </tbody>
@@ -411,6 +427,7 @@ import {
 } from '@/utils/accesoVascularValidacion';
 import { useAuthStore } from '@/store/auth';
 import { debeLimitarClinicasAlUsuario } from '@/utils/perfil';
+import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
@@ -453,6 +470,7 @@ const listaEventos = ref([]);
 const listaMorbilidad = ref([]);
 const listaResultados = ref([]);
 const listaVacunacion = ref([]);
+const listaPacientesAtencion = ref([]);
 
 const paginaRegistros = ref(1);
 const pageSizeTablas = ref(15);
@@ -604,7 +622,7 @@ async function fetchEstadoPasarPacientesPeriodo() {
   }
 }
 
-function infoPasarPacientes(idIpress) {
+function infoDarConformidad(idIpress) {
   const key = String(idIpress);
   const raw = estadoPasarPorIpress.value[key];
   if (raw && typeof raw === 'object') {
@@ -613,6 +631,7 @@ function infoPasarPacientes(idIpress) {
       motivo: raw.motivo || '',
       periodo_destino_label: raw.periodo_destino_label || '',
       formularios_con_datos_abiertos: Array.isArray(raw.formularios_con_datos_abiertos) ? raw.formularios_con_datos_abiertos : [],
+      ya_dio_conformidad: !!raw.ya_dio_conformidad,
     };
   }
   return {
@@ -620,46 +639,52 @@ function infoPasarPacientes(idIpress) {
     motivo: cargandoEstadoPasar.value ? 'Consultando permisos…' : 'Sin información de estado.',
     periodo_destino_label: '',
     formularios_con_datos_abiertos: [],
+    ya_dio_conformidad: false,
   };
 }
 
-/** Habilitar botón: notificación enviada + puede_pasar + no cargando estado (el POST se refleja en disabled aparte). */
-function puedeActivarBotonPasarPacientes(row) {
+/** Habilitar botón: notificación enviada + puede_pasar + sin conformidad previa. */
+function puedeActivarBotonDarConformidad(row) {
   if (!row?.notificado) return false;
+  if (row?.conformidad_en || row?.ya_dio_conformidad) return false;
   if (cargandoEstadoPasar.value) return false;
-  return !!infoPasarPacientes(row.id_ipress).puede_pasar;
+  return !!infoDarConformidad(row.id_ipress).puede_pasar;
 }
 
-function tituloBotonPasarPacientes(row) {
+function tituloBotonDarConformidad(row) {
+  if (row?.conformidad_en || row?.ya_dio_conformidad) {
+    return 'Ya se registró la conformidad para este periodo.';
+  }
   if (!row?.notificado) {
-    return 'La clínica debe usar «Notificar» en registros antes de poder pasar pacientes al periodo siguiente.';
+    return 'La clínica debe usar «Notificar» en registros antes de dar conformidad.';
   }
   if (cargandoEstadoPasar.value) return 'Consultando permisos y periodo destino…';
-  const info = infoPasarPacientes(row.id_ipress);
-  if (!info.puede_pasar) return info.motivo || 'No se puede pasar de periodo en este momento.';
+  const info = infoDarConformidad(row.id_ipress);
+  if (!info.puede_pasar) return info.motivo || 'No se puede dar conformidad en este momento.';
   if (info.periodo_destino_label) {
-    return `Trasladar pacientes activos al periodo ${info.periodo_destino_label} (egresados no se trasladan; nuevos pasan como reingresados).`;
+    return `Dar conformidad y trasladar pacientes activos al periodo ${info.periodo_destino_label} (nuevos y reingresantes como continuador; egresados no se trasladan).`;
   }
-  return 'Pasar pacientes al periodo siguiente';
+  return 'Dar conformidad y pasar pacientes al periodo siguiente';
 }
 
-async function confirmarPasarPacientesSiguientePeriodo(row) {
+async function confirmarDarConformidad(row) {
   const idIpress = row?.id_ipress;
   if (idIpress == null) return;
   if (!row?.notificado) return;
-  const info = infoPasarPacientes(idIpress);
+  if (row?.conformidad_en) return;
+  const info = infoDarConformidad(idIpress);
   if (!info.puede_pasar || cargandoEstadoPasar.value) return;
   const nombre = row.nombre_corto || row.ipress || 'esta clínica';
   const destino = info.periodo_destino_label || 'el periodo siguiente';
   try {
     await ElMessageBox.confirm(
-      `¿Está seguro de cargar los pacientes del periodo actual al periodo posterior (${destino}) para «${nombre}»? ` +
+      `¿Dar conformidad y cargar los pacientes del periodo actual al periodo posterior (${destino}) para «${nombre}»? ` +
         'Se crearán registros de atención en el nuevo periodo solo para pacientes activos (no egresados) que aún no existan allí. ' +
-        'Los pacientes con condición «Nuevo» pasarán como «Reingresado».',
-      'Confirmar paso de pacientes',
+        'Los pacientes nuevos y reingresantes pasarán como «Continuador».',
+      'Dar conformidad',
       {
         type: 'warning',
-        confirmButtonText: 'Sí, pasar pacientes',
+        confirmButtonText: 'Sí, dar conformidad',
         cancelButtonText: 'Cancelar',
       },
     );
@@ -676,11 +701,12 @@ async function confirmarPasarPacientesSiguientePeriodo(row) {
     const data = res?.data ?? res;
     const creados = data?.creados ?? 0;
     const omitidosEgresados = data?.omitidos_egresados ?? 0;
-    let msg = `${creados} paciente(s) pasado(s) al periodo siguiente.`;
+    let msg = `Conformidad registrada. ${creados} paciente(s) pasado(s) al periodo siguiente.`;
     if (omitidosEgresados > 0) {
       msg += ` ${omitidosEgresados} egresado(s) no se trasladaron.`;
     }
     ElMessage.success(msg);
+    await fetchListaNotificacionesClinicas();
     await fetchEstadoPasarPacientesPeriodo();
   } catch (e) {
     console.error(e);
@@ -689,8 +715,8 @@ async function confirmarPasarPacientesSiguientePeriodo(row) {
       e?.detail ||
       e?.error ||
       e?.message ||
-      'No se pudo completar el traslado de pacientes.';
-    ElMessage.error(typeof msg === 'string' ? msg : 'No se pudo completar el traslado de pacientes.');
+      'No se pudo completar la conformidad.';
+    ElMessage.error(typeof msg === 'string' ? msg : 'No se pudo completar la conformidad.');
   } finally {
     pasandoPacientesIpress.value = null;
   }
@@ -864,7 +890,11 @@ const accesosMasAntiguosIds = computed(() => {
 
 function idFilaRegistro(r) {
   const cfg = ENDPOINTS[modulo.value];
-  return cfg ? r?.[cfg.idKey] : null;
+  const id = cfg ? r?.[cfg.idKey] : null;
+  if (id != null) return id;
+  const aid = idAtencionDesdeRegistro(r);
+  if (aid != null) return `at-${aid}`;
+  return `doc-${documentoPaciente(r)}`;
 }
 
 function valorCeldaTabla(r, col) {
@@ -890,7 +920,7 @@ function claseFilaEvaluacion(r) {
 }
 
 const pendientesAprobacion = computed(() =>
-  listaMostradaFiltrada.value.filter((r) => mostrarBotonAprobar(r.estado_aprobacion)),
+  listaMostradaFiltrada.value.filter((r) => mostrarBotonAprobar(r.estado_aprobacion, r)),
 );
 
 async function aprobarTodosPendientes() {
@@ -972,7 +1002,17 @@ function documentoPaciente(r) {
   return r.datosPacienteAtencion?.datosPaciente?.documento || r.datosPaciente?.documento || '—';
 }
 
-function claseEstado(estado) {
+function registroConDatos(r) {
+  return !r?.sin_registro_modulo;
+}
+
+function textoEstadoAprobacion(r) {
+  if (r?.sin_registro_modulo) return 'SIN REGISTRO';
+  return r?.estado_aprobacion || 'PENDIENTE';
+}
+
+function claseEstado(estado, row) {
+  if (row?.sin_registro_modulo) return 'bg-slate-100 text-slate-600';
   const v = String(estado || '').toUpperCase();
   if (v === 'APROBADO') return 'bg-emerald-100 text-emerald-700';
   if (v === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
@@ -1029,6 +1069,31 @@ function ultimosRegistrosPorPaciente(rows, idField) {
   return Array.from(grupos.values());
 }
 
+function filaSinRegistroDesdeAtencion(atencion) {
+  return {
+    id_paciente_atencion: atencion.id_paciente_atencion,
+    datosPacienteAtencion: atencion,
+    datosPaciente: atencion.datosPaciente ?? atencion.datosPacienteAtencion?.datosPaciente,
+    estado_aprobacion: 'SIN REGISTRO',
+    sin_registro_modulo: true,
+  };
+}
+
+function combinarAtencionesConUltimosRegistros(atenciones, registros, idField) {
+  const ultimos = ultimosRegistrosPorPaciente(registros, idField);
+  const porAtencion = new Map();
+  for (const r of ultimos) {
+    const aid = idPacienteAtencionDe(r);
+    if (aid) porAtencion.set(aid, r);
+  }
+  const filas = atenciones.map((a) => {
+    const aid = String(a.id_paciente_atencion);
+    return porAtencion.get(aid) ?? filaSinRegistroDesdeAtencion(a);
+  });
+  filas.sort((a, b) => nombrePaciente(a).localeCompare(nombrePaciente(b), 'es'));
+  return filas;
+}
+
 function rawListaPorModulo(m) {
   switch (m) {
     case 'acceso':
@@ -1049,7 +1114,11 @@ function rawListaPorModulo(m) {
 const listaMostrada = computed(() => {
   const cfg = ENDPOINTS[modulo.value];
   if (!cfg) return [];
-  return ultimosRegistrosPorPaciente(rawListaPorModulo(modulo.value), cfg.idKey);
+  return combinarAtencionesConUltimosRegistros(
+    listaPacientesAtencion.value,
+    rawListaPorModulo(modulo.value),
+    cfg.idKey,
+  );
 });
 
 const listaMostradaFiltrada = computed(() => {
@@ -1124,15 +1193,15 @@ const etiquetaModuloActual = computed(() => {
 });
 
 const todosRegistrosVisiblesAprobados = computed(() => {
-  const rows = listaMostrada.value;
+  const rows = listaMostrada.value.filter(registroConDatos);
   if (!rows.length) return false;
   return rows.every((r) => String(r.estado_aprobacion || '').toUpperCase() === 'APROBADO');
 });
 
-/** Solo si el formulario está abierto a nivel periodo/IPRESS/modalidad y todos los visibles aprobados */
+/** Solo si el formulario está abierto a nivel periodo/IPRESS/modalidad y todos los registros aprobados */
 const puedeCerrarFormulario = computed(() => {
   if (!filtroListo.value || formularioEstaAbierto.value !== true) return false;
-  const rows = listaMostrada.value;
+  const rows = listaMostrada.value.filter(registroConDatos);
   if (!rows.length) return false;
   return rows.every((r) => String(r.estado_aprobacion || '').toUpperCase() === 'APROBADO');
 });
@@ -1141,7 +1210,8 @@ const mostrarBannerAbrir = computed(() => {
   return filtroListo.value && formularioEstaAbierto.value === false;
 });
 
-function mostrarBotonAprobar(estado) {
+function mostrarBotonAprobar(estado, row) {
+  if (row?.sin_registro_modulo) return false;
   return String(estado || '').toUpperCase() !== 'APROBADO';
 }
 
@@ -1239,27 +1309,26 @@ async function cargarModuloActual() {
     listaMorbilidad.value = [];
     listaResultados.value = [];
     listaVacunacion.value = [];
+    listaPacientesAtencion.value = [];
     return;
   }
   const qs = buildQs();
+  const cfg = ENDPOINTS[modulo.value];
   cargando.value = true;
   try {
-    if (modulo.value === 'acceso') {
-      const res = await getAllIpress(`/unidadesActuales/?${qs}`);
-      listaAcceso.value = Array.isArray(res) ? res : res?.results || [];
-    } else if (modulo.value === 'eventos') {
-      const res = await getAllIpress(`/eventosAccesosVasculares/?${qs}`);
-      listaEventos.value = Array.isArray(res) ? res : res?.results || [];
-    } else if (modulo.value === 'morbilidad') {
-      const res = await getAllIpress(`/morbilidadesHospitalarias/?${qs}`);
-      listaMorbilidad.value = Array.isArray(res) ? res : res?.results || [];
-    } else if (modulo.value === 'resultados') {
-      const res = await getAllIpress(`/resultadosClinicos/?${qs}`);
-      listaResultados.value = Array.isArray(res) ? res : res?.results || [];
-    } else if (modulo.value === 'vacunacion') {
-      const res = await getAllIpress(`/vacunaciones/?${qs}`);
-      listaVacunacion.value = Array.isArray(res) ? res : res?.results || [];
-    }
+    const [resAtenciones, resModulo] = await Promise.all([
+      getAllIpress(`/pacienteAtencion/?${qs}`),
+      getAllIpress(`/${cfg.path}/?${qs}`),
+    ]);
+    listaPacientesAtencion.value = atencionesParaListadoRegistros(
+      Array.isArray(resAtenciones) ? resAtenciones : resAtenciones?.results || [],
+    );
+    const data = Array.isArray(resModulo) ? resModulo : resModulo?.results || [];
+    if (modulo.value === 'acceso') listaAcceso.value = data;
+    else if (modulo.value === 'eventos') listaEventos.value = data;
+    else if (modulo.value === 'morbilidad') listaMorbilidad.value = data;
+    else if (modulo.value === 'resultados') listaResultados.value = data;
+    else if (modulo.value === 'vacunacion') listaVacunacion.value = data;
   } catch (e) {
     console.error(e);
     ElMessage.error('Error al cargar los registros.');

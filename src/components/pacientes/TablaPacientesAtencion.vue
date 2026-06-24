@@ -339,14 +339,47 @@ function etiologiaTexto(row) {
 }
 
 function condicionPacienteTexto(row) {
-  const estado = String(row?.estado_atencion || row?.estado || '').trim().toUpperCase();
-  const tipo = String(row?.tipo_atencion || '').trim().toUpperCase();
-  if (estado === 'EGRESADO') return 'Egresado';
+  const at = row?.datosPacienteAtencion;
+  const estado = String(
+    row?.estado_atencion ?? at?.estado ?? row?.estado ?? row?.datosPaciente?.estado ?? '',
+  ).trim().toUpperCase();
+  const tipo = String(row?.tipo_atencion ?? at?.tipo_atencion ?? '').trim().toUpperCase();
+  if (estado === 'EGRESADO' || tipo === 'EGRESO') return 'Egresado';
   if (tipo.includes('REINGRESO')) return 'Reingresado';
-  if (tipo === 'NUEVO') return 'Nuevo';
+  if (tipo === 'NUEVO' || estado === 'NUEVO') return 'Nuevo';
   if (tipo === 'CONTINUADOR') return 'Continuador';
+  if (estado === 'ACTIVO' && !tipo) return 'En atención';
   if (tipo) return tipo.charAt(0) + tipo.slice(1).toLowerCase();
   return '—';
+}
+
+function enriquecerFilasConAtencion(filas, atenciones) {
+  const porPaciente = new Map();
+  const porAtencion = new Map();
+  (Array.isArray(atenciones) ? atenciones : []).forEach((a) => {
+    const pid = a.id_paciente ?? a.datosPaciente?.id_paciente;
+    if (pid != null) porPaciente.set(String(pid), a);
+    if (a.id_paciente_atencion != null) {
+      porAtencion.set(String(a.id_paciente_atencion), a);
+    }
+  });
+  return (Array.isArray(filas) ? filas : []).map((row) => {
+    let at = row.id_paciente_atencion != null
+      ? porAtencion.get(String(row.id_paciente_atencion))
+      : null;
+    if (!at) {
+      const pid = row.id_paciente ?? row.datosPaciente?.id_paciente;
+      if (pid != null) at = porPaciente.get(String(pid));
+    }
+    if (!at) return row;
+    return {
+      ...row,
+      id_paciente_atencion: row.id_paciente_atencion ?? at.id_paciente_atencion,
+      tipo_atencion: row.tipo_atencion ?? at.tipo_atencion,
+      estado_atencion: row.estado_atencion ?? at.estado,
+      datosPacienteAtencion: row.datosPacienteAtencion ?? at,
+    };
+  });
 }
 
 function claseCondicionPaciente(row) {
@@ -354,7 +387,9 @@ function claseCondicionPaciente(row) {
   if (texto === 'EGRESADO') return 'bg-slate-200 text-slate-700';
   if (texto === 'REINGRESADO') return 'bg-amber-100 text-amber-800';
   if (texto === 'NUEVO') return 'bg-violet-100 text-violet-800';
-  if (texto === 'CONTINUADOR') return 'bg-sky-100 text-sky-800';
+  if (texto === 'CONTINUADOR' || texto === 'EN ATENCIÓN' || texto === 'EN ATENCION') {
+    return 'bg-sky-100 text-sky-800';
+  }
   return 'bg-slate-100 text-slate-600';
 }
 
@@ -411,8 +446,21 @@ async function fetchPacientes() {
     const d = filtroDni.value.trim();
     if (n) params.set('nombre', n);
     if (d) params.set('documento', d);
-    const respuesta = await getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${params.toString()}`);
-    pacientes.value = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+    const qs = params.toString();
+    const paramsAtencion = new URLSearchParams({
+      id_ipress: String(ipressId),
+      id_periodo: String(periodoId),
+    });
+    if (mod != null && mod !== '') {
+      paramsAtencion.set('id_modalidad', String(mod));
+    }
+    const [respuesta, resAtenciones] = await Promise.all([
+      getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${qs}`),
+      getAllIpress(`/pacienteAtencion/?${paramsAtencion.toString()}`),
+    ]);
+    const lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+    const atenciones = Array.isArray(resAtenciones) ? resAtenciones : (resAtenciones?.results || []);
+    pacientes.value = enriquecerFilasConAtencion(lista, atenciones);
   } catch (error) {
     console.error('Error al obtener lista de pacientes diálisis:', error);
     pacientes.value = [];

@@ -115,7 +115,7 @@ import router from "@/router/index";
 import { toast } from 'vue-sonner'
 import { TokenService } from '@/services/api/token.service'
 import SelectorPeriodo from '@/components/SelectorPeriodo.vue'
-import { esSupervisor } from '@/utils/perfil'
+import { esSupervisor, debeLimitarClinicasAlUsuario } from '@/utils/perfil'
 
 const props = defineProps({
   periodo: { type: [Number, String], default: null },
@@ -180,6 +180,13 @@ const RUTAS_NOTIFICAR_REGISTROS = new Set([
 const mostrarBotonNotificar = computed(() => {
   if (route.name === 'Evaluacion') return false
   if (RUTAS_NOTIFICAR_REGISTROS.has(route.name)) return true
+  if (
+    route.name === 'Inicio' &&
+    debeLimitarClinicasAlUsuario() &&
+    !esSupervisor()
+  ) {
+    return true
+  }
   return route.matched.some((r) => r.meta?.mostrarNotificarRegistros === true)
 })
 
