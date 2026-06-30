@@ -196,13 +196,13 @@
             <el-form-item label="Edad actual">
               <el-input v-model="form.edad" readonly />
             </el-form-item>
-            <el-form-item label="Sexo" required>
+            <el-form-item label="Sexo" :required="esCampoRequerido('sexo')">
               <el-select v-model="form.sexo" placeholder="—" class="w-full" disabled>
                 <el-option label="Masculino" value="M" />
                 <el-option label="Femenino" value="F" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Grado de Instrucción" required>
+            <el-form-item label="Grado de Instrucción" :required="esCampoRequerido('gradoInstruccion')">
               <el-select v-model="form.gradoInstruccion" placeholder="Seleccione" class="w-full" clearable>
                 <el-option label="Sin instrucción" value="Sin instrucción" />
                 <el-option label="Primaria" value="Primaria" />
@@ -216,12 +216,12 @@
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Etiología</h3>
           <div class="form-grid grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5">
-            <el-form-item label="Etiología general">
+            <el-form-item label="Etiología general" :required="esCampoRequerido('etiologiaGeneral')">
               <el-select v-model="form.etiologiaGeneral" placeholder="Seleccione una opción" class="w-full" clearable>
                 <el-option v-for="g in opcionesEtiologiaGeneralFromApi" :key="g" :label="g" :value="g" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Etiología específica">
+            <el-form-item label="Etiología específica" :required="esCampoRequerido('etiologiaEspecifica')">
               <el-select v-model="form.etiologiaEspecifica" placeholder="Seleccione una opción" class="w-full" clearable filterable>
                 <el-option v-for="e in opcionesEtiologiaEspecificaFromApi" :key="e.id_etiologia" :label="e.especifica || e.codigo || e.id_etiologia" :value="e.id_etiologia" />
               </el-select>
@@ -248,32 +248,44 @@
 
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Datos de TRR y Acceso</h3>
+          <p
+            v-if="requiereDatosCompletosTRR"
+            class="mb-4 text-xs text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-3 py-2"
+          >
+            La fecha de inicio de TRR es <strong>desde el 1 de enero de 2027</strong>: todos los campos de esta sección (y etiología) son obligatorios.
+          </p>
+          <p
+            v-else-if="form.fechaInicioTRR"
+            class="mb-4 text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2"
+          >
+            Inicio de TRR <strong>anterior a 2027</strong>: solo tipo de documento, número, nombre y fecha de nacimiento son obligatorios; el resto es opcional.
+          </p>
 
           <div class="form-grid trr-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-6">
-            <el-form-item label="Modalidad de Inicio de TRR">
+            <el-form-item label="Modalidad de Inicio de TRR" :required="esCampoRequerido('modalidadTRR')">
               <el-select v-model="form.modalidadTRR" placeholder="Seleccione" class="w-full" clearable>
                 <el-option label="Hemodiálisis" value="Hemodiálisis" />
                 <el-option label="Diálisis Peritoneal" value="Diálisis Peritoneal" />
                 <el-option label="Trasplante" value="Trasplante" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Fecha de Creación del Acceso de Inicio" :error="erroresFecha.fechaCreacionAcceso">
+            <el-form-item label="Fecha de Creación del Acceso de Inicio" :required="esCampoRequerido('fechaCreacionAcceso')" :error="erroresFecha.fechaCreacionAcceso">
               <el-date-picker v-model="form.fechaCreacionAcceso" v-bind="attrsFechaDDMMAAAA" @change="actualizarErroresFechas" />
             </el-form-item>
-            <el-form-item label="Tipo de Acceso de Inicio" >
+            <el-form-item label="Tipo de Acceso de Inicio" :required="esCampoRequerido('tipoAccesoInicio')">
               <el-select v-model="form.tipoAccesoInicio" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'" @change="actualizarErroresFechas">
                 <el-option v-for="tipo in tiposAccesoFiltrados" :key="tipo.id" :label="tipo.label" :value="tipo.id" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Localización Acceso de Inicio" @mousedown.capture="validarOrden">
+            <el-form-item label="Localización Acceso de Inicio" :required="esCampoRequerido('localizacionAcceso')" @mousedown.capture="validarOrden">
               <el-select v-model="form.localizacionAcceso" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'">
                 <el-option v-for="opcion in opcionesAccesoFiltradas" :key="opcion.id" :label="opcion.label" :value="opcion.id" />
               </el-select>
             </el-form-item>
-            <el-form-item label="Fecha de Inicio de TRR" :error="erroresFecha.fechaInicioTRR">
+            <el-form-item label="Fecha de Inicio de TRR" :required="esCampoRequerido('fechaInicioTRR')" :error="erroresFecha.fechaInicioTRR">
               <el-date-picker v-model="form.fechaInicioTRR" v-bind="attrsFechaDDMMAAAA" @change="onCambioFechasTRR" />
             </el-form-item>
-            <el-form-item label="Subsistema de Salud">
+            <el-form-item label="Subsistema de Salud" :required="esCampoRequerido('subsistemaSalud')">
               <el-select v-model="form.subsistemaSalud" placeholder="Seleccione" class="w-full" clearable>
                 <el-option label="EsSalud" value="EsSalud" />
                 <el-option label="Minsa" value="Minsa" />
@@ -285,13 +297,10 @@
             <el-form-item label="Edad de Inicio de TRR">
               <el-input v-model="form.edadInicioTRR" readonly placeholder="—" />
             </el-form-item>
-            <el-form-item label="Fecha de Ingreso a Hospital EsSalud" :error="erroresFecha.fechaIngresoEsSalud">
-              <el-date-picker v-model="form.fechaIngresoEsSalud" v-bind="attrsFechaDDMMAAAA" clearable @change="actualizarErroresFechas" />
-            </el-form-item>
-            <el-form-item label="Fecha de Primer Ingreso a Unidad" :error="erroresFecha.fechaPrimerIngreso">
+            <el-form-item label="Fecha de Primer Ingreso a Unidad" :required="esCampoRequerido('fechaPrimerIngreso')" :error="erroresFecha.fechaPrimerIngreso">
               <el-date-picker v-model="form.fechaPrimerIngreso" v-bind="attrsFechaDDMMAAAA" clearable @change="actualizarErroresFechas" />
             </el-form-item>
-            <el-form-item label="Hospital Procedencia TRR en EsSalud" class="sm:col-span-2 xl:col-span-2">
+            <el-form-item label="Hospital Procedencia TRR en EsSalud" :required="esCampoRequerido('hospitalProcedencia')" class="sm:col-span-2 xl:col-span-2">
               <el-autocomplete
                 v-model="form.hospitalProcedencia"
                 :fetch-suggestions="querySearch"
@@ -496,7 +505,6 @@ const form = reactive({
   edadInicioTRR: '',
   tipoAccesoInicio: '',
   fechaCreacionAcceso: '',
-  fechaIngresoEsSalud: '',
   fechaPrimerIngreso: '',
   localizacionAcceso: '',
   hospitalProcedencia: '',
@@ -564,54 +572,6 @@ watch(() => form.distrito, (newVal) => {
   }
 });
 // ==========================================
-const validarFormulario = () => {
-  const camposObligatorios = [
-    'tipoDocumento',
-    'numeroDocumento',
-    'nombreCompleto',
-    'fechaNacimiento',
-    'sexo',
-    'gradoInstruccion',
-    'etiologiaGeneral',
-    'etiologiaEspecifica',
-    'modalidadTRR',
-    'fechaInicioTRR',
-    'subsistemaSalud',
-    'fechaCreacionAcceso',
-    'fechaIngresoEsSalud',
-    'fechaPrimerIngreso',
-    'localizacionAcceso',
-    'hospitalProcedencia'
-  ];
-
-  // Si la modalidad no es Trasplante, el tipo de acceso es obligatorio
-  if (form.modalidadTRR !== 'Trasplante') {
-    camposObligatorios.push('tipoAccesoInicio');
-  }
-
-  for (const campo of camposObligatorios) {
-    if (!form[campo]) {
-      ElMessage({
-        message: `Por favor complete el campo: ${campo}`,
-        type: 'warning',
-        plain: true,
-      })
-      return false;
-    }
-  }
-
-  if (!validarFechasFormulario()) {
-    ElMessage({
-      message: 'Revise las fechas marcadas en rojo antes de continuar.',
-      type: 'warning',
-      plain: true,
-    });
-    return false;
-  }
-
-  return true;
-};
-
 /** Mismo formato en pantalla y en v-model; calendario abre en el mes del periodo seleccionado. */
 const attrsFechaDDMMAAAA = computed(() => ({
   type: 'date',
@@ -665,6 +625,109 @@ const normalizarFecha = (valor) => {
   return fecha;
 };
 
+const UMBRAL_FECHA_TRR_DATOS_COMPLETOS = new Date(2027, 0, 1);
+
+const ETIQUETAS_CAMPO_FORMULARIO = {
+  tipoDocumento: 'Tipo de Documento',
+  numeroDocumento: 'Número de Documento',
+  nombreCompleto: 'Apellidos y Nombres',
+  fechaNacimiento: 'Fecha de Nacimiento',
+  sexo: 'Sexo',
+  gradoInstruccion: 'Grado de Instrucción',
+  etiologiaGeneral: 'Etiología general',
+  etiologiaEspecifica: 'Etiología específica',
+  modalidadTRR: 'Modalidad de Inicio de TRR',
+  fechaCreacionAcceso: 'Fecha de Creación del Acceso de Inicio',
+  tipoAccesoInicio: 'Tipo de Acceso de Inicio',
+  localizacionAcceso: 'Localización Acceso de Inicio',
+  fechaInicioTRR: 'Fecha de Inicio de TRR',
+  subsistemaSalud: 'Subsistema de Salud',
+  fechaPrimerIngreso: 'Fecha de Primer Ingreso a Unidad',
+  hospitalProcedencia: 'Hospital Procedencia TRR en EsSalud',
+};
+
+const CAMPOS_OBLIGATORIOS_MINIMOS = [
+  'tipoDocumento',
+  'numeroDocumento',
+  'nombreCompleto',
+  'fechaNacimiento',
+];
+
+const CAMPOS_OBLIGATORIOS_TRR_COMPLETO = [
+  'sexo',
+  'gradoInstruccion',
+  'etiologiaGeneral',
+  'etiologiaEspecifica',
+  'modalidadTRR',
+  'fechaInicioTRR',
+  'subsistemaSalud',
+  'fechaCreacionAcceso',
+  'fechaPrimerIngreso',
+  'localizacionAcceso',
+  'hospitalProcedencia',
+];
+
+/** Inicio TRR desde 01/01/2027 → todos los campos clínicos obligatorios. */
+const requiereDatosCompletosTRR = computed(() => {
+  const fecha = normalizarFecha(form.fechaInicioTRR);
+  if (!fecha) return false;
+  const umbral = new Date(UMBRAL_FECHA_TRR_DATOS_COMPLETOS);
+  umbral.setHours(0, 0, 0, 0);
+  return fecha >= umbral;
+});
+
+function esCampoRequerido(campo) {
+  if (CAMPOS_OBLIGATORIOS_MINIMOS.includes(campo)) return true;
+  if (!requiereDatosCompletosTRR.value) return false;
+  if ((campo === 'tipoAccesoInicio' || campo === 'localizacionAcceso') && form.modalidadTRR === 'Trasplante') {
+    return false;
+  }
+  if (campo === 'tipoAccesoInicio') return true;
+  return CAMPOS_OBLIGATORIOS_TRR_COMPLETO.includes(campo);
+}
+
+function camposObligatoriosActuales() {
+  const campos = [...CAMPOS_OBLIGATORIOS_MINIMOS];
+  if (requiereDatosCompletosTRR.value) {
+    campos.push(...CAMPOS_OBLIGATORIOS_TRR_COMPLETO);
+    if (form.modalidadTRR !== 'Trasplante') {
+      campos.push('tipoAccesoInicio');
+    }
+  }
+  return [...new Set(campos)].filter((campo) => {
+    if (form.modalidadTRR === 'Trasplante' && (campo === 'tipoAccesoInicio' || campo === 'localizacionAcceso')) {
+      return false;
+    }
+    return true;
+  });
+}
+
+const validarFormulario = () => {
+  for (const campo of camposObligatoriosActuales()) {
+    const val = form[campo];
+    const vacio = val == null || val === '' || (Array.isArray(val) && val.length === 0);
+    if (vacio) {
+      ElMessage({
+        message: `Por favor complete el campo: ${ETIQUETAS_CAMPO_FORMULARIO[campo] || campo}`,
+        type: 'warning',
+        plain: true,
+      });
+      return false;
+    }
+  }
+
+  if (!validarFechasFormulario()) {
+    ElMessage({
+      message: 'Revise las fechas marcadas en rojo antes de continuar.',
+      type: 'warning',
+      plain: true,
+    });
+    return false;
+  }
+
+  return true;
+};
+
 /** Rango del periodo elegido en pantalla (mes completo). Usa periodo global / selector / prop inicial. */
 const rangoPeriodoSeleccionado = computed(() => {
   const listaPeriodos = Array.isArray(periodos.value) ? periodos.value : [];
@@ -711,7 +774,6 @@ const fechaDefaultCalendarioPeriodo = computed(() => rangoPeriodoSeleccionado.va
 const CAMPOS_FECHA_TOPE_PERIODO = [
   'fechaCreacionAcceso',
   'fechaInicioTRR',
-  'fechaIngresoEsSalud',
   'fechaPrimerIngreso',
 ];
 
@@ -727,7 +789,6 @@ const erroresFecha = reactive({
   fechaNacimiento: '',
   fechaCreacionAcceso: '',
   fechaInicioTRR: '',
-  fechaIngresoEsSalud: '',
   fechaPrimerIngreso: '',
 });
 
@@ -735,7 +796,6 @@ const CAMPOS_FECHA_VALIDACION = [
   { key: 'fechaNacimiento', label: 'Fecha de Nacimiento' },
   { key: 'fechaCreacionAcceso', label: 'Fecha de Creación del Acceso de Inicio' },
   { key: 'fechaInicioTRR', label: 'Fecha de Inicio de TRR' },
-  { key: 'fechaIngresoEsSalud', label: 'Fecha de Ingreso a Hospital EsSalud' },
   { key: 'fechaPrimerIngreso', label: 'Fecha de Primer Ingreso a Unidad' },
 ];
 
@@ -836,7 +896,6 @@ watch(
     form.fechaNacimiento,
     form.fechaCreacionAcceso,
     form.fechaInicioTRR,
-    form.fechaIngresoEsSalud,
     form.fechaPrimerIngreso,
     form.tipoAccesoInicio,
     periodoSeleccionado.value,
@@ -1257,7 +1316,7 @@ async function cargarUbigeoDesdeEsSalud() {
 
 function camposDialisisAccesoTrr() {
   return {
-    fecha_ingreso_hospital: fechaFormularioParaApi(form.fechaIngresoEsSalud) || '',
+    fecha_ingreso_hospital: '',
     localizacion_acceso_inicio: resolverLocalizacionAccesoTexto(form.localizacionAcceso) || '',
     hospital_procedencia_trr: String(form.hospitalProcedencia || '').trim(),
   };
@@ -1288,31 +1347,91 @@ function esAccesoInicioUnidad(unidad) {
   return motivo == null || String(motivo).trim() === '';
 }
 
+function normalizarListaUnidades(res) {
+  return Array.isArray(res) ? res : (res?.results || []);
+}
+
+function idPacienteAtencionDeUnidad(unidad) {
+  return unidad?.id_paciente_atencion ?? unidad?.datosPacienteAtencion?.id_paciente_atencion ?? null;
+}
+
+function idPacienteDeUnidad(unidad) {
+  return unidad?.datosPacienteAtencion?.id_paciente ?? unidad?.datosPaciente?.id_paciente ?? null;
+}
+
+function seleccionarUnidadAccesoInicio(unidades, idPacienteAtencion) {
+  const lista = Array.isArray(unidades) ? unidades : [];
+  const delContexto = lista.filter((u) => {
+    if (idPacienteAtencion != null && String(idPacienteAtencionDeUnidad(u)) !== String(idPacienteAtencion)) {
+      return false;
+    }
+    return true;
+  });
+  const inicio = delContexto.filter(esAccesoInicioUnidad);
+  const candidatas = inicio.length ? inicio : delContexto;
+  const ordenadas = [...candidatas].sort(
+    (a, b) => (Number(a.id_unidad_actual) || 0) - (Number(b.id_unidad_actual) || 0),
+  );
+  return ordenadas[0] || null;
+}
+
+async function fetchUnidadesActualesEdicion(idP, idPa) {
+  const idPeriodo = idPeriodoListado.value ?? getIdPeriodoParaPayload();
+  const idIpress = idIpressListado.value;
+  const mod = modalidadGlobal.value;
+  const intentos = [];
+
+  if (idPa != null && idPa !== '') {
+    intentos.push(new URLSearchParams({ id_paciente_atencion: String(idPa) }));
+  }
+
+  const porPaciente = new URLSearchParams({ id_paciente: String(idP) });
+  if (idPeriodo != null && idPeriodo !== '') porPaciente.set('id_periodo', String(idPeriodo));
+  if (idIpress != null && idIpress !== '') porPaciente.set('id_ipress', String(idIpress));
+  if (mod != null && mod !== '') porPaciente.set('id_modalidad', String(mod));
+  intentos.push(porPaciente);
+
+  for (const params of intentos) {
+    try {
+      const res = await getAllIpress(`/unidadesActuales/?${params}`);
+      const lista = normalizarListaUnidades(res).filter((u) => {
+        const idPac = idPacienteDeUnidad(u);
+        if (idPac != null && String(idPac) !== String(idP)) return false;
+        if (idPa != null && idPa !== '' && String(idPacienteAtencionDeUnidad(u)) !== String(idPa)) return false;
+        return true;
+      });
+      if (lista.length) return lista;
+    } catch (e) {
+      console.error('Error al cargar unidades actuales:', e);
+    }
+  }
+  return [];
+}
+
+async function eliminarAccesosInicioDuplicados(idPa, idConservar) {
+  if (idPa == null || idConservar == null) return;
+  const unidades = await fetchUnidadesActualesEdicion(idPacienteEdicionInterno.value, idPa);
+  const duplicados = unidades.filter(
+    (u) => esAccesoInicioUnidad(u) && String(u.id_unidad_actual) !== String(idConservar),
+  );
+  for (const u of duplicados) {
+    try {
+      await deleteAllIpress(`/unidadesActuales/${u.id_unidad_actual}/`);
+    } catch (e) {
+      console.warn('No se eliminó duplicado de acceso inicio', u.id_unidad_actual, e);
+    }
+  }
+}
+
 async function cargarUnidadActualParaEdicion(idP) {
   idUnidadActualEdicionInterno.value = null;
   idPacienteAtencionEdicionInterno.value = await resolverIdPacienteAtencionParaEdicion(idP);
 
-  let unidades = [];
-  if (idPacienteAtencionEdicionInterno.value) {
-    const res = await getAllIpress(`/unidadesActuales/?id_paciente_atencion=${idPacienteAtencionEdicionInterno.value}`);
-    unidades = Array.isArray(res) ? res : (res?.results || []);
-  }
-  if (!unidades.length) {
-    const res = await getAllIpress(`/unidadesActuales/?id_paciente=${idP}`);
-    unidades = Array.isArray(res) ? res : (res?.results || []);
-  }
-
-  const inicioUnidades = unidades.filter(esAccesoInicioUnidad);
-  const candidatas = inicioUnidades.length ? inicioUnidades : unidades;
-  const ordenadas = [...candidatas].sort(
-    (a, b) => (Number(a.id_unidad_actual) || 0) - (Number(b.id_unidad_actual) || 0),
-  );
-  const unidad = ordenadas[0] || null;
+  const unidades = await fetchUnidadesActualesEdicion(idP, idPacienteAtencionEdicionInterno.value);
+  const unidad = seleccionarUnidadAccesoInicio(unidades, idPacienteAtencionEdicionInterno.value);
   idUnidadActualEdicionInterno.value = unidad?.id_unidad_actual ?? null;
   if (!idPacienteAtencionEdicionInterno.value && unidad) {
-    idPacienteAtencionEdicionInterno.value = unidad.id_paciente_atencion
-      ?? unidad.datosPacienteAtencion?.id_paciente_atencion
-      ?? null;
+    idPacienteAtencionEdicionInterno.value = idPacienteAtencionDeUnidad(unidad);
   }
   return unidad;
 }
@@ -1325,6 +1444,12 @@ async function sincronizarUnidadActualEnEdicion() {
   }
   if (!idPa) return;
 
+  if (!idUnidadActualEdicionInterno.value) {
+    const unidades = await fetchUnidadesActualesEdicion(idPacienteEdicionInterno.value, idPa);
+    const unidad = seleccionarUnidadAccesoInicio(unidades, idPa);
+    idUnidadActualEdicionInterno.value = unidad?.id_unidad_actual ?? null;
+  }
+
   const payloadUnidades = prepararPayloadUnidadesActuales({
     id_paciente_atencion: Number(idPa),
     fecha_creacion_acceso: fechaFormularioParaApi(form.fechaCreacionAcceso) || '',
@@ -1336,9 +1461,13 @@ async function sincronizarUnidadActualEnEdicion() {
 
   if (idUnidadActualEdicionInterno.value) {
     await patchAllIpress(`/unidadesActuales/${idUnidadActualEdicionInterno.value}/`, payloadUnidades);
+    await eliminarAccesosInicioDuplicados(idPa, idUnidadActualEdicionInterno.value);
   } else {
     const res = await postAllIpress('/unidadesActuales/', payloadUnidades);
     idUnidadActualEdicionInterno.value = res?.id_unidad_actual ?? res?.id ?? null;
+    if (idUnidadActualEdicionInterno.value) {
+      await eliminarAccesosInicioDuplicados(idPa, idUnidadActualEdicionInterno.value);
+    }
   }
 }
 // Filtro B: Tipo de Acceso -> Localizaciones específicas (Validación Cruzada)
@@ -1637,6 +1766,7 @@ const puedeConsultar = computed(() => {
 });
 
 const validarOrden = (e) => {
+  if (!requiereDatosCompletosTRR.value) return;
   // 1. Si es Trasplante, no hacemos nada (el input ya está disabled por HTML y eso está bien)
   if (form.modalidadTRR === 'Trasplante') {
     return;
@@ -2262,7 +2392,6 @@ async function cargarDatosPacienteParaEdicion(idP, idDial) {
     form.fechaInicioTRR = fechaIsoADDisplay(dia.fecha_inicio_trr);
     form.subsistemaSalud = dia.subsistema_salud || '';
     form.fechaPrimerIngreso = fechaIsoADDisplay(dia.fecha_primer_ingreso);
-    form.fechaIngresoEsSalud = fechaIsoADDisplay(dia.fecha_ingreso_hospital);
     form.hospitalProcedencia = dia.hospital_procedencia_trr || '';
     form.comorbilidades = mapComorbilidadesDesdeDialisis(dia);
 

@@ -86,6 +86,22 @@
                         {{ erroresNuevoAcceso.localizacion_acceso_nuevo }}
                     </p>
                 </div>
+                <div v-if="esTipoAccesoFistulaNuevo">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de inicio de canulación *</label>
+                    <input v-model="form.fecha_inicio_canulacion" type="date"
+                        class="w-full border text-slate-800 text-sm rounded-lg p-2.5"
+                        :class="erroresNuevoAcceso.fecha_inicio_canulacion ? 'border-red-500' : 'border-slate-300'"
+                        :min="form.fecha_creacion_acceso_nuevo || minFechaNuevoAccesoVascular || undefined"
+                        :max="rangoFechasPeriodo.max || undefined"
+                        @input="erroresNuevoAcceso.fecha_inicio_canulacion = ''" />
+                    <p v-if="erroresNuevoAcceso.fecha_inicio_canulacion"
+                        class="text-[11px] text-red-500 mt-1 font-medium">
+                        {{ erroresNuevoAcceso.fecha_inicio_canulacion }}
+                    </p>
+                    <p v-else class="text-[11px] text-slate-500 mt-1">
+                        Solo para fístula. No puede ser anterior a la fecha de creación del acceso.
+                    </p>
+                </div>
                 <div v-if="form.motivo_cambio || desdeFormularioInfeccion">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Motivo del cambio</label>
                     <select v-model="form.motivo_cambio"
@@ -261,6 +277,23 @@
                                 <p v-if="erroresNuevoAcceso.localizacion_acceso_nuevo"
                                     class="text-[11px] text-red-500 mt-1 font-medium">
                                     {{ erroresNuevoAcceso.localizacion_acceso_nuevo }}
+                                </p>
+                            </div>
+                            <div v-if="esTipoAccesoFistulaNuevo">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de inicio de canulación
+                                    *</label>
+                                <input v-model="form.fecha_inicio_canulacion" type="date"
+                                    class="w-full border text-slate-800 text-sm rounded-lg p-2.5"
+                                    :class="erroresNuevoAcceso.fecha_inicio_canulacion ? 'border-red-500' : 'border-slate-300'"
+                                    :min="form.fecha_creacion_acceso_nuevo || minFechaNuevoAccesoVascular || undefined"
+                                    :max="rangoFechasPeriodo.max || undefined"
+                                    @input="erroresNuevoAcceso.fecha_inicio_canulacion = ''" />
+                                <p v-if="erroresNuevoAcceso.fecha_inicio_canulacion"
+                                    class="text-[11px] text-red-500 mt-1 font-medium">
+                                    {{ erroresNuevoAcceso.fecha_inicio_canulacion }}
+                                </p>
+                                <p v-else class="text-[11px] text-slate-500 mt-1">
+                                    Solo para fístula. No puede ser anterior a la fecha de creación del acceso.
                                 </p>
                             </div>
                         </div>
@@ -504,6 +537,7 @@ import { useRouter } from 'vue-router'
 import { ref, onMounted, reactive, computed, watch, inject, defineAsyncComponent } from 'vue';
 import { getAllIpress, patchAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
+import { esTipoAccesoFistula, existeCambioAccesoMismoDia, MENSAJE_CAMBIO_ACCESO_MISMO_DIA } from '@/utils/accesoVascularValidacion';
 import { ElMessage } from 'element-plus';
 import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
@@ -543,6 +577,7 @@ const form = reactive({
     fecha_creacion_acceso_nuevo: null,
     tipo_acceso_nuevo: null,
     localizacion_acceso_nuevo: null,
+    fecha_inicio_canulacion: null,
     id_periodo_ipress: periodoIpress,
     id_red: 1,
     id_paciente: paciente.id_paciente
@@ -648,18 +683,22 @@ const opcionesLocalizacionNuevoFiltradas = computed(() => {
     return listaLocalizacionesNuevo.filter(op => op.tipo === tipoElegido);
 });
 
+const esTipoAccesoFistulaNuevo = computed(() => esTipoAccesoFistula(form.tipo_acceso_nuevo));
+
 const silenciandoWatchTipoAcceso = ref(false);
 
 watch(() => form.tipo_acceso_nuevo, (val) => {
     if (silenciandoWatchTipoAcceso.value) return;
     form.localizacion_acceso_nuevo = '';
     if (val === 'Catéter peritoneal') form.localizacion_acceso_nuevo = 'Catéter peritoneal';
+    if (!esTipoAccesoFistula(val)) form.fecha_inicio_canulacion = null;
 });
 
 const limpiarCamposNuevoAcceso = () => {
     form.fecha_creacion_acceso_nuevo = null;
     form.tipo_acceso_nuevo = null;
     form.localizacion_acceso_nuevo = null;
+    form.fecha_inicio_canulacion = null;
     if (!props.desdeFormularioInfeccion) {
         form.motivo_cambio = null;
     }
@@ -670,6 +709,7 @@ const erroresNuevoAcceso = reactive({
     fecha_creacion_acceso_nuevo: '',
     tipo_acceso_nuevo: '',
     localizacion_acceso_nuevo: '',
+    fecha_inicio_canulacion: '',
     motivo_cambio: '',
 });
 
@@ -677,6 +717,7 @@ const LABELS_CAMPOS_NUEVO_ACCESO = {
     fecha_creacion_acceso_nuevo: 'Fecha de creación',
     tipo_acceso_nuevo: 'Tipo de acceso',
     localizacion_acceso_nuevo: 'Localización',
+    fecha_inicio_canulacion: 'Fecha de inicio de canulación',
     motivo_cambio: 'Motivo del cambio',
 };
 
@@ -776,6 +817,9 @@ const validarFormulario = () => {
     if ((!esEdicionDirecta.value && tieneHistorialAcceso.value) || props.desdeFormularioInfeccion) {
         camposObligatorios.push('motivo_cambio');
     }
+    if (esTipoAccesoFistulaNuevo.value) {
+        camposObligatorios.push('fecha_inicio_canulacion');
+    }
 
     let primerError = '';
     for (const campo of camposObligatorios) {
@@ -825,6 +869,37 @@ const validarFormulario = () => {
             }
         }
     }
+
+    if (esTipoAccesoFistulaNuevo.value) {
+        const canul = form.fecha_inicio_canulacion;
+        const creacion = form.fecha_creacion_acceso_nuevo;
+        if (creacion && canul && canul < creacion) {
+            const msg = 'La fecha de inicio de canulación no puede ser anterior a la fecha de creación del acceso.';
+            erroresNuevoAcceso.fecha_inicio_canulacion = msg;
+            ElMessage({ message: msg, type: 'warning', plain: true });
+            return false;
+        }
+        if (rango.max && canul && canul > rango.max) {
+            const msg = `La fecha de canulación no puede ser posterior al periodo seleccionado (${rango.max}).`;
+            erroresNuevoAcceso.fecha_inicio_canulacion = msg;
+            ElMessage({ message: msg, type: 'warning', plain: true });
+            return false;
+        }
+    }
+
+    if (esMotivoCambioAcceso(form.motivo_cambio)) {
+        const idP = paciente?.id_paciente ?? pacienteSeleccionado.value?.id_paciente;
+        if (existeCambioAccesoMismoDia(periodoActual.value, {
+            idPaciente: idP,
+            fecha: f,
+            excluirIdUnidad: props.registroEdicion?.id_unidad_actual ?? null,
+        })) {
+            erroresNuevoAcceso.fecha_creacion_acceso_nuevo = MENSAJE_CAMBIO_ACCESO_MISMO_DIA;
+            ElMessage({ message: MENSAJE_CAMBIO_ACCESO_MISMO_DIA, type: 'warning', plain: true });
+            return false;
+        }
+    }
+
     return true;
 };
 
@@ -882,6 +957,7 @@ function cargarRegistroEdicion(registro) {
     form.tipo_acceso_nuevo = normalizarTipoAcceso(registro.tipo_acceso || registro.tipo_acceso_actual) || null;
     form.localizacion_acceso_nuevo = normalizarLocalizacionNuevo(loc);
     silenciandoWatchTipoAcceso.value = false;
+    form.fecha_inicio_canulacion = registro.fecha_inicio_canulacion || null;
     form.motivo_cambio = motivoDesdeRegistro(registro.motivo_cambio);
 }
 
@@ -923,6 +999,7 @@ const guardarRegistro = async () => {
             tipo_acceso: normalizarTipoAcceso(form.tipo_acceso_nuevo),
             localizacion_acceso: describirLocalizacion(form.localizacion_acceso_nuevo),
             fecha_creacion_acceso: form.fecha_creacion_acceso_nuevo,
+            fecha_inicio_canulacion: esTipoAccesoFistulaNuevo.value ? (form.fecha_inicio_canulacion || null) : null,
             motivo_cambio: motivoGuardado || null
         });
         const idEdicion = props.registroEdicion?.id_unidad_actual;
@@ -932,6 +1009,7 @@ const guardarRegistro = async () => {
                     tipo_acceso: payload.tipo_acceso,
                     localizacion_acceso: payload.localizacion_acceso,
                     fecha_creacion_acceso: payload.fecha_creacion_acceso,
+                    fecha_inicio_canulacion: payload.fecha_inicio_canulacion,
                     motivo_cambio: payload.motivo_cambio,
                 });
             } else {

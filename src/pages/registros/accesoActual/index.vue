@@ -111,6 +111,7 @@
                       <th class="tabla-av-th">Tipo acceso</th>
                       <th class="tabla-av-th">Localización</th>
                       <th class="tabla-av-th">F. creación</th>
+                      <th class="tabla-av-th">F. inicio canulación</th>
                       <th class="tabla-av-th">Motivo cambio</th>
                       <th class="tabla-av-th">Estado</th>
                       <th class="tabla-av-th">Editado sup.</th>
@@ -131,6 +132,7 @@
                       <td class="tabla-av-td text-slate-600">{{ r.tipo_acceso || r.tipo_acceso_actual || '—' }}</td>
                       <td class="tabla-av-td text-slate-600">{{ r.localizacion_acceso || r.localizacion_acceso_actual || '—' }}</td>
                       <td class="tabla-av-td text-slate-600">{{ r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '—' }}</td>
+                      <td class="tabla-av-td text-slate-600">{{ textoCanulacionRegistro(r) }}</td>
                       <td class="tabla-av-td text-slate-600">{{ r.motivo_cambio || '—' }}</td>
                       <td class="tabla-av-td">
                         <span class="tabla-av-badge inline-flex rounded-full px-2 py-0.5 font-semibold whitespace-nowrap" :class="estadoAprobacionClase(r.estado_aprobacion)">
@@ -208,6 +210,7 @@
                     <th class="tabla-av-th">Tipo acceso</th>
                     <th class="tabla-av-th">Localización</th>
                     <th class="tabla-av-th">F. creación</th>
+                    <th class="tabla-av-th">F. inicio canulación</th>
                     <th class="tabla-av-th">Motivo cambio</th>
                     <th class="tabla-av-th">Estado</th>
                     <th class="tabla-av-th">Editado sup.</th>
@@ -232,6 +235,7 @@
                     <td class="tabla-av-td text-slate-600">{{ fila.tipo_acceso || '—' }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.localizacion_acceso || '—' }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.fecha_creacion_acceso || '—' }}</td>
+                    <td class="tabla-av-td text-slate-600">{{ textoCanulacionRegistro(fila) }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.motivo_cambio || '—' }}</td>
                     <td class="tabla-av-td">
                       <span class="tabla-av-badge inline-flex rounded-full px-2 py-0.5 font-semibold whitespace-nowrap" :class="estadoAprobacionClase(fila.estado_aprobacion)">
@@ -437,16 +441,19 @@
 
     <!-- Modal Importar: descargar formato Excel + cargar archivo -->
     <div v-if="mostrarModalImportar" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center">
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full overflow-hidden flex flex-col"
+        :class="resultadoImportacion?.detalles?.length ? 'max-w-6xl max-h-[90vh]' : 'max-w-md'"
+      >
+        <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center shrink-0">
           <h3 class="font-bold text-white flex items-center gap-2">Importar Acceso Vascular</h3>
           <button type="button" class="text-white/80 hover:text-white" @click="cerrarModalImportar">✕</button>
         </div>
-        <div class="p-6 space-y-6">
-          <p class="text-sm text-slate-600">
-            Cargue el Excel completado. La importacion valida el tipo de acceso, la localizacion, la fecha dentro del periodo y el DNI contra los pacientes visibles.
+        <div class="p-6 space-y-6 overflow-auto">
+          <p v-if="!resultadoImportacion?.detalles?.length" class="text-sm text-slate-600">
+            Cargue el Excel completado. La importacion valida el tipo de acceso, la localizacion, las fechas dentro del periodo (para fístula, también la fecha de inicio de canulación) y el DNI contra los pacientes visibles.
           </p>
-          <div>
+          <div v-if="!resultadoImportacion?.detalles?.length">
             <label class="block text-sm font-bold text-slate-700 mb-2">Cargar archivo Excel</label>
             <div
               class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center transition-colors"
@@ -479,9 +486,82 @@
           <div v-if="resultadoImportacion" class="rounded-lg p-3 text-sm" :class="resultadoImportacion.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'">
             {{ resultadoImportacion.mensaje }}
           </div>
-          <div class="flex justify-end gap-2 pt-2">
+          <div v-if="resultadoImportacion?.detalles?.length" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 text-sm">
+                <div class="text-xs uppercase font-bold text-slate-500">Total filas</div>
+                <div class="font-semibold text-slate-800 mt-1">{{ resultadoImportacion.totalFilas }}</div>
+              </div>
+              <div class="bg-green-50 rounded-lg p-3 border border-green-200 text-sm">
+                <div class="text-xs uppercase font-bold text-green-700">Guardadas</div>
+                <div class="font-semibold text-green-800 mt-1">{{ resultadoImportacion.guardadas }}</div>
+              </div>
+              <div class="bg-red-50 rounded-lg p-3 border border-red-200 text-sm">
+                <div class="text-xs uppercase font-bold text-red-700">Errores</div>
+                <div class="font-semibold text-red-800 mt-1">{{ resultadoImportacion.errores }}</div>
+              </div>
+            </div>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">DNI</th>
+                    <th class="whitespace-nowrap px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Paciente</th>
+                    <th class="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
+                    <th class="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localización</th>
+                    <th class="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">F. creación</th>
+                    <th class="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Canulación</th>
+                    <th class="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
+                    <th class="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                    <th class="px-3 py-2 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr
+                    v-for="(detalle, index) in detallesImportacionPaginados"
+                    :key="`import-${(paginaResultadoImportacion - 1) * tamPaginaResultadoImportacion + index}`"
+                    :class="detalle.guardado ? 'bg-white' : 'bg-red-50/40'"
+                  >
+                    <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.dni || '—' }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.paciente || '—' }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.tipo_acceso || '—' }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.localizacion_acceso || '—' }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.fecha_creacion_acceso || '—' }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.fecha_inicio_canulacion || '—' }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.motivo_cambio || '—' }}</td>
+                    <td class="px-3 py-2 text-sm font-semibold whitespace-nowrap" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
+                      {{ detalle.guardado ? 'Guardado' : 'Error' }}
+                    </td>
+                    <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.mensaje || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-if="detallesImportacionLista.length > 0" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm">
+              <div class="flex flex-wrap items-center gap-3 text-slate-600">
+                <span>{{ rangoResultadoImportacionLabel }}</span>
+                <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+                  <span>Por página</span>
+                  <select v-model.number="tamPaginaResultadoImportacion" class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white">
+                    <option :value="10">10</option>
+                    <option :value="25">25</option>
+                    <option :value="50">50</option>
+                  </select>
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaResultadoImportacion <= 1" @click="paginaResultadoImportacion = 1">Primera</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaResultadoImportacion <= 1" @click="paginaResultadoImportacion--">Anterior</button>
+                <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaResultadoImportacion }} / {{ totalPaginasResultadoImportacion }}</span>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaResultadoImportacion >= totalPaginasResultadoImportacion" @click="paginaResultadoImportacion++">Siguiente</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaResultadoImportacion >= totalPaginasResultadoImportacion" @click="paginaResultadoImportacion = totalPaginasResultadoImportacion">Última</button>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 pt-2 shrink-0">
             <button type="button" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalImportar">Cerrar</button>
             <button
+              v-if="!resultadoImportacion?.detalles?.length"
               type="button"
               class="px-4 py-2 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg disabled:opacity-50"
               :disabled="!archivoSeleccionado || importando"
@@ -532,6 +612,8 @@
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Tipo</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Localizacion</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Fecha</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Canulación</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Estado</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle</th>
                   </tr>
@@ -543,6 +625,8 @@
                     <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.tipo_acceso || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.localizacion_acceso || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.fecha_creacion_acceso || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.fecha_inicio_canulacion || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.motivo_cambio || '—' }}</td>
                     <td class="px-4 py-3 text-sm font-semibold" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
                       {{ detalle.guardado ? 'Guardado' : 'Error' }}
                     </td>
@@ -590,6 +674,10 @@ import { ElMessage } from 'element-plus';
 import {
   claseFilaAccesoAntiguo,
   esAccesoVascularAntiguo,
+  esTipoAccesoFistula,
+  existeCambioAccesoMismoDia,
+  claveCambioAccesoMismoDia,
+  MENSAJE_CAMBIO_ACCESO_MISMO_DIA,
   motivoAccesoAntiguo,
   idsAccesosMasAntiguosPorPaciente,
 } from '@/utils/accesoVascularValidacion';
@@ -603,6 +691,7 @@ const HISTORIAL_CARGAS_KEY = 'acceso_vascular_historial_cargas';
 const NUMERO_FORMULARIO_ACCESO_VASCULAR = 1;
 
 const registros = ref([]);
+const registrosHistorialCompleto = ref([]);
 const dialisisPorPaciente = ref({});
 const cargando = ref(false);
 const mostrarModalNuevo = ref(false);
@@ -641,6 +730,8 @@ const paginaTodos = ref(1);
 const tamPaginaTodos = ref(10);
 const paginaDetalleCarga = ref(1);
 const tamPaginaDetalle = ref(10);
+const paginaResultadoImportacion = ref(1);
+const tamPaginaResultadoImportacion = ref(10);
 
 const TIPOS_ACCESO = [
   'Catéter Venoso Central Temporal',
@@ -766,7 +857,10 @@ function construirUltimoAccesoPorPaciente(regs) {
     const pid = idPacienteDesdeRegistro(r);
     if (pid == null) return;
     const key = String(pid);
-    if (map[key] == null) map[key] = r;
+    const prev = map[key];
+    if (prev == null || (Number(r.id_unidad_actual) || 0) > (Number(prev.id_unidad_actual) || 0)) {
+      map[key] = r;
+    }
   });
   return map;
 }
@@ -780,11 +874,18 @@ function tieneDatosAccesoDialisis(dialisis) {
   );
 }
 
+function textoCanulacionRegistro(row) {
+  const tipo = row?.tipo_acceso || row?.tipo_acceso_actual || '';
+  if (!esTipoAccesoFistula(tipo)) return '—';
+  return row?.fecha_inicio_canulacion || '—';
+}
+
 function camposDesdeUnidad(r) {
   return {
     tipo_acceso: r.tipo_acceso || r.tipo_acceso_actual || '',
     localizacion_acceso: r.localizacion_acceso || r.localizacion_acceso_actual || '',
     fecha_creacion_acceso: r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
+    fecha_inicio_canulacion: r.fecha_inicio_canulacion || '',
     motivo_cambio: r.motivo_cambio || '',
   };
 }
@@ -794,6 +895,7 @@ function camposDesdeDialisis(dialisis) {
     tipo_acceso: textoTipoAcceso(dialisis.tipo_acceso),
     localizacion_acceso: dialisis.localizacion_acceso_inicio || '',
     fecha_creacion_acceso: dialisis.fecha_creacion_acceso || '',
+    fecha_inicio_canulacion: '',
     motivo_cambio: '',
   };
 }
@@ -889,12 +991,24 @@ const normalizarLocalizacion = (valor, tipoAcceso) => {
   return match || '';
 };
 
-const validarFilaImportacion = (obj) => {
+const detalleFilaImportacion = (obj, extra = {}) => ({
+  dni: obj.dni || '',
+  paciente: obj.paciente || '',
+  tipo_acceso: obj.tipo_acceso || '',
+  localizacion_acceso: obj.localizacion_acceso || '',
+  fecha_creacion_acceso: obj.fecha_creacion_acceso || '',
+  fecha_inicio_canulacion: obj.fecha_inicio_canulacion || '',
+  motivo_cambio: obj.motivo_cambio || '',
+  ...extra,
+});
+
+const validarFilaImportacion = (obj, cambiosEnLote = null) => {
   const dni = String(obj.dni || '').trim();
   const paciente = String(obj.paciente || '').trim();
   const tipoAcceso = normalizarTipoAcceso(obj.tipo_acceso);
   const localizacion = normalizarLocalizacion(obj.localizacion_acceso, tipoAcceso);
   const fechaCreacion = String(obj.fecha_creacion_acceso || '').trim();
+  const fechaCanulacion = String(obj.fecha_inicio_canulacion || '').trim();
   const motivoCambio = String(obj.motivo_cambio || '').trim();
 
   if (!dni) return { ok: false, mensaje: 'Falta el DNI del paciente.' };
@@ -910,6 +1024,27 @@ const validarFilaImportacion = (obj) => {
   if (rangoFechasPeriodo.value.min && (fechaCreacion < rangoFechasPeriodo.value.min || fechaCreacion > rangoFechasPeriodo.value.max)) {
     return { ok: false, mensaje: `La fecha debe estar entre ${rangoFechasPeriodo.value.min} y ${rangoFechasPeriodo.value.max}.` };
   }
+  if (motivoCambio) {
+    const idPac = atencion.id_paciente ?? atencion.datosPaciente?.id_paciente;
+    if (existeCambioAccesoMismoDia(registrosHistorialCompleto.value, {
+      idPaciente: idPac,
+      fecha: fechaCreacion,
+    })) {
+      return { ok: false, mensaje: MENSAJE_CAMBIO_ACCESO_MISMO_DIA };
+    }
+    if (cambiosEnLote?.has(claveCambioAccesoMismoDia(idPac, fechaCreacion))) {
+      return { ok: false, mensaje: MENSAJE_CAMBIO_ACCESO_MISMO_DIA };
+    }
+  }
+  if (esTipoAccesoFistula(tipoAcceso)) {
+    if (!fechaCanulacion) return { ok: false, mensaje: 'Para fístula, indique la fecha de inicio de canulación.' };
+    if (fechaCanulacion < fechaCreacion) {
+      return { ok: false, mensaje: 'La canulación no puede ser anterior a la fecha de creación del acceso.' };
+    }
+    if (rangoFechasPeriodo.value.max && fechaCanulacion > rangoFechasPeriodo.value.max) {
+      return { ok: false, mensaje: `La canulación debe estar dentro del periodo (${rangoFechasPeriodo.value.max}).` };
+    }
+  }
 
   return {
     ok: true,
@@ -918,6 +1053,7 @@ const validarFilaImportacion = (obj) => {
       tipo_acceso: tipoAcceso,
       localizacion_acceso: localizacion,
       fecha_creacion_acceso: fechaCreacion,
+      fecha_inicio_canulacion: esTipoAccesoFistula(tipoAcceso) ? fechaCanulacion : null,
       motivo_cambio: motivoCambio || null,
     }),
     detalle: {
@@ -926,6 +1062,8 @@ const validarFilaImportacion = (obj) => {
       tipo_acceso: tipoAcceso,
       localizacion_acceso: localizacion,
       fecha_creacion_acceso: fechaCreacion,
+      fecha_inicio_canulacion: esTipoAccesoFistula(tipoAcceso) ? fechaCanulacion : '',
+      motivo_cambio: motivoCambio,
     },
   };
 };
@@ -949,6 +1087,7 @@ const todosPacientesLista = computed(() => {
       tipo_acceso: '',
       localizacion_acceso: '',
       fecha_creacion_acceso: '',
+      fecha_inicio_canulacion: '',
       motivo_cambio: '',
       estado_aprobacion: 'SIN REGISTRO',
       supervisor_edito_registro: false,
@@ -1077,6 +1216,35 @@ const detallesCargaLista = computed(() => {
   return Array.isArray(d) ? d : [];
 });
 
+const detallesImportacionLista = computed(() => {
+  const d = resultadoImportacion.value?.detalles;
+  return Array.isArray(d) ? d : [];
+});
+
+const totalPaginasResultadoImportacion = computed(() => {
+  const n = detallesImportacionLista.value.length;
+  if (n === 0) return 1;
+  return Math.ceil(n / tamPaginaResultadoImportacion.value);
+});
+
+const detallesImportacionPaginados = computed(() => {
+  const list = detallesImportacionLista.value;
+  const tam = tamPaginaResultadoImportacion.value;
+  const p = Math.min(Math.max(1, paginaResultadoImportacion.value), totalPaginasResultadoImportacion.value);
+  const start = (p - 1) * tam;
+  return list.slice(start, start + tam);
+});
+
+const rangoResultadoImportacionLabel = computed(() => {
+  const total = detallesImportacionLista.value.length;
+  if (total === 0) return '0 resultados';
+  const tam = tamPaginaResultadoImportacion.value;
+  const p = Math.min(Math.max(1, paginaResultadoImportacion.value), totalPaginasResultadoImportacion.value);
+  const start = (p - 1) * tam + 1;
+  const end = Math.min(p * tam, total);
+  return `Mostrando ${start}–${end} de ${total}`;
+});
+
 const totalPaginasDetalleCarga = computed(() => {
   const n = detallesCargaLista.value.length;
   if (n === 0) return 1;
@@ -1128,6 +1296,15 @@ watch(() => cargaSeleccionada.value?.id, () => {
   paginaDetalleCarga.value = 1;
 });
 
+watch(tamPaginaResultadoImportacion, () => {
+  paginaResultadoImportacion.value = 1;
+});
+
+watch(detallesImportacionLista, (list) => {
+  const tp = Math.max(1, Math.ceil(list.length / tamPaginaResultadoImportacion.value) || 1);
+  if (paginaResultadoImportacion.value > tp) paginaResultadoImportacion.value = tp;
+}, { deep: true });
+
 watch(detallesCargaLista, (list) => {
   const tp = Math.max(1, Math.ceil(list.length / tamPaginaDetalle.value) || 1);
   if (paginaDetalleCarga.value > tp) paginaDetalleCarga.value = tp;
@@ -1164,6 +1341,7 @@ async function fetchRegistros() {
   const qs = params.toString();
   if (!qs) {
     registros.value = [];
+    registrosHistorialCompleto.value = [];
     return;
   }
   cargando.value = true;
@@ -1199,6 +1377,7 @@ async function fetchRegistros() {
       return true;
     });
     const ultimoPorPaciente = construirUltimoAccesoPorPaciente(historialFiltrado);
+    registrosHistorialCompleto.value = historialFiltrado;
     registros.value = Object.values(ultimoPorPaciente);
 
     const listaDialisis = Array.isArray(resDialisis) ? resDialisis : (resDialisis?.results || []);
@@ -1211,6 +1390,7 @@ async function fetchRegistros() {
   } catch (e) {
     console.error('Error al cargar registros de acceso vascular:', e);
     registros.value = [];
+    registrosHistorialCompleto.value = [];
     dialisisPorPaciente.value = {};
     listadoAtenciones.value = [];
   } finally {
@@ -1451,6 +1631,7 @@ function onGuardado() {
 function abrirModalImportar() {
   archivoSeleccionado.value = null;
   resultadoImportacion.value = null;
+  paginaResultadoImportacion.value = 1;
   mostrarModalImportar.value = true;
 }
 
@@ -1458,6 +1639,7 @@ function cerrarModalImportar() {
   mostrarModalImportar.value = false;
   archivoSeleccionado.value = null;
   resultadoImportacion.value = null;
+  paginaResultadoImportacion.value = 1;
   arrastrando.value = false;
   fetchRegistros();
 }
@@ -1468,6 +1650,7 @@ const COLUMNAS_FORMATO = [
   'tipo_acceso',
   'localizacion_acceso',
   'fecha_creacion_acceso',
+  'fecha_inicio_canulacion',
   'motivo_cambio',
 ];
 
@@ -1488,6 +1671,7 @@ function filasExcelVistaRegistros() {
     'Tipo acceso': r.tipo_acceso || r.tipo_acceso_actual || '',
     Localización: r.localizacion_acceso || r.localizacion_acceso_actual || '',
     'Fecha creación': r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
+    'F. inicio canulación': textoCanulacionRegistro(r),
     'Motivo cambio': r.motivo_cambio || '',
     Estado: r.estado_aprobacion || 'PENDIENTE',
     'Editado supervisor': r.supervisor_edito_registro ? 'Sí' : 'No',
@@ -1503,6 +1687,7 @@ function filasExcelVistaTodos() {
     'Tipo acceso': fila.tipo_acceso || '',
     Localización: fila.localizacion_acceso || '',
     'Fecha creación': fila.fecha_creacion_acceso || '',
+    'F. inicio canulación': textoCanulacionRegistro(fila),
     'Motivo cambio': fila.motivo_cambio || '',
     Estado: fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO'),
     'Editado supervisor': fila.supervisor_edito_registro ? 'Sí' : 'No',
@@ -1541,6 +1726,7 @@ function descargarFormatoExcel() {
     ...todosPacientesLista.value.map((fila) => [
       fila.documento || '',
       fila.paciente || '',
+      '',
       '',
       '',
       '',
@@ -1615,37 +1801,39 @@ async function ejecutarImportacion() {
     let creados = 0;
     let errores = 0;
     const detalles = [];
+    const cambiosEnLote = new Set();
     for (const row of dataRows) {
       const obj = {};
       headers.forEach((h, i) => { obj[h] = row[i] != null ? String(row[i]).trim() : ''; });
-      const validacion = validarFilaImportacion(obj);
+      const validacion = validarFilaImportacion(obj, cambiosEnLote);
       if (!validacion.ok) {
-        detalles.push({
-          dni: obj.dni || '',
-          paciente: obj.paciente || '',
-          tipo_acceso: obj.tipo_acceso || '',
-          localizacion_acceso: obj.localizacion_acceso || '',
-          fecha_creacion_acceso: obj.fecha_creacion_acceso || '',
+        detalles.push(detalleFilaImportacion(obj, {
           guardado: false,
           mensaje: validacion.mensaje,
-        });
+        }));
         errores++;
         continue;
       }
+      const motivoCambio = String(obj.motivo_cambio || '').trim();
+      if (motivoCambio) {
+        const atencion = listadoAtenciones.value.find((item) => String(item.datosPaciente?.documento || '').trim() === String(obj.dni || '').trim());
+        const idPac = atencion?.id_paciente ?? atencion?.datosPaciente?.id_paciente;
+        if (idPac != null) {
+          cambiosEnLote.add(claveCambioAccesoMismoDia(idPac, obj.fecha_creacion_acceso));
+        }
+      }
       try {
         await postAllIpress('/unidadesActuales/', validacion.payload);
-        detalles.push({
-          ...validacion.detalle,
+        detalles.push(detalleFilaImportacion(validacion.detalle, {
           guardado: true,
           mensaje: 'Registro guardado correctamente.',
-        });
+        }));
         creados++;
       } catch (e) {
-        detalles.push({
-          ...validacion.detalle,
+        detalles.push(detalleFilaImportacion(validacion.detalle, {
           guardado: false,
           mensaje: e?.error || 'Error al guardar el registro.',
-        });
+        }));
         errores++;
       }
     }
@@ -1663,9 +1851,14 @@ async function ejecutarImportacion() {
     };
     historialCargas.value = [nuevaCarga, ...historialCargas.value];
     guardarHistorialCargas();
+    paginaResultadoImportacion.value = 1;
     resultadoImportacion.value = {
-      ok: true,
-      mensaje: `Importación completada: ${creados} registro(s) creado(s).` + (errores ? ` ${errores} fila(s) con error o sin id_paciente_atencion.` : ''),
+      ok: errores === 0,
+      mensaje: `Importación completada: ${creados} registro(s) guardado(s), ${errores} con error, de ${dataRows.length} fila(s).`,
+      totalFilas: dataRows.length,
+      guardadas: creados,
+      errores,
+      detalles,
     };
     fetchRegistros();
   } catch (e) {

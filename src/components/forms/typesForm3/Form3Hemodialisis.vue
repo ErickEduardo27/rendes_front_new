@@ -76,11 +76,12 @@
                     <div class="space-y-0.5">
                       <label class="form3-label">Fecha de evento</label>
                       <input v-model="evento.feEvento" type="date"
-                        :min="rangoFechasPeriodo.min"
+                        :min="minFechaEventoInfeccion(evento.feEvento)"
                         :max="rangoFechasPeriodo.max"
                         class="form3-control"
                         @change="onCambioFechaEvento(index)" />
                       <p v-if="rangoFechasPeriodo.min" class="form3-hint">Dentro del periodo ({{ rangoFechasPeriodo.min }} a {{ rangoFechasPeriodo.max }})</p>
+                      <p v-if="hintFechaEventoFistula(evento.feEvento)" class="form3-hint text-cyan-800">{{ hintFechaEventoFistula(evento.feEvento) }}</p>
                     </div>
 
                     <div v-if="evento.feEvento" class="lg:col-span-3">
@@ -90,6 +91,12 @@
                           <p class="text-xs font-semibold text-slate-800">{{ accesoVigenteEnFechaEvento(evento.feEvento).tipo_acceso || accesoVigenteEnFechaEvento(evento.feEvento).tipo_acceso_actual || '—' }}</p>
                           <p class="text-[11px] text-slate-600">{{ accesoVigenteEnFechaEvento(evento.feEvento).localizacion_acceso || accesoVigenteEnFechaEvento(evento.feEvento).localizacion_acceso_actual || '—' }}</p>
                           <p class="text-[11px] text-slate-500 mt-0.5">Fecha creación: {{ accesoVigenteEnFechaEvento(evento.feEvento).fecha_creacion_acceso || accesoVigenteEnFechaEvento(evento.feEvento).fecha_creacion_acceso_actual || '—' }}</p>
+                          <p
+                            v-if="esTipoAccesoFistula(accesoVigenteEnFechaEvento(evento.feEvento).tipo_acceso || accesoVigenteEnFechaEvento(evento.feEvento).tipo_acceso_actual)"
+                            class="text-[11px] text-cyan-800 mt-0.5"
+                          >
+                            Inicio canulación: {{ accesoVigenteEnFechaEvento(evento.feEvento).fecha_inicio_canulacion || '— (regístrela en Acceso Vascular)' }}
+                          </p>
                         </template>
                         <p v-else class="text-xs text-slate-400 italic">No hay registro de acceso vascular para esta fecha.</p>
                       </div>
@@ -287,6 +294,11 @@ import { useRouter } from 'vue-router';
 import { ElMessage, ElConfigProvider } from 'element-plus';
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
+import {
+  accesoVigenteEnFechaEvento as resolverAccesoVigenteEnFecha,
+  esTipoAccesoFistula,
+  minFechaEventoSegunAcceso,
+} from '@/utils/accesoVascularValidacion';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
 import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
@@ -467,6 +479,30 @@ function onCambioFechaEvento(index) {
   if (!evento) return;
   evento.tpInfeccion = '';
   resetearHemocultivo(index);
+  const acceso = accesoVigenteEnFechaEvento(evento.feEvento);
+  if (acceso && esTipoAccesoFistula(acceso.tipo_acceso || acceso.tipo_acceso_actual)) {
+    const canul = String(acceso.fecha_inicio_canulacion || '').trim().slice(0, 10);
+    if (canul && evento.feEvento && evento.feEvento < canul) {
+      ElMessage.warning('La fecha del evento no puede ser anterior al inicio de canulación de la fístula.');
+      evento.feEvento = '';
+    }
+  }
+}
+
+function minFechaEventoInfeccion(fechaEvento) {
+  const rangoMin = rangoFechasPeriodo.value.min;
+  const acceso = accesoVigenteEnFechaEvento(fechaEvento);
+  const minAcceso = minFechaEventoSegunAcceso(acceso);
+  if (rangoMin && minAcceso) return rangoMin > minAcceso ? rangoMin : minAcceso;
+  return rangoMin || minAcceso || undefined;
+}
+
+function hintFechaEventoFistula(fechaEvento) {
+  const acceso = accesoVigenteEnFechaEvento(fechaEvento);
+  if (!acceso || !esTipoAccesoFistula(acceso.tipo_acceso || acceso.tipo_acceso_actual)) return '';
+  const canul = String(acceso.fecha_inicio_canulacion || '').trim().slice(0, 10);
+  if (!canul) return 'Fístula: registre la fecha de inicio de canulación en Acceso Vascular.';
+  return `Fístula: el evento debe ser desde el inicio de canulación (${canul}).`;
 }
 
 const getNombreGermen = (valor) => {
@@ -525,13 +561,7 @@ async function fetchUnidadesActualesPaciente() {
 }
 
 function accesoVigenteEnFechaEvento(fechaEvento) {
-  if (!fechaEvento || !unidadesPaciente.value.length) return null;
-  const ordenados = [...unidadesPaciente.value]
-    .filter(u => u.fecha_creacion_acceso || u.fecha_creacion_acceso_actual)
-    .map(u => ({ ...u, fecha: u.fecha_creacion_acceso || u.fecha_creacion_acceso_actual }))
-    .filter(u => u.fecha <= fechaEvento)
-    .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-  return ordenados[0] || null;
+  return resolverAccesoVigenteEnFecha(unidadesPaciente.value, fechaEvento);
 }
 
 function etiquetaAccesoEnFecha(fechaEvento) {
@@ -654,6 +684,23 @@ const guardarInfeccion = async () => {
     if (rango.min && rango.max && (eventoActual.feEvento < rango.min || eventoActual.feEvento > rango.max)) {
       ElMessage.warning(`La fecha del evento debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
       return;
+    }
+
+    const acceso = accesoVigenteEnFechaEvento(eventoActual.feEvento);
+    if (!acceso) {
+      ElMessage.warning('No hay acceso vascular vigente para la fecha del evento.');
+      return;
+    }
+    if (esTipoAccesoFistula(acceso.tipo_acceso || acceso.tipo_acceso_actual)) {
+      const canul = String(acceso.fecha_inicio_canulacion || '').trim().slice(0, 10);
+      if (!canul) {
+        ElMessage.warning('Para fístula, registre la fecha de inicio de canulación en Acceso Vascular.');
+        return;
+      }
+      if (eventoActual.feEvento < canul) {
+        ElMessage.warning('La fecha del evento no puede ser anterior al inicio de canulación de la fístula.');
+        return;
+      }
     }
 
     if (enModal.value && props.idPacienteAtencion) {

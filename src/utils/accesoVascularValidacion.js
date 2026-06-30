@@ -27,6 +27,84 @@ export function esTipoAccesoTemporal(tipo) {
   return TIPOS_ACCESO_TEMPORAL.test(t) || /^CVCT$/i.test(t);
 }
 
+/** Fístula arteriovenosa (FAV). */
+export function esTipoAccesoFistula(tipo) {
+  const t = String(tipo || '').trim().toUpperCase();
+  if (!t) return false;
+  return t === 'FAV' || t.includes('FÍSTULA') || t.includes('FISTULA') || t.includes('ARTERIOVENOSA');
+}
+
+export function esRegistroCambioAcceso(unidad) {
+  const motivo = unidad?.motivo_cambio;
+  return motivo != null && String(motivo).trim() !== '';
+}
+
+export function idPacienteDesdeUnidad(unidad) {
+  return unidad?.id_paciente
+    ?? unidad?.datosPaciente?.id_paciente
+    ?? unidad?.datosPacienteAtencion?.id_paciente
+    ?? unidad?.id_paciente_atencion?.id_paciente;
+}
+
+export function fechaCreacionAccesoISO(unidad) {
+  return String(unidad?.fecha_creacion_acceso || unidad?.fecha_creacion_acceso_actual || '').trim().slice(0, 10);
+}
+
+export const MENSAJE_CAMBIO_ACCESO_MISMO_DIA = 'Ya existe un cambio de acceso registrado para este paciente en la misma fecha. No se permiten dos cambios el mismo día.';
+
+export function claveCambioAccesoMismoDia(idPaciente, fecha) {
+  return `${idPaciente}|${String(fecha || '').trim().slice(0, 10)}`;
+}
+
+/** Impide más de un cambio de acceso (con motivo) por paciente y fecha. */
+export function existeCambioAccesoMismoDia(registros, { idPaciente, fecha, excluirIdUnidad = null }) {
+  const fechaNorm = String(fecha || '').trim().slice(0, 10);
+  if (!fechaNorm || idPaciente == null) return false;
+  const idP = String(idPaciente);
+  const excluir = excluirIdUnidad != null ? String(excluirIdUnidad) : null;
+  return (registros || []).some((r) => {
+    if (excluir && r?.id_unidad_actual != null && String(r.id_unidad_actual) === excluir) return false;
+    const pac = idPacienteDesdeUnidad(r);
+    if (pac == null || String(pac) !== idP) return false;
+    if (fechaCreacionAccesoISO(r) !== fechaNorm) return false;
+    return esRegistroCambioAcceso(r);
+  });
+}
+
+/** Para FAV con canulación registrada, la vigencia del acceso usa esa fecha; si no, fecha de creación. */
+export function fechaReferenciaVigenciaAcceso(unidad) {
+  const tipo = unidad?.tipo_acceso || unidad?.tipo_acceso_actual || '';
+  const creacion = unidad?.fecha_creacion_acceso || unidad?.fecha_creacion_acceso_actual || '';
+  const canulacion = String(unidad?.fecha_inicio_canulacion || '').trim().slice(0, 10);
+  if (esTipoAccesoFistula(tipo) && canulacion) return canulacion;
+  return creacion;
+}
+
+/** Acceso vascular vigente en una fecha de evento (p. ej. infección). */
+export function accesoVigenteEnFechaEvento(unidades, fechaEvento) {
+  if (!fechaEvento || !Array.isArray(unidades) || !unidades.length) return null;
+  const ordenados = [...unidades]
+    .map((u) => {
+      const fechaCreacion = String(u.fecha_creacion_acceso || u.fecha_creacion_acceso_actual || '').trim().slice(0, 10);
+      const fechaRef = String(fechaReferenciaVigenciaAcceso(u) || '').trim().slice(0, 10);
+      return { ...u, fechaCreacion, fechaRef };
+    })
+    .filter((u) => u.fechaCreacion && u.fechaCreacion <= fechaEvento && u.fechaRef && u.fechaRef <= fechaEvento)
+    .sort((a, b) => (b.fechaRef || '').localeCompare(a.fechaRef || ''));
+  return ordenados[0] || null;
+}
+
+export function minFechaEventoSegunAcceso(acceso) {
+  if (!acceso) return null;
+  const tipo = acceso.tipo_acceso || acceso.tipo_acceso_actual || '';
+  if (esTipoAccesoFistula(tipo)) {
+    const canulacion = String(acceso.fecha_inicio_canulacion || '').trim().slice(0, 10);
+    if (canulacion) return canulacion;
+  }
+  const creacion = String(acceso.fecha_creacion_acceso || acceso.fecha_creacion_acceso_actual || '').trim().slice(0, 10);
+  return creacion || null;
+}
+
 /**
  * Acceso antiguo: temporal (CVCT) o con más de DIAS_ACCESO_ANTIGUO días desde su creación.
  */

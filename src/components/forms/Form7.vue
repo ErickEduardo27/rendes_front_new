@@ -23,7 +23,7 @@
     <div class="space-y-4">
       <div class="border-l-4 border-[#008f9c] pl-3">
         <h2 class="text-base font-bold text-gray-800">Serología y vacunación</h2>
-        <p class="text-xs text-gray-500">Complete la información del paciente</p>
+        <p class="text-xs text-gray-500">Todos los campos son opcionales. Si ingresa fechas, deben estar en el periodo y con formato dd-mm-aaaa.</p>
       </div>
 
       <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
@@ -674,71 +674,8 @@ watch(() => form.vacunaHepatitis, (nuevoValor) => {
 const router = useRouter()
 const pacienteSeleccionado = paciente
 
-const validarCampos = () => {
-  const camposRequeridos = [
-    'vhbEstado',
-    'vhcEstado',
-    'vihEstado',
-    'antiHbcEstado',
-    'estadoAcHBs',
-    'dosisHepatitisB',
-    'fechaHepatitisB',
-    'dosisCovid',
-    'fechaCovid',
-    'fechaInfluenza',
-    'fechaNeumococo',
-  ];
-
-  if (!esEstadoDesconocido(form.vhbEstado)) camposRequeridos.push('vhbFecha')
-  if (!esEstadoDesconocido(form.antiHbcEstado)) camposRequeridos.push('antiHbcFecha')
-  if (!esEstadoDesconocido(form.vhcEstado)) camposRequeridos.push('vhcFecha')
-  if (!esEstadoDesconocido(form.estadoAcHBs)) {
-    camposRequeridos.push('vacunaHepatitis')
-  }
-
-  for (const campo of camposRequeridos) {
-    if (!form[campo] || form[campo] === '' || form[campo] === null) {
-      return campo;
-    }
-  }
-  return null;
-};
-
-// Función para lanzar los fuegos artificiales
-const lanzarFuegosArtificiales = () => {
-  const duration = 3 * 1000;
-  const animationEnd = Date.now() + duration;
-  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 }; // Añadido zIndex alto para que pase por encima de todo
-
-  const interval = setInterval(function() {
-    const timeLeft = animationEnd - Date.now();
-
-    if (timeLeft <= 0) {
-      return clearInterval(interval);
-    }
-
-    const particleCount = 50 * (timeLeft / duration);
-    
-    // Confeti desde la izquierda
-    confetti(Object.assign({}, defaults, { 
-      particleCount, 
-      origin: { x: Math.random() - 0.2, y: Math.random() - 0.2 } 
-    }));
-    // Confeti desde la derecha
-    confetti(Object.assign({}, defaults, { 
-      particleCount, 
-      origin: { x: Math.random() + 1.2, y: Math.random() - 0.2 } 
-    }));
-  }, 250);
-};
-
 const postForm = async () => {
   normalizarTodasLasFechas()
-  const campoFaltante = validarCampos();
-  if (campoFaltante) {
-    alert(`Por favor complete el campo obligatorio: ${campoFaltante}`);
-    return;
-  }
   const errorFecha = validarFechasPeriodo();
   if (errorFecha) {
     alert(errorFecha);

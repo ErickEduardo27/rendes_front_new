@@ -91,6 +91,7 @@
                   <th class="tabla-morbilidad-th">Código</th>
                   <th class="tabla-morbilidad-th">F. hospitalización</th>
                   <th class="tabla-morbilidad-th">F. alta</th>
+                  <th class="tabla-morbilidad-th">Desenlace</th>
                   <th class="tabla-morbilidad-th">Fuente</th>
                   <th class="tabla-morbilidad-th">Estado</th>
                   <th class="tabla-morbilidad-th">Editado sup.</th>
@@ -106,6 +107,7 @@
                   <td class="tabla-morbilidad-td text-slate-600">{{ r.codigo_diagnostico || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ r.fecha_hospitalizacion || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ r.fecha_alta_hospitalizacion || '—' }}</td>
+                  <td class="tabla-morbilidad-td text-slate-600">{{ r.desenlace || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ r.fuente || '—' }}</td>
                   <td class="tabla-morbilidad-td">
                     <span class="tabla-morbilidad-badge inline-flex rounded-full px-2 py-0.5 font-semibold whitespace-nowrap" :class="estadoAprobacionClase(r.estado_aprobacion)">{{ r.estado_aprobacion || 'PENDIENTE' }}</span>
@@ -165,6 +167,7 @@
                   <th class="tabla-morbilidad-th">Código</th>
                   <th class="tabla-morbilidad-th">F. hospitalización</th>
                   <th class="tabla-morbilidad-th">F. alta</th>
+                  <th class="tabla-morbilidad-th">Desenlace</th>
                   <th class="tabla-morbilidad-th">Fuente</th>
                   <th class="tabla-morbilidad-th">Estado</th>
                   <th class="tabla-morbilidad-th">Editado sup.</th>
@@ -180,6 +183,7 @@
                   <td class="tabla-morbilidad-td text-slate-600">{{ fila.codigo_diagnostico || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ fila.fecha_hospitalizacion || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ fila.fecha_alta_hospitalizacion || '—' }}</td>
+                  <td class="tabla-morbilidad-td text-slate-600">{{ fila.desenlace || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ fila.fuente || '—' }}</td>
                   <td class="tabla-morbilidad-td">
                     <span class="tabla-morbilidad-badge inline-flex rounded-full px-2 py-0.5 font-semibold whitespace-nowrap" :class="estadoAprobacionClase(fila.estado_aprobacion)">{{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}</span>
@@ -405,6 +409,7 @@ function filasExcelMorbilidadVistaRegistros() {
     Código: r.codigo_diagnostico || '',
     'F. hospitalización': r.fecha_hospitalizacion || '',
     'F. alta': r.fecha_alta_hospitalizacion || '',
+    Desenlace: r.desenlace || '',
     Fuente: r.fuente || '',
     Estado: r.estado_aprobacion || 'PENDIENTE',
     'Editado supervisor': r.supervisor_edito_registro ? 'Sí' : 'No',
@@ -421,6 +426,7 @@ function filasExcelMorbilidadVistaTodos() {
     Código: fila.codigo_diagnostico || '',
     'F. hospitalización': fila.fecha_hospitalizacion || '',
     'F. alta': fila.fecha_alta_hospitalizacion || '',
+    Desenlace: fila.desenlace || '',
     Fuente: fila.fuente || '',
     Estado: fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO'),
     'Editado supervisor': fila.supervisor_edito_registro ? 'Sí' : 'No',
@@ -453,7 +459,14 @@ async function exportarDatosMorbilidadExcel() {
   }
 }
 
-const COLUMNAS_FORMATO = ['id_paciente_atencion', 'diagnostico', 'codigo_diagnostico', 'fecha_hospitalizacion', 'fecha_alta_hospitalizacion', 'fuente'];
+const COLUMNAS_FORMATO = ['id_paciente_atencion', 'diagnostico', 'codigo_diagnostico', 'fecha_hospitalizacion', 'fecha_alta_hospitalizacion', 'desenlace', 'fuente'];
+
+function normalizarDesenlace(valor) {
+  const texto = String(valor ?? '').trim();
+  if (!texto) return '';
+  const mapa = { alta: 'Alta', fallecimiento: 'Fallecimiento' };
+  return mapa[texto.toLowerCase()] || texto;
+}
 
 const periodoNumero = computed(() => {
   const v = periodoGlobal.value;
@@ -551,6 +564,7 @@ const todosPacientesLista = computed(() => {
         codigo_diagnostico: r.codigo_diagnostico || '',
         fecha_hospitalizacion: r.fecha_hospitalizacion || '',
         fecha_alta_hospitalizacion: r.fecha_alta_hospitalizacion || '',
+        desenlace: r.desenlace || '',
         fuente: r.fuente || '',
         estado_aprobacion: r.estado_aprobacion || 'PENDIENTE',
         supervisor_edito_registro: !!r.supervisor_edito_registro,
@@ -566,6 +580,7 @@ const todosPacientesLista = computed(() => {
       codigo_diagnostico: '',
       fecha_hospitalizacion: '',
       fecha_alta_hospitalizacion: '',
+      desenlace: '',
       fuente: '',
       estado_aprobacion: 'SIN REGISTRO',
       supervisor_edito_registro: false,
@@ -830,7 +845,7 @@ function cerrarModalImportar() {
   fetchRegistros();
 }
 function descargarFormatoExcel() {
-  const ws = XLSX.utils.aoa_to_sheet([COLUMNAS_FORMATO, ['', '', '', '', '', '']]);
+  const ws = XLSX.utils.aoa_to_sheet([COLUMNAS_FORMATO, ['', '', '', '', '', '', '']]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Morbilidad hospitalaria');
   XLSX.writeFile(wb, 'formato_morbilidad_hospitalaria.xlsx');
@@ -898,6 +913,7 @@ async function ejecutarImportacion() {
           codigo_diagnostico: obj.codigo_diagnostico || '',
           fecha_hospitalizacion: obj.fecha_hospitalizacion || '',
           fecha_alta_hospitalizacion: obj.fecha_alta_hospitalizacion || null,
+          desenlace: normalizarDesenlace(obj.desenlace) || null,
           fuente: obj.fuente || '',
         });
         creados++;

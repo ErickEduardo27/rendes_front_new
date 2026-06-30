@@ -15,6 +15,8 @@
           <button
             type="button"
             class="header-accion-btn header-accion-btn-primario"
+            :disabled="existeRegistroEnPeriodoActual"
+            :title="existeRegistroEnPeriodoActual ? 'Ya hay un registro para este periodo. Edítelo desde la tabla.' : undefined"
             @click="abrirModalNuevo"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -94,21 +96,20 @@
               <div class="cm-info-box">{{ periodoDisplay }}</div>
             </div>
             <div class="cm-campo">
-              <label class="cm-label">Fecha de registro *</label>
+              <label class="cm-label">Fecha de registro</label>
               <input
                 v-model="fechaRegistro"
                 type="date"
                 class="cm-control"
                 :min="rangoFechasPeriodo.min || undefined"
                 :max="rangoFechasPeriodo.max || undefined"
-                :disabled="!rangoFechasPeriodo.min"
                 @change="validarFechaRegistro"
                 @blur="validarFechaRegistro"
               />
               <p v-if="rangoFechasPeriodo.min" class="cm-hint">
-                Debe estar entre {{ rangoFechasPeriodoTexto.min }} y {{ rangoFechasPeriodoTexto.max }}
+                Si la indica, debe estar entre {{ rangoFechasPeriodoTexto.min }} y {{ rangoFechasPeriodoTexto.max }}
               </p>
-              <p v-else class="cm-hint text-amber-700">Seleccione un periodo en la barra superior.</p>
+              <p v-else-if="periodoVisibleId" class="cm-hint text-amber-700">No se pudo determinar el rango del periodo.</p>
               <p v-if="errorFechaRegistro" class="cm-error">{{ errorFechaRegistro }}</p>
             </div>
           </div>
@@ -212,7 +213,7 @@
                 v-if="!modoEdicion"
                 type="button"
                 class="cm-btn cm-btn-outline"
-                :disabled="!puedeEnviarRegistro"
+                :disabled="!puedeGuardarFormulario"
                 @click="guardarYVolver"
               >
                 Registrar y volver
@@ -220,7 +221,7 @@
               <button
                 type="submit"
                 class="cm-btn cm-btn-primario"
-                :disabled="!puedeEnviarRegistro"
+                :disabled="!puedeGuardarFormulario"
               >
                 {{ modoEdicion ? 'Guardar cambios' : 'Registrar' }}
               </button>
@@ -238,6 +239,7 @@ import { ElMessage } from 'element-plus';
 import { getAllIpress } from '@/services/ipress/Ipress.service';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
+const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const periodos = ref([]);
 
 const listaIpress = ref([
@@ -278,9 +280,48 @@ const registros = ref([
   },
 ]);
 
-const registrosFiltrados = computed(() =>
-  registros.value.filter((r) => !r.id_ipress || r.id_ipress === ipressSeleccionada.value),
-);
+const ipressActiva = computed(() => clinicaGlobal.value ?? ipressSeleccionada.value);
+
+function rangoDesdeTextoPeriodo(textoPeriodo) {
+  if (!textoPeriodo) return { min: null, max: null };
+  const parts = String(textoPeriodo).trim().split('-');
+  if (parts.length < 2) return { min: null, max: null };
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  if (Number.isNaN(year) || Number.isNaN(month)) return { min: null, max: null };
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  return {
+    min: firstDay.toISOString().split('T')[0],
+    max: lastDay.toISOString().split('T')[0],
+  };
+}
+
+function registroPerteneceAlPeriodo(registro, idPeriodo) {
+  if (idPeriodo == null || idPeriodo === '') return false;
+  if (registro.id_periodo != null && registro.id_periodo !== '') {
+    return String(registro.id_periodo) === String(idPeriodo);
+  }
+  const fecha = registro.fechaRegistro || registro.periodo;
+  if (!fecha) return false;
+  const lista = Array.isArray(periodos.value) ? periodos.value : [];
+  const p = lista.find((per) => String(per.id_periodo) === String(idPeriodo));
+  const rango = rangoDesdeTextoPeriodo(p?.periodo);
+  if (!rango.min || !rango.max) return false;
+  return fecha >= rango.min && fecha <= rango.max;
+}
+
+const registrosFiltrados = computed(() => {
+  const idIpress = ipressActiva.value;
+  const idPeriodo = periodoVisibleId.value;
+  return registros.value.filter((r) => {
+    const matchIpress = idIpress == null || !r.id_ipress || String(r.id_ipress) === String(idIpress);
+    if (idPeriodo == null || idPeriodo === '') return matchIpress;
+    return matchIpress && registroPerteneceAlPeriodo(r, idPeriodo);
+  });
+});
+
+const existeRegistroEnPeriodoActual = computed(() => registrosFiltrados.value.length > 0);
 
 const mostrarModalFormulario = ref(false);
 const modoEdicion = ref(false);
@@ -323,18 +364,7 @@ const rangoFechasPeriodo = computed(() => {
   const idPeriodo = periodoVisibleId.value;
   if (idPeriodo == null || idPeriodo === '') return { min: null, max: null };
   const p = lista.find((per) => String(per.id_periodo) === String(idPeriodo));
-  if (!p?.periodo) return { min: null, max: null };
-  const parts = String(p.periodo).trim().split('-');
-  if (parts.length < 2) return { min: null, max: null };
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  if (Number.isNaN(year) || Number.isNaN(month)) return { min: null, max: null };
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
-  return {
-    min: firstDay.toISOString().split('T')[0],
-    max: lastDay.toISOString().split('T')[0],
-  };
+  return rangoDesdeTextoPeriodo(p?.periodo);
 });
 
 const rangoFechasPeriodoTexto = computed(() => {
@@ -346,11 +376,8 @@ const rangoFechasPeriodoTexto = computed(() => {
   };
 });
 
-const puedeEnviarRegistro = computed(() => {
-  if (!fechaRegistro.value || errorFechaRegistro.value) return false;
-  if (!rangoFechasPeriodo.value.min) return false;
-  return control.value === '1' || control.value === '2';
-});
+/** Solo bloquea guardar si la fecha ingresada (opcional) está fuera del periodo. */
+const puedeGuardarFormulario = computed(() => !errorFechaRegistro.value);
 
 function formatoFechaTabla(iso) {
   if (!iso) return '—';
@@ -363,22 +390,30 @@ function formatoFechaTabla(iso) {
 }
 
 function validarFechaRegistro() {
-  const fecha = fechaRegistro.value;
+  const fecha = fechaRegistro.value?.trim();
   const rango = rangoFechasPeriodo.value;
   const rangoTxt = rangoFechasPeriodoTexto.value;
-  if (!rango.min || !rango.max) {
-    errorFechaRegistro.value = 'Seleccione un periodo de reporte válido.';
-    return false;
-  }
   if (!fecha) {
-    errorFechaRegistro.value = 'Indique la fecha de registro.';
-    return false;
+    errorFechaRegistro.value = '';
+    return true;
+  }
+  if (!rango.min || !rango.max) {
+    errorFechaRegistro.value = '';
+    return true;
   }
   if (fecha < rango.min || fecha > rango.max) {
     errorFechaRegistro.value = `La fecha debe estar entre ${rangoTxt.min} y ${rangoTxt.max}.`;
     return false;
   }
   errorFechaRegistro.value = '';
+  return true;
+}
+
+function bloquearRegistroDuplicadoEnPeriodo() {
+  if (modoEdicion.value) return false;
+  if (periodoVisibleId.value == null || periodoVisibleId.value === '') return false;
+  if (!existeRegistroEnPeriodoActual.value) return false;
+  ElMessage.warning('Solo puede registrar un control por mes (periodo de reporte). Edite el registro existente.');
   return true;
 }
 
@@ -479,6 +514,7 @@ function cargarRegistroEnFormulario(registro) {
 }
 
 function abrirModalNuevo() {
+  if (bloquearRegistroDuplicadoEnPeriodo()) return;
   modoEdicion.value = false;
   registroEdicionId.value = null;
   limpiarFormulario();
@@ -503,7 +539,8 @@ function cerrarModalFormulario() {
 function construirRegistroDesdeFormulario() {
   const conMediciones = control.value === '1';
   return {
-    fechaRegistro: fechaRegistro.value,
+    id_periodo: periodoVisibleId.value ?? null,
+    fechaRegistro: fechaRegistro.value || '',
     control: control.value === '1' ? 'Sí' : control.value === '2' ? 'No' : '',
     bacSaOsmosis: conMediciones && bacSaOsmosis.value !== '' ? Number(bacSaOsmosis.value) : null,
     bacAniCirculacion: conMediciones && bacAniCirculacion.value !== '' ? Number(bacAniCirculacion.value) : null,
@@ -521,7 +558,8 @@ function guardarRegistro() {
     ElMessage.warning(errorFechaRegistro.value || 'Revise la fecha de registro.');
     return;
   }
-  if (!puedeEnviarRegistro.value) return;
+  if (!puedeGuardarFormulario.value) return;
+  if (bloquearRegistroDuplicadoEnPeriodo()) return;
   const datos = construirRegistroDesdeFormulario();
 
   if (modoEdicion.value && registroEdicionId.value != null) {
@@ -535,7 +573,7 @@ function guardarRegistro() {
   } else {
     registros.value.unshift({
       id: Date.now(),
-      id_ipress: ipressSeleccionada.value,
+      id_ipress: ipressActiva.value,
       ...datos,
     });
   }
@@ -548,11 +586,12 @@ function guardarYVolver() {
     ElMessage.warning(errorFechaRegistro.value || 'Revise la fecha de registro.');
     return;
   }
-  if (!puedeEnviarRegistro.value) return;
+  if (!puedeGuardarFormulario.value) return;
+  if (bloquearRegistroDuplicadoEnPeriodo()) return;
   const datos = construirRegistroDesdeFormulario();
   registros.value.unshift({
     id: Date.now(),
-    id_ipress: ipressSeleccionada.value,
+    id_ipress: ipressActiva.value,
     ...datos,
   });
   limpiarFormulario();
@@ -641,8 +680,13 @@ onMounted(() => {
   background: #0891b2;
 }
 
-.header-accion-btn-primario:hover {
+.header-accion-btn-primario:hover:not(:disabled) {
   background: #0e7490;
+}
+
+.header-accion-btn-primario:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .cm-seccion {

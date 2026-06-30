@@ -54,7 +54,7 @@
 
                     <hr class="border-gray-100 my-4" />
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Inicio de Hospitalización</label>
                             <input v-model="form.fIniHos" type="date" :min="modoCompletarAlta ? undefined : rangoFechasPeriodo.min" :max="modoCompletarAlta ? undefined : rangoFechasPeriodo.max" :readonly="modoCompletarAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{ 'bg-gray-100 cursor-not-allowed': modoCompletarAlta }" />
@@ -65,6 +65,14 @@
                             <input v-model="form.fAltHos" type="date" :min="minFechaAlta" :max="maxFechaAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{'border-red-500 focus:ring-red-500 focus:border-red-500': errorFechaAlta}" />
                             <p v-if="maxFechaAlta" class="text-xs text-gray-500 mt-1">No debe salir del periodo (máx. {{ maxFechaAlta }})</p>
                             <div v-if="errorFechaAlta" class="text-red-500 text-xs mt-1.5 font-medium">{{ errorFechaAlta }}</div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Desenlace</label>
+                            <select v-model="form.desenlace" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
+                                <option value="">Seleccione</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Fallecimiento">Fallecimiento</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fuente</label>
@@ -173,6 +181,7 @@ function limpiarFormularioNuevo() {
     idMorbilidadCompletar.value = null;
     form.value.fIniHos = '';
     form.value.fAltHos = '';
+    form.value.desenlace = '';
     form.value.fuente = '';
     form.value.seleccionados = [];
     form.value.filtroCodigo = '';
@@ -200,6 +209,7 @@ function cargarRegistroEdicion(registro) {
     idMorbilidadEdicion.value = registro.id_morbilidad_hospitalaria;
     form.value.fIniHos = toInputDate(registro.fecha_hospitalizacion);
     form.value.fAltHos = toInputDate(registro.fecha_alta_hospitalizacion);
+    form.value.desenlace = registro.desenlace || '';
     form.value.fuente = registro.fuente || '';
     form.value.seleccionados = diagnosticosDesdeRegistro(registro);
     form.value.filtroCodigo = '';
@@ -1041,6 +1051,7 @@ const form = ref({
     seleccionados: [],
     fIniHos: '',
     fAltHos: '',
+    desenlace: '',
     fuente: '',
     id_periodo_ipress: 17,
     id_red: 1,
@@ -1080,6 +1091,7 @@ const fetchUltimoRegistroHospitalizacion = async () => {
             idMorbilidadCompletar.value = ultimo.id_morbilidad_hospitalaria;
             form.value.fIniHos = toInputDate(ultimo.fecha_hospitalizacion);
             form.value.fAltHos = '';
+            form.value.desenlace = ultimo.desenlace || '';
             form.value.fuente = ultimo.fuente || '';
             form.value.seleccionados = diagnosticosDesdeRegistro(ultimo);
             form.value.filtroCodigo = '';
@@ -1196,7 +1208,8 @@ const postForm = async (url = null) => {
     try {
         if (modoCompletarAlta.value && idMorbilidadCompletar.value != null) {
             await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, {
-                fecha_alta_hospitalizacion: form.value.fAltHos || ''
+                fecha_alta_hospitalizacion: form.value.fAltHos || '',
+                desenlace: form.value.desenlace || ''
             });
             if (idPacienteAtencion != null && idPacienteAtencion !== '') emit('guardado');
             else { alert('Se registró la fecha de alta con éxito.'); window.location.reload(); }
@@ -1210,6 +1223,7 @@ const postForm = async (url = null) => {
                 codigo_diagnostico: form.value.seleccionados.map(item => item.codigo).join(','),
                 fecha_hospitalizacion: form.value.fIniHos || '',
                 fecha_alta_hospitalizacion: form.value.fAltHos || '',
+                desenlace: form.value.desenlace || '',
                 fuente: form.value.fuente || ''
             };
             if (idMorbilidadEdicion.value != null) {

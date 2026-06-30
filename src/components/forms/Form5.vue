@@ -89,7 +89,9 @@
           <hr class="border-slate-100" />
 
           <div class="w-full md:w-1/2 md:pr-3">
-            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Tiempo de diálisis (horas)</label>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+              Tiempo de diálisis (horas) <span class="text-red-500">*</span>
+            </label>
             <div class="flex items-center gap-2">
               <input
                 v-model="form.tmpDialisis"
@@ -100,6 +102,8 @@
                 inputmode="decimal"
                 placeholder="Ej. 2, 2.5, 3.25"
                 class="form5-control"
+                :class="{ 'form5-control--error': errorTiempoDialisis }"
+                @input="errorTiempoDialisis = false"
               />
               <button
                 type="button"
@@ -110,36 +114,63 @@
                 <ChartBarIcon class="w-4 h-4" />
               </button>
             </div>
-            <p class="text-[11px] text-slate-400 mt-1">Ingrese el valor en horas (número entero o decimal, entre 0,25 y 8).</p>
+            <p class="text-[11px] text-slate-400 mt-1">Obligatorio. Ingrese el valor en horas (número entero o decimal, entre 0,25 y 8).</p>
+            <p v-if="errorTiempoDialisis" class="text-[11px] text-red-500 mt-1 font-medium">
+              Indique el tiempo de diálisis en horas (entre {{ TIEMPO_DIALISIS_MIN }} y {{ TIEMPO_DIALISIS_MAX }}).
+            </p>
           </div>
 
-          <h3 class="text-sm font-bold text-slate-800 pt-1">Tratamiento Administrado</h3>
+          <h3 class="text-sm font-bold text-slate-800 pt-1">Tratamiento Administrado <span class="text-red-500 text-xs">*</span></h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Eritropoyetina</label>
-              <select v-model="form.eritropoyetina" class="form5-control">
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                Eritropoyetina <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="form.eritropoyetina"
+                class="form5-control"
+                :class="{ 'form5-control--error': erroresTratamiento.eritropoyetina }"
+                @change="erroresTratamiento.eritropoyetina = false"
+              >
                 <option value="">Seleccione una opción</option>
                 <option value="1">Sí</option>
                 <option value="2">No</option>
               </select>
+              <p v-if="erroresTratamiento.eritropoyetina" class="text-[11px] text-red-500 mt-1 font-medium">Seleccione Sí o No.</p>
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Hierro</label>
-              <select v-model="form.hierro" class="form5-control">
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                Hierro <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="form.hierro"
+                class="form5-control"
+                :class="{ 'form5-control--error': erroresTratamiento.hierro }"
+                @change="erroresTratamiento.hierro = false"
+              >
                 <option value="">Seleccione una opción</option>
                 <option value="1">Sí</option>
                 <option value="2">No</option>
               </select>
+              <p v-if="erroresTratamiento.hierro" class="text-[11px] text-red-500 mt-1 font-medium">Seleccione Sí o No.</p>
             </div>
 
             <div>
-              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Calcitriol</label>
-              <select v-model="form.hiperparatiroidismo" class="form5-control">
+              <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
+                Calcitriol <span class="text-red-500">*</span>
+              </label>
+              <select
+                v-model="form.hiperparatiroidismo"
+                class="form5-control"
+                :class="{ 'form5-control--error': erroresTratamiento.hiperparatiroidismo }"
+                @change="erroresTratamiento.hiperparatiroidismo = false"
+              >
                 <option value="">Seleccione una opción</option>
                 <option value="1">Sí</option>
                 <option value="2">No</option>
               </select>
+              <p v-if="erroresTratamiento.hiperparatiroidismo" class="text-[11px] text-red-500 mt-1 font-medium">Seleccione Sí o No.</p>
             </div>
           </div>
 
@@ -360,9 +391,9 @@ const modalidadDisplay = computed(() => props.modalidadNombre || modalidadTexto.
 
 const form = ref({
   tmpDialisis: '',
-  eritropoyetina: null,
-  hierro: null,
-  hiperparatiroidismo: null,
+  eritropoyetina: '',
+  hierro: '',
+  hiperparatiroidismo: '',
   hb: null,
   calcio: null,
   fosforo: null,
@@ -770,6 +801,26 @@ const fetchClinicas = async () => {
 const TIEMPO_DIALISIS_MIN = 0.25
 const TIEMPO_DIALISIS_MAX = 8
 
+const errorTiempoDialisis = ref(false)
+const erroresTratamiento = ref({
+  eritropoyetina: false,
+  hierro: false,
+  hiperparatiroidismo: false,
+})
+
+function tratamientoSeleccionado(val) {
+  return val === '1' || val === '2'
+}
+
+function validarTratamientoObligatorio() {
+  erroresTratamiento.value = {
+    eritropoyetina: !tratamientoSeleccionado(form.value.eritropoyetina),
+    hierro: !tratamientoSeleccionado(form.value.hierro),
+    hiperparatiroidismo: !tratamientoSeleccionado(form.value.hiperparatiroidismo),
+  }
+  return !Object.values(erroresTratamiento.value).some(Boolean)
+}
+
 function tiempoDialisisHorasValido() {
   const raw = form.value.tmpDialisis
   if (raw === null || raw === '') return false
@@ -799,7 +850,14 @@ const postForm = async () => {
   }
 
   if (!tiempoDialisisHorasValido()) {
+    errorTiempoDialisis.value = true
     alert(`Indique el tiempo de diálisis en horas (número entre ${TIEMPO_DIALISIS_MIN} y ${TIEMPO_DIALISIS_MAX}).`)
+    return
+  }
+  errorTiempoDialisis.value = false
+
+  if (!validarTratamientoObligatorio()) {
+    alert('Complete el tratamiento administrado: Eritropoyetina, Hierro y Calcitriol (Sí o No).')
     return
   }
   

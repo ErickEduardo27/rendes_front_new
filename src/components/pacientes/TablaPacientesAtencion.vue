@@ -1,7 +1,7 @@
 <template>
   <div class="bg-white border rounded-xl shadow-sm p-4">
     <h3 class="text-sm font-semibold text-slate-700 mb-3">
-      Pacientes en atención (clínica y periodo) — incluye sin ficha de diálisis aún
+      Registro de Inicio de Terapia de Reemplazo Renal (clínica y periodo) — incluye sin ficha de diálisis aún
     </h3>
     <div class="flex flex-wrap gap-3 mb-4">
       <div class="flex-1 min-w-[200px]">
@@ -35,24 +35,24 @@
       <table class="min-w-full text-xs tabla-pacientes">
         <thead class="bg-slate-100 text-slate-700">
           <tr>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. 1er ingreso</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">T. doc.</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Documento</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap min-w-[140px]">Paciente</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Condición</th>
-              <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. nac.</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. nac.</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap min-w-[140px]">Paciente</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Sexo</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Grado</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Etiol. general</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Etiol. específica</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Comorb.</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Mod. TRR</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. inicio TRR</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Subsistema</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. creac. acceso</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Tipo acceso</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Localización</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. creac. acceso</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. ingreso hosp.</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. inicio TRR</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Subsistema</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. 1er ingreso</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Hosp. proced.</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Etiología</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Comorb.</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Condición</th>
             <th v-if="mostrarAcciones" class="text-left px-2 py-2 font-semibold whitespace-nowrap sticky right-0 bg-slate-100">Acciones</th>
           </tr>
         </thead>
@@ -62,36 +62,36 @@
             :key="row.id_paciente_dialisis ?? `at-${row.id_paciente_atencion}`"
             class="border-t border-slate-100 hover:bg-slate-50 group"
           >
-            <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_primer_ingreso) }}</td>
             <td class="px-2 py-2">{{ celda(row.datosPaciente?.tipo_documento) }}</td>
             <td class="px-2 py-2 font-mono">{{ celda(row.datosPaciente?.documento) }}</td>
+            <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.datosPaciente?.fecha_nacimiento) }}</td>
             <td class="px-2 py-2 whitespace-nowrap">
               <span :title="celda(row.datosPaciente?.paciente)">{{ celda(row.datosPaciente?.paciente) }}</span>
               <span
                 v-if="row.sin_registro_dialisis"
                 class="ml-1 inline text-[10px] font-semibold uppercase text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded align-middle"
                 title="Tiene atención en el periodo pero aún no tiene ficha en diálisis"
-              >Sin ficha diálisis              </span>
+              >Sin ficha diálisis</span>
             </td>
+            <td class="px-2 py-2 whitespace-nowrap">{{ generoTexto(row.datosPaciente?.genero) }}</td>
+            <td class="px-2 py-2 max-w-[90px] truncate" :title="row.datosPaciente?.grado_instruccion">{{ celda(row.datosPaciente?.grado_instruccion) }}</td>
+            <td class="px-2 py-2 max-w-[120px] truncate" :title="etiologiaGeneralTexto(row)">{{ etiologiaGeneralTexto(row) }}</td>
+            <td class="px-2 py-2 max-w-[140px] truncate" :title="etiologiaEspecificaTexto(row)">{{ etiologiaEspecificaTexto(row) }}</td>
+            <td class="px-2 py-2 max-w-[120px] truncate" :title="comorbilidadesTexto(row)">{{ comorbilidadesTexto(row) }}</td>
+            <td class="px-2 py-2 max-w-[110px] truncate" :title="row.modalidad_inicio_trr">{{ celda(row.modalidad_inicio_trr) }}</td>
+            <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_creacion_acceso) }}</td>
+            <td class="px-2 py-2 max-w-[130px] truncate" :title="tipoAccesoTexto(row.tipo_acceso)">{{ tipoAccesoTexto(row.tipo_acceso) }}</td>
+            <td class="px-2 py-2 max-w-[130px] truncate" :title="row.localizacion_acceso_inicio">{{ celda(row.localizacion_acceso_inicio) }}</td>
+            <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_inicio_trr) }}</td>
+            <td class="px-2 py-2 max-w-[100px] truncate" :title="row.subsistema_salud">{{ celda(row.subsistema_salud) }}</td>
+            <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_primer_ingreso) }}</td>
+            <td class="px-2 py-2 max-w-[120px] truncate" :title="row.hospital_procedencia_trr">{{ celda(row.hospital_procedencia_trr) }}</td>
             <td class="px-2 py-2 whitespace-nowrap">
               <span
                 class="inline-flex text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded"
                 :class="claseCondicionPaciente(row)"
               >{{ condicionPacienteTexto(row) }}</span>
             </td>
-            <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.datosPaciente?.fecha_nacimiento) }}</td>
-            <td class="px-2 py-2 whitespace-nowrap">{{ generoTexto(row.datosPaciente?.genero) }}</td>
-            <td class="px-2 py-2 max-w-[90px] truncate" :title="row.datosPaciente?.grado_instruccion">{{ celda(row.datosPaciente?.grado_instruccion) }}</td>
-            <td class="px-2 py-2 max-w-[110px] truncate" :title="row.modalidad_inicio_trr">{{ celda(row.modalidad_inicio_trr) }}</td>
-            <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_inicio_trr) }}</td>
-            <td class="px-2 py-2 max-w-[100px] truncate" :title="row.subsistema_salud">{{ celda(row.subsistema_salud) }}</td>
-            <td class="px-2 py-2 max-w-[130px] truncate" :title="tipoAccesoTexto(row.tipo_acceso)">{{ tipoAccesoTexto(row.tipo_acceso) }}</td>
-            <td class="px-2 py-2 max-w-[130px] truncate" :title="row.localizacion_acceso_inicio">{{ celda(row.localizacion_acceso_inicio) }}</td>
-            <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_creacion_acceso) }}</td>
-            <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_ingreso_hospital) }}</td>
-            <td class="px-2 py-2 max-w-[120px] truncate" :title="row.hospital_procedencia_trr">{{ celda(row.hospital_procedencia_trr) }}</td>
-            <td class="px-2 py-2 max-w-[140px] truncate" :title="etiologiaTexto(row)">{{ etiologiaTexto(row) }}</td>
-            <td class="px-2 py-2 max-w-[120px] truncate" :title="comorbilidadesTexto(row)">{{ comorbilidadesTexto(row) }}</td>
             <td v-if="mostrarAcciones" class="px-2 py-2 sticky right-0 bg-white group-hover:bg-slate-50">
               <div class="flex flex-wrap gap-1 items-center">
                 <button
@@ -331,11 +331,14 @@ function comorbilidadesTexto(row) {
   return items.length ? items.join(', ') : '—';
 }
 
-function etiologiaTexto(row) {
+function etiologiaGeneralTexto(row) {
+  return celda(row?.datosEti?.general);
+}
+
+function etiologiaEspecificaTexto(row) {
   const e = row?.datosEti;
   if (!e) return '—';
-  const partes = [e.general, e.especifica || e.codigo].filter((x) => x != null && String(x).trim() !== '');
-  return partes.length ? partes.join(' — ') : '—';
+  return celda(e.especifica || e.codigo);
 }
 
 function condicionPacienteTexto(row) {

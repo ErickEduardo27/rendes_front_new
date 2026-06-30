@@ -382,19 +382,22 @@
     </div>
 
     <div v-if="mostrarModalImportar" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full overflow-hidden flex flex-col"
+        :class="resultadoImportacion?.detalles?.length ? 'max-w-[100rem] max-h-[90vh]' : 'max-w-2xl'"
+      >
         <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center shrink-0">
           <h3 class="font-bold text-white">Importar Resultados Clínicos</h3>
           <button type="button" class="text-white/80 hover:text-white" @click="cerrarModalImportar">✕</button>
         </div>
         <div class="p-6 space-y-4 overflow-y-auto">
-          <p class="text-sm text-slate-600">
+          <p v-if="!resultadoImportacion?.detalles?.length" class="text-sm text-slate-600">
             Cargue el Excel completado. La importación valida rangos clínicos, valores numéricos (sin letras), el DNI del paciente según el filtro actual y el
             <strong>tiempo de diálisis</strong> en <strong>horas o fracción de hora</strong>, usando incrementos de <strong>0,25</strong>
             (ej.: 1, 1,25, 1,5, 1,75, 2, 2,25…).
             Eritropoyetina, hierro y calcitriol: <strong>Sí</strong> o <strong>No</strong> (deje vacío si no aplica).
           </p>
-          <div>
+          <div v-if="!resultadoImportacion?.detalles?.length">
             <label class="block text-sm font-bold text-slate-700 mb-2">Cargar archivo Excel</label>
             <div class="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center" @dragover.prevent="arrastrando = true" @dragleave.prevent="arrastrando = false" @drop.prevent="onDropArchivo" :class="arrastrando ? 'border-cyan-400 bg-cyan-50/50' : ''">
               <input ref="inputArchivoImportar" type="file" accept=".xlsx,.xls" class="hidden" @change="onSeleccionarArchivo" />
@@ -410,43 +413,88 @@
             :class="claseResultadoImportacion"
           >
             <p>{{ resultadoImportacion.mensaje }}</p>
-            <button
-              v-if="resultadoImportacion.detallesErrores?.length"
-              type="button"
-              class="mt-2 text-xs font-bold underline hover:no-underline"
-              @click="mostrarDetallesErroresImportacion = !mostrarDetallesErroresImportacion"
-            >
-              {{ mostrarDetallesErroresImportacion ? 'Ocultar detalles' : 'Ver detalles' }}
-            </button>
           </div>
-          <div
-            v-if="mostrarDetallesErroresImportacion && resultadoImportacion?.detallesErrores?.length"
-            class="rounded-lg border border-red-200 bg-red-50/50 max-h-56 overflow-y-auto"
-          >
-            <table class="w-full text-xs">
-              <thead class="bg-red-100/80 sticky top-0">
-                <tr>
-                  <th class="px-3 py-2 text-left font-bold text-red-900">DNI</th>
-                  <th class="px-3 py-2 text-left font-bold text-red-900">Paciente</th>
-                  <th class="px-3 py-2 text-left font-bold text-red-900">Error</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(detalle, idx) in resultadoImportacion.detallesErrores"
-                  :key="`err-import-${idx}`"
-                  class="border-t border-red-100"
-                >
-                  <td class="px-3 py-2 text-slate-700">{{ detalle.dni || '—' }}</td>
-                  <td class="px-3 py-2 text-slate-700">{{ detalle.paciente || '—' }}</td>
-                  <td class="px-3 py-2 text-red-800 font-medium">{{ detalle.mensaje }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-if="resultadoImportacion?.detalles?.length" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 text-sm">
+                <div class="text-xs uppercase font-bold text-slate-500">Total filas</div>
+                <div class="font-semibold text-slate-800 mt-1">{{ resultadoImportacion.totalFilas }}</div>
+              </div>
+              <div class="bg-green-50 rounded-lg p-3 border border-green-200 text-sm">
+                <div class="text-xs uppercase font-bold text-green-700">Guardadas</div>
+                <div class="font-semibold text-green-800 mt-1">{{ resultadoImportacion.guardadas }}</div>
+              </div>
+              <div class="bg-red-50 rounded-lg p-3 border border-red-200 text-sm">
+                <div class="text-xs uppercase font-bold text-red-700">Errores</div>
+                <div class="font-semibold text-red-800 mt-1">{{ resultadoImportacion.errores }}</div>
+              </div>
+            </div>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="min-w-full divide-y divide-slate-200 text-xs">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase whitespace-nowrap">DNI</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase whitespace-nowrap">Paciente</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">Hb</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">Calcio</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">Fósforo</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">PTHi</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">Alb</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase whitespace-nowrap">Ca corr.</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">Kt/V</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase whitespace-nowrap">T. diálisis</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase whitespace-nowrap">Eritrop.</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">Hierro</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">Calcitriol</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">Estado</th>
+                    <th class="px-2 py-2 text-left font-bold text-slate-600 uppercase">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr
+                    v-for="(detalle, index) in detallesImportacionPaginados"
+                    :key="`import-rc-${(paginaResultadoImportacion - 1) * tamPaginaResultadoImportacion + index}`"
+                    :class="detalle.guardado ? 'bg-white' : 'bg-red-50/40'"
+                  >
+                    <td class="px-2 py-2 text-slate-700 whitespace-nowrap">{{ detalle.dni || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700 whitespace-nowrap">{{ detalle.paciente || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.Hb || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.calcio || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.fosforo || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.PTHi || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.Alb || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.calcio_corregido || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.ktv || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.tiempo_dialisis || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.eritropoyetina || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.hierro || '—' }}</td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.calcitriol || '—' }}</td>
+                    <td class="px-2 py-2 font-semibold whitespace-nowrap" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
+                      {{ detalle.guardado ? 'Guardado' : 'Error' }}
+                    </td>
+                    <td class="px-2 py-2 text-slate-700">{{ detalle.mensaje || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <TablaPaginacion
+              v-model:page="paginaResultadoImportacion"
+              v-model:page-size="tamPaginaResultadoImportacion"
+              :page-size-options="[10, 25, 50]"
+              :total="detallesImportacionLista.length"
+            />
           </div>
-          <div class="flex justify-end gap-2 pt-2">
+          <div class="flex justify-end gap-2 pt-2 shrink-0">
             <button type="button" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalImportar">Cerrar</button>
-            <button type="button" class="px-4 py-2 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg disabled:opacity-50" :disabled="!archivoSeleccionado || importando" @click="ejecutarImportacion">Importar datos</button>
+            <button
+              v-if="!resultadoImportacion?.detalles?.length"
+              type="button"
+              class="px-4 py-2 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg disabled:opacity-50"
+              :disabled="!archivoSeleccionado || importando"
+              @click="ejecutarImportacion"
+            >
+              Importar datos
+            </button>
           </div>
         </div>
       </div>
@@ -533,7 +581,6 @@
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
-import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
@@ -567,7 +614,6 @@ const archivoSeleccionado = ref(null);
 const inputArchivoImportar = ref(null);
 const importando = ref(false);
 const resultadoImportacion = ref(null);
-const mostrarDetallesErroresImportacion = ref(false);
 const historialCargas = ref([]);
 const mostrarDetalleCarga = ref(false);
 const cargaSeleccionada = ref(null);
@@ -580,6 +626,8 @@ const paginaRegistros = ref(1);
 const paginaTodos = ref(1);
 const paginaHistorialCargas = ref(1);
 const paginaDetalleCarga = ref(1);
+const paginaResultadoImportacion = ref(1);
+const tamPaginaResultadoImportacion = ref(10);
 
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
 const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto' : 'Cerrado'));
@@ -931,6 +979,20 @@ const totalDetallesCargaSeleccionada = computed(() => {
   return Array.isArray(all) ? all.length : 0;
 });
 
+const detallesImportacionLista = computed(() => {
+  const d = resultadoImportacion.value?.detalles;
+  return Array.isArray(d) ? d : [];
+});
+
+const detallesImportacionPaginados = computed(() => {
+  const list = detallesImportacionLista.value;
+  const tam = tamPaginaResultadoImportacion.value;
+  const totalPag = Math.max(1, Math.ceil(list.length / tam) || 1);
+  const p = Math.min(Math.max(1, paginaResultadoImportacion.value), totalPag);
+  const start = (p - 1) * tam;
+  return list.slice(start, start + tam);
+});
+
 function clampPaginaRegistros() {
   const total = registros.value.length;
   const maxP = Math.max(1, Math.ceil(total / PAGE_SIZE_TABLAS) || 1);
@@ -1049,6 +1111,31 @@ async function exportarDatosResultadosClinicosExcel() {
   }
 }
 
+function detalleFilaImportacion(obj, extra = {}) {
+  const textoSiNoImport = (val) => {
+    const s = String(val ?? '').trim();
+    if (!s) return '';
+    const sn = siNo(val);
+    return sn === '—' ? s : sn;
+  };
+  return {
+    dni: obj.dni || '',
+    paciente: obj.paciente || '',
+    Hb: obj.hb || obj.Hb || '',
+    calcio: obj.calcio || '',
+    fosforo: obj.fosforo || '',
+    PTHi: obj.pthi || obj.PTHi || '',
+    Alb: obj.alb || obj.Alb || '',
+    calcio_corregido: obj.calcio_corregido || '',
+    ktv: obj.ktv || '',
+    tiempo_dialisis: obj.tiempo_dialisis || '',
+    eritropoyetina: textoSiNoImport(obj.eritropoyetina ?? obj.eritoproyetina),
+    hierro: textoSiNoImport(obj.hierro),
+    calcitriol: textoSiNoImport(obj.calcitriol),
+    ...extra,
+  };
+}
+
 const validarFilaImportacion = (obj) => {
   const dni = String(obj.dni || '').trim();
   const pacienteTexto = String(obj.paciente || '').trim();
@@ -1105,23 +1192,34 @@ const validarFilaImportacion = (obj) => {
   const rawTiempo = obj.tiempo_dialisis;
   const tiempoStrParaValidar =
     rawTiempo != null && rawTiempo !== '' ? String(rawTiempo).trim().replace(',', '.') : '';
-  if (tiempoStrParaValidar && /[a-zA-Z]/.test(tiempoStrParaValidar)) {
+  if (!tiempoStrParaValidar) {
+    return { ok: false, mensaje: 'Falta tiempo_dialisis (campo obligatorio).' };
+  }
+  if (/[a-zA-Z]/.test(tiempoStrParaValidar)) {
     return {
       ok: false,
       mensaje: 'tiempo_dialisis debe ser un valor numérico (no se permiten letras).',
     };
   }
-  if (tiempoStrParaValidar && !esTiempoDialisisValorValido(rawTiempo)) {
+  if (!esTiempoDialisisValorValido(rawTiempo)) {
     return {
       ok: false,
       mensaje: MENSAJE_TIEMPO_DIALISIS_IMPORT,
     };
   }
-  payload.tiempo_dialisis = tiempoStrParaValidar
-    ? normalizarTiempoDialisisParaApi(rawTiempo)
-    : '';
+  payload.tiempo_dialisis = normalizarTiempoDialisisParaApi(rawTiempo);
 
   const valErit = obj.eritropoyetina ?? obj.eritoproyetina;
+  const tratamientoPresente = (valor) => {
+    const s = String(valor ?? '').trim();
+    return s !== '' && esBooleanoValido(valor);
+  };
+  if (!tratamientoPresente(valErit) || !tratamientoPresente(obj.hierro) || !tratamientoPresente(obj.calcitriol)) {
+    return {
+      ok: false,
+      mensaje: 'Eritropoyetina, hierro y calcitriol son obligatorios (Si/No o 1/0).',
+    };
+  }
   if (!esBooleanoValido(valErit) || !esBooleanoValido(obj.hierro) || !esBooleanoValido(obj.calcitriol)) {
     return { ok: false, mensaje: 'Eritropoyetina, hierro y calcitriol deben ser Si/No o 1/0.' };
   }
@@ -1136,12 +1234,17 @@ const validarFilaImportacion = (obj) => {
     detalle: {
       dni,
       paciente: atencion.datosPaciente?.paciente || pacienteTexto || '—',
-      Hb: payload.Hb,
-      calcio: payload.calcio,
-      fosforo: payload.fosforo,
-      PTHi: payload.PTHi,
-      Alb: payload.Alb,
-      ktv: payload.ktv,
+      Hb: payload.Hb || '',
+      calcio: payload.calcio || '',
+      fosforo: payload.fosforo || '',
+      PTHi: payload.PTHi || '',
+      Alb: payload.Alb || '',
+      calcio_corregido: payload.calcio_corregido || '',
+      ktv: payload.ktv || '',
+      tiempo_dialisis: payload.tiempo_dialisis || '',
+      eritropoyetina: payload.eritoproyetina ? 'Sí' : 'No',
+      hierro: payload.hierro ? 'Sí' : 'No',
+      calcitriol: payload.calcitriol ? 'Sí' : 'No',
     },
   };
 };
@@ -1318,14 +1421,14 @@ function onGuardado() {
 function abrirModalImportar() {
   archivoSeleccionado.value = null;
   resultadoImportacion.value = null;
-  mostrarDetallesErroresImportacion.value = false;
+  paginaResultadoImportacion.value = 1;
   mostrarModalImportar.value = true;
 }
 function cerrarModalImportar() {
   mostrarModalImportar.value = false;
   archivoSeleccionado.value = null;
   resultadoImportacion.value = null;
-  mostrarDetallesErroresImportacion.value = false;
+  paginaResultadoImportacion.value = 1;
   arrastrando.value = false;
   fetchRegistros();
 }
@@ -1355,7 +1458,7 @@ function onSeleccionarArchivo(ev) {
   if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
     archivoSeleccionado.value = file;
     resultadoImportacion.value = null;
-    mostrarDetallesErroresImportacion.value = false;
+    paginaResultadoImportacion.value = 1;
   }
   ev.target.value = '';
 }
@@ -1365,7 +1468,7 @@ function onDropArchivo(ev) {
   if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
     archivoSeleccionado.value = file;
     resultadoImportacion.value = null;
-    mostrarDetallesErroresImportacion.value = false;
+    paginaResultadoImportacion.value = 1;
   }
 }
 function leerFilasExcel(file) {
@@ -1393,7 +1496,6 @@ async function ejecutarImportacion() {
   }
   importando.value = true;
   resultadoImportacion.value = null;
-  mostrarDetallesErroresImportacion.value = false;
   try {
     const rows = await leerFilasExcel(file);
     if (rows.length < 2) {
@@ -1411,35 +1513,25 @@ async function ejecutarImportacion() {
       headers.forEach((h, i) => (obj[h] = row[i] != null ? String(row[i]).trim() : ''));
       const validacion = validarFilaImportacion(obj);
       if (!validacion.ok) {
-        detalles.push({
-          dni: obj.dni || '',
-          paciente: obj.paciente || '',
-          Hb: obj.hb || obj.Hb || '',
-          calcio: obj.calcio || '',
-          fosforo: obj.fosforo || '',
-          PTHi: obj.pthi || obj.PTHi || '',
-          Alb: obj.alb || obj.Alb || '',
-          ktv: obj.ktv || '',
+        detalles.push(detalleFilaImportacion(obj, {
           guardado: false,
           mensaje: validacion.mensaje,
-        });
+        }));
         errores++;
         continue;
       }
       try {
         await postAllIpress('/resultadosClinicos/', validacion.payload);
-        detalles.push({
-          ...validacion.detalle,
+        detalles.push(detalleFilaImportacion(validacion.detalle, {
           guardado: true,
           mensaje: 'Registro guardado correctamente.',
-        });
+        }));
         creados++;
       } catch (e) {
-        detalles.push({
-          ...validacion.detalle,
+        detalles.push(detalleFilaImportacion(validacion.detalle, {
           guardado: false,
           mensaje: e?.error || 'Error al guardar el registro.',
-        });
+        }));
         errores++;
       }
     }
@@ -1459,46 +1551,20 @@ async function ejecutarImportacion() {
       ...historialCargas.value,
     ];
     guardarHistorialCargas();
-    const detallesErrores = detalles.filter((d) => !d.guardado);
     const importacionExitosa = creados > 0 && errores === 0;
     const importacionParcial = creados > 0 && errores > 0;
-    const importacionRechazada = creados === 0 && errores > 0;
-
-    let mensaje = '';
-    if (importacionExitosa) {
-      mensaje = `Importación completada: ${creados} registro(s) creado(s).`;
-    } else if (importacionParcial) {
-      mensaje = `Importación parcial: ${creados} registro(s) creado(s) y ${errores} fila(s) con error. Revise los detalles y corrija el archivo.`;
-    } else if (importacionRechazada) {
-      mensaje = `No se importó ningún registro. ${errores} fila(s) con error. Revise los detalles y corrija el archivo.`;
-    } else {
-      mensaje = 'No se encontraron filas válidas para importar.';
-    }
 
     await fetchRegistros();
-
-    if (importacionExitosa) {
-      mostrarModalImportar.value = false;
-      archivoSeleccionado.value = null;
-      resultadoImportacion.value = null;
-      mostrarDetallesErroresImportacion.value = false;
-      arrastrando.value = false;
-      await Swal.fire({
-        icon: 'success',
-        title: 'Importación exitosa',
-        text: mensaje,
-        confirmButtonText: 'Aceptar',
-        confirmButtonColor: '#0891b2',
-      });
-    } else {
-      resultadoImportacion.value = {
-        ok: false,
-        parcial: importacionParcial,
-        mensaje,
-        detallesErrores,
-      };
-      mostrarDetallesErroresImportacion.value = detallesErrores.length > 0;
-    }
+    paginaResultadoImportacion.value = 1;
+    resultadoImportacion.value = {
+      ok: importacionExitosa,
+      parcial: importacionParcial,
+      mensaje: `Importación completada: ${creados} registro(s) guardado(s), ${errores} con error, de ${dataRows.length} fila(s).`,
+      totalFilas: dataRows.length,
+      guardadas: creados,
+      errores,
+      detalles,
+    };
   } catch (e) {
     console.error(e);
     resultadoImportacion.value = { ok: false, mensaje: 'Error al procesar el archivo.' };
@@ -1511,6 +1577,16 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   fetchRegistros();
   fetchEstadoFormulario();
 }, { deep: true });
+
+watch(tamPaginaResultadoImportacion, () => {
+  paginaResultadoImportacion.value = 1;
+});
+
+watch(detallesImportacionLista, (list) => {
+  const tp = Math.max(1, Math.ceil(list.length / tamPaginaResultadoImportacion.value) || 1);
+  if (paginaResultadoImportacion.value > tp) paginaResultadoImportacion.value = tp;
+}, { deep: true });
+
 onMounted(() => {
   cargarHistorialCargas();
   fetchPeriodos();

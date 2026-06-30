@@ -841,6 +841,7 @@ const CAMPOS_EDICION = {
     { key: 'codigo_diagnostico', label: 'Código diagnóstico' },
     { key: 'fecha_hospitalizacion', label: 'Fecha hospitalización' },
     { key: 'fecha_alta_hospitalizacion', label: 'Fecha alta' },
+    { key: 'desenlace', label: 'Desenlace' },
     { key: 'fuente', label: 'Fuente' },
   ],
   resultados: [

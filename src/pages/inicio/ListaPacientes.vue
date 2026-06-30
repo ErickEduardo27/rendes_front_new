@@ -1,74 +1,67 @@
 <template>
   <div>
 
-    <div class="grid grid-cols-4 gap-4 my-6">
-      
-      <div class="bg-white border rounded-lg p-4 shadow-sm flex items-center justify-between">
+    <div class="bg-white border rounded-lg p-5 shadow-sm my-6">
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Total Pacientes</p>
-          <p class="text-3xl font-bold text-gray-800">{{ estadisticas.total }}</p>
+          <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Resumen del periodo</p>
+          <p class="text-xs text-gray-400">Pacientes en atención y registros cargados · periodo, IPRESS y modalidad</p>
         </div>
-        <div class="p-3 bg-blue-50 rounded-full text-blue-600">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        <p class="text-sm font-semibold text-slate-700 tabular-nums">
+          Total registros: <span class="text-lg text-cyan-700">{{ totalRegistrosPeriodo }}</span>
+        </p>
+      </div>
+
+      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Pacientes en atención</p>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+        <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 leading-tight">Total</p>
+          <p class="text-2xl font-bold text-gray-800 mt-1 tabular-nums">{{ estadisticas.total }}</p>
+        </div>
+        <div class="rounded-lg border border-violet-100 bg-violet-50/60 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-violet-600 leading-tight">Nuevos</p>
+          <p class="text-2xl font-bold text-violet-700 mt-1 tabular-nums">{{ estadisticas.nuevos }}</p>
+        </div>
+        <div class="rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-amber-600 leading-tight">Reingresos</p>
+          <p class="text-2xl font-bold text-amber-700 mt-1 tabular-nums">{{ estadisticas.reingresos }}</p>
+        </div>
+        <div class="rounded-lg border border-sky-100 bg-sky-50/60 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-sky-600 leading-tight">Continuadores</p>
+          <p class="text-2xl font-bold text-sky-700 mt-1 tabular-nums">{{ estadisticas.continuadores }}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-100/80 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-600 leading-tight">Egresos</p>
+          <p class="text-2xl font-bold text-slate-700 mt-1 tabular-nums">{{ estadisticas.egresados }}</p>
         </div>
       </div>
 
-      <div class="bg-white border rounded-lg p-4 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Pacientes Egresados</p>
-          <p class="text-3xl font-bold text-emerald-600">{{ estadisticas.egresados }}</p>
-        </div>
-        <div class="p-3 bg-emerald-50 rounded-full text-emerald-600">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-        </div>
-      </div>
-
-      <div class="bg-white border rounded-lg p-4 shadow-sm flex items-center justify-between">
-        <div>
-          <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Pacientes Reingresados</p>
-          <p class="text-3xl font-bold text-amber-600">{{ estadisticas.reingresos }}</p>
-        </div>
-        <div class="p-3 bg-amber-50 rounded-full text-amber-600">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h4l3-7 4 14 3-7h4"></path>
-          </svg>
-        </div>
-      </div>
-
-      <div class="bg-white border rounded-lg p-4 shadow-sm flex items-center justify-between">
-        <div class="w-full">
-          <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Registros por Formulario</p>
-          <p class="text-xs text-gray-400 mb-2">Según periodo, IPRESS y modalidad</p>
-          <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600 mt-1">
-            <div class="flex justify-between">
-              <span>Acceso Vascular</span>
-              <span class="font-semibold text-sky-700">{{ estadisticas.totalUnidades }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Infecciones</span>
-              <span class="font-semibold text-rose-700">{{ estadisticas.totalEventos }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Morbilidad Hosp.</span>
-              <span class="font-semibold text-amber-700">{{ estadisticas.totalMorbilidades }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Resultados Clínicos</span>
-              <span class="font-semibold text-indigo-700">{{ estadisticas.totalResultados }}</span>
-            </div>
-            <div class="flex justify-between col-span-2">
-              <span>Vacunación</span>
-              <span class="font-semibold text-emerald-700">{{ estadisticas.totalVacunaciones }}</span>
-            </div>
+      <div class="border-t border-slate-100 pt-4">
+        <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Registros del periodo</p>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 leading-tight">Cambio de acceso vascular</p>
+            <p class="text-2xl font-bold text-sky-700 mt-1 tabular-nums">{{ estadisticasRegistros.cambioAccesoVascular }}</p>
+          </div>
+          <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 leading-tight">Eventos infecciosos</p>
+            <p class="text-2xl font-bold text-rose-700 mt-1 tabular-nums">{{ estadisticasRegistros.eventosInfecciosos }}</p>
+          </div>
+          <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 leading-tight">Morbilidad hospitalaria</p>
+            <p class="text-2xl font-bold text-amber-700 mt-1 tabular-nums">{{ estadisticasRegistros.morbilidadHospitalaria }}</p>
+          </div>
+          <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 leading-tight">Resultados clínicos</p>
+            <p class="text-2xl font-bold text-indigo-700 mt-1 tabular-nums">{{ estadisticasRegistros.resultadosClinicos }}</p>
+          </div>
+          <div class="rounded-lg border border-teal-100 bg-teal-50/60 px-3 py-2.5">
+            <p class="text-[10px] font-bold uppercase tracking-wide text-teal-600 leading-tight">Calidad de agua</p>
+            <p class="text-2xl font-bold text-teal-700 mt-1 tabular-nums">{{ estadisticasRegistros.calidadAgua }}</p>
           </div>
         </div>
       </div>
-
     </div>
-
-    <TablaPacientesAtencion ref="tablaPacientesRef" class="mb-4" />
 
     <div class="flex items-center gap-4 my-4 border-t pt-4">
       <button
@@ -236,9 +229,7 @@ import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
-import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 import FormularioPaciente from './FormularioPaciente.vue';
-import TablaPacientesAtencion from '@/components/pacientes/TablaPacientesAtencion.vue';
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
 const router = useRouter();
@@ -256,7 +247,7 @@ const esSupervisor = computed(() => {
 });
 
 // Estadísticas de pacientes desde tabla paciente_atencion (por periodo, ipress, modalidad)
-const estadisticasAtencion = ref({ total: 0, egresados: 0, reingresos: 0 });
+const estadisticasAtencion = ref({ total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 });
 
 const fetchEstadisticasAtencion = async () => {
   const idPeriodo = periodoGlobal.value;
@@ -268,29 +259,30 @@ const fetchEstadisticasAtencion = async () => {
   if (idModalidad != null && idModalidad !== '') params.set('id_modalidad', idModalidad);
   const qs = params.toString();
   if (!qs) {
-    estadisticasAtencion.value = { total: 0, egresados: 0, reingresos: 0 };
+    estadisticasAtencion.value = { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 };
     return;
   }
   try {
     const res = await getAllIpress(`/pacienteAtencion/estadisticas/?${qs}`);
     estadisticasAtencion.value = {
       total: res?.total ?? 0,
-      egresados: res?.egresados ?? 0,
+      nuevos: res?.nuevos ?? 0,
       reingresos: res?.reingresos ?? 0,
+      continuadores: res?.continuadores ?? 0,
+      egresados: res?.egresados ?? 0,
     };
   } catch (e) {
     console.error('Error al obtener estadísticas de atención:', e);
-    estadisticasAtencion.value = { total: 0, egresados: 0, reingresos: 0 };
+    estadisticasAtencion.value = { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 };
   }
 };
 
-// Cantidad de registros por tipo de formulario según periodo, IPRESS y modalidad
 const estadisticasRegistros = ref({
-  totalUnidades: 0,
-  totalEventos: 0,
-  totalMorbilidades: 0,
-  totalResultados: 0,
-  totalVacunaciones: 0,
+  cambioAccesoVascular: 0,
+  eventosInfecciosos: 0,
+  morbilidadHospitalaria: 0,
+  resultadosClinicos: 0,
+  calidadAgua: 0,
 });
 
 const countFromResponse = (res) => {
@@ -299,70 +291,98 @@ const countFromResponse = (res) => {
   return 0;
 };
 
+const resolverIdUsuarioIpress = async (idIpress) => {
+  if (idIpress == null || idIpress === '') return null;
+  const idUsuario = user.value?.id_usuario ?? JSON.parse(localStorage.getItem('user') || 'null')?.id_usuario;
+  if (idUsuario) {
+    try {
+      const asig = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${idUsuario}`);
+      const lista = Array.isArray(asig) ? asig : (asig?.results || []);
+      const match = lista.find((a) => String(a.id_ipress) === String(idIpress));
+      if (match?.id_usuario_ipress != null) return match.id_usuario_ipress;
+    } catch (e) {
+      console.error('Error al resolver usuario IPRESS:', e);
+    }
+  }
+  try {
+    const uiList = await getAllIpress(`/usuarioIpress/?id_ipress=${idIpress}`);
+    const lista = Array.isArray(uiList) ? uiList : (uiList?.results || []);
+    return lista[0]?.id_usuario_ipress ?? null;
+  } catch (e) {
+    console.error('Error al obtener vínculo usuario–IPRESS:', e);
+    return null;
+  }
+};
+
 const fetchEstadisticasRegistros = async () => {
   const idPeriodo = periodoGlobal.value;
   const idIpress = clinicaGlobal.value;
   const idModalidad = modalidadGlobal.value;
-
   const params = new URLSearchParams();
   if (idPeriodo != null && idPeriodo !== '') params.set('id_periodo', idPeriodo);
   if (idIpress != null && idIpress !== '') params.set('id_ipress', idIpress);
   if (idModalidad != null && idModalidad !== '') params.set('id_modalidad', idModalidad);
   const qs = params.toString();
-
+  const vacio = {
+    cambioAccesoVascular: 0,
+    eventosInfecciosos: 0,
+    morbilidadHospitalaria: 0,
+    resultadosClinicos: 0,
+    calidadAgua: 0,
+  };
   if (!qs) {
-    estadisticasRegistros.value = { totalUnidades: 0, totalEventos: 0, totalMorbilidades: 0, totalResultados: 0, totalVacunaciones: 0 };
+    estadisticasRegistros.value = { ...vacio };
     return;
   }
-
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, idPeriodoIpress] = await Promise.all([
+    const [resUnidades, resEventos, resMorb, resResultados, idUsuarioIpress] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${qs}`),
       getAllIpress(`/eventosAccesosVasculares/?${qs}`),
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
-      resolverIdPeriodoIpress(idPeriodo, idIpress),
+      resolverIdUsuarioIpress(idIpress),
     ]);
-    let totalVacunaciones = 0;
-    if (idPeriodoIpress != null) {
+
+    let calidadAgua = 0;
+    const idPi = idPeriodoIpress.value;
+    if (idPi != null && idUsuarioIpress != null) {
       try {
-        const resVac = await getAllIpress(`/vacunaciones/?id_periodo_ipress=${idPeriodoIpress}`);
-        totalVacunaciones = countFromResponse(resVac);
+        const resCal = await postAllIpress('/reporte_calidad_microbiologicas/', {
+          id_usuario_ipress: Number(idUsuarioIpress),
+          id_periodo_ipress: Number(idPi),
+        });
+        calidadAgua = countFromResponse(resCal);
       } catch (e) {
-        totalVacunaciones = 0;
+        console.error('Error al contar calidad de agua:', e);
       }
     }
 
     estadisticasRegistros.value = {
-      totalUnidades: countFromResponse(resUnidades),
-      totalEventos: countFromResponse(resEventos),
-      totalMorbilidades: countFromResponse(resMorb),
-      totalResultados: countFromResponse(resResultados),
-      totalVacunaciones,
+      cambioAccesoVascular: countFromResponse(resUnidades),
+      eventosInfecciosos: countFromResponse(resEventos),
+      morbilidadHospitalaria: countFromResponse(resMorb),
+      resultadosClinicos: countFromResponse(resResultados),
+      calidadAgua,
     };
   } catch (e) {
     console.error('Error al obtener estadísticas de registros:', e);
-    estadisticasRegistros.value = { totalUnidades: 0, totalEventos: 0, totalMorbilidades: 0, totalResultados: 0, totalVacunaciones: 0 };
+    estadisticasRegistros.value = { ...vacio };
   }
 };
 
-// --- ESTADÍSTICAS DEL DASHBOARD ---
-// Total, egresados y reingresos: paciente_atencion (periodo/ipress/modalidad)
-// Registros por formulario: cantidades por tipo según periodo, IPRESS y modalidad
-const estadisticas = computed(() => {
-  const atencion = estadisticasAtencion.value;
-  const regs = estadisticasRegistros.value;
-  return {
-    total: atencion.total,
-    egresados: atencion.egresados,
-    reingresos: atencion.reingresos,
-    totalUnidades: regs.totalUnidades,
-    totalEventos: regs.totalEventos,
-    totalMorbilidades: regs.totalMorbilidades,
-    totalResultados: regs.totalResultados,
-    totalVacunaciones: regs.totalVacunaciones,
-  };
+const totalRegistrosPeriodo = computed(() => {
+  const r = estadisticasRegistros.value;
+  return (
+    Number(r.cambioAccesoVascular || 0)
+    + Number(r.eventosInfecciosos || 0)
+    + Number(r.morbilidadHospitalaria || 0)
+    + Number(r.resultadosClinicos || 0)
+    + Number(r.calidadAgua || 0)
+  );
 });
+
+// --- ESTADÍSTICAS DEL DASHBOARD ---
+const estadisticas = computed(() => ({ ...estadisticasAtencion.value }));
 // -----------------------------------
 
 /** Último registro por id_paciente_atencion: indicador de edición del supervisor y comentario (vista por formulario). */
@@ -550,7 +570,6 @@ async function searchPeriodoIpress() {
     idPeriodoIpress.value = null;
   }
 
-  fetchMetaFormulariosPorAtencion();
 }
 
 const fetchPeriodoIpress = async (url = null) => {
@@ -590,7 +609,6 @@ const fetchPeriodo = async (url = null) => {
 };
 
 const mostrarModalNuevo = ref(false);
-const tablaPacientesRef = ref(null);
 
 /** Precarga documento en FormularioPaciente al abrir tras “no encontrado”. */
 const documentoPrefillRegistro = ref('');
@@ -633,10 +651,8 @@ const cerrarModalNuevo = () => {
 
 const onGuardadoFormularioPaciente = async () => {
   cerrarModalFormularioPaciente();
-  await tablaPacientesRef.value?.recargar?.();
   await fetchEstadisticasAtencion();
   await fetchEstadisticasRegistros();
-  await fetchMetaFormulariosPorAtencion();
 };
 
 const cerrarModalConsultaDocumento = () => {
@@ -723,8 +739,8 @@ const abrirFormularioRegistroNuevo = () => {
 
 watch([periodoGlobal, clinicaGlobal, modalidadGlobal], async () => {
   await searchPeriodoIpress();
-  fetchEstadisticasAtencion();
-  fetchEstadisticasRegistros();
+  await fetchEstadisticasAtencion();
+  await fetchEstadisticasRegistros();
 }, { deep: true });
 
 onMounted(async () => {
@@ -732,8 +748,8 @@ onMounted(async () => {
   await fetchIpress();
   fetchPeriodo();
   await searchPeriodoIpress();
-  fetchEstadisticasAtencion();
-  fetchEstadisticasRegistros();
+  await fetchEstadisticasAtencion();
+  await fetchEstadisticasRegistros();
 });
 </script>
 

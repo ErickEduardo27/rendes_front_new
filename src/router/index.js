@@ -71,6 +71,12 @@ const routes = [
         component: () => import('@/pages/movimientos/movimientos.vue'),
       },
       {
+        path: 'inicio-trr',
+        name: 'InicioTRR',
+        component: () => import('@/pages/registros/inicioTrr/index.vue'),
+        meta: { bloqueadoSupervisor: true },
+      },
+      {
         path: 'acceso-vascular',
         name: 'AccesoVascular',
         component: () => import('@/pages/registros/accesoActual/index.vue'),

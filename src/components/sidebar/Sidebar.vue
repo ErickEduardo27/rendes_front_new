@@ -23,6 +23,7 @@
             :icon="DocumentMagnifyingGlassIcon" 
             label="Registros" 
             :submenu="[
+              { label: 'Inicio de TRR', to: '/inicio-trr' },
               { label: 'Acceso Vascular', to: '/acceso-vascular' },
               { label: 'Eventos Infecciosos', to: '/eventos-infecciosos' },
               { label: 'Morbilidad Hospitalaria', to: '/morbilidad-hospitalaria' },
