@@ -24,6 +24,34 @@ export async function resolverIdPeriodoIpress(idPeriodo, idIpress) {
   }
 }
 
+export async function resolverIdUsuarioIpress(idIpress) {
+  if (idIpress == null || idIpress === '') return null;
+  let idUsuario = null;
+  try {
+    idUsuario = JSON.parse(localStorage.getItem('user') || 'null')?.id_usuario ?? null;
+  } catch {
+    idUsuario = null;
+  }
+  if (idUsuario) {
+    try {
+      const asig = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${idUsuario}`);
+      const lista = Array.isArray(asig) ? asig : (asig?.results || []);
+      const match = lista.find((a) => String(a.id_ipress) === String(idIpress));
+      if (match?.id_usuario_ipress != null) return match.id_usuario_ipress;
+    } catch (e) {
+      console.error('Error al resolver usuario IPRESS:', e);
+    }
+  }
+  try {
+    const uiList = await getAllIpress(`/usuarioIpress/?id_ipress=${idIpress}`);
+    const lista = Array.isArray(uiList) ? uiList : (uiList?.results || []);
+    return lista[0]?.id_usuario_ipress ?? null;
+  } catch (e) {
+    console.error('Error al obtener vínculo usuario–IPRESS:', e);
+    return null;
+  }
+}
+
 /**
  * Mismos conteos que el bloque «Registros por formulario» (ListaPacientes / dashboard).
  */
@@ -39,25 +67,29 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalEventos: 0,
       totalMorbilidades: 0,
       totalResultados: 0,
-      totalVacunaciones: 0,
+      totalCalidadAgua: 0,
     };
   }
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, idPeriodoIpress] = await Promise.all([
+    const [resUnidades, resEventos, resMorb, resResultados, idPeriodoIpress, idUsuarioIpress] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${qs}`),
       getAllIpress(`/eventosAccesosVasculares/?${qs}`),
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
       resolverIdPeriodoIpress(idPeriodo, idIpress),
+      resolverIdUsuarioIpress(idIpress),
     ]);
 
-    let totalVacunaciones = 0;
-    if (idPeriodoIpress != null) {
+    let totalCalidadAgua = 0;
+    if (idPeriodoIpress != null && idUsuarioIpress != null) {
       try {
-        const resVac = await getAllIpress(`/vacunaciones/?id_periodo_ipress=${idPeriodoIpress}`);
-        totalVacunaciones = countFromResponse(resVac);
+        const resCal = await postAllIpress('/reporte_calidad_microbiologicas/', {
+          id_usuario_ipress: Number(idUsuarioIpress),
+          id_periodo_ipress: Number(idPeriodoIpress),
+        });
+        totalCalidadAgua = countFromResponse(resCal);
       } catch (e) {
-        console.error('Error al contar vacunaciones:', e);
+        console.error('Error al contar calidad de agua:', e);
       }
     }
 
@@ -66,7 +98,7 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalEventos: countFromResponse(resEventos),
       totalMorbilidades: countFromResponse(resMorb),
       totalResultados: countFromResponse(resResultados),
-      totalVacunaciones,
+      totalCalidadAgua,
     };
   } catch (e) {
     console.error(e);
@@ -75,7 +107,7 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalEventos: 0,
       totalMorbilidades: 0,
       totalResultados: 0,
-      totalVacunaciones: 0,
+      totalCalidadAgua: 0,
     };
   }
 }

@@ -78,11 +78,11 @@
             <div v-if="cargandoStats" class="text-sm text-slate-500 py-4 text-center">Cargando conteos…</div>
             <div v-else class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 border border-slate-100 rounded-lg p-3 bg-slate-50/80">
               <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1">Registros por formulario</div>
-              <div class="flex justify-between"><span>Acceso Vascular</span><span class="font-semibold text-sky-700">{{ statsModal.totalUnidades }}</span></div>
+              <div class="flex justify-between"><span>Cambio Acceso Vascular</span><span class="font-semibold text-sky-700">{{ statsModal.totalUnidades }}</span></div>
               <div class="flex justify-between"><span>Infecciones</span><span class="font-semibold text-rose-700">{{ statsModal.totalEventos }}</span></div>
               <div class="flex justify-between"><span>Morbilidad Hosp.</span><span class="font-semibold text-amber-700">{{ statsModal.totalMorbilidades }}</span></div>
               <div class="flex justify-between"><span>Resultados Clínicos</span><span class="font-semibold text-indigo-700">{{ statsModal.totalResultados }}</span></div>
-              <div class="flex justify-between col-span-2"><span>Vacunación</span><span class="font-semibold text-emerald-700">{{ statsModal.totalVacunaciones }}</span></div>
+              <div class="flex justify-between col-span-2"><span>Calidad de agua</span><span class="font-semibold text-teal-700">{{ statsModal.totalCalidadAgua }}</span></div>
             </div>
             <p class="text-sm text-slate-700">
               ¿Desea <strong>notificar al equipo de revisión</strong> que estos datos están listos para ser evaluados?
@@ -161,7 +161,7 @@ const statsModal = ref({
   totalEventos: 0,
   totalMorbilidades: 0,
   totalResultados: 0,
-  totalVacunaciones: 0,
+  totalCalidadAgua: 0,
 })
 
 /**

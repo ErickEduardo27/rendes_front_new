@@ -53,6 +53,7 @@
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. 1er ingreso</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Hosp. proced.</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Condición</th>
+            <th v-if="mostrarAprobacion" class="text-left px-2 py-2 font-semibold whitespace-nowrap">Estado</th>
             <th v-if="mostrarAcciones" class="text-left px-2 py-2 font-semibold whitespace-nowrap sticky right-0 bg-slate-100">Acciones</th>
           </tr>
         </thead>
@@ -92,6 +93,12 @@
                 :class="claseCondicionPaciente(row)"
               >{{ condicionPacienteTexto(row) }}</span>
             </td>
+            <td v-if="mostrarAprobacion" class="px-2 py-2 whitespace-nowrap">
+              <span
+                class="inline-flex text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                :class="claseEstadoAprobacion(row)"
+              >{{ textoEstadoAprobacion(row) }}</span>
+            </td>
             <td v-if="mostrarAcciones" class="px-2 py-2 sticky right-0 bg-white group-hover:bg-slate-50">
               <div class="flex flex-wrap gap-1 items-center">
                 <button
@@ -103,11 +110,20 @@
                 >
                   Editar
                 </button>
+                <button
+                  v-if="mostrarAprobacion && mostrarBotonAprobar(row)"
+                  type="button"
+                  class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-semibold disabled:opacity-40"
+                  :disabled="aprobandoId === row.id_paciente_atencion"
+                  @click="aprobarPaciente(row)"
+                >
+                  {{ aprobandoId === row.id_paciente_atencion ? '…' : 'Aprobar' }}
+                </button>
               </div>
             </td>
           </tr>
           <tr v-if="!pacientes.length">
-            <td :colspan="mostrarAcciones ? 19 : 18" class="px-3 py-8 text-center text-gray-500">
+            <td :colspan="columnasTabla" class="px-3 py-8 text-center text-gray-500">
               No hay pacientes con atención en esta clínica y periodo
               <span v-if="filtroNombre.trim() || filtroDni.trim()"> (pruebe otro filtro)</span>.
             </td>
@@ -190,11 +206,13 @@
 <script setup>
 import { ref, computed, watch, inject, onMounted } from 'vue';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
+import { ElMessage } from 'element-plus';
 import { tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import FormularioPaciente from '@/pages/inicio/FormularioPaciente.vue';
 
-defineProps({
+const props = defineProps({
   mostrarAcciones: { type: Boolean, default: true },
+  mostrarAprobacion: { type: Boolean, default: false },
 });
 
 const LISTA_TIPOS_ACCESO = [
@@ -240,6 +258,14 @@ const clinicaSeleccionada = ref('');
 
 const mostrarModalEdicionSupervisor = ref(false);
 const filaEdicionSupervisor = ref(null);
+const aprobandoId = ref(null);
+
+const columnasTabla = computed(() => {
+  let n = 18;
+  if (props.mostrarAprobacion) n += 1;
+  if (props.mostrarAcciones) n += 1;
+  return n;
+});
 
 const pacientesFiltrados = computed(() => pacientes.value);
 
@@ -380,9 +406,45 @@ function enriquecerFilasConAtencion(filas, atenciones) {
       id_paciente_atencion: row.id_paciente_atencion ?? at.id_paciente_atencion,
       tipo_atencion: row.tipo_atencion ?? at.tipo_atencion,
       estado_atencion: row.estado_atencion ?? at.estado,
+      estado_aprobacion: row.estado_aprobacion ?? at.estado_aprobacion ?? 'PENDIENTE',
       datosPacienteAtencion: row.datosPacienteAtencion ?? at,
     };
   });
+}
+
+function textoEstadoAprobacion(row) {
+  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return 'SIN REGISTRO';
+  const estado = String(row?.estado_aprobacion ?? 'PENDIENTE').trim().toUpperCase();
+  return estado || 'PENDIENTE';
+}
+
+function claseEstadoAprobacion(row) {
+  const estado = textoEstadoAprobacion(row);
+  if (estado === 'SIN REGISTRO') return 'bg-slate-100 text-slate-600';
+  if (estado === 'APROBADO') return 'bg-emerald-100 text-emerald-800';
+  return 'bg-amber-100 text-amber-800';
+}
+
+function mostrarBotonAprobar(row) {
+  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return false;
+  if (!row?.id_paciente_atencion) return false;
+  return textoEstadoAprobacion(row) !== 'APROBADO';
+}
+
+async function aprobarPaciente(row) {
+  const id = row?.id_paciente_atencion;
+  if (!id || !mostrarBotonAprobar(row)) return;
+  aprobandoId.value = id;
+  try {
+    await postAllIpress(`/pacienteAtencion/${id}/evaluar/`, { estado_aprobacion: 'APROBADO' });
+    ElMessage.success('Paciente aprobado correctamente.');
+    await fetchPacientes();
+  } catch (e) {
+    const msg = e?.detail || e?.error || e?.response?.data?.detail || e?.message || 'No se pudo aprobar el registro.';
+    ElMessage.error(typeof msg === 'string' ? msg : 'No se pudo aprobar el registro.');
+  } finally {
+    aprobandoId.value = null;
+  }
 }
 
 function claseCondicionPaciente(row) {

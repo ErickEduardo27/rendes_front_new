@@ -55,7 +55,7 @@
 
         <template v-else>
         <div v-if="modulo === 'pacientes'" class="p-4">
-          <TablaPacientesAtencion />
+          <TablaPacientesAtencion mostrar-aprobacion />
         </div>
 
         <template v-else-if="esModuloRegistros">
