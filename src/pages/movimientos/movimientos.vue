@@ -4,7 +4,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Gestión de Movimientos de Pacientes</h1>
-                <p class="text-sm text-gray-600 mt-1">Registre ingresos, reingresos y egresos de pacientes</p>
+                <p class="text-sm text-gray-600 mt-1">Historial de ingresos, reingresos, egresos y cambios de modalidad del periodo, IPRESS y modalidad seleccionados</p>
             </div>
             <div class="flex gap-2">
                 <button
@@ -91,7 +91,7 @@
                                 No hay movimientos registrados
                             </td>
                         </tr>
-                        <tr v-for="(movimiento, index) in movimientosPaginados" :key="index" class="hover:bg-gray-50">
+                        <tr v-for="movimiento in movimientosPaginados" :key="movimiento.id" class="hover:bg-gray-50">
                             <td class="px-3 py-2 text-gray-900 whitespace-nowrap">
                                 {{ movimiento.fecha }}
                             </td>
@@ -529,6 +529,9 @@
                             <option value="Trasplante">Trasplante</option>
                             <option value="Cambio de Unidad">Cambio de Unidad</option>
                             <option value="Cambio de Modalidad">Cambio de Modalidad</option>
+                            <option value="Recuperación de la Función Renal">Recuperación de la Función Renal</option>
+                            <option value="Pérdida de la acreditación">Pérdida de la acreditación</option>
+                            <option value="Abandono del tratamiento">Abandono del tratamiento</option>
                             <option value="Otros">Otros</option>
                         </select>
                     </div>
@@ -740,6 +743,9 @@ const TIPOS_EGRESO_PREDEFINIDOS = [
     'Trasplante',
     'Cambio de Unidad',
     'Cambio de Modalidad',
+    'Recuperación de la Función Renal',
+    'Pérdida de la acreditación',
+    'Abandono del tratamiento',
 ];
 
 // Filtros
@@ -1549,7 +1555,9 @@ const captarPaciente = async () => {
             created_at: now,
         };
 
-        const idReactivar = atencionEgresada?.id_paciente_atencion ?? activaSinIpress?.id_paciente_atencion;
+        const idReactivar = atencionEgresada
+            ? null
+            : (activaSinIpress?.id_paciente_atencion ?? null);
         let idPacienteAtencionCapturado = idReactivar ?? null;
         if (idReactivar) {
             await patchAllIpress(`/pacienteAtencion/${idReactivar}/`, payload);
@@ -2095,13 +2103,25 @@ const egresarPaciente = async () => {
                 ? `Egreso: ${tipoEgresoTexto}. ${formEgresar.observaciones}`
                 : `Egreso: ${tipoEgresoTexto}`
         );
+        const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
         await patchAllIpress(`/pacienteAtencion/${atencionActiva.id_paciente_atencion}/`, {
-            estado: 'EGRESADO',
-            tipo_atencion: 'EGRESO',
+            estado: 'CERRADO',
             fecha_fin: formEgresar.fecha,
+        });
+
+        await postAllIpress('/pacienteAtencion/', {
+            id_paciente: formEgresar.paciente,
+            id_ipress: formEgresar.clinica,
+            id_periodo: formEgresar.periodo,
+            id_modalidad: modalidadActual,
             fecha_atencion: formEgresar.fecha,
+            tipo_atencion: 'EGRESO',
+            fecha_inicio: formEgresar.fecha,
+            fecha_fin: formEgresar.fecha,
+            estado: 'EGRESADO',
             observaciones: obsEgreso,
+            created_at: now,
         });
 
         try {
@@ -2151,6 +2171,46 @@ const egresarPaciente = async () => {
 };
 
 // Funciones de carga de datos: listar atenciones según periodo, ipress y modalidad globales
+const mapearAtencionAMovimiento = (mov) => {
+    const tipoAtencion = String(mov.tipo_atencion || '').toUpperCase();
+    const estadoAtencion = String(mov.estado || '').toUpperCase();
+    let tipo = 'INGRESO';
+    if (tipoAtencion === 'CAMBIO_MODALIDAD') tipo = 'CAMBIO_MODALIDAD';
+    else if (tipoAtencion === 'EGRESO' || estadoAtencion === 'EGRESADO') tipo = 'EGRESO';
+
+    const modalidadLabel = mov.datosModalidad?.modalidad
+        || etiquetaModalidad(mov.id_modalidad ?? mov.datosModalidad?.id_modalidad);
+
+    const fechaMov = isoDesdeValorApi(mov.fecha_atencion)
+        || isoDesdeValorApi(mov.fecha_fin)
+        || isoDesdeValorApi(mov.created_at)
+        || 'N/A';
+
+    return {
+        id: mov.id_paciente_atencion,
+        id_paciente: mov.id_paciente ?? mov.datosPaciente?.id_paciente,
+        id_periodo: mov.id_periodo ?? mov.datosPeriodo?.id_periodo,
+        id_ipress: mov.id_ipress ?? mov.datosIpress?.id_ipress,
+        id_modalidad: mov.id_modalidad ?? mov.datosModalidad?.id_modalidad,
+        tipo_atencion: mov.tipo_atencion,
+        estado: mov.estado,
+        tipo,
+        condicion: tipo === 'EGRESO'
+            ? 'EGRESADO'
+            : (tipoAtencion === 'CAMBIO_MODALIDAD' ? 'CAMBIO_MODALIDAD' : (mov.tipo_atencion || 'N/A')),
+        fecha: fechaMov,
+        paciente_nombre: mov.datosPaciente?.paciente || 'N/A',
+        paciente_dni: mov.datosPaciente?.documento || 'N/A',
+        tipo_egreso: tipo === 'EGRESO' ? extraerTipoEgresoDesdeObs(mov.observaciones) : null,
+        observaciones: mov.observaciones,
+        periodo: mov.datosPeriodo?.periodo || 'N/A',
+        clinica: mov.datosIpress?.nombre_corto || mov.datosIpress?.ipress || 'N/A',
+        modalidad: modalidadLabel,
+        detalle_modalidad: tipoAtencion === 'CAMBIO_MODALIDAD' ? (mov.observaciones || modalidadLabel) : modalidadLabel,
+        created_at: mov.created_at,
+    };
+};
+
 const fetchMovimientos = async (filtrosOverride = null) => {
     try {
         const idPeriodo = filtrosOverride?.idPeriodo ?? periodoGlobal.value;
@@ -2167,44 +2227,13 @@ const fetchMovimientos = async (filtrosOverride = null) => {
         const respuesta = await getAllIpress(url);
         const lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
 
-        movimientos.value = lista.map((mov) => {
-            const tipoAtencion = String(mov.tipo_atencion || '').toUpperCase();
-            const estadoAtencion = String(mov.estado || '').toUpperCase();
-            let tipo = 'INGRESO';
-            if (tipoAtencion === 'CAMBIO_MODALIDAD') tipo = 'CAMBIO_MODALIDAD';
-            else if (tipoAtencion === 'EGRESO' || estadoAtencion === 'EGRESADO') tipo = 'EGRESO';
-
-            const modalidadLabel = mov.datosModalidad?.modalidad
-                || etiquetaModalidad(mov.id_modalidad ?? mov.datosModalidad?.id_modalidad);
-
-            const fechaMov = isoDesdeValorApi(mov.fecha_atencion)
-                || isoDesdeValorApi(mov.fecha_fin)
-                || isoDesdeValorApi(mov.created_at)
-                || 'N/A';
-
-            return {
-                id: mov.id_paciente_atencion,
-                id_paciente: mov.id_paciente ?? mov.datosPaciente?.id_paciente,
-                id_periodo: mov.id_periodo ?? mov.datosPeriodo?.id_periodo,
-                id_ipress: mov.id_ipress ?? mov.datosIpress?.id_ipress,
-                id_modalidad: mov.id_modalidad ?? mov.datosModalidad?.id_modalidad,
-                tipo_atencion: mov.tipo_atencion,
-                estado: mov.estado,
-                tipo,
-                condicion: tipo === 'EGRESO'
-                    ? 'EGRESADO'
-                    : (tipoAtencion === 'CAMBIO_MODALIDAD' ? 'CAMBIO_MODALIDAD' : (mov.tipo_atencion || 'N/A')),
-                fecha: fechaMov,
-                paciente_nombre: mov.datosPaciente?.paciente || 'N/A',
-                paciente_dni: mov.datosPaciente?.documento || 'N/A',
-                tipo_egreso: tipo === 'EGRESO' ? extraerTipoEgresoDesdeObs(mov.observaciones) : null,
-                observaciones: mov.observaciones,
-                periodo: mov.datosPeriodo?.periodo || 'N/A',
-                clinica: mov.datosIpress?.nombre_corto || mov.datosIpress?.ipress || 'N/A',
-                modalidad: modalidadLabel,
-                detalle_modalidad: tipoAtencion === 'CAMBIO_MODALIDAD' ? (mov.observaciones || modalidadLabel) : modalidadLabel,
-            };
-        });
+        movimientos.value = lista
+            .map(mapearAtencionAMovimiento)
+            .sort((a, b) => {
+                const cmpFecha = String(b.fecha).localeCompare(String(a.fecha));
+                if (cmpFecha !== 0) return cmpFecha;
+                return (Number(b.id) || 0) - (Number(a.id) || 0);
+            });
     } catch (error) {
         console.error('Error al obtener movimientos:', error);
         movimientos.value = [];
@@ -2398,7 +2427,6 @@ async function obtenerAtencionActivaParaEgreso({ pacienteId, periodoId, ipressId
 
     return (
         lista.find((a) => String(a.estado || '').toUpperCase() === 'ACTIVO')
-        || lista.find((a) => String(a.tipo_atencion || '').toUpperCase() !== 'EGRESO' && String(a.estado || '').toUpperCase() !== 'EGRESADO')
         || null
     );
 }

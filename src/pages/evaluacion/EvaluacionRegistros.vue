@@ -842,6 +842,8 @@ const CAMPOS_EDICION = {
     { key: 'fecha_hospitalizacion', label: 'Fecha hospitalización' },
     { key: 'fecha_alta_hospitalizacion', label: 'Fecha alta' },
     { key: 'desenlace', label: 'Desenlace' },
+    { key: 'fecha_fallecimiento', label: 'Fecha fallecimiento' },
+    { key: 'causa_muerte', label: 'Causa de muerte' },
     { key: 'fuente', label: 'Fuente' },
   ],
   resultados: [

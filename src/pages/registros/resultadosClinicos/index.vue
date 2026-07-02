@@ -392,10 +392,10 @@
         </div>
         <div class="p-6 space-y-4 overflow-y-auto">
           <p v-if="!resultadoImportacion?.detalles?.length" class="text-sm text-slate-600">
-            Cargue el Excel completado. La importación valida rangos clínicos, valores numéricos (sin letras), el DNI del paciente según el filtro actual y el
-            <strong>tiempo de diálisis</strong> en <strong>horas o fracción de hora</strong>, usando incrementos de <strong>0,25</strong>
-            (ej.: 1, 1,25, 1,5, 1,75, 2, 2,25…).
-            Eritropoyetina, hierro y calcitriol: <strong>Sí</strong> o <strong>No</strong> (deje vacío si no aplica).
+            Cargue el Excel completado. La importación valida el DNI del paciente según el filtro actual.
+            Campos <strong>obligatorios</strong>: <strong>tiempo de diálisis</strong> (horas o fracción de hora, incrementos de 0,25 entre 0,25 y 8)
+            y tratamiento (<strong>Eritropoyetina</strong>, <strong>Hierro</strong> y <strong>Calcitriol</strong>: Sí o No).
+            Los demás resultados de laboratorio son opcionales; si se indican, deben ser numéricos y estar dentro del rango válido.
           </p>
           <div v-if="!resultadoImportacion?.detalles?.length">
             <label class="block text-sm font-bold text-slate-700 mb-2">Cargar archivo Excel</label>

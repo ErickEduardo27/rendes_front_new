@@ -3,7 +3,7 @@
     <div class="p-6 space-y-6 bg-gray-50 min-h-screen">
         
         <div class="border-l-4 border-cyan-600 pl-3 my-6">
-            <h2 class="text-xl font-bold text-gray-800">Morbilidad Hospitalaria</h2>
+            <h2 class="text-xl font-bold text-gray-800">Morbimorbilidad</h2>
         </div>
 
         <div class="flex flex-col lg:flex-row gap-6 items-start">
@@ -82,6 +82,30 @@
                                 <option value="Informe de Alta">Informe de Alta</option>
                                 <option value="Otro">Otro</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div v-if="form.desenlace === 'Fallecimiento'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Fallecimiento <span class="text-red-500">*</span></label>
+                            <input
+                                v-model="form.fechaFallecimiento"
+                                type="date"
+                                :min="minFechaAlta || rangoFechasPeriodo.min"
+                                :max="rangoFechasPeriodo.max"
+                                class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white"
+                            />
+                            <p v-if="rangoFechasPeriodo.max" class="text-xs text-gray-500 mt-1">Dentro del periodo (máx. {{ rangoFechasPeriodo.max }})</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Causa de Muerte <span class="text-red-500">*</span></label>
+                            <input
+                                v-model="form.causaMuerte"
+                                type="text"
+                                maxlength="500"
+                                placeholder="Describa la causa de muerte"
+                                class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white"
+                            />
                         </div>
                     </div>
                 </div>
@@ -182,6 +206,8 @@ function limpiarFormularioNuevo() {
     form.value.fIniHos = '';
     form.value.fAltHos = '';
     form.value.desenlace = '';
+    form.value.fechaFallecimiento = '';
+    form.value.causaMuerte = '';
     form.value.fuente = '';
     form.value.seleccionados = [];
     form.value.filtroCodigo = '';
@@ -210,6 +236,8 @@ function cargarRegistroEdicion(registro) {
     form.value.fIniHos = toInputDate(registro.fecha_hospitalizacion);
     form.value.fAltHos = toInputDate(registro.fecha_alta_hospitalizacion);
     form.value.desenlace = registro.desenlace || '';
+    form.value.fechaFallecimiento = toInputDate(registro.fecha_fallecimiento);
+    form.value.causaMuerte = registro.causa_muerte || '';
     form.value.fuente = registro.fuente || '';
     form.value.seleccionados = diagnosticosDesdeRegistro(registro);
     form.value.filtroCodigo = '';
@@ -1052,6 +1080,8 @@ const form = ref({
     fIniHos: '',
     fAltHos: '',
     desenlace: '',
+    fechaFallecimiento: '',
+    causaMuerte: '',
     fuente: '',
     id_periodo_ipress: 17,
     id_red: 1,
@@ -1092,6 +1122,8 @@ const fetchUltimoRegistroHospitalizacion = async () => {
             form.value.fIniHos = toInputDate(ultimo.fecha_hospitalizacion);
             form.value.fAltHos = '';
             form.value.desenlace = ultimo.desenlace || '';
+            form.value.fechaFallecimiento = toInputDate(ultimo.fecha_fallecimiento);
+            form.value.causaMuerte = ultimo.causa_muerte || '';
             form.value.fuente = ultimo.fuente || '';
             form.value.seleccionados = diagnosticosDesdeRegistro(ultimo);
             form.value.filtroCodigo = '';
@@ -1133,6 +1165,48 @@ watch(() => form.value.fAltHos, (nuevaFechaAlta) => {
         errorFechaAlta.value = `La fecha de alta debe estar dentro del periodo (${rango.min} a ${rango.max})`;
     }
 });
+
+watch(() => form.value.desenlace, (valor) => {
+    if (valor !== 'Fallecimiento') {
+        form.value.fechaFallecimiento = '';
+        form.value.causaMuerte = '';
+    }
+});
+
+function datosFallecimientoPayload() {
+    if (form.value.desenlace === 'Fallecimiento') {
+        return {
+            fecha_fallecimiento: form.value.fechaFallecimiento || null,
+            causa_muerte: form.value.causaMuerte?.trim() || null,
+        };
+    }
+    return {
+        fecha_fallecimiento: null,
+        causa_muerte: null,
+    };
+}
+
+function validarDatosFallecimiento() {
+    if (form.value.desenlace !== 'Fallecimiento') return true;
+    if (!form.value.fechaFallecimiento) {
+        alert('Indique la fecha de fallecimiento.');
+        return false;
+    }
+    if (!form.value.causaMuerte?.trim()) {
+        alert('Indique la causa de muerte.');
+        return false;
+    }
+    const rango = rangoFechasPeriodo.value;
+    if (rango.min && rango.max && (form.value.fechaFallecimiento < rango.min || form.value.fechaFallecimiento > rango.max)) {
+        alert(`La fecha de fallecimiento debe estar dentro del periodo (${rango.min} a ${rango.max}).`);
+        return false;
+    }
+    if (form.value.fIniHos && form.value.fechaFallecimiento < form.value.fIniHos) {
+        alert('La fecha de fallecimiento no puede ser anterior a la fecha de inicio de hospitalización.');
+        return false;
+    }
+    return true;
+}
 
 // Watcher para limpiar error cuando cambia la fecha de inicio
 watch(() => form.value.fIniHos, () => {
@@ -1186,6 +1260,7 @@ const postForm = async (url = null) => {
         alert('Por favor corrija los errores en las fechas antes de continuar.');
         return;
     }
+    if (!validarDatosFallecimiento()) return;
     if (form.value.fIniHos && form.value.fAltHos && form.value.fAltHos < form.value.fIniHos) {
         alert('La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización.');
         return;
@@ -1209,7 +1284,8 @@ const postForm = async (url = null) => {
         if (modoCompletarAlta.value && idMorbilidadCompletar.value != null) {
             await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, {
                 fecha_alta_hospitalizacion: form.value.fAltHos || '',
-                desenlace: form.value.desenlace || ''
+                desenlace: form.value.desenlace || '',
+                ...datosFallecimientoPayload(),
             });
             if (idPacienteAtencion != null && idPacienteAtencion !== '') emit('guardado');
             else { alert('Se registró la fecha de alta con éxito.'); window.location.reload(); }
@@ -1224,7 +1300,8 @@ const postForm = async (url = null) => {
                 fecha_hospitalizacion: form.value.fIniHos || '',
                 fecha_alta_hospitalizacion: form.value.fAltHos || '',
                 desenlace: form.value.desenlace || '',
-                fuente: form.value.fuente || ''
+                fuente: form.value.fuente || '',
+                ...datosFallecimientoPayload(),
             };
             if (idMorbilidadEdicion.value != null) {
                 if (props.modoSupervisor) {

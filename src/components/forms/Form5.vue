@@ -33,7 +33,9 @@
 
     <div class="border-l-4 border-cyan-600 pl-3">
       <h2 class="text-base font-bold text-slate-800">Resultados Clínicos</h2>
-      <p class="text-xs text-slate-500">Complete la información médica del paciente</p>
+      <p class="text-xs text-slate-500">
+        Los resultados de laboratorio son opcionales. Solo son obligatorios el tiempo de diálisis y el tratamiento administrado.
+      </p>
     </div>
 
     <div class="flex flex-col lg:flex-row gap-4 items-start">
@@ -44,7 +46,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div v-for="campo in camposResultados" :key="campo.key">
               <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
-                {{ campo.label }}
+                {{ campo.label }} <span class="text-slate-400 font-normal normal-case">(opcional)</span>
               </label>
 
               <div class="flex items-center gap-2">
@@ -333,7 +335,7 @@ import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSu
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
 
 const props = defineProps({
-  paciente: { type: Object, required: true },
+  paciente: { type: Object, default: null },
   periodo: { type: Number, default: null },
   idPacienteAtencion: { type: [Number, String], default: null },
   registroEdicion: { type: Object, default: null },

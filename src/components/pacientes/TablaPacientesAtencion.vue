@@ -25,6 +25,21 @@
         />
       </div>
     </div>
+    <div
+      v-if="mostrarAprobacion && idIpress != null && idPeriodo != null"
+      class="flex flex-wrap items-center justify-between gap-2 mb-3"
+    >
+      <p class="text-xs text-slate-500">Editar y Aprobar solo aplican si el paciente tiene ficha de diálisis.</p>
+      <button
+        v-if="pendientesAprobacion.length"
+        type="button"
+        class="text-xs px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold disabled:opacity-50"
+        :disabled="aprobandoTodos || cargandoPacientes"
+        @click="aprobarTodosPendientes"
+      >
+        {{ aprobandoTodos ? 'Aprobando…' : `Aprobar todos (${pendientesAprobacion.length})` }}
+      </button>
+    </div>
     <p v-if="idIpress == null || idPeriodo == null" class="text-sm text-amber-600">
       Seleccione clínica (IPRESS) y periodo en el encabezado para cargar la lista.
     </p>
@@ -43,7 +58,7 @@
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Grado</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Etiol. general</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Etiol. específica</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Comorb.</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap min-w-[180px]">Comorbilidades</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Mod. TRR</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. creac. acceso</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Tipo acceso</th>
@@ -78,7 +93,7 @@
             <td class="px-2 py-2 max-w-[90px] truncate" :title="row.datosPaciente?.grado_instruccion">{{ celda(row.datosPaciente?.grado_instruccion) }}</td>
             <td class="px-2 py-2 max-w-[120px] truncate" :title="etiologiaGeneralTexto(row)">{{ etiologiaGeneralTexto(row) }}</td>
             <td class="px-2 py-2 max-w-[140px] truncate" :title="etiologiaEspecificaTexto(row)">{{ etiologiaEspecificaTexto(row) }}</td>
-            <td class="px-2 py-2 max-w-[120px] truncate" :title="comorbilidadesTexto(row)">{{ comorbilidadesTexto(row) }}</td>
+            <td class="px-2 py-2 min-w-[180px] max-w-[320px] whitespace-normal align-top" :title="comorbilidadesTexto(row)">{{ comorbilidadesTexto(row) }}</td>
             <td class="px-2 py-2 max-w-[110px] truncate" :title="row.modalidad_inicio_trr">{{ celda(row.modalidad_inicio_trr) }}</td>
             <td class="px-2 py-2 whitespace-nowrap">{{ fechaCelda(row.fecha_creacion_acceso) }}</td>
             <td class="px-2 py-2 max-w-[130px] truncate" :title="tipoAccesoTexto(row.tipo_acceso)">{{ tipoAccesoTexto(row.tipo_acceso) }}</td>
@@ -206,7 +221,7 @@
 <script setup>
 import { ref, computed, watch, inject, onMounted } from 'vue';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import FormularioPaciente from '@/pages/inicio/FormularioPaciente.vue';
 
@@ -225,13 +240,13 @@ const LISTA_TIPOS_ACCESO = [
 ];
 
 const COMORBILIDADES_CAMPOS = [
-  ['enf_insuficiencia_cardiaca_congestiva', 'ICC'],
+  ['enf_insuficiencia_cardiaca_congestiva', 'Insuficiencia cardiaca congestiva'],
   ['enf_diabetes', 'Diabetes'],
-  ['enf_ateroesclerotica_cardiaca', 'Aterosclerosis'],
-  ['enf_hipertension', 'HTA'],
-  ['enf_vascular_periferica', 'Vasc. perif.'],
-  ['enf_tuberculosis', 'TBC'],
-  ['enf_cerebro_vascular', 'ACV'],
+  ['enf_ateroesclerotica_cardiaca', 'Aterosclerosis cardíaca'],
+  ['enf_hipertension', 'Hipertensión'],
+  ['enf_vascular_periferica', 'Enfermedad vascular periférica'],
+  ['enf_tuberculosis', 'Tuberculosis'],
+  ['enf_cerebro_vascular', 'Accidente cerebrovascular'],
   ['enf_cancer', 'Cáncer'],
   ['enf_otra', 'Otra'],
 ];
@@ -259,6 +274,7 @@ const clinicaSeleccionada = ref('');
 const mostrarModalEdicionSupervisor = ref(false);
 const filaEdicionSupervisor = ref(null);
 const aprobandoId = ref(null);
+const aprobandoTodos = ref(false);
 
 const columnasTabla = computed(() => {
   let n = 18;
@@ -268,6 +284,10 @@ const columnasTabla = computed(() => {
 });
 
 const pacientesFiltrados = computed(() => pacientes.value);
+
+const pendientesAprobacion = computed(() =>
+  pacientesFiltrados.value.filter((row) => mostrarBotonAprobar(row)),
+);
 
 const totalPaginas = computed(() => {
   const n = pacientesFiltrados.value.length;
@@ -445,6 +465,40 @@ async function aprobarPaciente(row) {
   } finally {
     aprobandoId.value = null;
   }
+}
+
+async function aprobarTodosPendientes() {
+  const pendientes = pendientesAprobacion.value;
+  if (!pendientes.length) return;
+  try {
+    await ElMessageBox.confirm(
+      `¿Aprobar ${pendientes.length} paciente(s) pendiente(s) de revisión?`,
+      'Aprobar todos',
+      { type: 'info', confirmButtonText: 'Aprobar todos', cancelButtonText: 'Cancelar' },
+    );
+  } catch {
+    return;
+  }
+  aprobandoTodos.value = true;
+  let ok = 0;
+  let fail = 0;
+  for (const row of pendientes) {
+    const id = row?.id_paciente_atencion;
+    if (!id) {
+      fail += 1;
+      continue;
+    }
+    try {
+      await postAllIpress(`/pacienteAtencion/${id}/evaluar/`, { estado_aprobacion: 'APROBADO' });
+      ok += 1;
+    } catch {
+      fail += 1;
+    }
+  }
+  aprobandoTodos.value = false;
+  if (ok) ElMessage.success(`Se aprobaron ${ok} paciente(s).`);
+  if (fail) ElMessage.warning(`No se pudieron aprobar ${fail} paciente(s).`);
+  await fetchPacientes();
 }
 
 function claseCondicionPaciente(row) {

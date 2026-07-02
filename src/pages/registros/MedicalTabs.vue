@@ -1,7 +1,11 @@
 <template>
     <div class="bg-white p-6 rounded shadow">
         <h2 class="text-xl font-semibold mb-1">Formularios Médicos</h2>
-        <p class="text-sm text-gray-500 mb-4">Complete la información médica del paciente en las diferentes secciones
+        <p class="text-sm text-gray-500 mb-4">
+            Complete la información médica del paciente en las diferentes secciones.
+            En <strong>Resultados clínicos</strong>, los únicos campos obligatorios son el
+            <strong>tiempo de diálisis</strong> y el <strong>tratamiento administrado</strong>
+            (Eritropoyetina, Hierro y Calcitriol).
         </p>
         <TabGroup>
             <div class="w-full overflow-x-auto custom-scrollbar">

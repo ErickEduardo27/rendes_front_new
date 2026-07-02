@@ -19,8 +19,12 @@
       <button
         v-if="mostrarBotonNotificar"
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg border border-cyan-600 bg-cyan-50 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-cyan-800 hover:bg-cyan-100 shrink-0"
-        @click="abrirModalNotificar"
+        class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold shrink-0 transition-colors"
+        :class="botonNotificarHabilitado
+          ? 'border-cyan-600 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
+          : 'border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed'"
+        :title="tituloBotonNotificar"
+        @click="onClickNotificar"
       >
         Notificar
       </button>
@@ -77,13 +81,28 @@
             <p class="text-sm text-slate-600">Registros cargados según el filtro actual:</p>
             <div v-if="cargandoStats" class="text-sm text-slate-500 py-4 text-center">Cargando conteos…</div>
             <div v-else class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 border border-slate-100 rounded-lg p-3 bg-slate-50/80">
-              <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1">Registros por formulario</div>
+              <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1">Resumen del periodo</div>
+              <div class="flex justify-between col-span-2 pb-1 mb-1 border-b border-slate-200/80">
+                <span>Total pacientes atendidos</span>
+                <span class="font-semibold text-slate-800">{{ statsModal.totalPacientesAtendidos }}</span>
+              </div>
+              <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1 mt-1">Registros por formulario</div>
               <div class="flex justify-between"><span>Cambio Acceso Vascular</span><span class="font-semibold text-sky-700">{{ statsModal.totalUnidades }}</span></div>
               <div class="flex justify-between"><span>Infecciones</span><span class="font-semibold text-rose-700">{{ statsModal.totalEventos }}</span></div>
               <div class="flex justify-between"><span>Morbilidad Hosp.</span><span class="font-semibold text-amber-700">{{ statsModal.totalMorbilidades }}</span></div>
               <div class="flex justify-between"><span>Resultados Clínicos</span><span class="font-semibold text-indigo-700">{{ statsModal.totalResultados }}</span></div>
+              <div class="flex justify-between col-span-2">
+                <span>Resultados completos (tiempo diálisis y tratamientos)</span>
+                <span class="font-semibold" :class="statsModal.puedeNotificarClinica ? 'text-emerald-700' : 'text-rose-700'">{{ statsModal.totalResultadosCompletos }}</span>
+              </div>
               <div class="flex justify-between col-span-2"><span>Calidad de agua</span><span class="font-semibold text-teal-700">{{ statsModal.totalCalidadAgua }}</span></div>
             </div>
+            <p
+              v-if="esPerfilClinicaUsuario && !statsModal.puedeNotificarClinica"
+              class="text-sm text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"
+            >
+              {{ mensajeBloqueoNotificacion }}
+            </p>
             <p class="text-sm text-slate-700">
               ¿Desea <strong>notificar al equipo de revisión</strong> que estos datos están listos para ser evaluados?
             </p>
@@ -94,7 +113,7 @@
           <button
             type="button"
             class="px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 disabled:opacity-50"
-            :disabled="!filtroSelectorListo || enviandoNotificacion"
+            :disabled="!filtroSelectorListo || enviandoNotificacion || (esPerfilClinicaUsuario && !statsModal.puedeNotificarClinica)"
             @click="confirmarNotificacion"
           >{{ enviandoNotificacion ? 'Enviando…' : 'Sí, notificar' }}</button>
         </div>
@@ -109,13 +128,14 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service'
 import { obtenerEstadisticasRegistrosFormularios } from '@/utils/estadisticasRegistrosFormularios'
+import { mensajeBloqueoNotificacionClinica } from '@/utils/resultadosClinicosNotificacion'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from "@/store/auth";
 import router from "@/router/index";
 import { toast } from 'vue-sonner'
 import { TokenService } from '@/services/api/token.service'
 import SelectorPeriodo from '@/components/SelectorPeriodo.vue'
-import { esSupervisor, debeLimitarClinicasAlUsuario } from '@/utils/perfil'
+import { esSupervisor, debeLimitarClinicasAlUsuario, esPerfilClinica } from '@/utils/perfil'
 
 const props = defineProps({
   periodo: { type: [Number, String], default: null },
@@ -162,6 +182,33 @@ const statsModal = ref({
   totalMorbilidades: 0,
   totalResultados: 0,
   totalCalidadAgua: 0,
+  totalPacientesAtendidos: 0,
+  totalResultadosCompletos: 0,
+  puedeNotificarClinica: false,
+})
+
+const esPerfilClinicaUsuario = computed(() => esPerfilClinica())
+
+const mensajeBloqueoNotificacion = computed(() =>
+  mensajeBloqueoNotificacionClinica(
+    statsModal.value.totalPacientesAtendidos,
+    statsModal.value.totalResultadosCompletos,
+  ),
+)
+
+const botonNotificarHabilitado = computed(() => {
+  if (!filtroSelectorListo.value) return false
+  if (cargandoStats.value) return false
+  if (esPerfilClinicaUsuario.value) return statsModal.value.puedeNotificarClinica === true
+  return true
+})
+
+const tituloBotonNotificar = computed(() => {
+  if (!filtroSelectorListo.value) return 'Seleccione periodo, clínica y modalidad'
+  if (esPerfilClinicaUsuario.value && !statsModal.value.puedeNotificarClinica) {
+    return mensajeBloqueoNotificacion.value
+  }
+  return 'Notificar envío a revisión'
 })
 
 /**
@@ -198,9 +245,20 @@ const filtroSelectorListo = computed(() => {
   )
 })
 
-async function abrirModalNotificar() {
-  modalNotificarAbierto.value = true
-  if (!filtroSelectorListo.value) return
+async function cargarStatsNotificacion() {
+  if (!filtroSelectorListo.value) {
+    statsModal.value = {
+      totalUnidades: 0,
+      totalEventos: 0,
+      totalMorbilidades: 0,
+      totalResultados: 0,
+      totalCalidadAgua: 0,
+      totalPacientesAtendidos: 0,
+      totalResultadosCompletos: 0,
+      puedeNotificarClinica: false,
+    }
+    return
+  }
   cargandoStats.value = true
   try {
     statsModal.value = await obtenerEstadisticasRegistrosFormularios({
@@ -213,6 +271,23 @@ async function abrirModalNotificar() {
   }
 }
 
+function onClickNotificar() {
+  if (!filtroSelectorListo.value) {
+    ElMessage.warning('Seleccione periodo, clínica y modalidad en la barra superior.')
+    return
+  }
+  if (esPerfilClinicaUsuario.value && !statsModal.value.puedeNotificarClinica) {
+    ElMessage.warning(mensajeBloqueoNotificacion.value)
+    return
+  }
+  abrirModalNotificar()
+}
+
+async function abrirModalNotificar() {
+  modalNotificarAbierto.value = true
+  await cargarStatsNotificacion()
+}
+
 function cerrarModalNotificar() {
   modalNotificarAbierto.value = false
   enviandoNotificacion.value = false
@@ -220,6 +295,10 @@ function cerrarModalNotificar() {
 
 async function confirmarNotificacion() {
   if (!filtroSelectorListo.value) return
+  if (esPerfilClinicaUsuario.value && !statsModal.value.puedeNotificarClinica) {
+    ElMessage.warning(mensajeBloqueoNotificacion.value)
+    return
+  }
   enviandoNotificacion.value = true
   try {
     await postAllIpress('/notificar_envio_revision/', {
@@ -267,6 +346,14 @@ onUnmounted(() => {
   window.removeEventListener('focus', fetchNoLeidas)
   window.removeEventListener('notificaciones:actualizar', onNotifEvent)
 })
+
+watch(
+  () => [periodo.value, clinica.value, modalidad.value, mostrarBotonNotificar.value],
+  () => {
+    if (mostrarBotonNotificar.value) cargarStatsNotificacion()
+  },
+  { immediate: true },
+)
 
 watch(
   () => route.path,

@@ -15,6 +15,13 @@ export function esAdmin() {
   return p.includes('admin');
 }
 
+/** Usuario de clínica u hospital (no supervisor ni admin). */
+export function esPerfilClinica() {
+  const p = obtenerNombrePerfil().toLowerCase();
+  if (esSupervisor() || esAdmin()) return false;
+  return p.includes('clínica') || p.includes('clinica') || p.includes('hospital');
+}
+
 export function esEvaluador() {
   return esSupervisor() || esAdmin();
 }

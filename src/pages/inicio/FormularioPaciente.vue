@@ -189,8 +189,9 @@
             <el-form-item label="Apellidos y Nombres" required class="sm:col-span-2">
               <el-input
                 v-model="form.nombreCompleto"
-                :readonly="!modoEdicionSupervisor"
-                :placeholder="modoEdicionSupervisor ? 'Nombre del paciente' : 'Se completará al consultar'"
+                readonly
+                disabled
+                placeholder="Se completará al consultar el documento"
               />
             </el-form-item>
             <el-form-item label="Edad actual">
@@ -248,7 +249,7 @@
 
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Datos de TRR y Acceso</h3>
-          <p
+          <!-- <p
             v-if="requiereDatosCompletosTRR"
             class="mb-4 text-xs text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-3 py-2"
           >
@@ -259,7 +260,7 @@
             class="mb-4 text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2"
           >
             Inicio de TRR <strong>anterior a 2027</strong>: solo tipo de documento, número, nombre y fecha de nacimiento son obligatorios; el resto es opcional.
-          </p>
+          </p> -->
 
           <div class="form-grid trr-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-5 gap-y-6">
             <el-form-item label="Modalidad de Inicio de TRR" :required="esCampoRequerido('modalidadTRR')">
@@ -727,6 +728,25 @@ const validarFormulario = () => {
 
   return true;
 };
+
+async function confirmarSinComorbilidades() {
+  if (Array.isArray(form.comorbilidades) && form.comorbilidades.length > 0) {
+    return true;
+  }
+  const result = await Swal.fire({
+    title: 'Sin comorbilidades registradas',
+    html:
+      'No ha seleccionado ninguna comorbilidad.<br><br>' +
+      '¿Confirma que el paciente <strong>no tiene ninguna comorbilidad presente al inicio de TRR</strong>?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, confirmar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#008f9c',
+    cancelButtonColor: '#64748b',
+  });
+  return result.isConfirmed === true;
+}
 
 /** Rango del periodo elegido en pantalla (mes completo). Usa periodo global / selector / prop inicial. */
 const rangoPeriodoSeleccionado = computed(() => {
@@ -1939,6 +1959,7 @@ const registrarPaciente = async () => {
     return;
   }
   if (!validarFormulario()) return;
+  if (!(await confirmarSinComorbilidades())) return;
   calcularEdadInicioTRR();
   const idPeriodo = getIdPeriodoParaAtencion();
   if (idPeriodo == null) {
@@ -2243,6 +2264,7 @@ async function guardarEdicionSupervisor() {
     return;
   }
   if (!validarFormulario()) return;
+  if (!(await confirmarSinComorbilidades())) return;
   calcularEdadInicioTRR();
   const idPeriodo = getIdPeriodoParaPayload();
   if (idPeriodo == null) {
@@ -2268,7 +2290,6 @@ async function guardarEdicionSupervisor() {
       documento: form.numeroDocumento,
       tipo_documento: form.tipoDocumento,
       autogenerado: 'ASD',
-      paciente: form.nombreCompleto,
       fecha_nacimiento: fechaFormularioParaApi(form.fechaNacimiento),
       genero: form.sexo,
       grado_instruccion: form.gradoInstruccion,
