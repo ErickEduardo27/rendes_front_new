@@ -95,18 +95,21 @@
               Tiempo de diálisis (horas) <span class="text-red-500">*</span>
             </label>
             <div class="flex items-center gap-2">
-              <input
+              <select
                 v-model="form.tmpDialisis"
-                type="number"
-                min="0.25"
-                max="8"
-                step="any"
-                inputmode="decimal"
-                placeholder="Ej. 2, 2.5, 3.25"
                 class="form5-control"
                 :class="{ 'form5-control--error': errorTiempoDialisis }"
-                @input="errorTiempoDialisis = false"
-              />
+                @change="errorTiempoDialisis = false"
+              >
+                <option value="">Seleccione horas…</option>
+                <option
+                  v-for="v in opcionesTiempoDialisisLista"
+                  :key="v"
+                  :value="String(v)"
+                >
+                  {{ formatearTiempoDialisisEtiqueta(v) }} h
+                </option>
+              </select>
               <button
                 type="button"
                 class="form5-btn-icon"
@@ -116,9 +119,9 @@
                 <ChartBarIcon class="w-4 h-4" />
               </button>
             </div>
-            <p class="text-[11px] text-slate-400 mt-1">Obligatorio. Ingrese el valor en horas (número entero o decimal, entre 0,25 y 8).</p>
+            <p class="text-[11px] text-slate-400 mt-1">Obligatorio. Valores permitidos: de {{ TIEMPO_DIALISIS_MIN }} a {{ TIEMPO_DIALISIS_MAX }} horas, en incrementos de 0,25.</p>
             <p v-if="errorTiempoDialisis" class="text-[11px] text-red-500 mt-1 font-medium">
-              Indique el tiempo de diálisis en horas (entre {{ TIEMPO_DIALISIS_MIN }} y {{ TIEMPO_DIALISIS_MAX }}).
+              {{ MENSAJE_TIEMPO_DIALISIS_INVALIDO }}
             </p>
           </div>
 
@@ -333,6 +336,16 @@ import { ChartBarIcon } from '@heroicons/vue/24/outline'
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
+import Swal from 'sweetalert2';
+import {
+  TIEMPO_DIALISIS_MIN,
+  TIEMPO_DIALISIS_MAX,
+  MENSAJE_TIEMPO_DIALISIS_INVALIDO,
+  esTiempoDialisisValorValido,
+  opcionesTiempoDialisis,
+  formatearTiempoDialisisEtiqueta,
+  parseTiempoDialisisNumero,
+} from '@/utils/tiempoDialisis';
 
 const props = defineProps({
   paciente: { type: Object, default: null },
@@ -426,11 +439,20 @@ const campoTiempoDialisis = {
   key: 'tmpDialisis',
   apiKey: 'tiempo_dialisis',
   allowDecimals: true,
-  min: 0.25,
-  max: 8,
+  min: TIEMPO_DIALISIS_MIN,
+  max: TIEMPO_DIALISIS_MAX,
   rangoVerde: null,
   rangoAmarillo: null,
 }
+
+const opcionesTiempoDialisisLista = computed(() => {
+  const base = opcionesTiempoDialisis()
+  const actual = parseTiempoDialisisNumero(form.value.tmpDialisis)
+  if (actual != null && !base.some((v) => Math.abs(v - actual) < 1e-9)) {
+    return [...base, actual].sort((a, b) => a - b)
+  }
+  return base
+})
 
 const idResultadoEdicion = ref(null)
 
@@ -800,9 +822,6 @@ const fetchClinicas = async () => {
   }
 }
 
-const TIEMPO_DIALISIS_MIN = 0.25
-const TIEMPO_DIALISIS_MAX = 8
-
 const errorTiempoDialisis = ref(false)
 const erroresTratamiento = ref({
   eritropoyetina: false,
@@ -824,19 +843,12 @@ function validarTratamientoObligatorio() {
 }
 
 function tiempoDialisisHorasValido() {
-  const raw = form.value.tmpDialisis
-  if (raw === null || raw === '') return false
-  const n = Number(String(raw).replace(',', '.'))
-  if (Number.isNaN(n)) return false
-  return n >= TIEMPO_DIALISIS_MIN && n <= TIEMPO_DIALISIS_MAX
+  return esTiempoDialisisValorValido(form.value.tmpDialisis)
 }
 
 function tiempoDialisisPayloadString() {
-  const raw = form.value.tmpDialisis
-  if (raw === null || raw === '') return ''
-  const n = Number(String(raw).replace(',', '.'))
-  if (Number.isNaN(n)) return ''
-  return String(n)
+  const n = parseTiempoDialisisNumero(form.value.tmpDialisis)
+  return n == null ? '' : String(n)
 }
 
 const postForm = async () => {
@@ -847,19 +859,37 @@ const postForm = async () => {
   
   if (camposInvalidos.length > 0) {
     const nombresInvalidos = camposInvalidos.map(c => c.label).join(', ')
-    alert(`Por favor corrija los siguientes campos que están fuera del rango válido:\n${nombresInvalidos}`)
+    await Swal.fire({
+      title: 'Campos fuera de rango',
+      html: `Por favor corrija los siguientes campos que están fuera del rango válido:<br><strong>${nombresInvalidos}</strong>`,
+      icon: 'warning',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#008f9c',
+    })
     return
   }
 
   if (!tiempoDialisisHorasValido()) {
     errorTiempoDialisis.value = true
-    alert(`Indique el tiempo de diálisis en horas (número entre ${TIEMPO_DIALISIS_MIN} y ${TIEMPO_DIALISIS_MAX}).`)
+    await Swal.fire({
+      title: 'Tiempo de diálisis requerido',
+      text: MENSAJE_TIEMPO_DIALISIS_INVALIDO,
+      icon: 'warning',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#008f9c',
+    })
     return
   }
   errorTiempoDialisis.value = false
 
   if (!validarTratamientoObligatorio()) {
-    alert('Complete el tratamiento administrado: Eritropoyetina, Hierro y Calcitriol (Sí o No).')
+    await Swal.fire({
+      title: 'Tratamiento incompleto',
+      text: 'Complete el tratamiento administrado: Eritropoyetina, Hierro y Calcitriol (Sí o No).',
+      icon: 'warning',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#008f9c',
+    })
     return
   }
   
@@ -897,11 +927,24 @@ const postForm = async () => {
       emit('guardado')
       return
     }
-    alert("Se registró con éxito")
+    await Swal.fire({
+      title: 'Registro guardado',
+      text: 'Se registró con éxito.',
+      icon: 'success',
+      confirmButtonText: 'Aceptar',
+      confirmButtonColor: '#008f9c',
+    })
     window.location.reload()
   } catch (error) {
     console.error('Error al registrar:', error)
-    alert("Error al registrar los resultados clínicos")
+    const mensaje = error?.error || error?.response?.data?.detail || error?.message
+    await Swal.fire({
+      title: 'Error al registrar',
+      text: typeof mensaje === 'string' ? mensaje : 'Error al registrar los resultados clínicos.',
+      icon: 'error',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#008f9c',
+    })
   }
 }
 

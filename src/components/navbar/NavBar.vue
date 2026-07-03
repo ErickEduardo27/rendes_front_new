@@ -82,6 +82,19 @@
             <div v-if="cargandoStats" class="text-sm text-slate-500 py-4 text-center">Cargando conteos…</div>
             <div v-else class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 border border-slate-100 rounded-lg p-3 bg-slate-50/80">
               <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1">Resumen del periodo</div>
+              <div class="flex justify-between col-span-2">
+                <span>N° de Atenciones (Inicio TRR)</span>
+                <span
+                  class="font-semibold"
+                  :class="tieneNumeroAtenciones ? 'text-slate-800' : 'text-rose-700'"
+                >{{ etiquetaNumeroAtenciones }}</span>
+              </div>
+              <div
+                v-if="esPerfilClinicaUsuario && !tieneNumeroAtenciones"
+                class="col-span-2 text-[11px] text-rose-700"
+              >
+                Registre el N° de Atenciones en Inicio de TRR antes de notificar.
+              </div>
               <div class="flex justify-between col-span-2 pb-1 mb-1 border-b border-slate-200/80">
                 <span>Total pacientes atendidos</span>
                 <span class="font-semibold text-slate-800">{{ statsModal.totalPacientesAtendidos }}</span>
@@ -90,10 +103,18 @@
               <div class="flex justify-between"><span>Cambio Acceso Vascular</span><span class="font-semibold text-sky-700">{{ statsModal.totalUnidades }}</span></div>
               <div class="flex justify-between"><span>Infecciones</span><span class="font-semibold text-rose-700">{{ statsModal.totalEventos }}</span></div>
               <div class="flex justify-between"><span>Morbilidad Hosp.</span><span class="font-semibold text-amber-700">{{ statsModal.totalMorbilidades }}</span></div>
-              <div class="flex justify-between"><span>Resultados Clínicos</span><span class="font-semibold text-indigo-700">{{ statsModal.totalResultados }}</span></div>
               <div class="flex justify-between col-span-2">
-                <span>Resultados completos (tiempo diálisis y tratamientos)</span>
-                <span class="font-semibold" :class="statsModal.puedeNotificarClinica ? 'text-emerald-700' : 'text-rose-700'">{{ statsModal.totalResultadosCompletos }}</span>
+                <span>Resultados clínicos (registros)</span>
+                <span
+                  class="font-semibold"
+                  :class="statsModal.totalPacientesAtendidos === statsModal.totalResultadosRegistrados && statsModal.totalPacientesAtendidos > 0 ? 'text-emerald-700' : 'text-rose-700'"
+                >{{ statsModal.totalResultadosRegistrados }}</span>
+              </div>
+              <div
+                v-if="esPerfilClinicaUsuario && statsModal.totalPacientesAtendidos !== statsModal.totalResultadosRegistrados"
+                class="col-span-2 text-[11px] text-rose-700"
+              >
+                Debe haber un registro de resultados clínicos por cada paciente en atención ({{ statsModal.totalPacientesAtendidos }} paciente(s) / {{ statsModal.totalResultadosRegistrados }} registro(s)).
               </div>
               <div class="flex justify-between col-span-2"><span>Calidad de agua</span><span class="font-semibold text-teal-700">{{ statsModal.totalCalidadAgua }}</span></div>
             </div>
@@ -128,7 +149,11 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service'
 import { obtenerEstadisticasRegistrosFormularios } from '@/utils/estadisticasRegistrosFormularios'
-import { mensajeBloqueoNotificacionClinica } from '@/utils/resultadosClinicosNotificacion'
+import {
+  mensajeBloqueoNotificacionClinica,
+  tieneNumeroAtencionesRegistrado,
+  MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES,
+} from '@/utils/resultadosClinicosNotificacion'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from "@/store/auth";
 import router from "@/router/index";
@@ -183,25 +208,35 @@ const statsModal = ref({
   totalResultados: 0,
   totalCalidadAgua: 0,
   totalPacientesAtendidos: 0,
+  numeroAtenciones: null,
+  totalResultadosRegistrados: 0,
   totalResultadosCompletos: 0,
   puedeNotificarClinica: false,
 })
 
 const esPerfilClinicaUsuario = computed(() => esPerfilClinica())
 
-const mensajeBloqueoNotificacion = computed(() =>
-  mensajeBloqueoNotificacionClinica(
-    statsModal.value.totalPacientesAtendidos,
-    statsModal.value.totalResultadosCompletos,
-  ),
+const etiquetaNumeroAtenciones = computed(() => {
+  const n = statsModal.value.numeroAtenciones
+  if (n == null || Number.isNaN(n)) return 'Sin registrar'
+  return n
+})
+
+const tieneNumeroAtenciones = computed(() =>
+  tieneNumeroAtencionesRegistrado(statsModal.value.numeroAtenciones),
 )
 
-const botonNotificarHabilitado = computed(() => {
-  if (!filtroSelectorListo.value) return false
-  if (cargandoStats.value) return false
-  if (esPerfilClinicaUsuario.value) return statsModal.value.puedeNotificarClinica === true
-  return true
+const mensajeBloqueoNotificacion = computed(() => {
+  if (!tieneNumeroAtenciones.value) {
+    return MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES
+  }
+  return mensajeBloqueoNotificacionClinica(
+    statsModal.value.totalPacientesAtendidos,
+    statsModal.value.totalResultadosRegistrados,
+  )
 })
+
+const botonNotificarHabilitado = computed(() => filtroSelectorListo.value && !cargandoStats.value)
 
 const tituloBotonNotificar = computed(() => {
   if (!filtroSelectorListo.value) return 'Seleccione periodo, clínica y modalidad'
@@ -212,9 +247,8 @@ const tituloBotonNotificar = computed(() => {
 })
 
 /**
- * Botón "Notificar" en rutas de carga de registros (misma idea que meta `mostrarNotificarRegistros`).
- * No ocultar por perfil Supervisor/Admin: en el menú lateral también entran a Registros y deben poder
- * avisar a revisión. Solo ocultar en la pantalla de Evaluación (rol revisor).
+ * Perfil clínica/hospital: botón visible en todas las pantallas (salvo Evaluación).
+ * Supervisor/admin: solo en rutas de registros o con meta mostrarNotificarRegistros.
  */
 const RUTAS_NOTIFICAR_REGISTROS = new Set([
   'AccesoVascular',
@@ -226,6 +260,7 @@ const RUTAS_NOTIFICAR_REGISTROS = new Set([
 
 const mostrarBotonNotificar = computed(() => {
   if (route.name === 'Evaluacion') return false
+  if (esPerfilClinicaUsuario.value) return true
   if (RUTAS_NOTIFICAR_REGISTROS.has(route.name)) return true
   if (
     route.name === 'Inicio' &&
@@ -254,6 +289,8 @@ async function cargarStatsNotificacion() {
       totalResultados: 0,
       totalCalidadAgua: 0,
       totalPacientesAtendidos: 0,
+      numeroAtenciones: null,
+      totalResultadosRegistrados: 0,
       totalResultadosCompletos: 0,
       puedeNotificarClinica: false,
     }
@@ -339,12 +376,14 @@ onMounted(() => {
   pollTimer = setInterval(fetchNoLeidas, 60000)
   window.addEventListener('focus', fetchNoLeidas)
   window.addEventListener('notificaciones:actualizar', onNotifEvent)
+  window.addEventListener('registros-formularios:actualizar', cargarStatsNotificacion)
 })
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
   window.removeEventListener('focus', fetchNoLeidas)
   window.removeEventListener('notificaciones:actualizar', onNotifEvent)
+  window.removeEventListener('registros-formularios:actualizar', cargarStatsNotificacion)
 })
 
 watch(

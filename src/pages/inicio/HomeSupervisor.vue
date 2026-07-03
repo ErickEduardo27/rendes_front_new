@@ -9,7 +9,7 @@
       </div>
       <div class="flex items-center gap-2">
         <button
-          v-if="datos?.clinicas?.length"
+          v-if="datosVista?.clinicas?.length"
           type="button"
           class="bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-lg text-xs font-semibold shadow-sm hover:bg-slate-50 transition"
           :disabled="exportandoReporte"
@@ -17,6 +17,23 @@
         >
           {{ exportandoReporte ? 'Exportando…' : 'Exportar reporte' }}
         </button>
+        <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
+          <span class="text-xs font-semibold text-slate-600 uppercase tracking-wide">IPRESS</span>
+          <select
+            v-model="ipressFiltro"
+            class="text-sm border-0 bg-transparent outline-none min-w-[8rem] max-w-[12rem] truncate disabled:opacity-50"
+            :disabled="!opcionesIpress.length"
+          >
+            <option value="">Todas</option>
+            <option
+              v-for="op in opcionesIpress"
+              :key="op.id_ipress"
+              :value="String(op.id_ipress)"
+            >
+              {{ op.label }}
+            </option>
+          </select>
+        </div>
         <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-sm">
         <span class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Periodo</span>
         <el-config-provider :locale="locale">
@@ -40,26 +57,26 @@
     <div v-if="cargando" class="text-center py-16 text-slate-500 text-sm">Cargando estadísticas…</div>
     <div v-else-if="error" class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">{{ error }}</div>
 
-    <template v-else-if="datos">
+    <template v-else-if="datosVista">
       <!-- Tarjetas resumen -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Clínicas</p>
-          <p class="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{{ datos.resumen.total_clinicas }}</p>
+          <p class="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{{ datosVista.resumen.total_clinicas }}</p>
         </div>
         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Pacientes</p>
-          <p class="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{{ datos.resumen.total_pacientes }}</p>
-          <p class="text-[10px] text-slate-400 mt-0.5">Periodo {{ datos.periodo }}</p>
+          <p class="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{{ datosVista.resumen.total_pacientes }}</p>
+          <p class="text-[10px] text-slate-400 mt-0.5">Periodo {{ datosVista.periodo }}</p>
         </div>
         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Registros</p>
-          <p class="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{{ datos.resumen.total_registros }}</p>
+          <p class="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">{{ datosVista.resumen.total_registros }}</p>
         </div>
         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Notificadas</p>
           <p class="text-2xl sm:text-3xl font-bold text-slate-800 mt-1">
-            {{ datos.resumen.total_notificados }}<span class="text-base font-normal text-slate-400">/{{ datos.resumen.total_clinicas }}</span>
+            {{ datosVista.resumen.total_notificados }}<span class="text-base font-normal text-slate-400">/{{ datosVista.resumen.total_clinicas }}</span>
           </p>
           <p class="text-[10px] text-slate-400 mt-0.5">Enviaron a revisión</p>
         </div>
@@ -70,9 +87,9 @@
         <!-- Pacientes por clínica -->
         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
           <h2 class="text-sm font-bold text-slate-700 mb-4">Pacientes por clínica</h2>
-          <div v-if="!datos.clinicas.length" class="text-xs text-slate-400 py-6 text-center">Sin clínicas asignadas</div>
+          <div v-if="!datosVista.clinicas.length" class="text-xs text-slate-400 py-6 text-center">Sin clínicas para el filtro seleccionado</div>
           <div v-else class="space-y-2.5">
-            <div v-for="c in datos.clinicas" :key="'p-' + c.id_ipress" class="flex items-center gap-2">
+            <div v-for="c in datosVista.clinicas" :key="'p-' + c.id_ipress" class="flex items-center gap-2">
               <span class="text-[11px] text-slate-600 w-28 sm:w-36 truncate shrink-0" :title="c.nombre_corto || c.ipress">
                 {{ c.nombre_corto || c.ipress }}
               </span>
@@ -89,7 +106,9 @@
 
         <!-- Registros por formulario -->
         <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-          <h2 class="text-sm font-bold text-slate-700 mb-4">Registros por formulario (todas las clínicas)</h2>
+          <h2 class="text-sm font-bold text-slate-700 mb-4">
+            {{ ipressFiltro ? 'Registros por formulario (clínica seleccionada)' : 'Registros por formulario (todas las clínicas)' }}
+          </h2>
           <div class="space-y-2.5">
             <div v-for="f in formulariosChart" :key="f.key" class="flex items-center gap-2">
               <span class="text-[11px] text-slate-600 w-28 sm:w-36 truncate shrink-0">{{ f.label }}</span>
@@ -108,9 +127,9 @@
       <!-- Registros por clínica (stacked bars simplified) -->
       <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm overflow-x-auto">
         <h2 class="text-sm font-bold text-slate-700 mb-4">Registros por clínica</h2>
-        <div v-if="!datos.clinicas.length" class="text-xs text-slate-400 py-4 text-center">Sin datos</div>
+        <div v-if="!datosVista.clinicas.length" class="text-xs text-slate-400 py-4 text-center">Sin datos para el filtro seleccionado</div>
         <div v-else class="space-y-3 min-w-[320px]">
-          <div v-for="c in datos.clinicas" :key="'r-' + c.id_ipress">
+          <div v-for="c in datosVista.clinicas" :key="'r-' + c.id_ipress">
             <div class="flex justify-between items-baseline mb-1">
               <span class="text-xs font-medium text-slate-700 truncate max-w-[60%]" :title="c.ipress">
                 {{ c.nombre_corto || c.ipress }}
@@ -139,7 +158,7 @@
       <!-- Tabla detalle -->
       <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
-          <h2 class="text-sm font-bold text-slate-700">Reporte de supervisor por IPRESS — {{ datos.periodo }}</h2>
+          <h2 class="text-sm font-bold text-slate-700">Reporte de supervisor por IPRESS — {{ datosVista.periodo }}</h2>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-xs text-left">
@@ -159,7 +178,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-for="c in datos.clinicas" :key="c.id_ipress" class="hover:bg-cyan-50/40">
+              <tr v-for="c in datosVista.clinicas" :key="c.id_ipress" class="hover:bg-cyan-50/40">
                 <td class="px-3 py-2 font-medium text-slate-800 max-w-[140px] truncate" :title="c.ipress">
                   {{ c.nombre_corto || c.ipress }}
                 </td>
@@ -184,17 +203,17 @@
                 </td>
               </tr>
             </tbody>
-            <tfoot v-if="datos.clinicas.length" class="bg-slate-50 font-semibold text-slate-700">
+            <tfoot v-if="datosVista.clinicas.length" class="bg-slate-50 font-semibold text-slate-700">
               <tr>
                 <td class="px-3 py-2" colspan="2">Total</td>
-                <td class="px-3 py-2 text-center">{{ datos.resumen.total_pacientes }}</td>
+                <td class="px-3 py-2 text-center">{{ datosVista.resumen.total_pacientes }}</td>
                 <td class="px-3 py-2 text-center">—</td>
-                <td class="px-3 py-2 text-center">{{ datos.por_formulario.acceso_vascular }}</td>
-                <td class="px-3 py-2 text-center">{{ datos.por_formulario.infecciones }}</td>
-                <td class="px-3 py-2 text-center">{{ datos.por_formulario.morbilidad }}</td>
-                <td class="px-3 py-2 text-center">{{ datos.por_formulario.resultados }}</td>
-                <td class="px-3 py-2 text-center">{{ datos.por_formulario.vacunacion }}</td>
-                <td class="px-3 py-2 text-center">{{ datos.resumen.total_notificados }}/{{ datos.resumen.total_clinicas }}</td>
+                <td class="px-3 py-2 text-center">{{ datosVista.por_formulario.acceso_vascular }}</td>
+                <td class="px-3 py-2 text-center">{{ datosVista.por_formulario.infecciones }}</td>
+                <td class="px-3 py-2 text-center">{{ datosVista.por_formulario.morbilidad }}</td>
+                <td class="px-3 py-2 text-center">{{ datosVista.por_formulario.resultados }}</td>
+                <td class="px-3 py-2 text-center">{{ datosVista.por_formulario.vacunacion }}</td>
+                <td class="px-3 py-2 text-center">{{ datosVista.resumen.total_notificados }}/{{ datosVista.resumen.total_clinicas }}</td>
                 <td class="px-3 py-2 text-center">—</td>
               </tr>
             </tfoot>
@@ -226,6 +245,7 @@ const datos = ref(null);
 const cargando = ref(false);
 const error = ref('');
 const exportandoReporte = ref(false);
+const ipressFiltro = ref('');
 
 const FORMULARIOS_META = [
   { key: 'acceso_vascular', label: 'Acceso vascular', opacity: 1 },
@@ -235,17 +255,71 @@ const FORMULARIOS_META = [
   { key: 'vacunacion', label: 'Vacunación', opacity: 0.4 },
 ];
 
+const opcionesIpress = computed(() => {
+  if (!datos.value?.clinicas?.length) return [];
+  const seen = new Map();
+  for (const c of datos.value.clinicas) {
+    if (c.id_ipress == null || seen.has(c.id_ipress)) continue;
+    seen.set(c.id_ipress, {
+      id_ipress: c.id_ipress,
+      label: c.nombre_corto || c.ipress || `IPRESS ${c.id_ipress}`,
+    });
+  }
+  return Array.from(seen.values()).sort((a, b) => a.label.localeCompare(b.label, 'es'));
+});
+
+const clinicasFiltradas = computed(() => {
+  const lista = datos.value?.clinicas || [];
+  if (!ipressFiltro.value) return lista;
+  return lista.filter((c) => String(c.id_ipress) === String(ipressFiltro.value));
+});
+
+function agregarPorFormulario(lista) {
+  const agg = {
+    acceso_vascular: 0,
+    infecciones: 0,
+    morbilidad: 0,
+    resultados: 0,
+    vacunacion: 0,
+  };
+  for (const c of lista) {
+    const r = c.registros || {};
+    agg.acceso_vascular += r.acceso_vascular ?? 0;
+    agg.infecciones += r.infecciones ?? 0;
+    agg.morbilidad += r.morbilidad ?? 0;
+    agg.resultados += r.resultados ?? 0;
+    agg.vacunacion += r.vacunacion ?? 0;
+  }
+  return agg;
+}
+
+const datosVista = computed(() => {
+  if (!datos.value) return null;
+  const lista = clinicasFiltradas.value;
+  return {
+    ...datos.value,
+    clinicas: lista,
+    resumen: {
+      total_clinicas: lista.length,
+      total_pacientes: lista.reduce((s, c) => s + (c.total_pacientes || 0), 0),
+      total_registros: lista.reduce((s, c) => s + (c.registros?.total || 0), 0),
+      total_notificados: lista.filter((c) => c.notificado).length,
+    },
+    por_formulario: agregarPorFormulario(lista),
+  };
+});
+
 const formulariosChart = computed(() => {
-  if (!datos.value?.por_formulario) return [];
+  if (!datosVista.value?.por_formulario) return [];
   return FORMULARIOS_META.map((f) => ({
     ...f,
-    valor: datos.value.por_formulario[f.key] ?? 0,
+    valor: datosVista.value.por_formulario[f.key] ?? 0,
   }));
 });
 
 const maxPacientes = computed(() => {
-  if (!datos.value?.clinicas?.length) return 1;
-  return Math.max(1, ...datos.value.clinicas.map((c) => c.total_pacientes));
+  if (!datosVista.value?.clinicas?.length) return 1;
+  return Math.max(1, ...datosVista.value.clinicas.map((c) => c.total_pacientes));
 });
 
 const maxFormularios = computed(() => {
@@ -278,8 +352,8 @@ function formatoFechaNotificacion(iso) {
 }
 
 function filasReporteSupervisorExcel() {
-  if (!datos.value?.clinicas?.length) return [];
-  return datos.value.clinicas.map((c) => ({
+  if (!datosVista.value?.clinicas?.length) return [];
+  return datosVista.value.clinicas.map((c) => ({
     IPRESS: c.ipress || '',
     'Nombre corto': c.nombre_corto || '',
     Modalidad: c.modalidad || '',
@@ -296,7 +370,7 @@ function filasReporteSupervisorExcel() {
 }
 
 function exportarReporteSupervisor() {
-  if (!datos.value?.clinicas?.length) {
+  if (!datosVista.value?.clinicas?.length) {
     ElMessage.warning('No hay datos para exportar.');
     return;
   }
@@ -306,8 +380,11 @@ function exportarReporteSupervisor() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Supervisor por IPRESS');
-    const periodo = datos.value.periodo || fechaVisual.value || 'periodo';
-    XLSX.writeFile(wb, `reporte_supervisor_ipress_${periodo}.xlsx`);
+    const periodo = datosVista.value.periodo || fechaVisual.value || 'periodo';
+    const sufijoIpress = ipressFiltro.value
+      ? `_${opcionesIpress.value.find((o) => String(o.id_ipress) === String(ipressFiltro.value))?.label || ipressFiltro.value}`.replace(/[^\w.-]+/g, '_')
+      : '';
+    XLSX.writeFile(wb, `reporte_supervisor_ipress_${periodo}${sufijoIpress}.xlsx`);
     ElMessage.success(`Se exportaron ${rows.length} clínica(s).`);
   } catch (e) {
     console.error(e);
@@ -349,6 +426,7 @@ async function cargarPanel() {
   cargando.value = true;
   error.value = '';
   datos.value = null;
+  ipressFiltro.value = '';
   try {
     datos.value = await getAllIpress(`/panel_supervisor/?id_periodo=${idPeriodo.value}`);
   } catch (e) {

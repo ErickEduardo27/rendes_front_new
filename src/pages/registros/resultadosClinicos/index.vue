@@ -268,8 +268,8 @@
           </template>
         </template>
         <template v-else>
-          <div v-if="historialCargas.length === 0" class="p-12 text-center text-slate-500 italic">
-            Aun no hay cargas de Excel registradas.
+          <div v-if="historialCargasFiltradas.length === 0" class="p-12 text-center text-slate-500 italic">
+            No hay cargas de Excel para el periodo, IPRESS y modalidad seleccionados.
           </div>
           <template v-else>
             <div class="overflow-x-auto">
@@ -310,7 +310,7 @@
               v-model:page-size="pageSizeTablas"
               :page-size-options="[PAGE_SIZE_TABLAS]"
               hide-page-size-selector
-              :total="historialCargas.length"
+              :total="historialCargasFiltradas.length"
             />
           </template>
         </template>
@@ -347,10 +347,13 @@
                 >
                   <div class="text-sm font-medium text-slate-800">{{ p.datosPaciente?.paciente || 'Sin nombre' }}</div>
                   <div class="text-xs text-slate-500">DNI: {{ p.datosPaciente?.documento || '—' }}</div>
+                  <div v-if="pacienteYaTieneRegistro(p.id_paciente_atencion)" class="text-xs text-amber-600 font-medium mt-0.5">
+                    Ya tiene registro — se abrirá para edición
+                  </div>
                 </button>
               </div>
             </div>
-            <p class="text-xs text-slate-500">Pacientes con atención en el periodo, IPRESS y modalidad actuales.</p>
+            <p class="text-xs text-slate-500">Pacientes con atención en el periodo, IPRESS y modalidad actuales. Solo puede haber un registro por paciente.</p>
             <div class="flex justify-end gap-2 pt-2">
               <button type="button" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalNuevo">Cancelar</button>
               <button
@@ -393,7 +396,7 @@
         <div class="p-6 space-y-4 overflow-y-auto">
           <p v-if="!resultadoImportacion?.detalles?.length" class="text-sm text-slate-600">
             Cargue el Excel completado. La importación valida el DNI del paciente según el filtro actual.
-            Campos <strong>obligatorios</strong>: <strong>tiempo de diálisis</strong> (horas o fracción de hora, incrementos de 0,25 entre 0,25 y 8)
+            Campos <strong>obligatorios</strong>: <strong>tiempo de diálisis</strong> (entre 2 y 5 horas, en incrementos de 0,25: 2, 2,25, 2,5, …, 5)
             y tratamiento (<strong>Eritropoyetina</strong>, <strong>Hierro</strong> y <strong>Calcitriol</strong>: Sí o No).
             Los demás resultados de laboratorio son opcionales; si se indican, deben ser numéricos y estar dentro del rango válido.
           </p>
@@ -584,6 +587,10 @@ import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
+import {
+  MENSAJE_TIEMPO_DIALISIS_INVALIDO,
+  esTiempoDialisisValorValido,
+} from '@/utils/tiempoDialisis';
 import Form5 from '@/components/forms/Form5.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 
@@ -641,7 +648,7 @@ const claseResultadoImportacion = computed(() => {
   return 'bg-red-50 text-red-800 border border-red-200';
 });
 
-const MENSAJE_TIEMPO_DIALISIS_IMPORT = 'Tiempo de diálisis inválido. Registre horas o fracciones de hora en incrementos de 0,25';
+const MENSAJE_TIEMPO_DIALISIS_IMPORT = MENSAJE_TIEMPO_DIALISIS_INVALIDO;
 
 const COLUMNAS_FORMATO = [
   'dni',
@@ -667,18 +674,6 @@ function normalizarEncabezadoImportacion(encabezado) {
 function valorSiNoPlantilla(val) {
   const texto = siNo(val);
   return texto === '—' ? '' : texto;
-}
-/** Horas de sesión (entero o decimal); mismo criterio que Form5. */
-const TIEMPO_DIALISIS_MIN = 0.25;
-const TIEMPO_DIALISIS_MAX = 8;
-
-function esTiempoDialisisValorValido(raw) {
-  if (raw === null || raw === '') return false;
-  const texto = String(raw).trim().replace(',', '.');
-  if (!texto) return false;
-  const n = Number(texto);
-  if (Number.isNaN(n)) return false;
-  return n >= TIEMPO_DIALISIS_MIN && n <= TIEMPO_DIALISIS_MAX;
 }
 const camposResultados = [
   { key: 'Hb', min: 1, max: 18 },
@@ -963,8 +958,30 @@ const todosPacientesPaginados = computed(() => {
   const start = (paginaTodos.value - 1) * PAGE_SIZE_TABLAS;
   return all.slice(start, start + PAGE_SIZE_TABLAS);
 });
+function cargaCoincideFiltroActual(carga, idPeriodo, idIpress, idModalidad) {
+  if (!carga) return false;
+  if (carga.id_periodo != null && carga.id_ipress != null && carga.id_modalidad != null) {
+    return String(carga.id_periodo) === String(idPeriodo)
+      && String(carga.id_ipress) === String(idIpress)
+      && String(carga.id_modalidad) === String(idModalidad);
+  }
+  return String(carga.periodo || '') === String(periodoActualTexto.value)
+    && String(carga.clinica || '') === String(clinicaActualTexto.value)
+    && String(carga.modalidad || '') === String(modalidadActualTexto.value);
+}
+
+const historialCargasFiltradas = computed(() => {
+  const idPeriodo = periodoGlobal.value;
+  const idIpress = clinicaGlobal.value;
+  const idModalidad = modalidadGlobal.value;
+  if (idPeriodo == null || idPeriodo === '' || idIpress == null || idIpress === '' || idModalidad == null || idModalidad === '') {
+    return [];
+  }
+  return historialCargas.value.filter((carga) => cargaCoincideFiltroActual(carga, idPeriodo, idIpress, idModalidad));
+});
+
 const historialCargasPaginados = computed(() => {
-  const all = historialCargas.value;
+  const all = historialCargasFiltradas.value;
   const start = (paginaHistorialCargas.value - 1) * PAGE_SIZE_TABLAS;
   return all.slice(start, start + PAGE_SIZE_TABLAS);
 });
@@ -1004,7 +1021,7 @@ function clampPaginaTodos() {
   if (paginaTodos.value > maxP) paginaTodos.value = maxP;
 }
 function clampPaginaHistorialCargas() {
-  const total = historialCargas.value.length;
+  const total = historialCargasFiltradas.value.length;
   const maxP = Math.max(1, Math.ceil(total / PAGE_SIZE_TABLAS) || 1);
   if (paginaHistorialCargas.value > maxP) paginaHistorialCargas.value = maxP;
 }
@@ -1017,6 +1034,7 @@ function clampPaginaDetalleCarga() {
 watch(registros, () => clampPaginaRegistros(), { deep: true });
 watch(todosPacientesLista, () => clampPaginaTodos());
 watch(historialCargas, () => clampPaginaHistorialCargas(), { deep: true });
+watch(historialCargasFiltradas, () => clampPaginaHistorialCargas());
 watch(totalDetallesCargaSeleccionada, () => clampPaginaDetalleCarga());
 watch(() => vistaActiva.value, () => {
   paginaRegistros.value = 1;
@@ -1343,6 +1361,28 @@ function idAtencionDesdeRegistro(registro) {
     ?? null;
 }
 
+function registroPorAtencion(idAtencion) {
+  if (idAtencion == null || idAtencion === '') return null;
+  const clave = String(idAtencion);
+  const lista = Array.isArray(registros.value) ? registros.value : [];
+  let mejor = null;
+  for (const r of lista) {
+    const id = idAtencionDesdeRegistro(r);
+    if (id == null || String(id) !== clave) continue;
+    const rid = Number(r.id_resultado_clinico) || 0;
+    if (!mejor || rid > (Number(mejor.id_resultado_clinico) || 0)) mejor = r;
+  }
+  return mejor;
+}
+
+function pacienteYaTieneRegistro(idAtencion) {
+  return !!registroPorAtencion(idAtencion);
+}
+
+function notificarActualizacionStats() {
+  window.dispatchEvent(new CustomEvent('registros-formularios:actualizar'));
+}
+
 const tituloModalFormulario = computed(() => (
   registroEdicion.value ? 'Editar registro de Resultados Clínicos' : 'Nuevo registro de Resultados Clínicos'
 ));
@@ -1386,6 +1426,7 @@ async function eliminarRegistro(registro) {
     await deleteAllIpress(`/resultadosClinicos/${registro.id_resultado_clinico}/`);
     ElMessage.success('Registro eliminado correctamente.');
     await fetchRegistros();
+    notificarActualizacionStats();
   } catch (e) {
     console.error('Error al eliminar resultado clínico:', e);
     ElMessage.error('No se pudo eliminar el registro.');
@@ -1397,11 +1438,19 @@ async function eliminarRegistro(registro) {
 function confirmarPacienteYMostrarFormulario() {
   const id = idPacienteSeleccionado.value;
   const atencion = listadoAtenciones.value.find((a) => a.id_paciente_atencion === id || String(a.id_paciente_atencion) === String(id));
-  if (atencion?.datosPaciente) {
-    pacienteParaFormulario.value = atencion.datosPaciente;
-    idPacienteAtencionParaForm.value = atencion.id_paciente_atencion ?? id;
-    form5ModalKey.value += 1;
+  if (!atencion?.datosPaciente) return;
+
+  const existente = registroPorAtencion(id);
+  if (existente) {
+    registroEdicion.value = existente;
+    ElMessage.info('El paciente ya tiene un registro de resultados clínicos. Se abrirá para edición.');
+  } else {
+    registroEdicion.value = null;
   }
+
+  pacienteParaFormulario.value = atencion.datosPaciente;
+  idPacienteAtencionParaForm.value = atencion.id_paciente_atencion ?? id;
+  form5ModalKey.value += 1;
 }
 
 function cerrarModalNuevo() {
@@ -1415,6 +1464,7 @@ function cerrarModalNuevo() {
 }
 
 function onGuardado() {
+  notificarActualizacionStats();
   cerrarModalNuevo();
 }
 
@@ -1431,6 +1481,7 @@ function cerrarModalImportar() {
   paginaResultadoImportacion.value = 1;
   arrastrando.value = false;
   fetchRegistros();
+  notificarActualizacionStats();
 }
 function descargarFormatoExcel() {
   const filasBase = todosPacientesLista.value.map((fila) => [
@@ -1540,6 +1591,9 @@ async function ejecutarImportacion() {
         id: Date.now(),
         fecha: new Date().toLocaleString(),
         archivo: file.name,
+        id_periodo: periodoNumero.value,
+        id_ipress: clinicaGlobal.value,
+        id_modalidad: modalidadGlobal.value,
         periodo: periodoActualTexto.value,
         clinica: clinicaActualTexto.value,
         modalidad: modalidadActualTexto.value,
@@ -1555,6 +1609,7 @@ async function ejecutarImportacion() {
     const importacionParcial = creados > 0 && errores > 0;
 
     await fetchRegistros();
+    notificarActualizacionStats();
     paginaResultadoImportacion.value = 1;
     resultadoImportacion.value = {
       ok: importacionExitosa,
@@ -1576,6 +1631,7 @@ async function ejecutarImportacion() {
 watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   fetchRegistros();
   fetchEstadoFormulario();
+  paginaHistorialCargas.value = 1;
 }, { deep: true });
 
 watch(tamPaginaResultadoImportacion, () => {

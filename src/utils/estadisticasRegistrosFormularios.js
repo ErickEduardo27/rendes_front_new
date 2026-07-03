@@ -1,5 +1,5 @@
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
-import { contarResultadosClinicosCompletos, listaDesdeResponse } from '@/utils/resultadosClinicosNotificacion';
+import { contarResultadosClinicosCompletos, listaDesdeResponse, tieneNumeroAtencionesRegistrado, ultimosResultadosPorAtencion } from '@/utils/resultadosClinicosNotificacion';
 
 export function countFromResponse(res) {
   return listaDesdeResponse(res).length;
@@ -68,22 +68,31 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalResultados: 0,
       totalCalidadAgua: 0,
       totalPacientesAtendidos: 0,
+      numeroAtenciones: null,
+      totalResultadosRegistrados: 0,
       totalResultadosCompletos: 0,
       puedeNotificarClinica: false,
     };
   }
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, resEstadisticasAtencion, idPeriodoIpress, idUsuarioIpress] = await Promise.all([
+    const [resUnidades, resEventos, resMorb, resResultados, resEstadisticasAtencion, resInicioTrr, idPeriodoIpress, idUsuarioIpress] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${qs}`),
       getAllIpress(`/eventosAccesosVasculares/?${qs}`),
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
       getAllIpress(`/pacienteAtencion/estadisticas/?${qs}`),
+      getAllIpress(`/consulta_inicio_trr_periodo/?${qs}`),
       resolverIdPeriodoIpress(idPeriodo, idIpress),
       resolverIdUsuarioIpress(idIpress),
     ]);
 
     const totalPacientesAtendidos = Number(resEstadisticasAtencion?.total) || 0;
+    const numeroAtenciones =
+      resInicioTrr?.numero_atenciones != null && resInicioTrr?.numero_atenciones !== ''
+        ? Number(resInicioTrr.numero_atenciones)
+        : null;
+    const listaResultados = listaDesdeResponse(resResultados);
+    const totalResultadosRegistrados = ultimosResultadosPorAtencion(listaResultados).length;
     const totalResultadosCompletos = contarResultadosClinicosCompletos(resResultados);
 
     let totalCalidadAgua = 0;
@@ -106,9 +115,13 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalResultados: countFromResponse(resResultados),
       totalCalidadAgua,
       totalPacientesAtendidos,
+      numeroAtenciones,
+      totalResultadosRegistrados,
       totalResultadosCompletos,
       puedeNotificarClinica:
-        totalPacientesAtendidos > 0 && totalPacientesAtendidos === totalResultadosCompletos,
+        tieneNumeroAtencionesRegistrado(numeroAtenciones)
+        && totalPacientesAtendidos > 0
+        && totalPacientesAtendidos === totalResultadosRegistrados,
     };
   } catch (e) {
     console.error(e);
@@ -119,6 +132,8 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalResultados: 0,
       totalCalidadAgua: 0,
       totalPacientesAtendidos: 0,
+      numeroAtenciones: null,
+      totalResultadosRegistrados: 0,
       totalResultadosCompletos: 0,
       puedeNotificarClinica: false,
     };

@@ -1,5 +1,4 @@
-const TIEMPO_DIALISIS_MIN = 0.25;
-const TIEMPO_DIALISIS_MAX = 8;
+import { esTiempoDialisisValorValido } from '@/utils/tiempoDialisis';
 
 export function listaDesdeResponse(res) {
   if (Array.isArray(res)) return res;
@@ -7,15 +6,7 @@ export function listaDesdeResponse(res) {
   return [];
 }
 
-export function esTiempoDialisisValorValido(raw) {
-  if (raw === null || raw === '') return false;
-  const texto = String(raw).trim().replace(',', '.');
-  if (!texto) return false;
-  if (/[a-zA-Z]/.test(texto)) return false;
-  const n = Number(texto);
-  if (Number.isNaN(n)) return false;
-  return n >= TIEMPO_DIALISIS_MIN && n <= TIEMPO_DIALISIS_MAX;
-}
+export { esTiempoDialisisValorValido };
 
 function tratamientoCompleto(valor) {
   if (valor === null || valor === undefined) return false;
@@ -54,10 +45,18 @@ export function contarResultadosClinicosCompletos(rows) {
   return ultimosResultadosPorAtencion(rows).filter(esResultadoClinicoCompleto).length;
 }
 
-export function mensajeBloqueoNotificacionClinica(totalPacientes, totalCompletos) {
+export function mensajeBloqueoNotificacionClinica(totalPacientes, totalRegistros) {
   return (
-    `No puede notificar: hay ${totalPacientes} paciente(s) en atención y solo ${totalCompletos} ` +
-    'registro(s) de resultados clínicos completos (tiempo de diálisis y tratamientos: Eritropoyetina, Hierro y Calcitriol). ' +
-    'Complete los registros faltantes antes de enviar a revisión.'
+    `No puede notificar: hay ${totalPacientes} paciente(s) en atención y ${totalRegistros} ` +
+    'registro(s) de resultados clínicos. Ambas cantidades deben ser iguales antes de enviar a revisión.'
   );
 }
+
+export function tieneNumeroAtencionesRegistrado(numeroAtenciones) {
+  if (numeroAtenciones == null || numeroAtenciones === '') return false;
+  const n = Number(numeroAtenciones);
+  return Number.isInteger(n) && n >= 0;
+}
+
+export const MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES =
+  'No puede notificar: debe registrar el N° de Atenciones en Inicio de TRR para el periodo, clínica y modalidad seleccionados.';

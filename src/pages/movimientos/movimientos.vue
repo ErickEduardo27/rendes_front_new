@@ -456,8 +456,8 @@
                                 </div>
                             </template>
                         </el-autocomplete>
-                        <p v-if="debeLimitarClinicasAlUsuario() && !pacientesEgresar.length" class="text-xs text-amber-600 mt-1">
-                            No hay pacientes activos en sus clínicas asignadas para el periodo seleccionado.
+                        <p v-if="!pacientesEgresar.length" class="text-xs text-amber-600 mt-1">
+                            No hay pacientes activos para el periodo, clínica y modalidad seleccionados.
                         </p>
                     </div>
 
@@ -895,6 +895,10 @@ const cargarPacientesActivosDeIpress = async (idIpress, periodoId, idModalidad =
 
     for (const a of atenciones) {
         if (String(a.estado || '').toUpperCase() !== 'ACTIVO') continue;
+        if (idModalidad != null && idModalidad !== '') {
+            const modA = a.id_modalidad ?? a.datosModalidad?.id_modalidad;
+            if (modA != null && String(modA) !== String(idModalidad)) continue;
+        }
         const pid = a.id_paciente ?? a.datosPaciente?.id_paciente;
         if (pid != null) activosPorPaciente.set(String(pid), a);
     }
@@ -917,62 +921,32 @@ const cargarPacientesActivosDeIpress = async (idIpress, periodoId, idModalidad =
 };
 
 const fetchPacientesParaEgresar = async () => {
-    const periodoId = periodoGlobal.value ?? formEgresar.periodo;
     pacientesEgresar.value = [];
+    const periodoId = periodoGlobal.value ?? formEgresar.periodo;
+    const idIpress = clinicaGlobal.value;
+    const idModalidad = modalidadGlobal.value;
 
-    if (periodoId == null || periodoId === '') {
+    if (periodoId == null || periodoId === '' || idIpress == null || idIpress === '' || idModalidad == null || idModalidad === '') {
         return;
     }
 
     if (debeLimitarClinicasAlUsuario()) {
         const idsIpress = await obtenerIdsIpressAsignados();
-        if (!idsIpress.length) return;
-
-        const acumulado = [];
-        const vistos = new Set();
-
-        await Promise.all(
-            idsIpress.map(async (idIpress) => {
-                try {
-                    const items = await cargarPacientesActivosDeIpress(idIpress, periodoId);
-                    for (const item of items) {
-                        const clave = `${item.id_paciente}-${item.id_ipress}`;
-                        if (item.id_paciente != null && !vistos.has(clave)) {
-                            vistos.add(clave);
-                            acumulado.push(item);
-                        }
-                    }
-                } catch (e) {
-                    console.error(`Error listando pacientes IPRESS ${idIpress}:`, e);
-                }
-            })
-        );
-
-        pacientesEgresar.value = acumulado.sort((a, b) =>
-            (a.paciente || '').localeCompare(b.paciente || '', 'es')
-        );
-        return;
-    }
-
-    const idIpress = clinicaGlobal.value;
-    if (idIpress != null && idIpress !== '') {
-        try {
-            pacientesEgresar.value = await cargarPacientesActivosDeIpress(
-                idIpress,
-                periodoId,
-                modalidadGlobal.value
-            );
-        } catch (e) {
-            console.error('Error al obtener pacientes para egreso:', e);
-            pacientesEgresar.value = [];
+        if (!idsIpress.some((id) => String(id) === String(idIpress))) {
+            return;
         }
-        return;
     }
 
-    await fetchPacientes();
-    pacientesEgresar.value = pacientes.value.filter(
-        (p) => String(p.estado || '').toUpperCase() !== 'EGRESADO'
-    );
+    try {
+        pacientesEgresar.value = await cargarPacientesActivosDeIpress(
+            idIpress,
+            periodoId,
+            idModalidad
+        );
+    } catch (e) {
+        console.error('Error al obtener pacientes para egreso:', e);
+        pacientesEgresar.value = [];
+    }
 };
 
 const handleSelectClinica = (item) => {
@@ -1599,6 +1573,22 @@ const abrirModalEgresar = async () => {
     if (periodoGlobal.value == null || periodoGlobal.value === '') {
         ElMessage({
             message: 'Seleccione el periodo en la barra superior antes de egresar un paciente.',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+    if (clinicaGlobal.value == null || clinicaGlobal.value === '') {
+        ElMessage({
+            message: 'Seleccione la clínica en la barra superior antes de egresar un paciente.',
+            type: 'warning',
+            plain: true,
+        });
+        return;
+    }
+    if (modalidadGlobal.value == null || modalidadGlobal.value === '') {
+        ElMessage({
+            message: 'Seleccione la modalidad en la barra superior antes de egresar un paciente.',
             type: 'warning',
             plain: true,
         });

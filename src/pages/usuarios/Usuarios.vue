@@ -421,24 +421,41 @@ const showEditModal = async (usuario) => {
 
 const guardarAsignacionesIpress = async (idUsuario) => {
   if (!idUsuario || !muestraSelectIpress.value) return;
-  const ids = Array.isArray(form.ipress_ids) ? [...form.ipress_ids] : [];
+  const idsSolicitados = new Set(
+    (Array.isArray(form.ipress_ids) ? form.ipress_ids : []).map((id) => String(id)),
+  );
   try {
     const existentes = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${idUsuario}`);
     const lista = Array.isArray(existentes) ? existentes : existentes.results || [];
-    for (const a of lista) {
-      if (a.id_usuario_ipress) {
-        await deleteAllIpress(`/usuarioIpress/${a.id_usuario_ipress}/`);
+    const existentesPorIpress = new Map(
+      lista
+        .filter((a) => a.id_ipress != null && a.id_usuario_ipress != null)
+        .map((a) => [String(a.id_ipress), a]),
+    );
+
+    for (const [idIpress, asignacion] of existentesPorIpress.entries()) {
+      if (!idsSolicitados.has(idIpress)) {
+        await deleteAllIpress(`/usuarioIpress/${asignacion.id_usuario_ipress}/`);
+      } else {
+        idsSolicitados.delete(idIpress);
       }
     }
-    for (const idIpress of ids) {
+
+    for (const idIpress of idsSolicitados) {
       await postAllIpress('/usuarioIpress/', {
         id_usuario: idUsuario,
-        id_ipress: idIpress,
+        id_ipress: Number(idIpress) || idIpress,
         estado: true,
       });
     }
   } catch (e) {
     console.error('Error al guardar IPRESS:', e);
+    const msg =
+      e?.data?.detail
+      || e?.detail
+      || e?.error
+      || 'No se pudo actualizar las asignaciones de IPRESS.';
+    alert(msg);
     throw e;
   }
 };

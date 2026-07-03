@@ -13,7 +13,7 @@
           <strong>Editar</strong> guarda correcciones y comentario del supervisor; <strong>Aprobar</strong> marca el registro como revisado favorablemente.
         </p>
         <p class="text-xs text-slate-500 mt-1">
-          En los formularios se listan <strong>todos los pacientes en atención</strong> del periodo, clínica y modalidad; si no hay registro en ese módulo, la fila aparece como <strong>SIN REGISTRO</strong>. Cuando existe registro, se muestra el último (mayor ID).
+          En los formularios se listan <strong>todos los pacientes en atención</strong> del periodo, clínica y modalidad; si no hay registro en ese módulo, la fila aparece como <strong>SIN REGISTRO</strong>.
         </p>
       </div>
 
@@ -81,7 +81,12 @@
           class="px-4 py-3 border-b border-emerald-100 bg-emerald-50/80 flex flex-wrap items-center justify-between gap-3"
         >
           <p class="text-sm text-emerald-900">
-            Todos los registros visibles están <strong>aprobados</strong>. Puede cerrar el formulario para este periodo, clínica y modalidad.
+            <template v-if="sinRegistrosEnModulo">
+              No hay registros ingresados en <strong>{{ etiquetaModuloActual }}</strong> para este periodo, clínica y modalidad. Puede cerrar el formulario igualmente.
+            </template>
+            <template v-else>
+              Todos los registros visibles están <strong>aprobados</strong>. Puede cerrar el formulario para este periodo, clínica y modalidad.
+            </template>
           </p>
           <button
             type="button"
@@ -317,7 +322,7 @@
                     <span
                       v-else
                       class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800"
-                    >Conformado</span>
+                    >Conforme</span>
                   </td>
                 </tr>
               </tbody>
@@ -1195,18 +1200,23 @@ const etiquetaModuloActual = computed(() => {
   return t?.label || 'este formulario';
 });
 
+const registrosConDatosEnModulo = computed(() => listaMostrada.value.filter(registroConDatos));
+
+const sinRegistrosEnModulo = computed(() => registrosConDatosEnModulo.value.length === 0);
+
 const todosRegistrosVisiblesAprobados = computed(() => {
-  const rows = listaMostrada.value.filter(registroConDatos);
+  const rows = registrosConDatosEnModulo.value;
   if (!rows.length) return false;
   return rows.every((r) => String(r.estado_aprobacion || '').toUpperCase() === 'APROBADO');
 });
 
-/** Solo si el formulario está abierto a nivel periodo/IPRESS/modalidad y todos los registros aprobados */
+/** Formulario abierto y (sin registros en el módulo o todos los existentes aprobados) */
 const puedeCerrarFormulario = computed(() => {
   if (!filtroListo.value || formularioEstaAbierto.value !== true) return false;
-  const rows = listaMostrada.value.filter(registroConDatos);
-  if (!rows.length) return false;
-  return rows.every((r) => String(r.estado_aprobacion || '').toUpperCase() === 'APROBADO');
+  if (sinRegistrosEnModulo.value) return true;
+  return registrosConDatosEnModulo.value.every(
+    (r) => String(r.estado_aprobacion || '').toUpperCase() === 'APROBADO',
+  );
 });
 
 const mostrarBannerAbrir = computed(() => {
