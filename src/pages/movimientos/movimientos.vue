@@ -4,7 +4,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Gestión de Movimientos de Pacientes</h1>
-                <p class="text-sm text-gray-600 mt-1">Historial de ingresos, reingresos, egresos y cambios de modalidad del periodo, IPRESS y modalidad seleccionados</p>
+                <p class="text-sm text-gray-600 mt-1">Último movimiento por paciente del periodo, IPRESS y modalidad seleccionados. Use «Historial» para ver todos los movimientos del paciente.</p>
             </div>
             <div class="flex gap-2">
                 <button
@@ -88,7 +88,7 @@
                     <tbody class="bg-white divide-y divide-gray-200">
                         <tr v-if="movimientosFiltrados.length === 0">
                             <td colspan="10" class="px-3 py-6 text-center text-gray-500">
-                                No hay movimientos registrados
+                                No hay pacientes con movimientos en este periodo, clínica y modalidad
                             </td>
                         </tr>
                         <tr v-for="movimiento in movimientosPaginados" :key="movimiento.id" class="hover:bg-gray-50">
@@ -132,24 +132,33 @@
                                 {{ movimiento.periodo }}
                             </td>
                             <td class="px-3 py-2 text-gray-600">
-                                {{ movimiento.clinica || '-' }}
+                                {{ nombreClinicaParaVista(movimiento) }}
                             </td>
                             <td class="px-3 py-2 text-gray-600 max-w-[220px] truncate" :title="movimiento.detalle_modalidad || ''">
                                 {{ movimiento.detalle_modalidad || movimiento.modalidad || '-' }}
                             </td>
                             <td class="px-3 py-2 text-center whitespace-nowrap">
-                                <button
-                                    type="button"
-                                    class="font-semibold text-[11px] px-2 py-1 rounded transition"
-                                    :class="movimiento.tipo === 'CAMBIO_MODALIDAD'
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'"
-                                    :disabled="movimiento.tipo === 'CAMBIO_MODALIDAD'"
-                                    :title="movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'Los cambios de modalidad no se editan desde aquí' : 'Editar movimiento'"
-                                    @click="editarMovimiento(movimiento)"
-                                >
-                                    Editar
-                                </button>
+                                <div class="inline-flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        class="font-semibold text-[11px] px-2 py-1 rounded transition text-violet-600 hover:text-violet-800 hover:bg-violet-50"
+                                        @click="abrirHistorialPaciente(movimiento)"
+                                    >
+                                        Historial
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="font-semibold text-[11px] px-2 py-1 rounded transition"
+                                        :class="movimiento.tipo === 'CAMBIO_MODALIDAD'
+                                            ? 'text-gray-400 cursor-not-allowed'
+                                            : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'"
+                                        :disabled="movimiento.tipo === 'CAMBIO_MODALIDAD'"
+                                        :title="movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'Los cambios de modalidad no se editan desde aquí' : 'Editar movimiento'"
+                                        @click="editarMovimiento(movimiento)"
+                                    >
+                                        Editar
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -161,7 +170,7 @@
                 <div class="text-sm text-gray-700">
                     Mostrando {{ ((paginaActual - 1) * itemsPorPagina) + 1 }} a 
                     {{ Math.min(paginaActual * itemsPorPagina, movimientosFiltrados.length) }} de 
-                    {{ movimientosFiltrados.length }} movimientos
+                    {{ movimientosFiltrados.length }} paciente(s)
                 </div>
                 <div class="flex gap-2">
                     <button 
@@ -180,6 +189,133 @@
                         class="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
                     >
                         Siguiente
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: historial completo del paciente -->
+        <div
+            v-if="mostrarModalHistorial"
+            class="fixed inset-0 z-[56] flex items-center justify-center bg-black/50 p-4"
+            @click.self="cerrarModalHistorial"
+        >
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col border border-slate-200">
+                <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 bg-violet-50/80 rounded-t-xl">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Historial de movimientos</h3>
+                        <p class="text-sm text-slate-600 mt-0.5">
+                            {{ historialPaciente?.nombre || '—' }}
+                            <span v-if="historialPaciente?.dni" class="text-slate-400">· DNI {{ historialPaciente.dni }}</span>
+                        </p>
+                        <p class="text-[11px] text-slate-500 mt-1">
+                            Otras clínicas distintas a la seleccionada en la barra superior se muestran como «Clínica Tercerizada».
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="text-slate-500 hover:text-slate-800 text-xl leading-none shrink-0"
+                        aria-label="Cerrar"
+                        @click="cerrarModalHistorial"
+                    >
+                        ✕
+                    </button>
+                </div>
+                <div class="overflow-auto flex-1 p-4">
+                    <div v-if="cargandoHistorial" class="py-12 text-center text-sm text-slate-500">Cargando historial…</div>
+                    <div v-else-if="!historialMovimientos.length" class="py-12 text-center text-sm text-slate-500 italic">
+                        No hay movimientos registrados para este paciente.
+                    </div>
+                    <template v-else>
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <p class="text-xs text-slate-500">
+                                {{ historialMovimientos.length }} movimiento(s) ·
+                                {{ historialOrdenDesc ? 'Más reciente primero' : 'Más antiguo primero' }}
+                            </p>
+                            <button
+                                type="button"
+                                class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold"
+                                @click="alternarOrdenHistorial"
+                            >
+                                {{ historialOrdenDesc ? '↑ Orden: reciente → antiguo' : '↓ Orden: antiguo → reciente' }}
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 border-b">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Fecha</th>
+                                    <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Tipo</th>
+                                    <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Condición</th>
+                                    <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Tipo egreso</th>
+                                    <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Periodo</th>
+                                    <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Clínica</th>
+                                    <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Modalidad</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="h in historialMovimientosPaginados" :key="h.id" class="hover:bg-slate-50">
+                                    <td class="px-3 py-2 whitespace-nowrap">{{ h.fecha }}</td>
+                                    <td class="px-3 py-2">
+                                        <span
+                                            class="inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full"
+                                            :class="h.tipo === 'INGRESO' ? 'bg-green-100 text-green-800'
+                                                : h.tipo === 'EGRESO' ? 'bg-red-100 text-red-800'
+                                                : h.tipo === 'CAMBIO_MODALIDAD' ? 'bg-indigo-100 text-indigo-800'
+                                                : 'bg-blue-100 text-blue-800'"
+                                        >
+                                            {{ h.tipo === 'CAMBIO_MODALIDAD' ? 'CAMBIO MOD.' : h.tipo }}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2">{{ h.condicion }}</td>
+                                    <td class="px-3 py-2">{{ h.tipo_egreso || '—' }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap">{{ h.periodo }}</td>
+                                    <td class="px-3 py-2">{{ nombreClinicaParaVista(h) }}</td>
+                                    <td class="px-3 py-2 max-w-[200px] truncate" :title="h.detalle_modalidad || h.modalidad || ''">
+                                        {{ h.detalle_modalidad || h.modalidad || '—' }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        </div>
+                        <div
+                            v-if="historialMovimientos.length > itemsPorPaginaHistorial"
+                            class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600"
+                        >
+                            <span>
+                                Mostrando {{ ((paginaHistorial - 1) * itemsPorPaginaHistorial) + 1 }} a
+                                {{ Math.min(paginaHistorial * itemsPorPaginaHistorial, historialMovimientos.length) }}
+                                de {{ historialMovimientos.length }}
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    class="px-2.5 py-1 border border-slate-300 rounded disabled:opacity-50 hover:bg-slate-50"
+                                    :disabled="paginaHistorial <= 1"
+                                    @click="paginaHistorial--"
+                                >
+                                    Anterior
+                                </button>
+                                <span>Página {{ paginaHistorial }} de {{ totalPaginasHistorial }}</span>
+                                <button
+                                    type="button"
+                                    class="px-2.5 py-1 border border-slate-300 rounded disabled:opacity-50 hover:bg-slate-50"
+                                    :disabled="paginaHistorial >= totalPaginasHistorial"
+                                    @click="paginaHistorial++"
+                                >
+                                    Siguiente
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="px-5 py-3 border-t border-slate-100 flex justify-end bg-slate-50 rounded-b-xl">
+                    <button
+                        type="button"
+                        class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-lg"
+                        @click="cerrarModalHistorial"
+                    >
+                        Cerrar
                     </button>
                 </div>
             </div>
@@ -712,6 +848,13 @@ const pacientes = ref([]);
 const pacientesEgresar = ref([]);
 const mostrarModalCaptar = ref(false);
 const mostrarModalEgresar = ref(false);
+const mostrarModalHistorial = ref(false);
+const cargandoHistorial = ref(false);
+const historialPaciente = ref(null);
+const historialMovimientos = ref([]);
+const historialOrdenDesc = ref(true);
+const paginaHistorial = ref(1);
+const itemsPorPaginaHistorial = 10;
 
 /** Misma consulta por documento + formulario que Lista de pacientes */
 const mostrarModalConsultaDocumento = ref(false);
@@ -797,6 +940,14 @@ const movimientosFiltrados = computed(() => {
         resultado = resultado.filter(m => m.tipo === filtros.tipo);
     }
 
+    const vistos = new Set();
+    resultado = resultado.filter((m) => {
+        const clave = String(m.id_paciente ?? m.paciente_dni ?? m.id);
+        if (vistos.has(clave)) return false;
+        vistos.add(clave);
+        return true;
+    });
+
     return resultado;
 });
 
@@ -805,6 +956,84 @@ const totalPaginas = computed(() => Math.ceil(movimientosFiltrados.value.length 
 const movimientosPaginados = computed(() => {
     const inicio = (paginaActual.value - 1) * itemsPorPagina;
     return movimientosFiltrados.value.slice(inicio, inicio + itemsPorPagina);
+});
+
+function compararMovimientosPorFecha(a, b, desc = true) {
+    const cmpFecha = String(b.fecha).localeCompare(String(a.fecha));
+    const cmpId = (Number(b.id) || 0) - (Number(a.id) || 0);
+    if (cmpFecha !== 0) return desc ? cmpFecha : -cmpFecha;
+    return desc ? cmpId : -cmpId;
+}
+
+const historialMovimientosOrdenados = computed(() => {
+    const lista = [...historialMovimientos.value];
+    lista.sort((a, b) => compararMovimientosPorFecha(a, b, historialOrdenDesc.value));
+    return lista;
+});
+
+const totalPaginasHistorial = computed(() =>
+    Math.max(1, Math.ceil(historialMovimientosOrdenados.value.length / itemsPorPaginaHistorial)),
+);
+
+const historialMovimientosPaginados = computed(() => {
+    const inicio = (paginaHistorial.value - 1) * itemsPorPaginaHistorial;
+    return historialMovimientosOrdenados.value.slice(inicio, inicio + itemsPorPaginaHistorial);
+});
+
+function alternarOrdenHistorial() {
+    historialOrdenDesc.value = !historialOrdenDesc.value;
+    paginaHistorial.value = 1;
+}
+
+function nombreClinicaParaVista(mov) {
+    const idActual = clinicaGlobal.value;
+    const idMov = mov?.id_ipress;
+    if (idActual != null && idActual !== '' && idMov != null && String(idMov) !== String(idActual)) {
+        return 'Clínica Tercerizada';
+    }
+    return mov?.clinica || '—';
+}
+
+async function abrirHistorialPaciente(movimiento) {
+    if (!movimiento?.id_paciente) {
+        ElMessage.warning('No se pudo identificar al paciente.');
+        return;
+    }
+    historialPaciente.value = {
+        id_paciente: movimiento.id_paciente,
+        nombre: movimiento.paciente_nombre,
+        dni: movimiento.paciente_dni,
+    };
+    mostrarModalHistorial.value = true;
+    historialOrdenDesc.value = true;
+    paginaHistorial.value = 1;
+    cargandoHistorial.value = true;
+    historialMovimientos.value = [];
+    try {
+        const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(movimiento.id_paciente)}`);
+        const lista = Array.isArray(res) ? res : (res?.results || []);
+        historialMovimientos.value = lista.map(mapearAtencionAMovimiento);
+        paginaHistorial.value = 1;
+    } catch (e) {
+        console.error('Error al cargar historial del paciente:', e);
+        ElMessage.error('No se pudo cargar el historial del paciente.');
+    } finally {
+        cargandoHistorial.value = false;
+    }
+}
+
+function cerrarModalHistorial() {
+    mostrarModalHistorial.value = false;
+    cargandoHistorial.value = false;
+    historialPaciente.value = null;
+    historialMovimientos.value = [];
+    historialOrdenDesc.value = true;
+    paginaHistorial.value = 1;
+}
+
+watch(historialMovimientosOrdenados, (lista) => {
+    const maxP = Math.max(1, Math.ceil(lista.length / itemsPorPaginaHistorial));
+    if (paginaHistorial.value > maxP) paginaHistorial.value = maxP;
 });
 
 // Funciones de búsqueda

@@ -18,6 +18,8 @@ export function useEdicionSupervisor(props) {
       ...fields,
       comentario_evaluacion: comentarioSupervisor.value ?? '',
     });
+    window.dispatchEvent(new CustomEvent('notificaciones:actualizar'));
+    window.dispatchEvent(new CustomEvent('notificacion-revision:actualizar'));
   }
 
   return { comentarioSupervisor, guardarComoSupervisor };

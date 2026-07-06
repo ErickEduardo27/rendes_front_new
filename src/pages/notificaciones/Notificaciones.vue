@@ -8,7 +8,7 @@
             Notificaciones
           </h1>
           <p class="text-slate-500 mt-1 text-sm">
-            Avisos cuando se abre o cierra un formulario y cuando un supervisor desaprueba un registro.
+            Avisos cuando se abre o cierra un formulario, cuando un supervisor corrige un registro o desaprueba un registro.
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -86,6 +86,7 @@ function etiquetaTipo(tipo) {
     FORMULARIO_ABIERTO: 'Formulario abierto',
     FORMULARIO_CERRADO: 'Formulario cerrado',
     REGISTRO_DESAPROBADO: 'Desaprobado',
+    SUPERVISOR_EDITO_REGISTRO: 'Corrección supervisor',
   }
   return m[tipo] || tipo || 'Aviso'
 }
@@ -94,6 +95,7 @@ function chipClass(tipo) {
   if (tipo === 'FORMULARIO_ABIERTO') return 'bg-emerald-100 text-emerald-800'
   if (tipo === 'FORMULARIO_CERRADO') return 'bg-amber-100 text-amber-900'
   if (tipo === 'REGISTRO_DESAPROBADO') return 'bg-rose-100 text-rose-800'
+  if (tipo === 'SUPERVISOR_EDITO_REGISTRO') return 'bg-violet-100 text-violet-800'
   return 'bg-slate-100 text-slate-700'
 }
 

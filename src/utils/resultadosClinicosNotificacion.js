@@ -45,7 +45,18 @@ export function contarResultadosClinicosCompletos(rows) {
   return ultimosResultadosPorAtencion(rows).filter(esResultadoClinicoCompleto).length;
 }
 
+/** Pacientes en atención activa (nuevos + reingresos + continuadores, sin egresos). */
+export function totalPacientesEnAtencionDesdeEstadisticas(stats) {
+  if (!stats || typeof stats !== 'object') return 0;
+  return (
+    Number(stats.nuevos || 0)
+    + Number(stats.reingresos || 0)
+    + Number(stats.continuadores || 0)
+  );
+}
+
 export function mensajeBloqueoNotificacionClinica(totalPacientes, totalRegistros) {
+  if (Number(totalPacientes) === Number(totalRegistros)) return '';
   return (
     `No puede notificar: hay ${totalPacientes} paciente(s) en atención y ${totalRegistros} ` +
     'registro(s) de resultados clínicos. Ambas cantidades deben ser iguales antes de enviar a revisión.'

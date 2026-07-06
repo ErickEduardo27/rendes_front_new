@@ -1,6 +1,6 @@
 <template>
   <header class="sticky top-0 z-50 w-full flex flex-col sm:flex-row flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white border-b border-cyan-200 shadow-sm">
-    <div class="flex items-center gap-3 min-w-0">
+    <div class="flex flex-wrap items-center gap-3 min-w-0">
       <Bars3Icon class="icons-arrow-left w-6 h-6 shrink-0 text-cyan-600 cursor-pointer" @click="$emit('toggle-sidebar')" />
       <SelectorPeriodo
         v-if="mostrarSelectorPeriodo"
@@ -9,9 +9,15 @@
         v-model:modalidad="modalidad"
         @change="onSelectorChange"
       />
+      <NumeroAtencionesNav
+        v-if="mostrarSelectorPeriodo && mostrarNumeroAtenciones"
+        :periodo="periodo"
+        :clinica="clinica"
+        :modalidad="modalidad"
+      />
       <div v-else class="min-w-0">
-        <h1 class="text-sm sm:text-base font-bold text-cyan-800 truncate">Panel de supervisión</h1>
-        <p class="text-[11px] text-slate-500 hidden sm:block">Resumen de clínicas asignadas</p>
+        <!-- <h1 class="text-sm sm:text-base font-bold text-cyan-800 truncate">Panel de supervisión</h1>
+        <p class="text-[11px] text-slate-500 hidden sm:block">Resumen de clínicas asignadas</p> -->
       </div>
     </div>
 
@@ -20,13 +26,12 @@
         v-if="mostrarBotonNotificar"
         type="button"
         class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold shrink-0 transition-colors"
-        :class="botonNotificarHabilitado
-          ? 'border-cyan-600 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
-          : 'border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed'"
+        :class="clasesBotonNotificar"
         :title="tituloBotonNotificar"
+        :disabled="!botonNotificarClickeable"
         @click="onClickNotificar"
       >
-        Notificar
+        {{ etiquetaBotonNotificar }}
       </button>
       <router-link
         to="/notificaciones"
@@ -119,7 +124,7 @@
               <div class="flex justify-between col-span-2"><span>Calidad de agua</span><span class="font-semibold text-teal-700">{{ statsModal.totalCalidadAgua }}</span></div>
             </div>
             <p
-              v-if="esPerfilClinicaUsuario && !statsModal.puedeNotificarClinica"
+              v-if="mensajeBloqueoNotificacion"
               class="text-sm text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"
             >
               {{ mensajeBloqueoNotificacion }}
@@ -134,7 +139,7 @@
           <button
             type="button"
             class="px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 disabled:opacity-50"
-            :disabled="!filtroSelectorListo || enviandoNotificacion || (esPerfilClinicaUsuario && !statsModal.puedeNotificarClinica)"
+            :disabled="!filtroSelectorListo || enviandoNotificacion || estadoNotificacionRevision.estado === 'NOTIFICADO' || (esPerfilClinicaUsuario && !statsModal.puedeNotificarClinica)"
             @click="confirmarNotificacion"
           >{{ enviandoNotificacion ? 'Enviando…' : 'Sí, notificar' }}</button>
         </div>
@@ -160,6 +165,7 @@ import router from "@/router/index";
 import { toast } from 'vue-sonner'
 import { TokenService } from '@/services/api/token.service'
 import SelectorPeriodo from '@/components/SelectorPeriodo.vue'
+import NumeroAtencionesNav from '@/components/navbar/NumeroAtencionesNav.vue'
 import { esSupervisor, debeLimitarClinicasAlUsuario, esPerfilClinica } from '@/utils/perfil'
 
 const props = defineProps({
@@ -195,12 +201,22 @@ const mostrarSelectorPeriodo = computed(() => {
   if (esSupervisor() && route.name === 'Inicio') return false
   return true
 })
+
+const mostrarNumeroAtenciones = computed(() => esPerfilClinicaUsuario.value)
 const noLeidas = ref(0)
 let pollTimer = null
 
 const modalNotificarAbierto = ref(false)
 const cargandoStats = ref(false)
+const cargandoEstadoRevision = ref(false)
 const enviandoNotificacion = ref(false)
+const estadoNotificacionRevision = ref({
+  notificado: false,
+  notificado_en: null,
+  usuario_nombre: null,
+  estado: 'POR_NOTIFICAR',
+  requiere_renotificacion: false,
+})
 const statsModal = ref({
   totalUnidades: 0,
   totalEventos: 0,
@@ -227,21 +243,65 @@ const tieneNumeroAtenciones = computed(() =>
 )
 
 const mensajeBloqueoNotificacion = computed(() => {
+  if (!esPerfilClinicaUsuario.value || statsModal.value.puedeNotificarClinica) return ''
   if (!tieneNumeroAtenciones.value) {
     return MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES
   }
   return mensajeBloqueoNotificacionClinica(
     statsModal.value.totalPacientesAtendidos,
     statsModal.value.totalResultadosRegistrados,
-  )
+  ) || 'Complete los requisitos antes de notificar.'
 })
 
-const botonNotificarHabilitado = computed(() => filtroSelectorListo.value && !cargandoStats.value)
+const botonNotificarHabilitado = computed(() => {
+  if (!filtroSelectorListo.value || cargandoStats.value || cargandoEstadoRevision.value) return false
+  if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') return false
+  if (esPerfilClinicaUsuario.value && !statsModal.value.puedeNotificarClinica) return false
+  return true
+})
+
+const botonNotificarClickeable = computed(() => {
+  if (!filtroSelectorListo.value || cargandoEstadoRevision.value) return false
+  if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') return false
+  return true
+})
+
+const etiquetaBotonNotificar = computed(() => {
+  if (!filtroSelectorListo.value || cargandoEstadoRevision.value) return 'Por notificar'
+  if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') return 'Notificado'
+  if (estadoNotificacionRevision.value.requiere_renotificacion) return 'Por notificar'
+  return 'Por notificar'
+})
+
+const clasesBotonNotificar = computed(() => {
+  if (!filtroSelectorListo.value || cargandoEstadoRevision.value) {
+    return 'border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed'
+  }
+  if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') {
+    return 'border-emerald-300 bg-emerald-50 text-emerald-800 cursor-default'
+  }
+  if (botonNotificarHabilitado.value) {
+    return 'border-cyan-600 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
+  }
+  return 'border-amber-300 bg-amber-50 text-amber-800 cursor-not-allowed'
+})
 
 const tituloBotonNotificar = computed(() => {
   if (!filtroSelectorListo.value) return 'Seleccione periodo, clínica y modalidad'
+  if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') {
+    const fecha = estadoNotificacionRevision.value.notificado_en
+    const quien = estadoNotificacionRevision.value.usuario_nombre
+    let t = 'Ya notificó el envío a revisión.'
+    if (fecha) t += ` ${new Date(fecha).toLocaleString('es-PE')}.`
+    if (quien) t += ` Por: ${quien}.`
+    t += ' El botón se habilitará si el supervisor edita o comenta un registro.'
+    return t
+  }
+  if (estadoNotificacionRevision.value.requiere_renotificacion) {
+    return 'El supervisor realizó correcciones. Revise los registros y vuelva a notificar.'
+  }
   if (esPerfilClinicaUsuario.value && !statsModal.value.puedeNotificarClinica) {
-    return mensajeBloqueoNotificacion.value
+    return 'Revise los requisitos antes de notificar (pase el cursor sobre el botón o ábralo para ver el detalle).'
   }
   return 'Notificar envío a revisión'
 })
@@ -280,6 +340,45 @@ const filtroSelectorListo = computed(() => {
   )
 })
 
+async function cargarEstadoNotificacionRevision() {
+  if (!filtroSelectorListo.value) {
+    estadoNotificacionRevision.value = {
+      notificado: false,
+      notificado_en: null,
+      usuario_nombre: null,
+      estado: 'POR_NOTIFICAR',
+      requiere_renotificacion: false,
+    }
+    return
+  }
+  cargandoEstadoRevision.value = true
+  try {
+    const params = new URLSearchParams({
+      id_periodo: String(periodo.value),
+      id_ipress: String(clinica.value),
+      id_modalidad: String(modalidad.value),
+    })
+    const r = await getAllIpress(`/consulta_notificacion_envio_revision/?${params.toString()}`)
+    estadoNotificacionRevision.value = {
+      notificado: Boolean(r?.notificado),
+      notificado_en: r?.notificado_en ?? null,
+      usuario_nombre: r?.usuario_nombre ?? null,
+      estado: r?.estado === 'NOTIFICADO' ? 'NOTIFICADO' : 'POR_NOTIFICAR',
+      requiere_renotificacion: Boolean(r?.requiere_renotificacion),
+    }
+  } catch {
+    estadoNotificacionRevision.value = {
+      notificado: false,
+      notificado_en: null,
+      usuario_nombre: null,
+      estado: 'POR_NOTIFICAR',
+      requiere_renotificacion: false,
+    }
+  } finally {
+    cargandoEstadoRevision.value = false
+  }
+}
+
 async function cargarStatsNotificacion() {
   if (!filtroSelectorListo.value) {
     statsModal.value = {
@@ -308,16 +407,16 @@ async function cargarStatsNotificacion() {
   }
 }
 
-function onClickNotificar() {
+async function onClickNotificar() {
   if (!filtroSelectorListo.value) {
     ElMessage.warning('Seleccione periodo, clínica y modalidad en la barra superior.')
     return
   }
-  if (esPerfilClinicaUsuario.value && !statsModal.value.puedeNotificarClinica) {
-    ElMessage.warning(mensajeBloqueoNotificacion.value)
+  if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') {
+    ElMessage.info('Ya notificó el envío a revisión. Espere correcciones del supervisor para volver a notificar.')
     return
   }
-  abrirModalNotificar()
+  await abrirModalNotificar()
 }
 
 async function abrirModalNotificar() {
@@ -345,6 +444,7 @@ async function confirmarNotificacion() {
     })
     ElMessage.success('Notificación enviada. El equipo de revisión verá el aviso en Evaluación de registros.')
     window.dispatchEvent(new CustomEvent('notificacion-revision:actualizar'))
+    await cargarEstadoNotificacionRevision()
     cerrarModalNotificar()
   } catch (e) {
     const msg = e?.detail || e?.error || e?.response?.data?.detail || e?.message || 'No se pudo enviar la notificación.'
@@ -377,6 +477,8 @@ onMounted(() => {
   window.addEventListener('focus', fetchNoLeidas)
   window.addEventListener('notificaciones:actualizar', onNotifEvent)
   window.addEventListener('registros-formularios:actualizar', cargarStatsNotificacion)
+  window.addEventListener('notificacion-revision:actualizar', cargarEstadoNotificacionRevision)
+  window.addEventListener('notificaciones:actualizar', cargarEstadoNotificacionRevision)
 })
 
 onUnmounted(() => {
@@ -384,15 +486,24 @@ onUnmounted(() => {
   window.removeEventListener('focus', fetchNoLeidas)
   window.removeEventListener('notificaciones:actualizar', onNotifEvent)
   window.removeEventListener('registros-formularios:actualizar', cargarStatsNotificacion)
+  window.removeEventListener('notificacion-revision:actualizar', cargarEstadoNotificacionRevision)
+  window.removeEventListener('notificaciones:actualizar', cargarEstadoNotificacionRevision)
 })
 
 watch(
   () => [periodo.value, clinica.value, modalidad.value, mostrarBotonNotificar.value],
   () => {
-    if (mostrarBotonNotificar.value) cargarStatsNotificacion()
+    if (mostrarBotonNotificar.value) {
+      cargarStatsNotificacion()
+      cargarEstadoNotificacionRevision()
+    }
   },
   { immediate: true },
 )
+
+watch(modalNotificarAbierto, (abierto) => {
+  if (abierto) cargarStatsNotificacion()
+})
 
 watch(
   () => route.path,

@@ -1,5 +1,5 @@
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
-import { contarResultadosClinicosCompletos, listaDesdeResponse, tieneNumeroAtencionesRegistrado, ultimosResultadosPorAtencion } from '@/utils/resultadosClinicosNotificacion';
+import { contarResultadosClinicosCompletos, listaDesdeResponse, tieneNumeroAtencionesRegistrado, totalPacientesEnAtencionDesdeEstadisticas, ultimosResultadosPorAtencion } from '@/utils/resultadosClinicosNotificacion';
 
 export function countFromResponse(res) {
   return listaDesdeResponse(res).length;
@@ -86,7 +86,7 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       resolverIdUsuarioIpress(idIpress),
     ]);
 
-    const totalPacientesAtendidos = Number(resEstadisticasAtencion?.total) || 0;
+    const totalPacientesAtendidos = totalPacientesEnAtencionDesdeEstadisticas(resEstadisticasAtencion);
     const numeroAtenciones =
       resInicioTrr?.numero_atenciones != null && resInicioTrr?.numero_atenciones !== ''
         ? Number(resInicioTrr.numero_atenciones)

@@ -8,7 +8,16 @@
           <p class="text-xs text-gray-400">Pacientes en atención y registros cargados · periodo, IPRESS y modalidad</p>
         </div>
         <p class="text-sm font-semibold text-slate-700 tabular-nums">
-          Total registros: <span class="text-lg text-cyan-700">{{ totalRegistrosPeriodo }}</span>
+          <!-- Total registros: <span class="text-lg text-cyan-700">{{ totalRegistrosPeriodo }}</span> -->
+         <!--  <div class="flex items-center gap-4 my-4 border-t pt-4"> -->
+      <button
+        type="button"
+        class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition"
+        @click="abrirModalConsultaDocumento"
+      >
+        Consultar Paciente
+      </button>
+    <!-- </div> -->
         </p>
       </div>
 
@@ -37,7 +46,7 @@
       </div>
 
       <div class="border-t border-slate-100 pt-4">
-        <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Registros del periodo</p>
+        <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Registros del periodo por módulo</p>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
             <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 leading-tight">Cambio de acceso vascular</p>
@@ -63,7 +72,9 @@
       </div>
     </div>
 
-    <div class="flex items-center gap-4 my-4 border-t pt-4">
+    <BandejaNotificaciones />
+
+   <!--  <div class="flex items-center gap-4 my-4 border-t pt-4">
       <button
         type="button"
         class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition"
@@ -71,7 +82,7 @@
       >
         Consultar Paciente
       </button>
-    </div>
+    </div> -->
 
     <!-- Modal 1: consultar por documento en el sistema -->
     <div
@@ -230,6 +241,7 @@ import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import FormularioPaciente from './FormularioPaciente.vue';
+import BandejaNotificaciones from '@/components/notificaciones/BandejaNotificaciones.vue';
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
 const router = useRouter();
@@ -382,7 +394,15 @@ const totalRegistrosPeriodo = computed(() => {
 });
 
 // --- ESTADÍSTICAS DEL DASHBOARD ---
-const estadisticas = computed(() => ({ ...estadisticasAtencion.value }));
+const estadisticas = computed(() => {
+  const e = estadisticasAtencion.value;
+  const totalConEgresados =
+    Number(e.nuevos || 0)
+    + Number(e.reingresos || 0)
+    + Number(e.continuadores || 0)
+    + Number(e.egresados || 0);
+  return { ...e, total: totalConEgresados };
+});
 // -----------------------------------
 
 /** Último registro por id_paciente_atencion: indicador de edición del supervisor y comentario (vista por formulario). */
