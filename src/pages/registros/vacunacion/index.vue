@@ -204,27 +204,36 @@
                   </td>
                   <td class="tabla-vac-td tabla-vac-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-vac-td tabla-vac-td-acciones">
-                    <div v-if="fila.tieneRegistro" class="inline-flex items-center gap-1.5">
+                    <div class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
-                        class="tabla-vac-btn tabla-vac-btn-editar"
-                        :disabled="!formularioAbierto"
-                        :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
-                        @click="abrirModalEditar(fila.registro)"
+                        class="tabla-vac-btn tabla-vac-btn-historial"
+                        title="Ver historial de vacunas"
+                        @click="abrirModalHistorialVacunas(fila)"
                       >
-                        Editar
+                        Historial
                       </button>
-                      <button
-                        type="button"
-                        class="tabla-vac-btn tabla-vac-btn-eliminar"
-                        :disabled="!formularioAbierto || eliminandoId === fila.id_vacunacion"
-                        :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
-                        @click="eliminarRegistro(fila.registro)"
-                      >
-                        {{ eliminandoId === fila.id_vacunacion ? '…' : 'Eliminar' }}
-                      </button>
+                      <template v-if="fila.tieneRegistro">
+                        <button
+                          type="button"
+                          class="tabla-vac-btn tabla-vac-btn-editar"
+                          :disabled="!formularioAbierto"
+                          :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                          @click="abrirModalEditar(fila.registro)"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          class="tabla-vac-btn tabla-vac-btn-eliminar"
+                          :disabled="!formularioAbierto || eliminandoId === fila.id_vacunacion"
+                          :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                          @click="eliminarRegistro(fila.registro)"
+                        >
+                          {{ eliminandoId === fila.id_vacunacion ? '…' : 'Eliminar' }}
+                        </button>
+                      </template>
                     </div>
-                    <span v-else class="text-slate-400">—</span>
                   </td>
                 </tr>
               </tbody>
@@ -239,6 +248,97 @@
             />
           </template>
         </template>
+      </div>
+    </div>
+
+    <!-- Modal historial de vacunas del paciente -->
+    <div
+      v-if="mostrarModalHistorialVacunas"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      @click.self="cerrarModalHistorialVacunas"
+    >
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="bg-[#008f9c] px-6 py-4 flex justify-between items-center gap-3">
+          <div class="min-w-0">
+            <h3 class="font-bold text-white">Historial de vacunación</h3>
+            <p class="text-cyan-100 text-sm truncate">
+              {{ pacienteHistorialVacunas?.paciente || '—' }}
+              <span v-if="pacienteHistorialVacunas?.documento"> · DNI {{ pacienteHistorialVacunas.documento }}</span>
+            </p>
+          </div>
+          <button type="button" class="text-white/80 hover:text-white shrink-0 text-lg leading-none" aria-label="Cerrar" @click="cerrarModalHistorialVacunas">✕</button>
+        </div>
+        <div class="p-6 overflow-auto">
+          <p class="text-xs text-slate-500 mb-3">
+            Vacunas registradas para este paciente (cualquier periodo), con su fecha de aplicación.
+          </p>
+          <div v-if="cargandoHistorialVacunas" class="py-10 text-center text-slate-500">
+            Cargando historial…
+          </div>
+          <div
+            v-else-if="historialVacunasLista.length === 0"
+            class="py-10 text-center text-slate-500 italic border border-dashed border-slate-200 rounded-xl bg-slate-50/50"
+          >
+            No hay vacunas registradas para este paciente.
+          </div>
+          <template v-else>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">#</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Vacuna</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Dosis / detalle</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Fecha registro</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Periodo</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr
+                    v-for="(item, idx) in historialVacunasPaginado"
+                    :key="`${item.id_vacunacion}-${item.vacuna}-${idx}`"
+                    class="hover:bg-slate-50"
+                  >
+                    <td class="px-3 py-2.5 text-slate-500 tabular-nums">{{ indiceHistorialVacunas(idx) }}</td>
+                    <td class="px-3 py-2.5 text-slate-800 font-medium">{{ item.vacuna }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.detalle || '—' }}</td>
+                    <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ item.fecha || '—' }}</td>
+                    <td class="px-3 py-2.5 text-slate-600 whitespace-nowrap">{{ item.periodo || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm border-t border-slate-100 pt-3 mt-3">
+              <div class="flex flex-wrap items-center gap-3 text-slate-600">
+                <span>{{ rangoHistorialVacunasLabel }}</span>
+                <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+                  <span>Por página</span>
+                  <select v-model.number="tamPaginaHistorialVacunas" class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white">
+                    <option :value="5">5</option>
+                    <option :value="10">10</option>
+                    <option :value="25">25</option>
+                  </select>
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialVacunas <= 1" @click="paginaHistorialVacunas = 1">Primera</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialVacunas <= 1" @click="paginaHistorialVacunas--">Anterior</button>
+                <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaHistorialVacunas }} / {{ totalPaginasHistorialVacunas }}</span>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialVacunas >= totalPaginasHistorialVacunas" @click="paginaHistorialVacunas++">Siguiente</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialVacunas >= totalPaginasHistorialVacunas" @click="paginaHistorialVacunas = totalPaginasHistorialVacunas">Última</button>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="px-6 py-3 border-t border-slate-100 flex justify-end bg-slate-50/80">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100"
+            @click="cerrarModalHistorialVacunas"
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
 
@@ -376,6 +476,13 @@ const cargandoEstadoFormulario = ref(false);
 const registroEdicion = ref(null);
 const eliminandoId = ref(null);
 const form7ModalKey = ref(0);
+
+const mostrarModalHistorialVacunas = ref(false);
+const pacienteHistorialVacunas = ref(null);
+const historialVacunasLista = ref([]);
+const cargandoHistorialVacunas = ref(false);
+const paginaHistorialVacunas = ref(1);
+const tamPaginaHistorialVacunas = ref(10);
 
 const PAGE_SIZE_TABLAS = 10;
 const pageSizeTablas = ref(PAGE_SIZE_TABLAS);
@@ -550,11 +657,13 @@ const todosPacientesLista = computed(() => {
   });
   return atenciones.map((a) => {
     const id = a.id_paciente_atencion;
+    const idPaciente = a.id_paciente ?? a.datosPaciente?.id_paciente ?? null;
     const r = id != null ? porAtencion[String(id)] : null;
     const paciente = a.datosPaciente?.paciente ?? '—';
     const documento = a.datosPaciente?.documento ?? '—';
     if (r) {
       return {
+        id_paciente: idPaciente ?? r.datosPacienteAtencion?.id_paciente ?? r.datosPaciente?.id_paciente ?? null,
         id_paciente_atencion: id,
         id_vacunacion: r.id_vacunacion,
         tieneRegistro: true,
@@ -575,6 +684,7 @@ const todosPacientesLista = computed(() => {
       };
     }
     return {
+      id_paciente: idPaciente,
       id_paciente_atencion: id,
       tieneRegistro: false,
       paciente,
@@ -592,6 +702,184 @@ const todosPacientesLista = computed(() => {
       comentario_evaluacion: '',
     };
   });
+});
+
+const totalPaginasHistorialVacunas = computed(() => {
+  const n = historialVacunasLista.value.length;
+  if (n === 0) return 1;
+  return Math.ceil(n / tamPaginaHistorialVacunas.value);
+});
+
+const historialVacunasPaginado = computed(() => {
+  const list = historialVacunasLista.value;
+  const tam = tamPaginaHistorialVacunas.value;
+  const p = Math.min(Math.max(1, paginaHistorialVacunas.value), totalPaginasHistorialVacunas.value);
+  const start = (p - 1) * tam;
+  return list.slice(start, start + tam);
+});
+
+const rangoHistorialVacunasLabel = computed(() => {
+  const total = historialVacunasLista.value.length;
+  if (total === 0) return '0 vacunas';
+  const tam = tamPaginaHistorialVacunas.value;
+  const p = Math.min(Math.max(1, paginaHistorialVacunas.value), totalPaginasHistorialVacunas.value);
+  const start = (p - 1) * tam + 1;
+  const end = Math.min(p * tam, total);
+  return `Mostrando ${start}–${end} de ${total}`;
+});
+
+function indiceHistorialVacunas(idx) {
+  return (paginaHistorialVacunas.value - 1) * tamPaginaHistorialVacunas.value + idx + 1;
+}
+
+function periodoDesdeRegistroVac(reg) {
+  const at = reg?.datosPacienteAtencion;
+  const periodoObj = at?.datosPeriodo || at?.id_periodo;
+  if (periodoObj && typeof periodoObj === 'object') {
+    return periodoObj.periodo || String(periodoObj.id_periodo || '') || '';
+  }
+  return at?.periodo || '';
+}
+
+function expandirVacunasDeRegistro(reg) {
+  const base = {
+    id_vacunacion: reg.id_vacunacion,
+    periodo: periodoDesdeRegistroVac(reg),
+    estado_aprobacion: reg.estado_aprobacion || 'PENDIENTE',
+  };
+  const filas = [];
+  const dosisHb = String(reg.dosis_hepatitis_b || '').trim();
+  const fechaHb = String(reg.fecha_hepatitis_b || '').trim();
+  if (dosisHb || fechaHb) {
+    filas.push({
+      ...base,
+      vacuna: 'Hepatitis B',
+      detalle: dosisHb || '—',
+      fecha: fechaHb || '—',
+    });
+  }
+  const dosisCv = String(reg.dosis_covid || '').trim();
+  const fechaCv = String(reg.fecha_covid || '').trim();
+  if (dosisCv || fechaCv) {
+    filas.push({
+      ...base,
+      vacuna: 'Covid-19',
+      detalle: dosisCv || '—',
+      fecha: fechaCv || '—',
+    });
+  }
+  const fechaInf = String(reg.fecha_influenza || '').trim();
+  if (fechaInf) {
+    filas.push({
+      ...base,
+      vacuna: 'Influenza',
+      detalle: 'Aplicada',
+      fecha: fechaInf,
+    });
+  }
+  const fechaNeu = String(reg.fecha_neumococo || '').trim();
+  if (fechaNeu) {
+    filas.push({
+      ...base,
+      vacuna: 'Neumococo',
+      detalle: 'Aplicada',
+      fecha: fechaNeu,
+    });
+  }
+  const titulo = String(reg.titulo_acHbs || '').trim();
+  const fechaTitulo = String(reg.fecha_titulo_acHbs || '').trim();
+  if (titulo || fechaTitulo) {
+    filas.push({
+      ...base,
+      vacuna: 'Título AcHBs',
+      detalle: [titulo, reg.estado_acHbs].filter(Boolean).join(' · ') || '—',
+      fecha: fechaTitulo || '—',
+    });
+  }
+  // Si el registro existe pero sin vacunas concretas, mostrar fila de serología
+  if (filas.length === 0) {
+    const serologia = [reg.vhb && `VHB: ${reg.vhb}`, reg.vhc && `VHC: ${reg.vhc}`, reg.vih && `VIH: ${reg.vih}`]
+      .filter(Boolean)
+      .join(' · ');
+    filas.push({
+      ...base,
+      vacuna: 'Registro de vacunación',
+      detalle: serologia || 'Sin dosis / fechas de vacuna',
+      fecha: reg.fecha_vhb || reg.fecha_vhc || reg.fecha_vih || '—',
+    });
+  }
+  return filas;
+}
+
+function ordenFechaHistorial(fecha) {
+  const s = String(fecha || '').trim();
+  if (!s || s === '—') return '';
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return s;
+}
+
+async function abrirModalHistorialVacunas(fila) {
+  if (!fila) return;
+  const idPaciente = fila.id_paciente
+    ?? fila.registro?.datosPacienteAtencion?.id_paciente
+    ?? fila.registro?.datosPaciente?.id_paciente
+    ?? null;
+  pacienteHistorialVacunas.value = {
+    id_paciente: idPaciente,
+    paciente: fila.paciente || '—',
+    documento: fila.documento || '—',
+  };
+  paginaHistorialVacunas.value = 1;
+  historialVacunasLista.value = [];
+  mostrarModalHistorialVacunas.value = true;
+  if (idPaciente == null || idPaciente === '') return;
+
+  cargandoHistorialVacunas.value = true;
+  try {
+    const resAt = await getAllIpress(`/pacienteAtencion/?id_paciente=${idPaciente}`);
+    const atenciones = Array.isArray(resAt) ? resAt : (resAt?.results || []);
+    const idsAtencion = [...new Set(
+      atenciones.map((a) => a.id_paciente_atencion).filter((id) => id != null && id !== ''),
+    )];
+    if (idsAtencion.length === 0) {
+      historialVacunasLista.value = [];
+      return;
+    }
+    const respuestas = await Promise.all(
+      idsAtencion.map((id) =>
+        getAllIpress(`/vacunaciones/?id_paciente_atencion=${id}`).catch(() => []),
+      ),
+    );
+    const registrosVac = respuestas.flatMap((r) => (Array.isArray(r) ? r : (r?.results || [])));
+    const eventos = registrosVac.flatMap((reg) => expandirVacunasDeRegistro(reg));
+    eventos.sort((a, b) => {
+      const fa = ordenFechaHistorial(a.fecha);
+      const fb = ordenFechaHistorial(b.fecha);
+      if (fa && fb && fa !== fb) return fb.localeCompare(fa);
+      return (Number(b.id_vacunacion) || 0) - (Number(a.id_vacunacion) || 0);
+    });
+    historialVacunasLista.value = eventos;
+  } catch (e) {
+    console.error('Error al cargar historial de vacunas:', e);
+    historialVacunasLista.value = [];
+    ElMessage.error('No se pudo cargar el historial de vacunas.');
+  } finally {
+    cargandoHistorialVacunas.value = false;
+  }
+}
+
+function cerrarModalHistorialVacunas() {
+  mostrarModalHistorialVacunas.value = false;
+  pacienteHistorialVacunas.value = null;
+  historialVacunasLista.value = [];
+  paginaHistorialVacunas.value = 1;
+}
+
+watch([historialVacunasLista, tamPaginaHistorialVacunas], () => {
+  const tp = Math.max(1, Math.ceil(historialVacunasLista.value.length / tamPaginaHistorialVacunas.value) || 1);
+  if (paginaHistorialVacunas.value > tp) paginaHistorialVacunas.value = tp;
 });
 
 const registrosPaginados = computed(() => {
@@ -1004,6 +1292,16 @@ onMounted(() => {
 
 .tabla-vac-btn-editar:hover:not(:disabled) {
   background: #ecfeff;
+}
+
+.tabla-vac-btn-historial {
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+  background: transparent;
+}
+
+.tabla-vac-btn-historial:hover:not(:disabled) {
+  background: #eef2ff;
 }
 
 .tabla-vac-btn-eliminar {

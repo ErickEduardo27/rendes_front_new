@@ -1,5 +1,6 @@
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import { contarResultadosClinicosCompletos, listaDesdeResponse, tieneNumeroAtencionesRegistrado, totalPacientesEnAtencionDesdeEstadisticas, ultimosResultadosPorAtencion } from '@/utils/resultadosClinicosNotificacion';
+import { contarUnidadesAccesoEnPeriodo, rangoFechasDesdePeriodoTexto } from '@/utils/accesoVascularValidacion';
 
 export function countFromResponse(res) {
   return listaDesdeResponse(res).length;
@@ -75,8 +76,11 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     };
   }
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, resEstadisticasAtencion, resInicioTrr, idPeriodoIpress, idUsuarioIpress] = await Promise.all([
-      getAllIpress(`/unidadesActuales/?${qs}`),
+    const [resUnidades, resEventos, resMorb, resResultados, resEstadisticasAtencion, resInicioTrr, idPeriodoIpress, idUsuarioIpress, resPeriodos] = await Promise.all([
+      getAllIpress(`/unidadesActuales/?${new URLSearchParams({
+        ...(idIpress != null && idIpress !== '' ? { id_ipress: String(idIpress) } : {}),
+        ...(idModalidad != null && idModalidad !== '' ? { id_modalidad: String(idModalidad) } : {}),
+      }).toString()}`),
       getAllIpress(`/eventosAccesosVasculares/?${qs}`),
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
@@ -84,7 +88,13 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       getAllIpress(`/consulta_inicio_trr_periodo/?${qs}`),
       resolverIdPeriodoIpress(idPeriodo, idIpress),
       resolverIdUsuarioIpress(idIpress),
+      getAllIpress('/periodos/'),
     ]);
+
+    const listaPeriodos = Array.isArray(resPeriodos) ? resPeriodos : (resPeriodos?.results || []);
+    const periodoItem = listaPeriodos.find((p) => String(p.id_periodo) === String(idPeriodo));
+    const rangoAcceso = rangoFechasDesdePeriodoTexto(periodoItem?.periodo);
+    const listaUnidades = listaDesdeResponse(resUnidades);
 
     const totalPacientesAtendidos = totalPacientesEnAtencionDesdeEstadisticas(resEstadisticasAtencion);
     const numeroAtenciones =
@@ -109,7 +119,7 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     }
 
     return {
-      totalUnidades: countFromResponse(resUnidades),
+      totalUnidades: contarUnidadesAccesoEnPeriodo(listaUnidades, rangoAcceso),
       totalEventos: countFromResponse(resEventos),
       totalMorbilidades: countFromResponse(resMorb),
       totalResultados: countFromResponse(resResultados),

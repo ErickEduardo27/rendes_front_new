@@ -88,7 +88,7 @@
             <div v-else class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 border border-slate-100 rounded-lg p-3 bg-slate-50/80">
               <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1">Resumen del periodo</div>
               <div class="flex justify-between col-span-2">
-                <span>N° de Atenciones (Inicio TRR)</span>
+                <span>N° de Sesiones</span>
                 <span
                   class="font-semibold"
                   :class="tieneNumeroAtenciones ? 'text-slate-800' : 'text-rose-700'"
@@ -442,7 +442,7 @@ async function confirmarNotificacion() {
       id_ipress: Number(clinica.value),
       id_modalidad: Number(modalidad.value),
     })
-    ElMessage.success('Notificación enviada. El equipo de revisión verá el aviso en Evaluación de registros.')
+    ElMessage.success('Notificación enviada. Pendiente de conformidad de OECIS.')
     window.dispatchEvent(new CustomEvent('notificacion-revision:actualizar'))
     await cargarEstadoNotificacionRevision()
     cerrarModalNotificar()

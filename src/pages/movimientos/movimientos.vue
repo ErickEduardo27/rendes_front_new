@@ -611,6 +611,9 @@
                             <div v-if="fechaPrimerIngresoEgresar" class="col-span-2">
                                 <strong>Primer ingreso a unidad:</strong> {{ fechaPrimerIngresoEgresar }}
                             </div>
+                            <div v-if="fechaUltimoIngresoReingresoEgresar" class="col-span-2">
+                                <strong>Último ingreso / reingreso:</strong> {{ fechaUltimoIngresoReingresoEgresar }}
+                            </div>
                             <div v-if="ultimaFechaRegistrosEgresar" class="col-span-2">
                                 <strong>Último registro en periodo:</strong> {{ ultimaFechaRegistrosEgresar }}
                             </div>
@@ -645,9 +648,12 @@
                             :placeholder="rangoFechaEgresoPaciente.placeholder"
                         />
                         <p v-if="rangoFechaEgresoPaciente.placeholder" class="text-xs text-amber-600 mt-1">{{ rangoFechaEgresoPaciente.placeholder }}</p>
-                        <p v-else-if="rangoFechaEgresoPaciente.fechaPrimerIngreso || rangoFechaEgresoPaciente.ultimaFechaRegistros" class="text-xs text-gray-500 mt-1 space-y-0.5">
+                        <p v-else-if="rangoFechaEgresoPaciente.fechaPrimerIngreso || rangoFechaEgresoPaciente.fechaUltimoIngresoReingreso || rangoFechaEgresoPaciente.ultimaFechaRegistros" class="text-xs text-gray-500 mt-1 space-y-0.5">
                             <span v-if="rangoFechaEgresoPaciente.fechaPrimerIngreso" class="block">
                                 No anterior al primer ingreso a la unidad ({{ rangoFechaEgresoPaciente.fechaPrimerIngreso }}).
+                            </span>
+                            <span v-if="rangoFechaEgresoPaciente.fechaUltimoIngresoReingreso" class="block">
+                                Posterior al último ingreso o reingreso ({{ rangoFechaEgresoPaciente.fechaUltimoIngresoReingreso }}).
                             </span>
                             <span v-if="rangoFechaEgresoPaciente.ultimaFechaRegistros" class="block">
                                 No anterior al último registro del periodo, clínica y modalidad actuales ({{ rangoFechaEgresoPaciente.ultimaFechaRegistros }}).
@@ -698,36 +704,37 @@
             </div>
         </div>
 
-        <!-- Modal: Hospitalización → Morbilidad hospitalaria -->
+        <!-- Modal: registrar hospitalización (Form4) antes de egresar -->
         <div
-            v-if="mostrarModalMorbilidadHospitalaria"
-            class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+            v-if="mostrarModalForm4Hospitalizacion && pacienteParaForm4"
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
         >
-            <div class="bg-white rounded-lg shadow-xl p-6 w-[520px] max-h-[90vh] overflow-y-auto relative">
-                <button class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl" @click="confirmarMorbilidadYaRegistrada">&times;</button>
-                <h3 class="text-xl font-bold mb-3 text-gray-800 flex items-center gap-2">
-                    <span class="text-2xl">🏥</span>
-                    <span>Egreso por hospitalización</span>
-                </h3>
-                <p class="text-sm text-gray-700">
-                    ¿Ya registró la <strong>Morbilidad Hospitalaria</strong> del paciente para el periodo actual?
-                </p>
-
-                <div class="flex justify-end gap-2 mt-6 pt-4 border-t">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
+                <div class="bg-[#008f9c] px-6 py-4 flex justify-between items-center gap-3 shrink-0">
+                    <div class="min-w-0">
+                        <h3 class="font-bold text-white">Registrar hospitalización</h3>
+                        <p class="text-cyan-100 text-sm truncate">
+                            Debe registrar la morbilidad hospitalaria del periodo e IPRESS actuales antes de egresar.
+                        </p>
+                    </div>
                     <button
                         type="button"
-                        class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-                        @click="confirmarMorbilidadYaRegistrada"
+                        class="text-white/80 hover:text-white shrink-0 text-lg leading-none"
+                        aria-label="Cerrar"
+                        @click="onCancelarForm4Hospitalizacion"
                     >
-                        Sí, ya registré
+                        ✕
                     </button>
-                    <button
-                        type="button"
-                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                        @click="irAMorbilidadHospitalaria"
-                    >
-                        Registrar hospitalización
-                    </button>
+                </div>
+                <div class="overflow-y-auto flex-1 p-2 sm:p-4">
+                    <Form4
+                        :key="form4ModalKey"
+                        :paciente="pacienteParaForm4"
+                        :periodo="Number(formEgresar.periodo || periodoGlobal)"
+                        :id-paciente-atencion="idPacienteAtencionForm4"
+                        @cancelar="onCancelarForm4Hospitalizacion"
+                        @guardado="onGuardadoForm4Hospitalizacion"
+                    />
                 </div>
             </div>
         </div>
@@ -743,6 +750,7 @@ import { useAuthStore } from '@/store/auth';
 import { ElMessage } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import FormularioPaciente from '../inicio/FormularioPaciente.vue';
+import Form4 from '@/components/forms/Form4.vue';
 
 // Estados globales del sistema (NavBar: periodo, clínica, modalidad)
 const periodoGlobal = inject('periodoGlobal', ref(null));
@@ -797,18 +805,27 @@ const rangoFechaEgreso = computed(() => {
 });
 
 const fechaPrimerIngresoEgresar = ref(null);
+const fechaUltimoIngresoReingresoEgresar = ref(null);
 const ultimaFechaRegistrosEgresar = ref(null);
 
 const rangoFechaEgresoPaciente = computed(() => {
   const base = rangoFechaEgreso.value;
+  // Último ingreso/reingreso: egreso debe ser posterior → min = día siguiente
+  const minTrasIngresoReingreso = fechaUltimoIngresoReingresoEgresar.value
+    ? sumarUnDiaIso(fechaUltimoIngresoReingresoEgresar.value)
+    : null;
   const minCalculada = maxIso(
-    maxIso(base.min, fechaPrimerIngresoEgresar.value),
-    ultimaFechaRegistrosEgresar.value,
-  ) || base.min || fechaPrimerIngresoEgresar.value || ultimaFechaRegistrosEgresar.value;
+    maxIso(
+      maxIso(base.min, fechaPrimerIngresoEgresar.value),
+      ultimaFechaRegistrosEgresar.value,
+    ),
+    minTrasIngresoReingreso,
+  ) || base.min || fechaPrimerIngresoEgresar.value || ultimaFechaRegistrosEgresar.value || minTrasIngresoReingreso;
   return {
     ...base,
     min: minCalculada || base.min,
     fechaPrimerIngreso: fechaPrimerIngresoEgresar.value,
+    fechaUltimoIngresoReingreso: fechaUltimoIngresoReingresoEgresar.value,
     ultimaFechaRegistros: ultimaFechaRegistrosEgresar.value,
   };
 });
@@ -876,8 +893,11 @@ const condicionAutomatica = ref('');
 const mensajeCondicion = ref('');
 const paginaActual = ref(1);
 const itemsPorPagina = 10;
-const mostrarModalMorbilidadHospitalaria = ref(false);
-const contextoEgresoHospitalizacion = ref(null);
+const mostrarModalForm4Hospitalizacion = ref(false);
+const pacienteParaForm4 = ref(null);
+const idPacienteAtencionForm4 = ref(null);
+const form4ModalKey = ref(0);
+const hospitalizacionConfirmadaEgreso = ref(false);
 const movimientoEnEdicion = ref(null);
 
 const TIPOS_EGRESO_PREDEFINIDOS = [
@@ -1761,19 +1781,15 @@ const captarPaciente = async () => {
         const idReactivar = atencionEgresada
             ? null
             : (activaSinIpress?.id_paciente_atencion ?? null);
-        let idPacienteAtencionCapturado = idReactivar ?? null;
         if (idReactivar) {
             await patchAllIpress(`/pacienteAtencion/${idReactivar}/`, payload);
         } else {
-            const resAtencion = await postAllIpress('/pacienteAtencion/', payload);
-            idPacienteAtencionCapturado = resAtencion?.id_paciente_atencion ?? resAtencion?.id ?? null;
+            await postAllIpress('/pacienteAtencion/', payload);
         }
 
         const estadoPaciente = condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'REINGRESO';
         await patchPacienteEstado(formCaptar.paciente, estadoPaciente);
         await actualizarPeriodoIpressPaciente(formCaptar.paciente, idPeriodo, idIpress);
-
-        const idPacienteCapturado = formCaptar.paciente;
 
         ElMessage({
             message: tipoAtencion === 'REINGRESO' ? 'Reingreso registrado exitosamente' : 'Paciente captado exitosamente',
@@ -1783,10 +1799,6 @@ const captarPaciente = async () => {
 
         cerrarModalCaptar();
         await fetchMovimientos();
-        irAAccessoVascular({
-            idPaciente: idPacienteCapturado,
-            idPacienteAtencion: idPacienteAtencionCapturado,
-        });
     } catch (error) {
         console.error('Error al captar paciente:', error);
         ElMessage({
@@ -1836,20 +1848,20 @@ const abrirModalEgresar = async () => {
     formEgresar.observaciones = '';
     pacienteSeleccionadoEgresar.value = null;
     fechaPrimerIngresoEgresar.value = null;
+    fechaUltimoIngresoReingresoEgresar.value = null;
     ultimaFechaRegistrosEgresar.value = null;
+    hospitalizacionConfirmadaEgreso.value = false;
     mostrarModalEgresar.value = true;
 };
 
 const cerrarModalEgresar = () => {
     mostrarModalEgresar.value = false;
     fechaPrimerIngresoEgresar.value = null;
+    fechaUltimoIngresoReingresoEgresar.value = null;
     ultimaFechaRegistrosEgresar.value = null;
     movimientoEnEdicion.value = null;
-};
-
-const cerrarModalMorbilidadHospitalaria = () => {
-    mostrarModalMorbilidadHospitalaria.value = false;
-    contextoEgresoHospitalizacion.value = null;
+    hospitalizacionConfirmadaEgreso.value = false;
+    onCancelarForm4Hospitalizacion();
 };
 
 async function tieneMorbilidadHospitalariaRegistrada(idPacienteAtencion) {
@@ -1864,72 +1876,62 @@ async function tieneMorbilidadHospitalariaRegistrada(idPacienteAtencion) {
     }
 }
 
-async function procesarEgresoHospitalizacion(idPacienteAtencion) {
-    const tieneMorbilidad = await tieneMorbilidadHospitalariaRegistrada(idPacienteAtencion);
-    contextoEgresoHospitalizacion.value = {
-        idPacienteAtencion,
-        idPaciente: formEgresar.paciente,
-        tieneMorbilidad,
-    };
-
-    if (!tieneMorbilidad) {
+async function abrirModalForm4DesdeEgreso(idPacienteAtencion) {
+    if (idPacienteAtencion == null || idPacienteAtencion === '') {
         ElMessage({
-            message: 'Debe registrar la morbilidad hospitalaria del paciente.',
-            type: 'warning',
+            message: 'No se encontró la atención del paciente para registrar hospitalización.',
+            type: 'error',
             plain: true,
-            duration: 6000,
         });
-        irAMorbilidadHospitalaria();
         return;
     }
-
-    mostrarModalMorbilidadHospitalaria.value = true;
-}
-
-async function confirmarMorbilidadYaRegistrada() {
-    const ctx = contextoEgresoHospitalizacion.value;
-    if (!ctx?.idPacienteAtencion) {
-        cerrarModalMorbilidadHospitalaria();
-        return;
-    }
-
-    const tiene = await tieneMorbilidadHospitalariaRegistrada(ctx.idPacienteAtencion);
-    if (!tiene) {
-        ElMessage({
-            message: 'No hay registro de hospitalización. Debe completarlo antes de continuar.',
-            type: 'warning',
-            plain: true,
-            duration: 6000,
-        });
-        irAMorbilidadHospitalaria();
-        return;
-    }
-
-    cerrarModalMorbilidadHospitalaria();
-}
-
-const irAMorbilidadHospitalaria = () => {
-    const ctx = contextoEgresoHospitalizacion.value;
-    const query = { abrirFormulario: '1' };
-    if (ctx?.idPacienteAtencion != null) query.idPacienteAtencion = String(ctx.idPacienteAtencion);
-    if (ctx?.idPaciente != null) query.idPaciente = String(ctx.idPaciente);
-
-    const destino = { name: 'MorbilidadHospitalaria', query };
-    mostrarModalMorbilidadHospitalaria.value = false;
-
     try {
-        window.open(router.resolve(destino).href, '_blank');
+        const atencion = await getAllIpress(`/pacienteAtencion/${idPacienteAtencion}/`);
+        const paciente = atencion?.datosPaciente;
+        if (!paciente?.id_paciente) {
+            ElMessage({
+                message: 'No se pudo cargar el paciente para el registro de hospitalización.',
+                type: 'error',
+                plain: true,
+            });
+            return;
+        }
+        pacienteParaForm4.value = paciente;
+        idPacienteAtencionForm4.value = Number(idPacienteAtencion);
+        form4ModalKey.value += 1;
+        mostrarModalForm4Hospitalizacion.value = true;
+        ElMessage({
+            message: 'Debe registrar la hospitalización del periodo e IPRESS actuales antes de egresar.',
+            type: 'warning',
+            plain: true,
+            duration: 6000,
+        });
     } catch (e) {
-        router.push(destino);
+        console.error('Error al abrir Form4 desde egreso:', e);
+        ElMessage({
+            message: 'No se pudo abrir el formulario de hospitalización.',
+            type: 'error',
+            plain: true,
+        });
     }
-};
+}
 
-const irAAccessoVascular = ({ idPaciente, idPacienteAtencion }) => {
-    const query = { abrirFormulario: '1' };
-    if (idPacienteAtencion != null) query.idPacienteAtencion = String(idPacienteAtencion);
-    if (idPaciente != null) query.idPaciente = String(idPaciente);
-    router.push({ name: 'AccesoVascular', query });
-};
+function onCancelarForm4Hospitalizacion() {
+    mostrarModalForm4Hospitalizacion.value = false;
+    pacienteParaForm4.value = null;
+    idPacienteAtencionForm4.value = null;
+}
+
+async function onGuardadoForm4Hospitalizacion() {
+    onCancelarForm4Hospitalizacion();
+    hospitalizacionConfirmadaEgreso.value = true;
+    ElMessage({
+        message: 'Hospitalización registrada. Continuando con el egreso…',
+        type: 'success',
+        plain: true,
+    });
+    await egresarPaciente();
+}
 
 function isoDesdeValorApi(valor) {
     if (!valor) return null;
@@ -1945,6 +1947,59 @@ function maxIso(a, b) {
     if (!a) return b || null;
     if (!b) return a || null;
     return a > b ? a : b;
+}
+
+/** Suma un día a una fecha ISO yyyy-mm-dd (para “posterior a”). */
+function sumarUnDiaIso(iso) {
+    const s = isoDesdeValorApi(iso);
+    if (!s) return null;
+    const [y, m, d] = s.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + 1);
+    const yy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
+}
+
+const TIPOS_INGRESO_REINGRESO = new Set([
+    'NUEVO',
+    'CONTINUADOR',
+    'REINGRESO',
+    'INGRESO',
+]);
+
+async function obtenerFechaUltimoIngresoOReingreso(pacienteId) {
+    if (pacienteId == null || pacienteId === '') return null;
+    let ultima = null;
+    try {
+        const atRes = await getAllIpress(`/pacienteAtencion/?id_paciente=${pacienteId}`);
+        const atList = Array.isArray(atRes) ? atRes : (atRes?.results || []);
+        for (const atencion of atList) {
+            const tipo = String(atencion.tipo_atencion || '').toUpperCase();
+            if (!TIPOS_INGRESO_REINGRESO.has(tipo)) continue;
+            const iso = isoDesdeValorApi(atencion.fecha_inicio)
+                || isoDesdeValorApi(atencion.fecha_atencion);
+            if (iso) ultima = maxIso(ultima, iso);
+        }
+    } catch (e) {
+        console.warn('No se pudo obtener último ingreso/reingreso:', e);
+    }
+    try {
+        const pr = await getAllIpress(`/PacienteRegistro/?paciente=${pacienteId}`);
+        const lista = Array.isArray(pr) ? pr : (pr?.results || []);
+        for (const registro of lista) {
+            const condicion = String(registro.condicion || '').toUpperCase();
+            if (!TIPOS_INGRESO_REINGRESO.has(condicion)) continue;
+            const iso = isoDesdeValorApi(registro.fecha_ingreso)
+                || isoDesdeValorApi(registro.fecha_created)
+                || isoDesdeValorApi(registro.created_at);
+            if (iso) ultima = maxIso(ultima, iso);
+        }
+    } catch (e) {
+        console.warn('No se pudo consultar ingresos en PacienteRegistro:', e);
+    }
+    return ultima;
 }
 
 function limpiarFechaCapturaSiInvalida() {
@@ -2023,12 +2078,14 @@ async function obtenerFechaPrimerIngresoPaciente(pacienteId, atencionActiva = nu
 async function actualizarLimitesFechaEgresarPaciente(item) {
     if (!item?.id_paciente) {
         fechaPrimerIngresoEgresar.value = null;
+        fechaUltimoIngresoReingresoEgresar.value = null;
         ultimaFechaRegistrosEgresar.value = null;
         return;
     }
 
     const desdeItem = isoDesdeValorApi(item.fecha_primer_ingreso);
     fechaPrimerIngresoEgresar.value = desdeItem || await obtenerFechaPrimerIngresoPaciente(item.id_paciente);
+    fechaUltimoIngresoReingresoEgresar.value = await obtenerFechaUltimoIngresoOReingreso(item.id_paciente);
 
     let idPacienteAtencion = item.id_paciente_atencion ?? null;
     if (!idPacienteAtencion) {
@@ -2135,11 +2192,17 @@ async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPacienteAtencion, 
     return ultima;
 }
 
-function validarFechaMinimaEgresoPaciente(fechaEgreso, { fechaPrimerIngreso, ultimaFechaRegistros }) {
+function validarFechaMinimaEgresoPaciente(fechaEgreso, { fechaPrimerIngreso, fechaUltimoIngresoReingreso, ultimaFechaRegistros }) {
     if (fechaPrimerIngreso && String(fechaEgreso) < String(fechaPrimerIngreso)) {
         return {
             valido: false,
             mensaje: `La fecha de egreso no puede ser anterior al primer ingreso a la unidad (${fechaPrimerIngreso}).`,
+        };
+    }
+    if (fechaUltimoIngresoReingreso && String(fechaEgreso) <= String(fechaUltimoIngresoReingreso)) {
+        return {
+            valido: false,
+            mensaje: `La fecha de egreso debe ser posterior al último ingreso o reingreso (${fechaUltimoIngresoReingreso}).`,
         };
     }
     if (ultimaFechaRegistros && String(fechaEgreso) < String(ultimaFechaRegistros)) {
@@ -2197,6 +2260,9 @@ const egresarPaciente = async () => {
     const fechaPrimerIngreso = fechaPrimerIngresoEgresar.value
         || await obtenerFechaPrimerIngresoPaciente(formEgresar.paciente);
 
+    const fechaUltimoIngresoReingreso = fechaUltimoIngresoReingresoEgresar.value
+        || await obtenerFechaUltimoIngresoOReingreso(formEgresar.paciente);
+
     const modalidadParaValidacion = pacienteSeleccionadoEgresar.value?.id_modalidad
         ?? modalidadGlobal.value
         ?? await obtenerModalidadActualPaciente(formEgresar.paciente);
@@ -2213,6 +2279,7 @@ const egresarPaciente = async () => {
 
     const validacionFechaMinima = validarFechaMinimaEgresoPaciente(formEgresar.fecha, {
         fechaPrimerIngreso,
+        fechaUltimoIngresoReingreso: esFechaOriginalEdicion ? null : fechaUltimoIngresoReingreso,
         ultimaFechaRegistros: esFechaOriginalEdicion ? null : ultimaFechaRegistros,
     });
     if (!validacionFechaMinima.valido) {
@@ -2226,6 +2293,26 @@ const egresarPaciente = async () => {
     }
 
     const validacionCierre = await validarCierreMesAnterior(formEgresar.paciente, formEgresar.periodo);
+
+    // Egreso por hospitalización: exigir registro de morbilidad del mismo periodo/IPRESS (vía atención)
+    if (!movimientoEnEdicion.value && formEgresar.tipo_egreso === 'Hospitalización') {
+        if (!idPacienteAtencionValidacion) {
+            ElMessage({
+                message: 'No se encontró una atención activa del paciente en la clínica y periodo indicados.',
+                type: 'error',
+                plain: true,
+            });
+            return;
+        }
+        if (!hospitalizacionConfirmadaEgreso.value) {
+            const tieneMorbilidad = await tieneMorbilidadHospitalariaRegistrada(idPacienteAtencionValidacion);
+            if (!tieneMorbilidad) {
+                await abrirModalForm4DesdeEgreso(idPacienteAtencionValidacion);
+                return;
+            }
+            hospitalizacionConfirmadaEgreso.value = true;
+        }
+    }
 
     if (movimientoEnEdicion.value) {
         try {
@@ -2375,10 +2462,6 @@ const egresarPaciente = async () => {
             idIpress: formEgresar.clinica,
             idModalidad: modalidadActual,
         });
-
-        if (formEgresar.tipo_egreso === 'Hospitalización') {
-            await procesarEgresoHospitalizacion(idPacienteAtencionValidacion);
-        }
     } catch (error) {
         console.error('Error al egresar paciente:', error);
         ElMessage({

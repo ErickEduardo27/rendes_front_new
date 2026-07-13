@@ -60,7 +60,7 @@
                             <input v-model="form.fIniHos" type="date" :min="modoCompletarAlta ? undefined : rangoFechasPeriodo.min" :max="modoCompletarAlta ? undefined : rangoFechasPeriodo.max" :readonly="modoCompletarAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{ 'bg-gray-100 cursor-not-allowed': modoCompletarAlta }" />
                             <p v-if="!modoCompletarAlta && rangoFechasPeriodo.min" class="text-xs text-gray-500 mt-1">Dentro del periodo ({{ rangoFechasPeriodo.min }} a {{ rangoFechasPeriodo.max }})</p>
                         </div>
-                        <div>
+                        <div v-if="form.desenlace !== 'Fallecimiento'">
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Alta de Hospitalización</label>
                             <input v-model="form.fAltHos" type="date" :min="minFechaAlta" :max="maxFechaAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{'border-red-500 focus:ring-red-500 focus:border-red-500': errorFechaAlta}" />
                             <p v-if="maxFechaAlta" class="text-xs text-gray-500 mt-1">No debe salir del periodo (máx. {{ maxFechaAlta }})</p>
@@ -1167,7 +1167,10 @@ watch(() => form.value.fAltHos, (nuevaFechaAlta) => {
 });
 
 watch(() => form.value.desenlace, (valor) => {
-    if (valor !== 'Fallecimiento') {
+    if (valor === 'Fallecimiento') {
+        form.value.fAltHos = '';
+        errorFechaAlta.value = '';
+    } else {
         form.value.fechaFallecimiento = '';
         form.value.causaMuerte = '';
     }
@@ -1256,16 +1259,17 @@ const quitarSeleccion = (item) => {
 };
 
 const postForm = async (url = null) => {
-    if (errorFechaAlta.value) {
+    const esFallecimiento = form.value.desenlace === 'Fallecimiento';
+    if (!esFallecimiento && errorFechaAlta.value) {
         alert('Por favor corrija los errores en las fechas antes de continuar.');
         return;
     }
     if (!validarDatosFallecimiento()) return;
-    if (form.value.fIniHos && form.value.fAltHos && form.value.fAltHos < form.value.fIniHos) {
+    if (!esFallecimiento && form.value.fIniHos && form.value.fAltHos && form.value.fAltHos < form.value.fIniHos) {
         alert('La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización.');
         return;
     }
-    if (fechaAltaAnterior.value && form.value.fAltHos && form.value.fAltHos <= fechaAltaAnterior.value) {
+    if (!esFallecimiento && fechaAltaAnterior.value && form.value.fAltHos && form.value.fAltHos <= fechaAltaAnterior.value) {
         alert('La fecha de alta debe ser mayor a la fecha de alta anterior.');
         return;
     }
@@ -1275,7 +1279,7 @@ const postForm = async (url = null) => {
             alert(`La fecha de hospitalización debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
             return;
         }
-        if (form.value.fAltHos && (form.value.fAltHos < rango.min || form.value.fAltHos > rango.max)) {
+        if (!esFallecimiento && form.value.fAltHos && (form.value.fAltHos < rango.min || form.value.fAltHos > rango.max)) {
             alert(`La fecha de alta debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
             return;
         }
@@ -1283,7 +1287,7 @@ const postForm = async (url = null) => {
     try {
         if (modoCompletarAlta.value && idMorbilidadCompletar.value != null) {
             await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, {
-                fecha_alta_hospitalizacion: form.value.fAltHos || '',
+                fecha_alta_hospitalizacion: esFallecimiento ? '' : (form.value.fAltHos || ''),
                 desenlace: form.value.desenlace || '',
                 ...datosFallecimientoPayload(),
             });
@@ -1298,7 +1302,7 @@ const postForm = async (url = null) => {
                 diagnostico: form.value.seleccionados.map(item => item.descripcion || '').join(', '),
                 codigo_diagnostico: form.value.seleccionados.map(item => item.codigo).join(','),
                 fecha_hospitalizacion: form.value.fIniHos || '',
-                fecha_alta_hospitalizacion: form.value.fAltHos || '',
+                fecha_alta_hospitalizacion: esFallecimiento ? '' : (form.value.fAltHos || ''),
                 desenlace: form.value.desenlace || '',
                 fuente: form.value.fuente || '',
                 ...datosFallecimientoPayload(),

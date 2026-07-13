@@ -242,6 +242,10 @@ import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import FormularioPaciente from './FormularioPaciente.vue';
 import BandejaNotificaciones from '@/components/notificaciones/BandejaNotificaciones.vue';
+import {
+  contarUnidadesAccesoEnPeriodo,
+  rangoFechasDesdePeriodoTexto,
+} from '@/utils/accesoVascularValidacion';
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
 const router = useRouter();
@@ -297,6 +301,12 @@ const estadisticasRegistros = ref({
   calidadAgua: 0,
 });
 
+const rangoFechasPeriodo = computed(() => {
+  const id = periodoGlobal.value;
+  const item = periodos.value.find((p) => String(p.id_periodo) === String(id));
+  return rangoFechasDesdePeriodoTexto(item?.periodo);
+});
+
 const countFromResponse = (res) => {
   if (Array.isArray(res)) return res.length;
   if (res?.results && Array.isArray(res.results)) return res.results.length;
@@ -348,7 +358,10 @@ const fetchEstadisticasRegistros = async () => {
   }
   try {
     const [resUnidades, resEventos, resMorb, resResultados, idUsuarioIpress] = await Promise.all([
-      getAllIpress(`/unidadesActuales/?${qs}`),
+      getAllIpress(`/unidadesActuales/?${new URLSearchParams({
+        ...(idIpress != null && idIpress !== '' ? { id_ipress: idIpress } : {}),
+        ...(idModalidad != null && idModalidad !== '' ? { id_modalidad: idModalidad } : {}),
+      }).toString()}`),
       getAllIpress(`/eventosAccesosVasculares/?${qs}`),
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
@@ -370,7 +383,10 @@ const fetchEstadisticasRegistros = async () => {
     }
 
     estadisticasRegistros.value = {
-      cambioAccesoVascular: countFromResponse(resUnidades),
+      cambioAccesoVascular: contarUnidadesAccesoEnPeriodo(
+        Array.isArray(resUnidades) ? resUnidades : (resUnidades?.results || []),
+        rangoFechasPeriodo.value,
+      ),
       eventosInfecciosos: countFromResponse(resEventos),
       morbilidadHospitalaria: countFromResponse(resMorb),
       resultadosClinicos: countFromResponse(resResultados),

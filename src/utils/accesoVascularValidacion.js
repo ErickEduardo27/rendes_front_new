@@ -47,7 +47,12 @@ export function idPacienteDesdeUnidad(unidad) {
 }
 
 export function fechaCreacionAccesoISO(unidad) {
-  return String(unidad?.fecha_creacion_acceso || unidad?.fecha_creacion_acceso_actual || '').trim().slice(0, 10);
+  return fechaCreacionAccesoColumna(unidad).slice(0, 10);
+}
+
+/** Valor mostrado en la columna «F. creación» (Acceso Vascular). */
+export function fechaCreacionAccesoColumna(unidad) {
+  return String(unidad?.fecha_creacion_acceso || unidad?.fecha_creacion_acceso_actual || '').trim();
 }
 
 export const MENSAJE_CAMBIO_ACCESO_MISMO_DIA = 'Ya existe un cambio de acceso registrado para este paciente en la misma fecha. No se permiten dos cambios el mismo día.';
@@ -160,4 +165,40 @@ export function idsAccesosMasAntiguosPorPaciente(registros, idKey = 'id_unidad_a
     }
   }
   return new Set([...porPaciente.values()].map((v) => v.id));
+}
+
+/** Rango ISO (yyyy-mm-dd) del mes de periodo en formato «YYYY-MM». */
+export function rangoFechasDesdePeriodoTexto(periodoTexto) {
+  if (!periodoTexto) return { min: null, max: null };
+  const [yearStr, monthStr] = String(periodoTexto).split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  if (!year || !month) return { min: null, max: null };
+  const lastDay = new Date(year, month, 0).getDate();
+  const pad = (n) => String(n).padStart(2, '0');
+  return {
+    min: `${year}-${pad(month)}-01`,
+    max: `${year}-${pad(month)}-${pad(lastDay)}`,
+  };
+}
+
+/** True si la columna «F. creación» cae dentro del mes del periodo (inclusive). */
+export function fechaCreacionAccesoEnPeriodo(unidad, rango) {
+  if (!rango?.min || !rango?.max) return false;
+  const raw = fechaCreacionAccesoColumna(unidad);
+  if (!raw) return false;
+  const fecha = parseFechaAcceso(raw);
+  const min = parseFechaAcceso(rango.min);
+  const max = parseFechaAcceso(rango.max);
+  if (!fecha || !min || !max) return false;
+  const t = fecha.getTime();
+  return t >= min.getTime() && t <= max.getTime();
+}
+
+export function contarUnidadesAccesoEnPeriodo(lista, rango) {
+  return (Array.isArray(lista) ? lista : []).filter((u) => fechaCreacionAccesoEnPeriodo(u, rango)).length;
+}
+
+export function filtrarUnidadesAccesoEnPeriodo(lista, rango) {
+  return (Array.isArray(lista) ? lista : []).filter((u) => fechaCreacionAccesoEnPeriodo(u, rango));
 }

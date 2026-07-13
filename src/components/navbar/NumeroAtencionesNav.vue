@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-wrap items-center gap-2 border-l border-gray-200 pl-4 min-w-0">
-    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide shrink-0">N° Atenciones:</h2>
+    <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide shrink-0">N° Sesiones:</h2>
     <input
       v-model="numeroAtenciones"
       type="number"
@@ -25,7 +25,7 @@
       class="text-[11px] text-slate-500 shrink-0 hidden lg:inline"
       :title="ultimaActualizacion ? `Última actualización: ${ultimaActualizacion}` : undefined"
     >
-      Pacientes: <strong>{{ totalPacientesSistema }}</strong>
+      <!-- Pacientes: <strong>{{ totalPacientesSistema }}</strong> -->
     </span>
     <span
       v-else-if="!filtroListo"
