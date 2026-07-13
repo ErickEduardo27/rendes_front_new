@@ -195,10 +195,22 @@ export function fechaCreacionAccesoEnPeriodo(unidad, rango) {
   return t >= min.getTime() && t <= max.getTime();
 }
 
+/**
+ * Acceso inicial (p. ej. FormularioPaciente) no trae motivo_cambio.
+ * Un «cambio del periodo» sí tiene motivo de cambio registrado.
+ */
+export function esCambioAccesoVascular(unidad) {
+  return String(unidad?.motivo_cambio || '').trim() !== '';
+}
+
 export function contarUnidadesAccesoEnPeriodo(lista, rango) {
-  return (Array.isArray(lista) ? lista : []).filter((u) => fechaCreacionAccesoEnPeriodo(u, rango)).length;
+  return (Array.isArray(lista) ? lista : []).filter(
+    (u) => fechaCreacionAccesoEnPeriodo(u, rango) && esCambioAccesoVascular(u),
+  ).length;
 }
 
 export function filtrarUnidadesAccesoEnPeriodo(lista, rango) {
-  return (Array.isArray(lista) ? lista : []).filter((u) => fechaCreacionAccesoEnPeriodo(u, rango));
+  return (Array.isArray(lista) ? lista : []).filter(
+    (u) => fechaCreacionAccesoEnPeriodo(u, rango) && esCambioAccesoVascular(u),
+  );
 }

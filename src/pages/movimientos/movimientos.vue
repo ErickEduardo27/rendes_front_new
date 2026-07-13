@@ -1524,12 +1524,43 @@ const resolverAtencionParaCaptacion = (listaAtenciones, idIpressObjetivo = null)
     };
 };
 
+const pacienteTieneHistorialEnIpress = async (pacienteId, idIpress) => {
+    if (pacienteId == null || pacienteId === '' || idIpress == null || idIpress === '') {
+        return { tieneHistorial: false, tuvoEgreso: false, lista: [] };
+    }
+    try {
+        const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(pacienteId)}`);
+        const list = Array.isArray(res) ? res : (res?.results || []);
+        const enIpress = list.filter((a) => a.id_ipress != null && String(a.id_ipress) === String(idIpress));
+        const tuvoEgreso = enIpress.some((a) => {
+            const estado = String(a.estado || '').toUpperCase();
+            const tipo = String(a.tipo_atencion || '').toUpperCase();
+            return estado === 'EGRESADO' || tipo === 'EGRESO';
+        });
+        return { tieneHistorial: enIpress.length > 0, tuvoEgreso, lista: enIpress };
+    } catch (e) {
+        console.warn('No se pudo consultar historial del paciente en la IPRESS:', e);
+        return { tieneHistorial: false, tuvoEgreso: false, lista: [] };
+    }
+};
+
 const determinarCondicionPaciente = async (pacienteId) => {
     ultimoEgreso.value = null;
     try {
         const idPeriodo = periodoGlobal.value;
         const idIpress = clinicaGlobal.value;
         const idModalidad = modalidadGlobal.value;
+
+        // Primer ingreso a esta IPRESS → siempre NUEVO (aunque exista en otra clínica).
+        const { tieneHistorial, tuvoEgreso } = await pacienteTieneHistorialEnIpress(pacienteId, idIpress);
+        if (!tieneHistorial) {
+            condicionAutomatica.value = 'NUEVO';
+            mensajeCondicion.value = 'Primer ingreso del paciente a esta IPRESS. Se registrará como NUEVO.';
+            formCaptar.condicion = 'NUEVO';
+            ultimoEgreso.value = await obtenerUltimoEgresoPaciente(pacienteId);
+            limpiarFechaCapturaSiInvalida();
+            return;
+        }
 
         if (idPeriodo != null && idModalidad != null) {
             const paramsAt = new URLSearchParams({
@@ -1539,7 +1570,7 @@ const determinarCondicionPaciente = async (pacienteId) => {
             });
             const atRes = await getAllIpress(`/pacienteAtencion/?${paramsAt}`);
             const atList = Array.isArray(atRes) ? atRes : (atRes?.results || []);
-            const { activaEnClinica, activaSinIpress, atencionEgresada } = resolverAtencionParaCaptacion(atList, idIpress);
+            const { activaEnClinica, atencionEgresada } = resolverAtencionParaCaptacion(atList, idIpress);
 
             if (activaEnClinica) {
                 condicionAutomatica.value = 'YA_ACTIVO';
@@ -1548,55 +1579,29 @@ const determinarCondicionPaciente = async (pacienteId) => {
                 return;
             }
 
-            if (atencionEgresada) {
+            const egresoEnEstaClinicaPeriodo = atencionEgresada
+                && atencionEgresada.id_ipress != null
+                && String(atencionEgresada.id_ipress) === String(idIpress);
+
+            if (egresoEnEstaClinicaPeriodo || tuvoEgreso) {
                 condicionAutomatica.value = 'REINGRESO';
-                mensajeCondicion.value = 'El paciente fue egresado en este periodo. El ingreso se registrará como REINGRESO.';
+                mensajeCondicion.value = egresoEnEstaClinicaPeriodo
+                    ? 'El paciente fue egresado en este periodo en esta IPRESS. El ingreso se registrará como REINGRESO.'
+                    : 'El paciente tiene un egreso previo en esta IPRESS. Se registrará como REINGRESO.';
                 formCaptar.condicion = 'REINGRESO';
             } else {
-                const respuesta = await getAllIpress(`/PacienteRegistro/?paciente=${pacienteId}`);
-
-                if (!respuesta || respuesta.length === 0) {
-                    condicionAutomatica.value = 'NUEVO';
-                    mensajeCondicion.value = 'Este es el primer registro del paciente en el sistema.';
-                    formCaptar.condicion = 'NUEVO';
-                } else {
-                    const egresos = respuesta.filter((r) => r.condicion === 'EGRESADO').sort((a, b) =>
-                        new Date(b.fecha_created) - new Date(a.fecha_created)
-                    );
-
-                    if (egresos.length > 0) {
-                        condicionAutomatica.value = 'REINGRESO';
-                        mensajeCondicion.value = 'El paciente tiene un egreso previo registrado.';
-                        formCaptar.condicion = 'REINGRESO';
-                    } else {
-                        condicionAutomatica.value = 'CONTINUADOR';
-                        mensajeCondicion.value = 'El paciente no tiene egreso registrado en la unidad.';
-                        formCaptar.condicion = 'CONTINUADOR';
-                    }
-                }
+                condicionAutomatica.value = 'CONTINUADOR';
+                mensajeCondicion.value = 'El paciente ya tuvo atención en esta IPRESS. Se registrará como CONTINUADOR.';
+                formCaptar.condicion = 'CONTINUADOR';
             }
+        } else if (tuvoEgreso) {
+            condicionAutomatica.value = 'REINGRESO';
+            mensajeCondicion.value = 'El paciente tiene un egreso previo en esta IPRESS. Se registrará como REINGRESO.';
+            formCaptar.condicion = 'REINGRESO';
         } else {
-            const respuesta = await getAllIpress(`/PacienteRegistro/?paciente=${pacienteId}`);
-
-            if (!respuesta || respuesta.length === 0) {
-                condicionAutomatica.value = 'NUEVO';
-                mensajeCondicion.value = 'Este es el primer registro del paciente en el sistema.';
-                formCaptar.condicion = 'NUEVO';
-            } else {
-                const egresos = respuesta.filter((r) => r.condicion === 'EGRESADO').sort((a, b) =>
-                    new Date(b.fecha_created) - new Date(a.fecha_created)
-                );
-
-                if (egresos.length > 0) {
-                    condicionAutomatica.value = 'REINGRESO';
-                    mensajeCondicion.value = 'El paciente tiene un egreso previo registrado.';
-                    formCaptar.condicion = 'REINGRESO';
-                } else {
-                    condicionAutomatica.value = 'CONTINUADOR';
-                    mensajeCondicion.value = 'El paciente no tiene egreso registrado en la unidad.';
-                    formCaptar.condicion = 'CONTINUADOR';
-                }
-            }
+            condicionAutomatica.value = 'CONTINUADOR';
+            mensajeCondicion.value = 'El paciente ya tuvo atención en esta IPRESS. Se registrará como CONTINUADOR.';
+            formCaptar.condicion = 'CONTINUADOR';
         }
 
         if (condicionAutomatica.value !== 'YA_ACTIVO') {
@@ -2662,7 +2667,7 @@ const validarCierreMesAnterior = async (pacienteId, periodoActualId) => {
         if (ultimoRegistroAnterior.condicion !== 'EGRESADO' && condicionAutomatica.value === 'NUEVO') {
             return {
                 valido: true,
-                mensaje: `Advertencia: El paciente tiene registros previos, la condición no debería ser NUEVO.`
+                mensaje: `Nota: Se marcará como NUEVO (p. ej. primer ingreso a esta IPRESS). Verifique si corresponde.`,
             };
         }
 

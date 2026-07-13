@@ -89,8 +89,8 @@
                   <th class="tabla-ei-th">DNI</th>
                   <th class="tabla-ei-th">F. evento</th>
                   <th class="tabla-ei-th">Tipo infección</th>
-                  <th class="tabla-ei-th">Antimicrobial</th>
-                  <th class="tabla-ei-th">Vancomicina</th>
+                  <th class="tabla-ei-th">Antimicrobial IV</th>
+                  <th class="tabla-ei-th">Vancomicina IV</th>
                   <th class="tabla-ei-th">Hemocultivo (+)</th>
                   <th class="tabla-ei-th">Germen</th>
                   <th class="tabla-ei-th">Estado</th>
@@ -173,8 +173,8 @@
                   <th class="tabla-ei-th">DNI</th>
                   <th class="tabla-ei-th">F. evento</th>
                   <th class="tabla-ei-th">Tipo infección</th>
-                  <th class="tabla-ei-th">Antimicrobial</th>
-                  <th class="tabla-ei-th">Vancomicina</th>
+                  <th class="tabla-ei-th">Antimicrobial  IV</th>
+                  <th class="tabla-ei-th">Vancomicina IV</th>
                   <th class="tabla-ei-th">Hemocultivo (+)</th>
                   <th class="tabla-ei-th">Germen</th>
                   <th class="tabla-ei-th">Estado</th>

@@ -50,26 +50,34 @@
         <button
           type="button"
           class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
+          :class="vistaActiva === 'todos' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
+          @click="vistaActiva = 'todos'"
+        >
+          Todos los pacientes
+        </button>
+        <button
+          type="button"
+          class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
           :class="vistaActiva === 'registros' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
           @click="vistaActiva = 'registros'"
         >
           Cambios del periodo
         </button>
-        <button
+        <!-- <button
           type="button"
           class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
           :class="vistaActiva === 'todos' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
           @click="vistaActiva = 'todos'"
         >
           Todos los pacientes
-        </button>
+        </button> -->
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div v-if="cargando" class="p-12 text-center text-slate-500">Cargando...</div>
         <template v-else-if="vistaActiva === 'registros'">
           <div v-if="registros.length === 0" class="p-12 text-center text-slate-500 italic">
-            No hay cambios de acceso vascular registrados en el periodo, IPRESS y modalidad seleccionados.
+            No hay cambios de acceso vascular (con motivo de cambio) en el periodo, IPRESS y modalidad seleccionados.
           </div>
           <div v-else class="p-4 space-y-4">
             <div class="flex flex-wrap gap-3">
@@ -97,7 +105,7 @@
             </div>
             <template v-else>
               <p class="text-[10px] text-slate-600 mb-2">
-                Registros cuya <strong>F. creación</strong> está dentro del periodo seleccionado (IPRESS y modalidad del selector superior).
+                Solo cambios de acceso vascular con <strong>motivo de cambio</strong> cuya <strong>F. creación</strong> está dentro del periodo (IPRESS y modalidad del selector superior). No incluye el acceso inicial del registro del paciente.
               </p>
               <p class="text-[10px] text-amber-800 mb-2">
                 Filas en ámbar: acceso temporal (CVCT) o con más de 90 días desde su creación.
@@ -618,9 +626,6 @@
                     <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">F. creación</th>
                     <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">F. inicio canulación</th>
                     <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
-                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Estado</th>
-                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Editado sup.</th>
-                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Comentario</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -636,21 +641,6 @@
                     <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ fechaCreacionAccesoColumna(r) || '—' }}</td>
                     <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ textoCanulacionRegistro(r) }}</td>
                     <td class="px-3 py-2.5 text-slate-700">{{ r.motivo_cambio || '—' }}</td>
-                    <td class="px-3 py-2.5">
-                      <span
-                        class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
-                        :class="estadoAprobacionClase(r.estado_aprobacion)"
-                      >
-                        {{ r.estado_aprobacion || 'PENDIENTE' }}
-                      </span>
-                    </td>
-                    <td class="px-3 py-2.5">
-                      <span v-if="r.supervisor_edito_registro" class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">Sí</span>
-                      <span v-else class="text-slate-400">—</span>
-                    </td>
-                    <td class="px-3 py-2.5 text-slate-600 max-w-[12rem] truncate" :title="r.comentario_evaluacion || ''">
-                      {{ r.comentario_evaluacion?.trim() || '—' }}
-                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -796,6 +786,7 @@ import {
   motivoAccesoAntiguo,
   idsAccesosMasAntiguosPorPaciente,
   fechaCreacionAccesoEnPeriodo,
+  esCambioAccesoVascular,
   fechaCreacionAccesoColumna,
 } from '@/utils/accesoVascularValidacion';
 
@@ -1490,7 +1481,7 @@ async function fetchRegistros() {
 
     const rango = rangoFechasPeriodo.value;
     const registrosPeriodo = (Array.isArray(resRegistrosPeriodo) ? resRegistrosPeriodo : (resRegistrosPeriodo?.results || []))
-      .filter((r) => fechaCreacionAccesoEnPeriodo(r, rango))
+      .filter((r) => fechaCreacionAccesoEnPeriodo(r, rango) && esCambioAccesoVascular(r))
       .sort((a, b) => (Number(b.id_unidad_actual) || 0) - (Number(a.id_unidad_actual) || 0));
     registros.value = registrosPeriodo;
 
