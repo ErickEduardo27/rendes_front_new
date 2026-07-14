@@ -1506,21 +1506,36 @@ const editarMovimiento = async (mov) => {
 
 const resolverAtencionParaCaptacion = (listaAtenciones, idIpressObjetivo = null) => {
     const lista = Array.isArray(listaAtenciones) ? listaAtenciones : [];
+    const mismaClinica = (a) =>
+        a.id_ipress != null
+        && idIpressObjetivo != null
+        && String(a.id_ipress) === String(idIpressObjetivo);
+
     const activaEnClinica = lista.find(
-        (a) => String(a.estado || '').toUpperCase() === 'ACTIVO'
-            && a.id_ipress != null
-            && idIpressObjetivo != null
-            && String(a.id_ipress) === String(idIpressObjetivo),
+        (a) => String(a.estado || '').toUpperCase() === 'ACTIVO' && mismaClinica(a),
     );
     const activaSinIpress = lista.find(
         (a) => String(a.estado || '').toUpperCase() === 'ACTIVO' && a.id_ipress == null,
     );
+    // Atención que quedó CERRADA al egresar (conserva resultados/vacunas/etc. del periodo)
+    const cerradas = lista
+        .filter((a) => {
+            const est = String(a.estado || '').toUpperCase();
+            return (est === 'CERRADO' || est === 'CERRADA') && mismaClinica(a);
+        })
+        .sort((a, b) => (Number(b.id_paciente_atencion) || 0) - (Number(a.id_paciente_atencion) || 0));
+    // Fila de egreso (o legado: misma atención marcada EGRESADO)
     const egresadas = lista
-        .filter((a) => String(a.estado || '').toUpperCase() === 'EGRESADO')
+        .filter((a) => {
+            const est = String(a.estado || '').toUpperCase();
+            const tipo = String(a.tipo_atencion || '').toUpperCase();
+            return (est === 'EGRESADO' || tipo === 'EGRESO') && mismaClinica(a);
+        })
         .sort((a, b) => (Number(b.id_paciente_atencion) || 0) - (Number(a.id_paciente_atencion) || 0));
     return {
         activaEnClinica: activaEnClinica || null,
         activaSinIpress: activaSinIpress || null,
+        atencionCerrada: cerradas[0] || null,
         atencionEgresada: egresadas[0] || null,
     };
 };
@@ -1759,7 +1774,7 @@ const captarPaciente = async () => {
         });
         const atencionesExistentes = await getAllIpress(`/pacienteAtencion/?${paramsAtencion}`);
         const listaAtenciones = Array.isArray(atencionesExistentes) ? atencionesExistentes : (atencionesExistentes?.results || []);
-        const { activaEnClinica, activaSinIpress, atencionEgresada } = resolverAtencionParaCaptacion(listaAtenciones, idIpress);
+        const { activaEnClinica, activaSinIpress, atencionCerrada, atencionEgresada } = resolverAtencionParaCaptacion(listaAtenciones, idIpress);
 
         if (activaEnClinica) {
             ElMessage({
@@ -1784,9 +1799,13 @@ const captarPaciente = async () => {
             created_at: now,
         };
 
-        const idReactivar = atencionEgresada
-            ? null
-            : (activaSinIpress?.id_paciente_atencion ?? null);
+        // Reingreso en el mismo periodo: reactivar la atención CERRADA (conserva registros de formularios).
+        // Si no hay cerrada (legado egreso en una sola fila), reactivar la EGRESADA de la misma clínica.
+        // Solo crear atención nueva si no hay nada que reactivar.
+        const idReactivar = atencionCerrada?.id_paciente_atencion
+            ?? (tipoAtencion === 'REINGRESO' ? atencionEgresada?.id_paciente_atencion : null)
+            ?? activaSinIpress?.id_paciente_atencion
+            ?? null;
         if (idReactivar) {
             await patchAllIpress(`/pacienteAtencion/${idReactivar}/`, payload);
         } else {

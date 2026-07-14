@@ -443,7 +443,7 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
 import Form7 from '@/components/forms/Form7.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 
@@ -646,19 +646,11 @@ const pacientesFiltrados = computed(() => {
 const todosPacientesLista = computed(() => {
   const atenciones = Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
   const regs = Array.isArray(registros.value) ? registros.value : [];
-  const porAtencion = {};
-  regs.forEach((r) => {
-    const id = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
-    if (id == null) return;
-    const k = String(id);
-    const prev = porAtencion[k];
-    const rid = Number(r.id_vacunacion) || 0;
-    if (!prev || rid > (Number(prev.id_vacunacion) || 0)) porAtencion[k] = r;
-  });
+  const { porAtencion, porPaciente } = indexarRegistrosPorAtencionYPaciente(regs, 'id_vacunacion');
   return atenciones.map((a) => {
     const id = a.id_paciente_atencion;
     const idPaciente = a.id_paciente ?? a.datosPaciente?.id_paciente ?? null;
-    const r = id != null ? porAtencion[String(id)] : null;
+    const r = registroParaAtencionActiva(a, porAtencion, porPaciente);
     const paciente = a.datosPaciente?.paciente ?? '—';
     const documento = a.datosPaciente?.documento ?? '—';
     if (r) {

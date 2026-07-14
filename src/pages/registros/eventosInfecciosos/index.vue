@@ -365,7 +365,7 @@ import { ElMessage } from 'element-plus';
 import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
 import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 import DashboardInfeccionesPaciente from '@/components/registros/DashboardInfeccionesPaciente.vue';
@@ -546,18 +546,10 @@ const pacientesFiltrados = computed(() => {
 const todosPacientesLista = computed(() => {
   const atenciones = Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
   const regs = Array.isArray(registros.value) ? registros.value : [];
-  const porAtencion = {};
-  regs.forEach((r) => {
-    const id = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
-    if (id == null) return;
-    const k = String(id);
-    const prev = porAtencion[k];
-    const rid = Number(r.id_evento_acceso_vascular) || 0;
-    if (!prev || rid > (Number(prev.id_evento_acceso_vascular) || 0)) porAtencion[k] = r;
-  });
+  const { porAtencion, porPaciente } = indexarRegistrosPorAtencionYPaciente(regs, 'id_evento_acceso_vascular');
   return atenciones.map((a) => {
     const id = a.id_paciente_atencion;
-    const r = id != null ? porAtencion[String(id)] : null;
+    const r = registroParaAtencionActiva(a, porAtencion, porPaciente);
     const paciente = a.datosPaciente?.paciente ?? '—';
     const documento = a.datosPaciente?.documento ?? '—';
     const idPaciente = a.datosPaciente?.id_paciente ?? a.id_paciente ?? null;

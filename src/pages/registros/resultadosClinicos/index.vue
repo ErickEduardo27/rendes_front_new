@@ -586,7 +586,7 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
 import {
   MENSAJE_TIEMPO_DIALISIS_INVALIDO,
   esTiempoDialisisValorValido,
@@ -887,18 +887,10 @@ async function fetchPeriodos() {
 const todosPacientesLista = computed(() => {
   const atenciones = Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
   const regs = Array.isArray(registros.value) ? registros.value : [];
-  const porAtencion = {};
-  regs.forEach((r) => {
-    const id = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
-    if (id == null) return;
-    const k = String(id);
-    const prev = porAtencion[k];
-    const rid = Number(r.id_resultado_clinico) || 0;
-    if (!prev || rid > (Number(prev.id_resultado_clinico) || 0)) porAtencion[k] = r;
-  });
+  const { porAtencion, porPaciente } = indexarRegistrosPorAtencionYPaciente(regs, 'id_resultado_clinico');
   return atenciones.map((a) => {
     const id = a.id_paciente_atencion;
-    const r = id != null ? porAtencion[String(id)] : null;
+    const r = registroParaAtencionActiva(a, porAtencion, porPaciente);
     const paciente = a.datosPaciente?.paciente ?? '—';
     const documento = a.datosPaciente?.documento ?? '—';
     if (r) {
@@ -1363,16 +1355,12 @@ function idAtencionDesdeRegistro(registro) {
 
 function registroPorAtencion(idAtencion) {
   if (idAtencion == null || idAtencion === '') return null;
-  const clave = String(idAtencion);
   const lista = Array.isArray(registros.value) ? registros.value : [];
-  let mejor = null;
-  for (const r of lista) {
-    const id = idAtencionDesdeRegistro(r);
-    if (id == null || String(id) !== clave) continue;
-    const rid = Number(r.id_resultado_clinico) || 0;
-    if (!mejor || rid > (Number(mejor.id_resultado_clinico) || 0)) mejor = r;
-  }
-  return mejor;
+  const { porAtencion, porPaciente } = indexarRegistrosPorAtencionYPaciente(lista, 'id_resultado_clinico');
+  const atencion = (Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [])
+    .find((a) => String(a.id_paciente_atencion) === String(idAtencion));
+  if (atencion) return registroParaAtencionActiva(atencion, porAtencion, porPaciente);
+  return porAtencion[String(idAtencion)] || null;
 }
 
 function pacienteYaTieneRegistro(idAtencion) {
