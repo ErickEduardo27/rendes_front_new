@@ -233,7 +233,7 @@
                 Notificaron {{ resumenTotales.total_notificados }} de {{ resumenTotales.total_ipress }} establecimientos.
               </span>
               <p class="mt-2 text-xs text-slate-500 max-w-4xl">
-                La acción <strong>Dar conformidad</strong> solo se habilita cuando la clínica ha usado <strong>Notificar</strong>, todos los formularios con datos están <strong>cerrados</strong> y aún no se registró conformidad. Traslada pacientes activos al periodo siguiente (nuevos y reingresantes como continuador; egresados no pasan).
+                La acción <strong>Dar conformidad</strong> solo se habilita cuando la clínica ha usado <strong>Notificar</strong>, todos los formularios con datos están <strong>cerrados</strong> y aún no se registró conformidad. Traslada pacientes activos al periodo siguiente con fecha de ingreso = primer día de ese mes (nuevos y reingresantes como continuador; egresados no pasan).
               </p>
             </div>
             <div v-if="listaIpressNotificaciones.length" class="px-4 py-3 border-b border-slate-100 flex flex-wrap gap-3">
@@ -667,7 +667,7 @@ function tituloBotonDarConformidad(row) {
   const info = infoDarConformidad(row.id_ipress);
   if (!info.puede_pasar) return info.motivo || 'No se puede dar conformidad en este momento.';
   if (info.periodo_destino_label) {
-    return `Dar conformidad y trasladar pacientes activos al periodo ${info.periodo_destino_label} (nuevos y reingresantes como continuador; egresados no se trasladan).`;
+    return `Dar conformidad y trasladar pacientes activos al periodo ${info.periodo_destino_label} (fecha de ingreso = 1.º del mes destino; nuevos y reingresantes como continuador; egresados no se trasladan).`;
   }
   return 'Dar conformidad y pasar pacientes al periodo siguiente';
 }
@@ -685,6 +685,7 @@ async function confirmarDarConformidad(row) {
     await ElMessageBox.confirm(
       `¿Dar conformidad y cargar los pacientes del periodo actual al periodo posterior (${destino}) para «${nombre}»? ` +
         'Se crearán registros de atención en el nuevo periodo solo para pacientes activos (no egresados) que aún no existan allí. ' +
+        'La fecha de ingreso/registro será el primer día del mes del periodo destino. ' +
         'Los pacientes nuevos y reingresantes pasarán como «Continuador».',
       'Dar conformidad',
       {
