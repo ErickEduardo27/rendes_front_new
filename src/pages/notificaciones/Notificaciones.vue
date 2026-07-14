@@ -15,7 +15,7 @@
           <button
             type="button"
             class="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-            :disabled="cargando || lista.length === 0"
+            :disabled="cargando || lista.length === 0 || !filtroListo"
             @click="marcarTodasLeidas"
           >
             Marcar todas leídas
@@ -31,9 +31,12 @@
         </div>
       </div>
 
-      <div v-if="cargando && lista.length === 0" class="text-center py-16 text-slate-500">Cargando…</div>
+      <div v-if="!filtroListo" class="text-center py-16 text-slate-500 italic bg-white rounded-xl border border-slate-200">
+        Seleccione periodo, IPRESS y modalidad en la barra superior para ver las notificaciones de ese contexto.
+      </div>
+      <div v-else-if="cargando && lista.length === 0" class="text-center py-16 text-slate-500">Cargando…</div>
       <div v-else-if="lista.length === 0" class="text-center py-16 text-slate-500 italic bg-white rounded-xl border border-slate-200">
-        No tiene notificaciones.
+        No tiene notificaciones para este periodo, IPRESS y modalidad.
       </div>
       <ul v-else class="space-y-3">
         <li
@@ -75,11 +78,32 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, inject, watch, onMounted } from 'vue'
 import { getAllIpress, patchAllIpress, postAllIpress } from '@/services/ipress/Ipress.service'
+
+const periodoGlobal = inject('periodoGlobal', ref(null))
+const clinicaGlobal = inject('clinicaGlobal', ref(null))
+const modalidadGlobal = inject('modalidadGlobal', ref(null))
 
 const lista = ref([])
 const cargando = ref(false)
+
+const filtroListo = computed(() => {
+  const p = periodoGlobal?.value
+  const i = clinicaGlobal?.value
+  const m = modalidadGlobal?.value
+  return p != null && p !== '' && i != null && i !== '' && m != null && m !== ''
+})
+
+function queryFiltro() {
+  if (!filtroListo.value) return ''
+  const params = new URLSearchParams({
+    id_periodo: String(periodoGlobal.value),
+    id_ipress: String(clinicaGlobal.value),
+    id_modalidad: String(modalidadGlobal.value),
+  })
+  return `?${params.toString()}`
+}
 
 function etiquetaTipo(tipo) {
   const m = {
@@ -110,9 +134,13 @@ function formatearFecha(iso) {
 }
 
 async function cargar() {
+  if (!filtroListo.value) {
+    lista.value = []
+    return
+  }
   cargando.value = true
   try {
-    const res = await getAllIpress('/notificaciones/')
+    const res = await getAllIpress(`/notificaciones/${queryFiltro()}`)
     lista.value = Array.isArray(res) ? res : res?.results || []
   } catch (e) {
     console.error(e)
@@ -133,14 +161,19 @@ async function marcarLeida(n) {
 }
 
 async function marcarTodasLeidas() {
+  if (!filtroListo.value) return
   try {
-    await postAllIpress('/notificaciones/marcar-todas-leidas/', {})
+    await postAllIpress(`/notificaciones/marcar-todas-leidas/${queryFiltro()}`, {})
     await cargar()
     window.dispatchEvent(new CustomEvent('notificaciones:actualizar'))
   } catch (e) {
     console.error(e)
   }
 }
+
+watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
+  cargar()
+})
 
 onMounted(() => {
   cargar()
