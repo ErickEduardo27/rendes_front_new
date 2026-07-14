@@ -614,8 +614,9 @@
                             <div v-if="fechaUltimoIngresoReingresoEgresar" class="col-span-2">
                                 <strong>Último ingreso / reingreso:</strong> {{ fechaUltimoIngresoReingresoEgresar }}
                             </div>
-                            <div v-if="ultimaFechaRegistrosEgresar" class="col-span-2">
-                                <strong>Último registro en periodo:</strong> {{ ultimaFechaRegistrosEgresar }}
+                            <div class="col-span-2">
+                                <strong>Último registro en periodo:</strong>
+                                {{ ultimaFechaRegistrosEgresar || 'Sin registros clínicos en el periodo' }}
                             </div>
                         </div>
                     </div>
@@ -2092,31 +2093,83 @@ async function actualizarLimitesFechaEgresarPaciente(item) {
     fechaPrimerIngresoEgresar.value = desdeItem || await obtenerFechaPrimerIngresoPaciente(item.id_paciente);
     fechaUltimoIngresoReingresoEgresar.value = await obtenerFechaUltimoIngresoOReingreso(item.id_paciente);
 
+    const periodoId = formEgresar.periodo ?? periodoGlobal.value;
+    const ipressId = item.id_ipress ?? formEgresar.clinica ?? clinicaGlobal.value;
+    const modalidadId = item.id_modalidad ?? modalidadGlobal.value;
+
     let idPacienteAtencion = item.id_paciente_atencion ?? null;
     if (!idPacienteAtencion) {
-        const modalidadActual = item.id_modalidad ?? modalidadGlobal.value;
         const atencion = await obtenerAtencionActivaParaEgreso({
             pacienteId: item.id_paciente,
-            periodoId: formEgresar.periodo ?? periodoGlobal.value,
-            ipressId: item.id_ipress ?? formEgresar.clinica ?? clinicaGlobal.value,
-            modalidadId: modalidadActual,
+            periodoId,
+            ipressId,
+            modalidadId,
         });
         idPacienteAtencion = atencion?.id_paciente_atencion ?? null;
+        if (idPacienteAtencion != null) {
+            item.id_paciente_atencion = idPacienteAtencion;
+            if (pacienteSeleccionadoEgresar.value?.id_paciente === item.id_paciente) {
+                pacienteSeleccionadoEgresar.value = {
+                    ...pacienteSeleccionadoEgresar.value,
+                    id_paciente_atencion: idPacienteAtencion,
+                };
+            }
+        }
     }
 
-    ultimaFechaRegistrosEgresar.value = idPacienteAtencion
-        ? await obtenerUltimaFechaRegistrosPacientePeriodo({
-            idPacienteAtencion,
-            rango: rangoFechaEgreso.value,
-        })
-        : null;
+    ultimaFechaRegistrosEgresar.value = await obtenerUltimaFechaRegistrosPacientePeriodo({
+        idPacienteAtencion,
+        pacienteId: item.id_paciente,
+        periodoId,
+        ipressId,
+        modalidadId,
+        rango: rangoFechaEgreso.value,
+    });
 
     limpiarFechaEgresoSiInvalida();
 }
 
-async function fetchRegistrosPorAtencion(endpoint, idPacienteAtencion) {
-    const res = await getAllIpress(`${endpoint}?id_paciente_atencion=${idPacienteAtencion}`);
-    return Array.isArray(res) ? res : (res?.results || []);
+async function fetchRegistrosPacientePeriodo(endpoint, filtros) {
+    const {
+        idPacienteAtencion = null,
+        pacienteId = null,
+        periodoId = null,
+        ipressId = null,
+        modalidadId = null,
+    } = filtros || {};
+
+    const params = new URLSearchParams();
+    if (idPacienteAtencion != null && idPacienteAtencion !== '') {
+        params.set('id_paciente_atencion', String(idPacienteAtencion));
+    }
+    if (pacienteId != null && pacienteId !== '') params.set('id_paciente', String(pacienteId));
+    if (periodoId != null && periodoId !== '') params.set('id_periodo', String(periodoId));
+    if (ipressId != null && ipressId !== '') params.set('id_ipress', String(ipressId));
+    if (modalidadId != null && modalidadId !== '') params.set('id_modalidad', String(modalidadId));
+
+    const qs = params.toString();
+    if (!qs) return [];
+
+    const res = await getAllIpress(`${endpoint}?${qs}`);
+    const lista = Array.isArray(res) ? res : (res?.results || []);
+
+    // Asegura que solo queden filas del paciente / atención seleccionados.
+    return lista.filter((registro) => {
+        const idPa = registro?.id_paciente_atencion
+            ?? registro?.datosPacienteAtencion?.id_paciente_atencion
+            ?? null;
+        if (idPacienteAtencion != null && idPa != null && String(idPa) !== String(idPacienteAtencion)) {
+            return false;
+        }
+        const idP = registro?.datosPacienteAtencion?.id_paciente
+            ?? registro?.datosPaciente?.id_paciente
+            ?? registro?.id_paciente
+            ?? null;
+        if (pacienteId != null && idP != null && String(idP) !== String(pacienteId)) {
+            return false;
+        }
+        return true;
+    });
 }
 
 function acumularFechasDesdeRegistros(ultima, registros, campos, within) {
@@ -2130,8 +2183,18 @@ function acumularFechasDesdeRegistros(ultima, registros, campos, within) {
     return resultado;
 }
 
-async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPacienteAtencion, rango }) {
-    if (!idPacienteAtencion) return null;
+async function obtenerUltimaFechaRegistrosPacientePeriodo({
+    idPacienteAtencion = null,
+    pacienteId = null,
+    periodoId = null,
+    ipressId = null,
+    modalidadId = null,
+    rango = null,
+} = {}) {
+    if ((idPacienteAtencion == null || idPacienteAtencion === '')
+        && (pacienteId == null || pacienteId === '')) {
+        return null;
+    }
 
     const min = rango?.min;
     const max = rango?.max;
@@ -2143,12 +2206,12 @@ async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPacienteAtencion, 
         return true;
     };
 
-    let ultima = null;
+    const filtros = { idPacienteAtencion, pacienteId, periodoId, ipressId, modalidadId };
 
     const consultas = [
         {
             endpoint: '/unidadesActuales/',
-            campos: ['fecha_creacion_acceso', 'fecha_creacion_acceso_actual', 'fecha_evaluacion', 'fecha_edicion_supervisor'],
+            campos: ['fecha_creacion_acceso', 'fecha_creacion_acceso_actual', 'fecha_inicio_canulacion'],
         },
         {
             endpoint: '/eventosAccesosVasculares/',
@@ -2170,18 +2233,18 @@ async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPacienteAtencion, 
         },
         {
             endpoint: '/morbilidadesHospitalarias/',
-            campos: ['fecha_hospitalizacion', 'fecha_alta_hospitalizacion'],
+            campos: ['fecha_hospitalizacion', 'fecha_alta_hospitalizacion', 'fecha_fallecimiento'],
         },
         {
             endpoint: '/resultadosClinicos/',
-            campos: ['fecha_evaluacion', 'fecha_edicion_supervisor', 'created_at'],
+            campos: ['fecha_evaluacion', 'created_at'],
         },
     ];
 
     const parciales = await Promise.all(
         consultas.map(async ({ endpoint, campos }) => {
             try {
-                const lista = await fetchRegistrosPorAtencion(endpoint, idPacienteAtencion);
+                const lista = await fetchRegistrosPacientePeriodo(endpoint, filtros);
                 return acumularFechasDesdeRegistros(null, lista, campos, within);
             } catch (e) {
                 console.warn(`No se pudo obtener registros desde ${endpoint}:`, e);
@@ -2190,6 +2253,7 @@ async function obtenerUltimaFechaRegistrosPacientePeriodo({ idPacienteAtencion, 
         }),
     );
 
+    let ultima = null;
     for (const parcial of parciales) {
         ultima = maxIso(ultima, parcial);
     }
@@ -2272,12 +2336,14 @@ const egresarPaciente = async () => {
         ?? modalidadGlobal.value
         ?? await obtenerModalidadActualPaciente(formEgresar.paciente);
     const idPacienteAtencionValidacion = await resolverIdPacienteAtencionEgreso(modalidadParaValidacion);
-    const ultimaFechaRegistros = idPacienteAtencionValidacion
-        ? await obtenerUltimaFechaRegistrosPacientePeriodo({
-            idPacienteAtencion: idPacienteAtencionValidacion,
-            rango: rangoFechaEgreso.value,
-        })
-        : null;
+    const ultimaFechaRegistros = await obtenerUltimaFechaRegistrosPacientePeriodo({
+        idPacienteAtencion: idPacienteAtencionValidacion,
+        pacienteId: formEgresar.paciente,
+        periodoId: formEgresar.periodo ?? periodoGlobal.value,
+        ipressId: formEgresar.clinica ?? clinicaGlobal.value,
+        modalidadId: modalidadParaValidacion,
+        rango: rangoFechaEgreso.value,
+    });
 
     const esFechaOriginalEdicion = movimientoEnEdicion.value
         && formEgresar.fecha === movimientoEnEdicion.value.fecha;
