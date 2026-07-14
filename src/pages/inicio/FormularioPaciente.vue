@@ -33,7 +33,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div>
             <h3 class="text-sm font-semibold text-slate-800">Pacientes registrados en clínica y periodo</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Seleccione un paciente con ficha de diálisis para editar.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Solo pacientes con atención activa. Los egresados no se pueden editar.</p>
           </div>
           <button
             type="button"
@@ -96,8 +96,8 @@
                     <button
                       type="button"
                       class="text-xs px-2.5 py-1 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-                      :disabled="row.sin_registro_dialisis || !row.id_paciente_dialisis || cargandoEdicionSupervisor"
-                      :title="row.sin_registro_dialisis ? 'Complete primero el registro de diálisis' : 'Editar ficha del paciente'"
+                      :disabled="!puedeEditarPacienteListado(row) || cargandoEdicionSupervisor"
+                      :title="tituloBotonEditarListado(row)"
                       @click="editarPacienteDesdeTabla(row)"
                     >
                       Editar
@@ -1356,10 +1356,7 @@ async function resolverIdPacienteAtencionParaEdicion(idPaciente) {
   const res = await getAllIpress(`/pacienteAtencion/?${params}`);
   const lista = Array.isArray(res) ? res : (res?.results || []);
   const activa = lista.find((a) => String(a.estado || '').toUpperCase() === 'ACTIVO');
-  const candidata = activa || [...lista].sort(
-    (a, b) => (Number(b.id_paciente_atencion) || 0) - (Number(a.id_paciente_atencion) || 0),
-  )[0];
-  return candidata?.id_paciente_atencion ?? null;
+  return activa?.id_paciente_atencion ?? null;
 }
 
 function esAccesoInicioUnidad(unidad) {
@@ -2263,6 +2260,15 @@ async function guardarEdicionSupervisor() {
   ) {
     return;
   }
+  const idAtencionActiva = await resolverIdPacienteAtencionParaEdicion(idPacienteEdicionInterno.value);
+  if (idAtencionActiva == null) {
+    ElMessage({
+      message: 'No se puede guardar: el paciente no tiene atención activa (está egresado).',
+      type: 'warning',
+      plain: true,
+    });
+    return;
+  }
   if (!validarFormulario()) return;
   if (!(await confirmarSinComorbilidades())) return;
   calcularEdadInicioTRR();
@@ -2363,11 +2369,40 @@ async function fetchPacientesParaEdicion() {
 }
 
 async function editarPacienteDesdeTabla(row) {
-  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return;
+  if (!puedeEditarPacienteListado(row)) {
+    ElMessage({
+      message: tituloBotonEditarListado(row),
+      type: 'warning',
+      plain: true,
+    });
+    return;
+  }
   const idP = row?.datosPaciente?.id_paciente;
   const idDial = row?.id_paciente_dialisis;
   if (idP == null || idDial == null) return;
   await cargarDatosPacienteParaEdicion(Number(idP), Number(idDial));
+}
+
+function esFilaPacienteEgresado(row) {
+  const estado = String(row?.estado_atencion || row?.estado || '').toUpperCase();
+  const tipo = String(row?.tipo_atencion || '').toUpperCase();
+  return estado === 'EGRESADO' || tipo === 'EGRESO';
+}
+
+function puedeEditarPacienteListado(row) {
+  if (!row || row.sin_registro_dialisis || !row.id_paciente_dialisis) return false;
+  if (esFilaPacienteEgresado(row)) return false;
+  return true;
+}
+
+function tituloBotonEditarListado(row) {
+  if (esFilaPacienteEgresado(row)) {
+    return 'No se puede editar: el paciente está egresado';
+  }
+  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
+    return 'Complete primero el registro de diálisis';
+  }
+  return 'Editar ficha del paciente';
 }
 
 function cancelarEdicionPaciente() {
@@ -2383,6 +2418,16 @@ function cancelarEdicionPaciente() {
 }
 
 async function cargarDatosPacienteParaEdicion(idP, idDial) {
+  const idAtencionActiva = await resolverIdPacienteAtencionParaEdicion(idP);
+  if (idAtencionActiva == null) {
+    ElMessage({
+      message: 'No se puede editar: el paciente está egresado o no tiene atención activa en el periodo/clínica actuales.',
+      type: 'warning',
+      plain: true,
+    });
+    return;
+  }
+
   modoEdicionSupervisor.value = true;
   idPacienteEdicionInterno.value = Number(idP);
   idPacienteDialisisEdicionInterno.value = Number(idDial);

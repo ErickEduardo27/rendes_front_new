@@ -412,12 +412,11 @@ const totalRegistrosPeriodo = computed(() => {
 // --- ESTADÍSTICAS DEL DASHBOARD ---
 const estadisticas = computed(() => {
   const e = estadisticasAtencion.value;
-  const totalConEgresados =
-    Number(e.nuevos || 0)
-    + Number(e.reingresos || 0)
-    + Number(e.continuadores || 0)
-    + Number(e.egresados || 0);
-  return { ...e, total: totalConEgresados };
+  // Mismo criterio que Movimientos: pacientes distintos en periodo/IPRESS/modalidad
+  return {
+    ...e,
+    total: Number(e.total || 0),
+  };
 });
 // -----------------------------------
 
