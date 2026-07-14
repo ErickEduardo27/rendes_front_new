@@ -19,6 +19,14 @@
         <button
           type="button"
           class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          :disabled="cargando || !filtroListo"
+          @click="cargar"
+        >
+          {{ cargando ? 'Actualizando…' : 'Actualizar' }}
+        </button>
+        <button
+          type="button"
+          class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           :disabled="cargando || lista.length === 0 || !filtroListo"
           @click="marcarTodasLeidas"
         >
