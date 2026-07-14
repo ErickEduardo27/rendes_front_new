@@ -498,12 +498,19 @@ function cargarRegistroEdicion(registro) {
   form.value.fosforo = parseNumeroCampo(registro.fosforo)
   form.value.pthi = parseNumeroCampo(registro.PTHi ?? registro.pthi)
   form.value.alb = parseNumeroCampo(registro.Alb ?? registro.alb)
-  form.value.calcioCorregido = parseNumeroCampo(registro.calcio_corregido)
   form.value.kt = parseNumeroCampo(registro.ktv ?? registro.kt)
   form.value.tmpDialisis = tiempoDialisisDesdeRegistro(registro.tiempo_dialisis)
-  form.value.eritropoyetina = boolToSelect(registro.eritropoyetina)
+  // Campo BD: eritoproyetina (sin la segunda 'r')
+  form.value.eritropoyetina = boolToSelect(registro.eritoproyetina)
   form.value.hierro = boolToSelect(registro.hierro)
   form.value.hiperparatiroidismo = boolToSelect(registro.calcitriol)
+  const calcioN = Number(form.value.calcio)
+  const albN = Number(form.value.alb)
+  if (calcioN > 0 && albN > 0) {
+    form.value.calcioCorregido = Math.round((calcioN + 0.8 * (4 - albN)) * 100) / 100
+  } else {
+    form.value.calcioCorregido = parseNumeroCampo(registro.calcio_corregido)
+  }
 }
 
 const historicoResultados = ref([])

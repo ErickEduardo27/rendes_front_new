@@ -234,6 +234,7 @@
               </span>
               <p class="mt-2 text-xs text-slate-500 max-w-4xl">
                 La acción <strong>Dar conformidad</strong> solo se habilita cuando la clínica ha usado <strong>Notificar</strong>, todos los formularios con datos están <strong>cerrados</strong> y aún no se registró conformidad. Traslada pacientes activos al periodo siguiente con fecha de ingreso = primer día de ese mes (nuevos y reingresantes como continuador; egresados no pasan).
+                Use <strong>Marcar observación</strong> para avisar a la clínica que debe corregir o completar datos; se deshabilita tras dar conformidad.
               </p>
             </div>
             <div v-if="listaIpressNotificaciones.length" class="px-4 py-3 border-b border-slate-100 flex flex-wrap gap-3">
@@ -306,23 +307,38 @@
                     <span v-else class="text-slate-400">—</span>
                   </td>
                   <td class="px-4 py-3 text-sm">
-                    <button
-                      v-if="!row.conformidad_en"
-                      type="button"
-                      class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45"
-                      :class="puedeActivarBotonDarConformidad(row)
-                        ? 'border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100'
-                        : 'border-slate-200 bg-slate-50 text-slate-500'"
-                      :disabled="pasandoPacientesIpress === Number(row.id_ipress) || !puedeActivarBotonDarConformidad(row)"
-                      :title="tituloBotonDarConformidad(row)"
-                      @click="confirmarDarConformidad(row)"
-                    >
-                      {{ pasandoPacientesIpress === Number(row.id_ipress) ? 'Procesando…' : 'Dar Conformidad' }}
-                    </button>
-                    <span
-                      v-else
-                      class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800"
-                    >Conforme</span>
+                    <div class="flex flex-wrap gap-1.5">
+                      <button
+                        v-if="!row.conformidad_en"
+                        type="button"
+                        class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45"
+                        :class="puedeActivarBotonDarConformidad(row)
+                          ? 'border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100'
+                          : 'border-slate-200 bg-slate-50 text-slate-500'"
+                        :disabled="pasandoPacientesIpress === Number(row.id_ipress) || marcandoObservacionIpress === Number(row.id_ipress) || !puedeActivarBotonDarConformidad(row)"
+                        :title="tituloBotonDarConformidad(row)"
+                        @click="confirmarDarConformidad(row)"
+                      >
+                        {{ pasandoPacientesIpress === Number(row.id_ipress) ? 'Procesando…' : 'Dar Conformidad' }}
+                      </button>
+                      <button
+                        v-if="!row.conformidad_en"
+                        type="button"
+                        class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45"
+                        :class="puedeActivarBotonMarcarObservacion(row)
+                          ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
+                          : 'border-slate-200 bg-slate-50 text-slate-500'"
+                        :disabled="marcandoObservacionIpress === Number(row.id_ipress) || pasandoPacientesIpress === Number(row.id_ipress) || !puedeActivarBotonMarcarObservacion(row)"
+                        :title="tituloBotonMarcarObservacion(row)"
+                        @click="confirmarMarcarObservacion(row)"
+                      >
+                        {{ marcandoObservacionIpress === Number(row.id_ipress) ? 'Enviando…' : 'Marcar observación' }}
+                      </button>
+                      <span
+                        v-if="row.conformidad_en"
+                        class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 self-center"
+                      >Conforme</span>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -462,6 +478,7 @@ const resumenTotales = ref({ total_ipress: 0, total_notificados: 0 });
 const estadoPasarPorIpress = ref({});
 const cargandoEstadoPasar = ref(false);
 const pasandoPacientesIpress = ref(null);
+const marcandoObservacionIpress = ref(null);
 const evaluando = ref(null);
 const aprobandoTodos = ref(false);
 const cerrandoFormulario = ref(false);
@@ -728,6 +745,74 @@ async function confirmarDarConformidad(row) {
   }
 }
 
+function puedeActivarBotonMarcarObservacion(row) {
+  if (!row) return false;
+  if (row.conformidad_en || row.ya_dio_conformidad) return false;
+  return true;
+}
+
+function tituloBotonMarcarObservacion(row) {
+  if (row?.conformidad_en || row?.ya_dio_conformidad) {
+    return 'Ya se registró la conformidad; no se pueden marcar más observaciones.';
+  }
+  return 'Envía una observación a los usuarios de esta clínica para el periodo y modalidad actuales.';
+}
+
+async function confirmarMarcarObservacion(row) {
+  const idIpress = row?.id_ipress;
+  if (idIpress == null || !puedeActivarBotonMarcarObservacion(row)) return;
+  if (!periodoGlobal.value || !modalidadGlobal.value) {
+    ElMessage.warning('Seleccione periodo y modalidad en la barra superior.');
+    return;
+  }
+  const nombre = row.nombre_corto || row.ipress || 'esta clínica';
+  let mensaje = '';
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `Escriba la observación para «${nombre}». Se notificará a los usuarios de la clínica.`,
+      'Marcar observación',
+      {
+        type: 'warning',
+        confirmButtonText: 'Enviar observación',
+        cancelButtonText: 'Cancelar',
+        inputType: 'textarea',
+        inputPlaceholder: 'Ej.: Revisar resultados clínicos y vacunación del periodo…',
+        inputValidator: (val) => {
+          if (!val || !String(val).trim()) return 'Ingrese el texto de la observación.';
+          if (String(val).trim().length < 5) return 'La observación debe tener al menos 5 caracteres.';
+          return true;
+        },
+      },
+    );
+    mensaje = String(value || '').trim();
+  } catch {
+    return;
+  }
+
+  marcandoObservacionIpress.value = Number(idIpress);
+  try {
+    await postAllIpress('/marcar_observacion_clinica/', {
+      id_periodo: Number(periodoGlobal.value),
+      id_ipress: Number(idIpress),
+      id_modalidad: Number(modalidadGlobal.value),
+      mensaje,
+    });
+    ElMessage.success('Observación enviada a la clínica.');
+    window.dispatchEvent(new CustomEvent('notificaciones:actualizar'));
+  } catch (e) {
+    console.error(e);
+    const msg =
+      e?.response?.data?.detail ||
+      e?.detail ||
+      e?.error ||
+      e?.message ||
+      'No se pudo marcar la observación.';
+    ElMessage.error(typeof msg === 'string' ? msg : 'No se pudo marcar la observación.');
+  } finally {
+    marcandoObservacionIpress.value = null;
+  }
+}
+
 const mostrarModalFormulario = ref(false);
 const moduloFormulario = ref('acceso');
 const registroEdicion = ref(null);
@@ -806,10 +891,26 @@ async function abrirModalEditar(mod, row) {
     ElMessage.error('No se pudo cargar el paciente del registro.');
     return;
   }
+  if (row?.sin_registro_modulo) {
+    ElMessage.warning('La clínica aún no registró datos en este formulario.');
+    return;
+  }
+
+  const cfg = ENDPOINTS[mod];
+  let registro = row;
+  if (cfg?.path && row?.[cfg.idKey] != null) {
+    try {
+      const full = await getAllIpress(`/${cfg.path}/${row[cfg.idKey]}/`);
+      registro = full && typeof full === 'object' ? full : row;
+    } catch (e) {
+      console.warn('No se pudo recargar el registro completo; se usa la fila de la tabla.', e);
+    }
+  }
+
   moduloFormulario.value = mod;
-  registroEdicion.value = row;
-  pacienteParaFormulario.value = paciente;
-  idPacienteAtencionParaForm.value = idAtencion;
+  registroEdicion.value = registro;
+  pacienteParaFormulario.value = pacienteDesdeRegistro(registro) || paciente;
+  idPacienteAtencionParaForm.value = idAtencionDesdeRegistro(registro) ?? idAtencion;
   formModalKey.value += 1;
   await resolverIdPeriodoIpressForm();
   mostrarModalFormulario.value = true;

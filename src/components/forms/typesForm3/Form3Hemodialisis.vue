@@ -516,6 +516,16 @@ function germenAValor(germen) {
   return g?.value || germen;
 }
 
+function esValorSi(val) {
+  if (val === true || val === 1 || val === '1') return true;
+  const s = String(val ?? '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return s === 'SI' || s === 'S' || s === 'TRUE' || s === 'YES';
+}
+
 function cargarRegistroEdicion(registro) {
   if (!registro) return;
   tieneInfeccion.value = true;
@@ -523,9 +533,9 @@ function cargarRegistroEdicion(registro) {
     id: registro.id_evento_acceso_vascular || Date.now(),
     feEvento: registro.fecha_evento || '',
     tpInfeccion: registro.tipo_infeccion || '',
-    tratamientoIV: registro.antmicrobial === 'SÍ',
-    vancomicinaIV: registro.vancomicina === 'SÍ',
-    hemocultivoPositivo: registro.hemocultivo_positivo === 'SÍ',
+    tratamientoIV: esValorSi(registro.antmicrobial),
+    vancomicinaIV: esValorSi(registro.vancomicina),
+    hemocultivoPositivo: esValorSi(registro.hemocultivo_positivo),
     tpGermen: germenAValor(registro.germen),
   }];
   form.obligoCambioAcceso = false;
@@ -620,9 +630,9 @@ async function fetchHistorialEventosApi() {
       id_evento_acceso_vascular: item.id_evento_acceso_vascular,
       feEvento: item.fecha_evento,
       tpInfeccion: item.tipo_infeccion,
-      tratamientoIV: item.antmicrobial === 'SÍ',
-      vancomicinaIV: item.vancomicina === 'SÍ',
-      hemocultivoPositivo: item.hemocultivo_positivo === 'SÍ',
+      tratamientoIV: esValorSi(item.antmicrobial),
+      vancomicinaIV: esValorSi(item.vancomicina),
+      hemocultivoPositivo: esValorSi(item.hemocultivo_positivo),
       tpGermen: item.germen,
       germenLabel: item.germen,
       obligoCambioAcceso: false

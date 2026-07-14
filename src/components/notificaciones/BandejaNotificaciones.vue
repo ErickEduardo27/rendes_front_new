@@ -125,6 +125,7 @@ function etiquetaTipo(tipo) {
     FORMULARIO_CERRADO: 'Formulario cerrado',
     REGISTRO_DESAPROBADO: 'Desaprobado',
     SUPERVISOR_EDITO_REGISTRO: 'Corrección supervisor',
+    OBSERVACION_SUPERVISOR: 'Observación supervisor',
   }
   return m[tipo] || tipo || 'Aviso'
 }
@@ -134,6 +135,7 @@ function chipClass(tipo) {
   if (tipo === 'FORMULARIO_CERRADO') return 'bg-amber-100 text-amber-900'
   if (tipo === 'REGISTRO_DESAPROBADO') return 'bg-rose-100 text-rose-800'
   if (tipo === 'SUPERVISOR_EDITO_REGISTRO') return 'bg-violet-100 text-violet-800'
+  if (tipo === 'OBSERVACION_SUPERVISOR') return 'bg-amber-100 text-amber-900'
   return 'bg-slate-100 text-slate-700'
 }
 
