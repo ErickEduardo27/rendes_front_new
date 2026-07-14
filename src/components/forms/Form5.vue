@@ -901,21 +901,26 @@ const postForm = async () => {
   }
   
   try {
+    const numONull = (v) => (v != null && v !== '' ? Number(String(v).replace(',', '.')) : null)
     let payload
     if (idPacienteAtencion != null && idPacienteAtencion !== '') {
       payload = {
         id_paciente_atencion: Number(idPacienteAtencion),
-        Hb: form.value.hb != null && form.value.hb !== '' ? String(form.value.hb) : '',
-        calcio: form.value.calcio != null && form.value.calcio !== '' ? String(form.value.calcio) : '',
-        fosforo: form.value.fosforo != null && form.value.fosforo !== '' ? String(form.value.fosforo) : '',
-        PTHi: form.value.pthi != null && form.value.pthi !== '' ? String(form.value.pthi) : '',
-        Alb: form.value.alb != null && form.value.alb !== '' ? String(form.value.alb) : '',
-        calcio_corregido: form.value.calcioCorregido != null && form.value.calcioCorregido !== '' ? String(form.value.calcioCorregido) : '',
-        ktv: form.value.kt != null && form.value.kt !== '' ? String(form.value.kt) : '',
-        tiempo_dialisis: tiempoDialisisPayloadString(),
+        Hb: numONull(form.value.hb),
+        calcio: numONull(form.value.calcio),
+        fosforo: numONull(form.value.fosforo),
+        PTHi: numONull(form.value.pthi),
+        Alb: numONull(form.value.alb),
+        calcio_corregido: numONull(form.value.calcioCorregido),
+        ktv: numONull(form.value.kt),
+        tiempo_dialisis: tiempoDialisisPayloadString() || null,
         eritoproyetina: form.value.eritropoyetina === 1 || form.value.eritropoyetina === '1',
         hierro: form.value.hierro === 1 || form.value.hierro === '1',
         calcitriol: form.value.hiperparatiroidismo === 1 || form.value.hiperparatiroidismo === '1'
+      }
+      // Evitar NaN si el input no es numérico
+      for (const k of ['Hb', 'calcio', 'fosforo', 'PTHi', 'Alb', 'calcio_corregido', 'ktv']) {
+        if (payload[k] != null && Number.isNaN(payload[k])) payload[k] = null
       }
       if (idResultadoEdicion.value != null) {
         if (props.modoSupervisor) {

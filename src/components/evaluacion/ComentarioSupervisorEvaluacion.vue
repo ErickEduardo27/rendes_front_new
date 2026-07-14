@@ -1,5 +1,5 @@
 <template>
-  <div class="mt-4 pt-4 border-t border-violet-100">
+  <div class="mt-4 pt-4 border-t border-violet-100 w-full min-w-0 block">
     <label class="block text-xs font-semibold text-slate-600 mb-1">Comentario para la clínica (supervisor)</label>
     <textarea
       :value="modelValue"

@@ -237,8 +237,9 @@
         </div>
       </div>
 
+      <ComentarioSupervisorEvaluacion v-if="modoSupervisor" v-model="comentarioSupervisor" />
+
       <div class="flex justify-end gap-2 pt-2">
-        <ComentarioSupervisorEvaluacion v-if="modoSupervisor" v-model="comentarioSupervisor" />
         <button type="button" class="form7-btn form7-btn--secondary" @click="$emit('cancelar')">Cancelar</button>
         <button type="button" class="form7-btn form7-btn--primary" @click="postForm()">{{ idVacunacionEdicion ? 'Guardar cambios' : 'Registrar' }}</button>
       </div>

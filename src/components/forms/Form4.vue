@@ -1287,7 +1287,7 @@ const postForm = async (url = null) => {
     try {
         if (modoCompletarAlta.value && idMorbilidadCompletar.value != null) {
             await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, {
-                fecha_alta_hospitalizacion: esFallecimiento ? '' : (form.value.fAltHos || ''),
+                fecha_alta_hospitalizacion: esFallecimiento ? null : (form.value.fAltHos || null),
                 desenlace: form.value.desenlace || '',
                 ...datosFallecimientoPayload(),
             });
@@ -1301,8 +1301,8 @@ const postForm = async (url = null) => {
                 id_paciente_atencion: Number(idPacienteAtencion),
                 diagnostico: form.value.seleccionados.map(item => item.descripcion || '').join(', '),
                 codigo_diagnostico: form.value.seleccionados.map(item => item.codigo).join(','),
-                fecha_hospitalizacion: form.value.fIniHos || '',
-                fecha_alta_hospitalizacion: esFallecimiento ? '' : (form.value.fAltHos || ''),
+                fecha_hospitalizacion: form.value.fIniHos || null,
+                fecha_alta_hospitalizacion: esFallecimiento ? null : (form.value.fAltHos || null),
                 desenlace: form.value.desenlace || '',
                 fuente: form.value.fuente || '',
                 ...datosFallecimientoPayload(),
