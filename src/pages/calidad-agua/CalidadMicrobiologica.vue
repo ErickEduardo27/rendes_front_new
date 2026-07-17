@@ -7,6 +7,8 @@
             <span class="w-1.5 h-7 bg-cyan-500 rounded-full shrink-0" aria-hidden="true"></span>
             Calidad de agua y LD
           </h1>
+
+          
           <p class="text-slate-500 text-xs mt-1 max-w-2xl">
             Registros de recuento bacteriano y endotoxinas en agua tratada y líquido de diálisis.
           </p>
