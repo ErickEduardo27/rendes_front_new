@@ -12,11 +12,19 @@
             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado del formulario</span>
             <span
               class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
-              :class="formularioAbierto ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+              :class="bloqueadoPorNotificacion
+                ? 'bg-amber-100 text-amber-800'
+                : (formularioAbierto ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700')"
             >
               {{ cargandoEstadoFormulario ? 'Consultando...' : estadoFormularioTexto }}
             </span>
           </div>
+          <p
+            v-if="bloqueadoPorNotificacion"
+            class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-xl"
+          >
+            {{ mensajeBloqueoNotificacion }}
+          </p>
         </div>
         <div class="flex items-center gap-2">
           <button
@@ -151,7 +159,7 @@
                         type="button"
                         class="tabla-rc-btn tabla-rc-btn-editar"
                         :disabled="!formularioAbierto"
-                        :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                        :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
                         @click="abrirModalEditar(r)"
                       >
                         Editar
@@ -160,7 +168,7 @@
                         type="button"
                         class="tabla-rc-btn tabla-rc-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === r.id_resultado_clinico"
-                        :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                        :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
                         @click="eliminarRegistro(r)"
                       >
                         {{ eliminandoId === r.id_resultado_clinico ? '…' : 'Eliminar' }}
@@ -237,7 +245,7 @@
                         type="button"
                         class="tabla-rc-btn tabla-rc-btn-editar"
                         :disabled="!formularioAbierto"
-                        :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                        :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
                         @click="abrirModalEditar(fila.registro)"
                       >
                         Editar
@@ -246,7 +254,7 @@
                         type="button"
                         class="tabla-rc-btn tabla-rc-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === fila.id_resultado_clinico"
-                        :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                        :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
                         @click="eliminarRegistro(fila.registro)"
                       >
                         {{ eliminandoId === fila.id_resultado_clinico ? '…' : 'Eliminar' }}
@@ -587,6 +595,7 @@ import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
+import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import {
   MENSAJE_TIEMPO_DIALISIS_INVALIDO,
   esTiempoDialisisValorValido,
@@ -599,6 +608,7 @@ const HISTORIAL_CARGAS_KEY = 'resultados_clinicos_historial_cargas';
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const { bloqueadoPorNotificacion, mensajeBloqueoNotificacion } = useBloqueoNotificacionRevision();
 
 const NUMERO_FORMULARIO_RESULTADOS = 4;
 
@@ -636,8 +646,14 @@ const paginaDetalleCarga = ref(1);
 const paginaResultadoImportacion = ref(1);
 const tamPaginaResultadoImportacion = ref(10);
 
-const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
-const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto' : 'Cerrado'));
+const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO' && !bloqueadoPorNotificacion.value);
+const estadoFormularioTexto = computed(() => {
+  if (bloqueadoPorNotificacion.value) return 'Bloqueado (Notificado)';
+  return estadoFormulario.value === 'ABIERTO' ? 'Abierto' : 'Cerrado';
+});
+const motivoFormularioNoEditable = computed(() => (
+  bloqueadoPorNotificacion.value ? mensajeBloqueoNotificacion : 'El formulario está cerrado'
+));
 const mostrarBotonNuevo = computed(() => formularioAbierto.value);
 
 const claseResultadoImportacion = computed(() => {

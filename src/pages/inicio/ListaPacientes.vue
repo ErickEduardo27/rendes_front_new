@@ -6,19 +6,32 @@
         <div>
           <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Resumen del periodo</p>
           <p class="text-xs text-gray-400">Pacientes en atención y registros cargados · periodo, IPRESS y modalidad</p>
+          <p
+            v-if="bloqueadoPorNotificacion"
+            class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-xl"
+          >
+            {{ mensajeBloqueoNotificacion }}
+          </p>
         </div>
-        <p class="text-sm font-semibold text-slate-700 tabular-nums">
-          <!-- Total registros: <span class="text-lg text-cyan-700">{{ totalRegistrosPeriodo }}</span> -->
-         <!--  <div class="flex items-center gap-4 my-4 border-t pt-4"> -->
-      <button
-        type="button"
-        class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition"
-        @click="abrirModalConsultaDocumento"
-      >
-        Consultar Paciente
-      </button>
-    <!-- </div> -->
-        </p>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            type="button"
+            class="bg-violet-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-violet-700 transition"
+            title="Ver historial de notificaciones, observaciones y conformidades"
+            @click="abrirModalHistorialNotificacion"
+          >
+            Historial de notificación
+          </button>
+          <button
+            type="button"
+            class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="bloqueadoPorNotificacion"
+            :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : 'Consultar paciente'"
+            @click="abrirModalConsultaDocumento"
+          >
+            Consultar Paciente
+          </button>
+        </div>
       </div>
 
       <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Pacientes en atención</p>
@@ -74,10 +87,101 @@
 
     <BandejaNotificaciones />
 
+    <!-- Modal: Historial de notificación -->
+    <div
+      v-if="mostrarModalHistorialNotificacion"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+      @click.self="cerrarModalHistorialNotificacion"
+    >
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-200">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-violet-50/80">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">Historial de notificación</h2>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Envíos a revisión, observaciones y conformidades del periodo / IPRESS / modalidad actuales.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+              :disabled="cargandoHistorialNotificacion || !historialNotificacion.length || exportandoHistorialNotificacion"
+              @click="exportarHistorialNotificacionExcel"
+            >
+              {{ exportandoHistorialNotificacion ? 'Exportando…' : 'Exportar Excel' }}
+            </button>
+            <button
+              type="button"
+              class="text-slate-500 hover:text-slate-800 text-lg leading-none px-2"
+              aria-label="Cerrar"
+              @click="cerrarModalHistorialNotificacion"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div class="p-5 overflow-auto flex-1">
+          <div v-if="cargandoHistorialNotificacion" class="py-10 text-center text-sm text-slate-500">
+            Cargando historial…
+          </div>
+          <div v-else-if="!filtroSelectorHistorialListo" class="py-10 text-center text-sm text-amber-700">
+            Seleccione periodo, clínica y modalidad en la barra superior.
+          </div>
+          <div v-else-if="!historialNotificacion.length" class="py-10 text-center text-sm text-slate-500">
+            No hay eventos de notificación para este filtro.
+          </div>
+          <div v-else class="overflow-x-auto border border-slate-100 rounded-lg">
+            <table class="w-full text-xs">
+              <thead class="bg-slate-50 border-b">
+                <tr>
+                  <th class="px-3 py-2 text-left font-semibold text-slate-600 uppercase tracking-wide">Fecha</th>
+                  <th class="px-3 py-2 text-left font-semibold text-slate-600 uppercase tracking-wide">Evento</th>
+                  <th class="px-3 py-2 text-left font-semibold text-slate-600 uppercase tracking-wide">Usuario / Supervisor</th>
+                  <th class="px-3 py-2 text-left font-semibold text-slate-600 uppercase tracking-wide">Detalle</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr
+                  v-for="(item, idx) in historialNotificacion"
+                  :key="item.id_historial ?? `${item.tipo}-${item.creado_en}-${idx}`"
+                  class="hover:bg-slate-50/80"
+                >
+                  <td class="px-3 py-2 whitespace-nowrap text-slate-800 tabular-nums">
+                    {{ formatFechaHoraDDMMAAAA(item.creado_en) }}
+                  </td>
+                  <td class="px-3 py-2">
+                    <span
+                      class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold"
+                      :class="claseTipoHistorial(item.tipo)"
+                    >
+                      {{ item.tipo_label || item.tipo }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-slate-800">
+                    <span class="font-medium">{{ item.usuario_nombre || '—' }}</span>
+                    <span
+                      v-if="item.es_supervisor"
+                      class="ml-1 text-[10px] font-semibold uppercase text-violet-700"
+                    >Supervisor</span>
+                  </td>
+                  <td class="px-3 py-2 text-slate-600 max-w-md whitespace-pre-wrap break-words">
+                    {{ item.mensaje || '—' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
    <!--  <div class="flex items-center gap-4 my-4 border-t pt-4">
       <button
         type="button"
-        class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition"
+        class="bg-sky-500 text-white px-4 py-2 rounded font-semibold shadow hover:bg-sky-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        :disabled="bloqueadoPorNotificacion"
+        :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : 'Consultar paciente'"
         @click="abrirModalConsultaDocumento"
       >
         Consultar Paciente
@@ -246,12 +350,98 @@ import {
   contarUnidadesAccesoEnPeriodo,
   rangoFechasDesdePeriodoTexto,
 } from '@/utils/accesoVascularValidacion';
+import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
+import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat';
+import { ElMessage } from 'element-plus';
+import * as XLSX from 'xlsx';
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
 const router = useRouter();
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const { bloqueadoPorNotificacion, mensajeBloqueoNotificacion } = useBloqueoNotificacionRevision();
+
+const mostrarModalHistorialNotificacion = ref(false);
+const historialNotificacion = ref([]);
+const cargandoHistorialNotificacion = ref(false);
+const exportandoHistorialNotificacion = ref(false);
+
+const filtroSelectorHistorialListo = computed(() => (
+  periodoGlobal.value != null && periodoGlobal.value !== ''
+  && clinicaGlobal.value != null && clinicaGlobal.value !== ''
+  && modalidadGlobal.value != null && modalidadGlobal.value !== ''
+));
+
+function claseTipoHistorial(tipo) {
+  if (tipo === 'CONFORMIDAD') return 'bg-emerald-100 text-emerald-800';
+  if (tipo === 'OBSERVACION') return 'bg-amber-100 text-amber-800';
+  if (tipo === 'ENVIO_REVISION') return 'bg-sky-100 text-sky-800';
+  return 'bg-slate-100 text-slate-700';
+}
+
+async function cargarHistorialNotificacion() {
+  if (!filtroSelectorHistorialListo.value) {
+    historialNotificacion.value = [];
+    return;
+  }
+  cargandoHistorialNotificacion.value = true;
+  try {
+    const params = new URLSearchParams({
+      id_periodo: String(periodoGlobal.value),
+      id_ipress: String(clinicaGlobal.value),
+      id_modalidad: String(modalidadGlobal.value),
+    });
+    const res = await getAllIpress(`/historial_notificacion_revision/?${params.toString()}`);
+    historialNotificacion.value = Array.isArray(res?.results) ? res.results : [];
+  } catch (e) {
+    console.error(e);
+    historialNotificacion.value = [];
+    ElMessage.error('No se pudo cargar el historial de notificación.');
+  } finally {
+    cargandoHistorialNotificacion.value = false;
+  }
+}
+
+function abrirModalHistorialNotificacion() {
+  mostrarModalHistorialNotificacion.value = true;
+  cargarHistorialNotificacion();
+}
+
+function cerrarModalHistorialNotificacion() {
+  mostrarModalHistorialNotificacion.value = false;
+}
+
+function exportarHistorialNotificacionExcel() {
+  if (!historialNotificacion.value.length) {
+    ElMessage.warning('No hay datos para exportar.');
+    return;
+  }
+  exportandoHistorialNotificacion.value = true;
+  try {
+    const rows = historialNotificacion.value.map((item) => ({
+      Fecha: formatFechaHoraDDMMAAAA(item.creado_en),
+      Evento: item.tipo_label || item.tipo || '',
+      'Usuario / Supervisor': item.usuario_nombre || '',
+      'Es supervisor': item.es_supervisor ? 'Sí' : 'No',
+      Detalle: item.mensaje || '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Historial notificación');
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(
+      wb,
+      `historial_notificacion_p${periodoGlobal.value}_i${clinicaGlobal.value}_m${modalidadGlobal.value}_${stamp}.xlsx`,
+    );
+    ElMessage.success('Historial exportado a Excel.');
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('No se pudo exportar el historial.');
+  } finally {
+    exportandoHistorialNotificacion.value = false;
+  }
+}
 
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
@@ -701,6 +891,10 @@ const cerrarModalConsultaDocumento = () => {
 };
 
 const abrirModalConsultaDocumento = () => {
+  if (bloqueadoPorNotificacion.value) {
+    ElMessage.warning(mensajeBloqueoNotificacion);
+    return;
+  }
   docConsulta.value = '';
   errorConsultaDoc.value = '';
   pacienteConsultaResultado.value = null;

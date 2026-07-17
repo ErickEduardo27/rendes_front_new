@@ -97,12 +97,12 @@
             </div>
             <div class="cm-campo">
               <label class="cm-label">Fecha de registro</label>
-              <input
+              <FechaInput
                 v-model="fechaRegistro"
-                type="date"
-                class="cm-control"
+                input-class="cm-control"
                 :min="rangoFechasPeriodo.min || undefined"
                 :max="rangoFechasPeriodo.max || undefined"
+                :has-error="!!errorFechaRegistro"
                 @change="validarFechaRegistro"
                 @blur="validarFechaRegistro"
               />

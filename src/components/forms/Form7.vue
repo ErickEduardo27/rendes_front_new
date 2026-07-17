@@ -40,7 +40,7 @@
             <template v-if="!esEstadoDesconocido(form.vhbEstado)">
             <label class="form7-label-sub">Fecha examen</label>
             <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.vhbFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhbFecha }" @blur="validarCampoFechaEnBlur('vhbFecha')" />
+              <input type="text" class="form7-control form7-control--date" v-model="form.vhbFecha" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhbFecha }" @input="onInputFechaTexto('vhbFecha', $event)" @blur="validarCampoFechaEnBlur('vhbFecha')" />
               <input :ref="(el) => setDatePickerRef('vhbFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('vhbFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('vhbFecha', $event)" />
               <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('vhbFecha')">
                 <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -60,7 +60,7 @@
             <template v-if="!esEstadoDesconocido(form.antiHbcEstado)">
             <label class="form7-label-sub">Fecha examen</label>
             <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.antiHbcFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.antiHbcFecha }" @blur="validarCampoFechaEnBlur('antiHbcFecha')" />
+              <input type="text" class="form7-control form7-control--date" v-model="form.antiHbcFecha" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.antiHbcFecha }" @input="onInputFechaTexto('antiHbcFecha', $event)" @blur="validarCampoFechaEnBlur('antiHbcFecha')" />
               <input :ref="(el) => setDatePickerRef('antiHbcFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('antiHbcFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('antiHbcFecha', $event)" />
               <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('antiHbcFecha')">
                 <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -80,7 +80,7 @@
             <template v-if="!esEstadoDesconocido(form.vhcEstado)">
             <label class="form7-label-sub">Fecha examen</label>
             <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.vhcFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhcFecha }" @blur="validarCampoFechaEnBlur('vhcFecha')" />
+              <input type="text" class="form7-control form7-control--date" v-model="form.vhcFecha" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhcFecha }" @input="onInputFechaTexto('vhcFecha', $event)" @blur="validarCampoFechaEnBlur('vhcFecha')" />
               <input :ref="(el) => setDatePickerRef('vhcFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('vhcFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('vhcFecha', $event)" />
               <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('vhcFecha')">
                 <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -100,7 +100,7 @@
             <template v-if="!esEstadoDesconocido(form.vihEstado)">
             <label class="form7-label-sub">Fecha examen</label>
             <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.vihFecha" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vihFecha }" @blur="validarCampoFechaEnBlur('vihFecha')" />
+              <input type="text" class="form7-control form7-control--date" v-model="form.vihFecha" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vihFecha }" @input="onInputFechaTexto('vihFecha', $event)" @blur="validarCampoFechaEnBlur('vihFecha')" />
               <input :ref="(el) => setDatePickerRef('vihFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('vihFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('vihFecha', $event)" />
               <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('vihFecha')">
                 <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -142,7 +142,7 @@
           <div v-if="!esEstadoDesconocido(form.estadoAcHBs)" class="form7-field">
             <label class="form7-label">Fecha de prueba</label>
             <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.fechaVacHepatitis" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaVacHepatitis }" @blur="validarCampoFechaEnBlur('fechaVacHepatitis')" />
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaVacHepatitis" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaVacHepatitis }" @input="onInputFechaTexto('fechaVacHepatitis', $event)" @blur="validarCampoFechaEnBlur('fechaVacHepatitis')" />
               <input :ref="(el) => setDatePickerRef('fechaVacHepatitis', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaVacHepatitis')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaVacHepatitis', $event)" />
               <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaVacHepatitis')">
                 <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -174,7 +174,7 @@
           <div class="form7-field">
             <label class="form7-label">Hepatitis B — fecha</label>
             <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.fechaHepatitisB" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaHepatitisB }" @blur="validarCampoFechaEnBlur('fechaHepatitisB')" />
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaHepatitisB" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaHepatitisB }" @input="onInputFechaTexto('fechaHepatitisB', $event)" @blur="validarCampoFechaEnBlur('fechaHepatitisB')" />
               <input :ref="(el) => setDatePickerRef('fechaHepatitisB', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaHepatitisB')" :min="minPickerVacuna('fechaHepatitisB')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaHepatitisB', $event)" />
               <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaHepatitisB')">
                 <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -201,7 +201,7 @@
           <div class="form7-field">
             <label class="form7-label">Covid-19 — fecha</label>
             <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.fechaCovid" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaCovid }" @blur="validarCampoFechaEnBlur('fechaCovid')" />
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaCovid" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaCovid }" @input="onInputFechaTexto('fechaCovid', $event)" @blur="validarCampoFechaEnBlur('fechaCovid')" />
               <input :ref="(el) => setDatePickerRef('fechaCovid', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaCovid')" :min="minPickerVacuna('fechaCovid')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaCovid', $event)" />
               <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaCovid')">
                 <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -213,7 +213,7 @@
           <div class="form7-field">
             <label class="form7-label">Influenza — fecha</label>
             <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.fechaInfluenza" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaInfluenza }" @blur="validarCampoFechaEnBlur('fechaInfluenza')" />
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaInfluenza" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaInfluenza }" @input="onInputFechaTexto('fechaInfluenza', $event)" @blur="validarCampoFechaEnBlur('fechaInfluenza')" />
               <input :ref="(el) => setDatePickerRef('fechaInfluenza', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaInfluenza')" :min="minPickerVacuna('fechaInfluenza')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaInfluenza', $event)" />
               <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaInfluenza')">
                 <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -225,7 +225,7 @@
           <div class="form7-field">
             <label class="form7-label">Neumococo — fecha</label>
             <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.fechaNeumococo" placeholder="dd-mm-aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaNeumococo }" @blur="validarCampoFechaEnBlur('fechaNeumococo')" />
+              <input type="text" class="form7-control form7-control--date" v-model="form.fechaNeumococo" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaNeumococo }" @input="onInputFechaTexto('fechaNeumococo', $event)" @blur="validarCampoFechaEnBlur('fechaNeumococo')" />
               <input :ref="(el) => setDatePickerRef('fechaNeumococo', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaNeumococo')" :min="minPickerVacuna('fechaNeumococo')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaNeumococo', $event)" />
               <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaNeumococo')">
                 <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
@@ -510,7 +510,7 @@ function mensajeErrorFecha(key) {
     return ''
   }
   if (!fechaDDMMAAAAValida(fecha)) {
-    return 'Formato inválido (dd-mm-aaaa)'
+    return 'Formato inválido (dd/mm/aaaa)'
   }
   const iso = parseFechaAISO(fecha)
   const rango = rangoFechasPeriodo.value
@@ -534,6 +534,18 @@ function onCambioDosisVacuna(fechaKey) {
   if (CAMPOS_FECHA_VACUNAS.some((c) => c.key === fechaKey)) {
     validarFechasVacunasDuplicadas()
   }
+}
+
+function onInputFechaTexto(key, event) {
+  let v = String(event?.target?.value ?? form[key] ?? '')
+  v = v.replace(/[^\d/\-.]/g, '')
+  if (/^\d{8}$/.test(v)) {
+    const formateada = formatFechaDDMMAAAA(v)
+    form[key] = formateada || v
+    erroresFecha[key] = mensajeErrorFecha(key)
+    return
+  }
+  form[key] = v
 }
 
 function validarCampoFechaEnBlur(key) {

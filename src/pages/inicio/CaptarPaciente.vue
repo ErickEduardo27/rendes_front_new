@@ -127,7 +127,7 @@
         <option>Hemodiálisis</option>
         <option>Peritoneal</option>
       </select>
-      <input type="date" class="w-full border px-2 py-1 rounded mb-2" v-model="nuevoPaciente.hospitalEsSalud" placeholder="Hospital EsSalud" />
+      <FechaInput class="mb-2" v-model="nuevoPaciente.hospitalEsSalud" input-class="w-full border px-2 py-1 rounded" />
 
       <div class="flex justify-end gap-2">
         <button class="bg-gray-400 text-white px-4 py-1 rounded" @click="mostrarFormularioIngreso = false">Cancelar</button>

@@ -60,7 +60,7 @@
       </select>
 
       <label class="text-sm font-medium">Hospital de Procedencia de TTR en EsSalud: Modalidad</label>
-      <input type="date" v-model="nuevoPaciente.hospitalEsSalud" class="w-full border px-2 py-1 rounded mb-2" placeholder="DD/MM/YY" />
+      <FechaInput v-model="nuevoPaciente.hospitalEsSalud" class="mb-2" input-class="w-full border px-2 py-1 rounded" />
     </div>
 
     <div class="flex justify-end gap-2">

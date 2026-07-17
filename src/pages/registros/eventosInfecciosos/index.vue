@@ -12,11 +12,19 @@
             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado del formulario</span>
             <span
               class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
-              :class="formularioAbierto ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+              :class="bloqueadoPorNotificacion
+                ? 'bg-amber-100 text-amber-800'
+                : (formularioAbierto ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700')"
             >
               {{ cargandoEstadoFormulario ? 'Consultando...' : estadoFormularioTexto }}
             </span>
           </div>
+          <p
+            v-if="bloqueadoPorNotificacion"
+            class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-xl"
+          >
+            {{ mensajeBloqueoNotificacion }}
+          </p>
         </div>
         <div class="flex items-center gap-2">
           <!-- <button
@@ -123,7 +131,7 @@
                         type="button"
                         class="tabla-ei-btn tabla-ei-btn-editar"
                         :disabled="!formularioAbierto"
-                        :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                        :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
                         @click="abrirModalEditar(r)"
                       >
                         Editar
@@ -132,7 +140,7 @@
                         type="button"
                         class="tabla-ei-btn tabla-ei-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === r.id_evento_acceso_vascular"
-                        :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                        :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
                         @click="eliminarRegistro(r)"
                       >
                         {{ eliminandoId === r.id_evento_acceso_vascular ? '…' : 'Eliminar' }}
@@ -207,7 +215,7 @@
                         type="button"
                         class="tabla-ei-btn tabla-ei-btn-editar"
                         :disabled="!formularioAbierto"
-                        :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                        :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
                         @click="abrirModalEditar(fila.registro)"
                       >
                         Editar
@@ -216,7 +224,7 @@
                         type="button"
                         class="tabla-ei-btn tabla-ei-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === fila.id_evento_acceso_vascular"
-                        :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                        :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
                         @click="eliminarRegistro(fila.registro)"
                       >
                         {{ eliminandoId === fila.id_evento_acceso_vascular ? '…' : 'Eliminar' }}
@@ -366,6 +374,7 @@ import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
+import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import { fechaCelda } from '@/utils/fechaFormat';
 import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
@@ -374,6 +383,7 @@ import DashboardInfeccionesPaciente from '@/components/registros/DashboardInfecc
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const { bloqueadoPorNotificacion, mensajeBloqueoNotificacion } = useBloqueoNotificacionRevision();
 
 /** Mismo número que EvaluacionRegistros (eventos infecciosos). */
 const NUMERO_FORMULARIO_EVENTOS = 2;
@@ -404,8 +414,14 @@ const pageSizeTablas = ref(PAGE_SIZE_TABLAS);
 const paginaRegistros = ref(1);
 const paginaTodos = ref(1);
 
-const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
-const estadoFormularioTexto = computed(() => (formularioAbierto.value ? 'Abierto' : 'Cerrado'));
+const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO' && !bloqueadoPorNotificacion.value);
+const estadoFormularioTexto = computed(() => {
+  if (bloqueadoPorNotificacion.value) return 'Bloqueado (Notificado)';
+  return estadoFormulario.value === 'ABIERTO' ? 'Abierto' : 'Cerrado';
+});
+const motivoFormularioNoEditable = computed(() => (
+  bloqueadoPorNotificacion.value ? mensajeBloqueoNotificacion : 'El formulario está cerrado'
+));
 const mostrarBotonNuevo = computed(() => formularioAbierto.value);
 const tituloModalFormulario = computed(() => (
   registroEdicion.value ? 'Editar evento infeccioso' : 'Nuevo evento infeccioso'

@@ -15,6 +15,7 @@ import { Toaster } from "vue-sonner";
 import 'element-plus/dist/index.css'
 import 'vue-sonner/style.css'
 import ElementPlus from 'element-plus'
+import FechaInput from '@/components/FechaInput.vue'
 
 const pinia = createPinia();
 const app = createApp(App)
@@ -32,5 +33,6 @@ app.use(toast, {
 });
 app.use(ElementPlus)
 app.component('Toaster', Toaster)
+app.component('FechaInput', FechaInput)
 
 app.mount('#app') // 👈 Usa la misma instancia

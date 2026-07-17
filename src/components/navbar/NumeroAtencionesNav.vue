@@ -9,12 +9,14 @@
       inputmode="numeric"
       placeholder="Ej. 120"
       class="w-24 border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none disabled:opacity-50"
-      :disabled="!filtroListo || guardando || cargando"
+      :disabled="!filtroListo || guardando || cargando || bloqueadoPorNotificacion"
+      :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : undefined"
     />
     <button
       type="button"
       class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#008f9c] hover:bg-[#007a86] disabled:opacity-50 shrink-0"
-      :disabled="!filtroListo || guardando || cargando || !puedeGuardar"
+      :disabled="!filtroListo || guardando || cargando || !puedeGuardar || bloqueadoPorNotificacion"
+      :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : undefined"
       @click="guardarNumeroAtenciones"
     >
       {{ guardando ? 'Guardando…' : 'Guardar' }}
@@ -41,12 +43,15 @@ import { ref, computed, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat';
+import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 
 const props = defineProps({
   periodo: { type: [Number, String], default: null },
   clinica: { type: [Number, String], default: null },
   modalidad: { type: [Number, String], default: null },
 });
+
+const { bloqueadoPorNotificacion, mensajeBloqueoNotificacion } = useBloqueoNotificacionRevision();
 
 const numeroAtenciones = ref('');
 const cargando = ref(false);
@@ -116,6 +121,10 @@ async function cargarNumeroAtenciones() {
 }
 
 async function guardarNumeroAtenciones() {
+  if (bloqueadoPorNotificacion.value) {
+    ElMessage.warning(mensajeBloqueoNotificacion);
+    return;
+  }
   if (!filtroListo.value || !puedeGuardar.value) return;
   guardando.value = true;
   try {

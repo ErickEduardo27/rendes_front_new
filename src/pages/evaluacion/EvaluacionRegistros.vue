@@ -792,6 +792,7 @@ async function confirmarMarcarObservacion(row) {
     });
     ElMessage.success('Observación enviada a la clínica.');
     window.dispatchEvent(new CustomEvent('notificaciones:actualizar'));
+    window.dispatchEvent(new CustomEvent('notificacion-revision:actualizar'));
   } catch (e) {
     console.error(e);
     const msg =

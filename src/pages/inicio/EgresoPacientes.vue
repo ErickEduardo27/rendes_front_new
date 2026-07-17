@@ -55,7 +55,7 @@
 
         <div>
           <label class="block text-sm font-medium mb-1">Fecha de Egreso</label>
-          <input type="date" v-model="formEgreso.fecha" class="w-full border px-2 py-1 rounded" />
+          <FechaInput v-model="formEgreso.fecha" input-class="w-full border px-2 py-1 rounded" />
         </div>
 
         <div>

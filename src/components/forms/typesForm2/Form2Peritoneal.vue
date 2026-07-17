@@ -5,7 +5,7 @@
 
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Fecha de Ingreso/Reingreso a Unidad</label>
-                <input v-model="feIngresoReingresoUni" type="date" class="w-full border rounded p-2 text-sm" />
+                <FechaInput v-model="feIngresoReingresoUni" input-class="w-full border rounded p-2 text-sm" />
             </div>
 
             <div class="space-y-2">
@@ -99,7 +99,7 @@
                 class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
                 <div class="space-y-2 lg:col-span-4">
                     <label class="block font-semibold text-sm text-gray-700">Fecha Egreso de la Unidad</label>
-                    <input v-model="evento.feEgreUni" type="date" class="w-full border rounded p-2 text-sm" />
+                    <FechaInput v-model="evento.feEgreUni" input-class="w-full border rounded p-2 text-sm" />
                 </div>
 
                 <div class="space-y-2 lg:col-span-4">
@@ -119,7 +119,7 @@
 
                 <div class="space-y-2 lg:col-span-3">
                     <label class="block font-semibold text-sm text-gray-700">Fecha Reingreso a la Unidad</label>
-                    <input v-model="evento.feReingresoUni" type="date" class="w-full border rounded p-2 text-sm" />
+                    <FechaInput v-model="evento.feReingresoUni" input-class="w-full border rounded p-2 text-sm" />
                 </div>
 
                 <div class="flex justify-end lg:col-span-1" v-if="eventos.length > 1">
@@ -158,7 +158,7 @@
 
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Fecha de Ingreso/Reingreso a Unidad</label>
-                <input v-model="feIngresoReingresoUni" type="date" class="w-full border rounded p-2 text-sm" />
+                <FechaInput v-model="feIngresoReingresoUni" input-class="w-full border rounded p-2 text-sm" />
             </div>
 
             <div class="space-y-2 col-span-1 lg:col-span-2">
@@ -183,7 +183,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
   <div>
     <label class="block text-sm font-medium text-gray-700">Fecha de Creación de Acceso Actual</label>
-    <input v-model="faCreaAcc" type="date" class="w-full border rounded p-2 text-sm" />
+    <FechaInput v-model="faCreaAcc" input-class="w-full border rounded p-2 text-sm" />
   </div>
   <div>
     <label class="block text-sm font-medium text-gray-700">Tipo de Acceso Actual</label>
@@ -226,7 +226,7 @@
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <div>
       <label class="block text-sm font-medium text-gray-700">Fecha de Creación de Acceso Actual</label>
-      <input v-model="nuevoAcceso.fecha" type="date" class="w-full border rounded p-2 text-sm" />
+      <FechaInput v-model="nuevoAcceso.fecha" input-class="w-full border rounded p-2 text-sm" />
     </div>
     <div>
       <label class="block text-sm font-medium text-gray-700">Tipo de Acceso Actual</label>

@@ -4,7 +4,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Fecha de Ingreso / Reingreso a Unidad</label>
-                <input v-model="ingreso" type="date" class="w-full border rounded p-2 text-sm" />
+                <FechaInput v-model="ingreso" input-class="w-full border rounded p-2 text-sm" />
             </div>
 
             <!-- Lista filtrada F2 ambas  -->
@@ -110,11 +110,11 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Fecha Creacion de Acceso Actual</label>
-                <input v-model="feCrea" type="date" class="w-full border rounded p-2 text-sm" />
+                <FechaInput v-model="feCrea" input-class="w-full border rounded p-2 text-sm" />
             </div>
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Fecha Egreso de la Unidad</label>
-                <input v-model="feEgre" type="date" class="w-full border rounded p-2 text-sm" />
+                <FechaInput v-model="feEgre" input-class="w-full border rounded p-2 text-sm" />
             </div>
         </div>
 

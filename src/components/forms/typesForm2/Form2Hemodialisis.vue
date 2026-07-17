@@ -42,12 +42,12 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de creación *</label>
-                    <input v-model="form.fecha_creacion_acceso_nuevo" type="date"
-                        class="w-full border text-slate-800 text-sm rounded-lg p-2.5"
-                        :class="erroresNuevoAcceso.fecha_creacion_acceso_nuevo ? 'border-red-500' : 'border-slate-300'"
+                    <FechaInput v-model="form.fecha_creacion_acceso_nuevo"
+                        :input-class="['w-full border text-slate-800 text-sm rounded-lg p-2.5', erroresNuevoAcceso.fecha_creacion_acceso_nuevo ? 'border-red-500' : 'border-slate-300']"
+                        :has-error="!!erroresNuevoAcceso.fecha_creacion_acceso_nuevo"
                         :min="minFechaNuevoAccesoVascular || undefined"
                         :max="rangoFechasPeriodo.max || undefined"
-                        @input="erroresNuevoAcceso.fecha_creacion_acceso_nuevo = ''" />
+                        @change="erroresNuevoAcceso.fecha_creacion_acceso_nuevo = ''" />
                     <p v-if="erroresNuevoAcceso.fecha_creacion_acceso_nuevo"
                         class="text-[11px] text-red-500 mt-1 font-medium">
                         {{ erroresNuevoAcceso.fecha_creacion_acceso_nuevo }}
@@ -88,12 +88,12 @@
                 </div>
                 <div v-if="esTipoAccesoFistulaNuevo">
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de inicio de canulación *</label>
-                    <input v-model="form.fecha_inicio_canulacion" type="date"
-                        class="w-full border text-slate-800 text-sm rounded-lg p-2.5"
-                        :class="erroresNuevoAcceso.fecha_inicio_canulacion ? 'border-red-500' : 'border-slate-300'"
+                    <FechaInput v-model="form.fecha_inicio_canulacion"
+                        :input-class="['w-full border text-slate-800 text-sm rounded-lg p-2.5', erroresNuevoAcceso.fecha_inicio_canulacion ? 'border-red-500' : 'border-slate-300']"
+                        :has-error="!!erroresNuevoAcceso.fecha_inicio_canulacion"
                         :min="form.fecha_creacion_acceso_nuevo || minFechaNuevoAccesoVascular || undefined"
                         :max="rangoFechasPeriodo.max || undefined"
-                        @input="erroresNuevoAcceso.fecha_inicio_canulacion = ''" />
+                        @change="erroresNuevoAcceso.fecha_inicio_canulacion = ''" />
                     <p v-if="erroresNuevoAcceso.fecha_inicio_canulacion"
                         class="text-[11px] text-red-500 mt-1 font-medium">
                         {{ erroresNuevoAcceso.fecha_inicio_canulacion }}
@@ -185,8 +185,8 @@
 
                         <div>
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha Creación</label>
-                            <input disabled v-model="form.fecha_creacion_acceso_actual" type="date"
-                                class="w-full bg-slate-100 border border-slate-300 text-slate-600 text-sm rounded-lg p-2.5 cursor-not-allowed font-medium" />
+                            <FechaInput disabled v-model="form.fecha_creacion_acceso_actual"
+                                input-class="w-full bg-slate-100 border border-slate-300 text-slate-600 text-sm rounded-lg p-2.5 cursor-not-allowed font-medium" />
                         </div>
                     </div>
                 </div>
@@ -229,12 +229,12 @@
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de creación
                                     *</label>
-                                <input v-model="form.fecha_creacion_acceso_nuevo" type="date"
-                                    class="w-full border text-slate-800 text-sm rounded-lg p-2.5"
-                                    :class="erroresNuevoAcceso.fecha_creacion_acceso_nuevo ? 'border-red-500' : 'border-slate-300'"
+                                <FechaInput v-model="form.fecha_creacion_acceso_nuevo"
+                                    :input-class="['w-full border text-slate-800 text-sm rounded-lg p-2.5', erroresNuevoAcceso.fecha_creacion_acceso_nuevo ? 'border-red-500' : 'border-slate-300']"
+                                    :has-error="!!erroresNuevoAcceso.fecha_creacion_acceso_nuevo"
                                     :min="minFechaNuevoAccesoVascular || undefined"
                                     :max="rangoFechasPeriodo.max || undefined"
-                                    @input="erroresNuevoAcceso.fecha_creacion_acceso_nuevo = ''" />
+                                    @change="erroresNuevoAcceso.fecha_creacion_acceso_nuevo = ''" />
                                 <p v-if="erroresNuevoAcceso.fecha_creacion_acceso_nuevo"
                                     class="text-[11px] text-red-500 mt-1 font-medium">
                                     {{ erroresNuevoAcceso.fecha_creacion_acceso_nuevo }}
@@ -282,12 +282,12 @@
                             <div v-if="esTipoAccesoFistulaNuevo">
                                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de inicio de canulación
                                     *</label>
-                                <input v-model="form.fecha_inicio_canulacion" type="date"
-                                    class="w-full border text-slate-800 text-sm rounded-lg p-2.5"
-                                    :class="erroresNuevoAcceso.fecha_inicio_canulacion ? 'border-red-500' : 'border-slate-300'"
+                                <FechaInput v-model="form.fecha_inicio_canulacion"
+                                    :input-class="['w-full border text-slate-800 text-sm rounded-lg p-2.5', erroresNuevoAcceso.fecha_inicio_canulacion ? 'border-red-500' : 'border-slate-300']"
+                                    :has-error="!!erroresNuevoAcceso.fecha_inicio_canulacion"
                                     :min="form.fecha_creacion_acceso_nuevo || minFechaNuevoAccesoVascular || undefined"
                                     :max="rangoFechasPeriodo.max || undefined"
-                                    @input="erroresNuevoAcceso.fecha_inicio_canulacion = ''" />
+                                    @change="erroresNuevoAcceso.fecha_inicio_canulacion = ''" />
                                 <p v-if="erroresNuevoAcceso.fecha_inicio_canulacion"
                                     class="text-[11px] text-red-500 mt-1 font-medium">
                                     {{ erroresNuevoAcceso.fecha_inicio_canulacion }}
@@ -441,8 +441,8 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
-                        <input v-model="formCaptar.fecha" type="date"
-                            class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-green-500 focus:border-green-500" />
+                        <FechaInput v-model="formCaptar.fecha"
+                            input-class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-green-500 focus:border-green-500" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Observaciones</label>
@@ -478,8 +478,8 @@
                 <div class="p-6 space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha</label>
-                        <input v-model="formEgresar.fecha" type="date"
-                            class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-red-500 focus:border-red-500" />
+                        <FechaInput v-model="formEgresar.fecha"
+                            input-class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-red-500 focus:border-red-500" />
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo de Egreso</label>

@@ -6,10 +6,9 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
           <label class="block text-sm font-semibold text-gray-700">Fecha de Evento</label>
-          <input
+          <FechaInput
             v-model="evento.feEvento"
-            type="date"
-            class="w-full border rounded p-2 text-sm"
+            input-class="w-full border rounded p-2 text-sm"
             @change="onCambioFechaEvento(index)"
           />
         </div>

@@ -89,7 +89,7 @@
             </div>
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Fecha de Creacion Acceso de Inicio</label>
-                <input v-model="fechaCreacionInicio" type="date" class="w-full border rounded p-2 text-sm"
+                <FechaInput v-model="fechaCreacionInicio" input-class="w-full border rounded p-2 text-sm"
                     :min="today" />
             </div>
             <div class="space-y-2">
@@ -103,7 +103,7 @@
             </div>
             <div class="space-y-2">
                 <label class="block font-semibold text-sm text-gray-700">Fecha de Inicio TRR</label>
-                <input v-model="fechaDiagnostico" type="date" class="w-full border rounded p-2 text-sm"
+                <FechaInput v-model="fechaDiagnostico" input-class="w-full border rounded p-2 text-sm"
                     :min="minFechaDependiente" />
                 <p v-if="!isFechaDiagnosticoValid" class="text-red-500 text-xs mt-1">La fecha debe ser igual o posterior
                     a la Fecha de Creacion Acceso de Inicio.</p>

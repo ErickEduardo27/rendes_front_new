@@ -149,7 +149,7 @@ const rtnAnilloCir = ref('')
       </div>
       <div class="space-y-2">
         <label class="block font-semibold text-sm text-gray-700">Periodo</label>
-        <input v-model="periodo" type="date" class="w-full border rounded p-2 text-sm" />
+        <FechaInput v-model="periodo" input-class="w-full border rounded p-2 text-sm" />
       </div>
     </div>
 

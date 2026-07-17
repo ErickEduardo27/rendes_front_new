@@ -167,6 +167,7 @@ import { TokenService } from '@/services/api/token.service'
 import SelectorPeriodo from '@/components/SelectorPeriodo.vue'
 import NumeroAtencionesNav from '@/components/navbar/NumeroAtencionesNav.vue'
 import { esSupervisor, debeLimitarClinicasAlUsuario, esPerfilClinica } from '@/utils/perfil'
+import { setEstadoRevisionShared } from '@/composables/useBloqueoNotificacionRevision'
 
 const props = defineProps({
   periodo: { type: [Number, String], default: null },
@@ -294,7 +295,7 @@ const tituloBotonNotificar = computed(() => {
     let t = 'Ya notificó el envío a revisión.'
     if (fecha) t += ` ${new Date(fecha).toLocaleString('es-PE')}.`
     if (quien) t += ` Por: ${quien}.`
-    t += ' El botón se habilitará si el supervisor edita o comenta un registro.'
+    t += ' Espere la observación del supervisor para volver a editar y notificar.'
     return t
   }
   if (estadoNotificacionRevision.value.requiere_renotificacion) {
@@ -349,6 +350,7 @@ async function cargarEstadoNotificacionRevision() {
       estado: 'POR_NOTIFICAR',
       requiere_renotificacion: false,
     }
+    setEstadoRevisionShared('POR_NOTIFICAR')
     return
   }
   cargandoEstadoRevision.value = true
@@ -359,13 +361,15 @@ async function cargarEstadoNotificacionRevision() {
       id_modalidad: String(modalidad.value),
     })
     const r = await getAllIpress(`/consulta_notificacion_envio_revision/?${params.toString()}`)
+    const estado = r?.estado === 'NOTIFICADO' ? 'NOTIFICADO' : 'POR_NOTIFICAR'
     estadoNotificacionRevision.value = {
       notificado: Boolean(r?.notificado),
       notificado_en: r?.notificado_en ?? null,
       usuario_nombre: r?.usuario_nombre ?? null,
-      estado: r?.estado === 'NOTIFICADO' ? 'NOTIFICADO' : 'POR_NOTIFICAR',
+      estado,
       requiere_renotificacion: Boolean(r?.requiere_renotificacion),
     }
+    setEstadoRevisionShared(estado)
   } catch {
     estadoNotificacionRevision.value = {
       notificado: false,
@@ -374,6 +378,7 @@ async function cargarEstadoNotificacionRevision() {
       estado: 'POR_NOTIFICAR',
       requiere_renotificacion: false,
     }
+    setEstadoRevisionShared('POR_NOTIFICAR')
   } finally {
     cargandoEstadoRevision.value = false
   }

@@ -144,11 +144,14 @@
               <div v-if="errorDNI" class="text-red-500 text-xs mt-1">{{ errorDNI }}</div>
             </el-form-item>
             <el-form-item label="Fecha de Nacimiento" required :error="erroresFecha.fechaNacimiento">
-              <el-date-picker
+              <FechaInput
                 v-model="form.fechaNacimiento"
-                v-bind="attrsFechaDDMMAAAA"
-                :clearable="false"
+                value-format="display"
+                placeholder="dd/mm/aaaa"
+                input-class="w-full"
+                :has-error="!!erroresFecha.fechaNacimiento"
                 @change="onCambioFechasTRR"
+                @blur="onCambioFechasTRR"
               />
             </el-form-item>
             <el-form-item label=" " class="flex items-end">
@@ -245,6 +248,19 @@
               <el-checkbox value="Otra">Otra</el-checkbox>
             </div>
           </el-checkbox-group>
+          <div v-if="mostrarComorbilidadOtra" class="mt-4 max-w-xl">
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+              Especifique otra comorbilidad
+            </label>
+            <el-input
+              v-model="form.comorbilidadOtra"
+              type="text"
+              maxlength="200"
+              show-word-limit
+              clearable
+              placeholder="Escriba la comorbilidad…"
+            />
+          </div>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -271,7 +287,15 @@
               </el-select>
             </el-form-item>
             <el-form-item label="Fecha de Creación del Acceso de Inicio" :required="esCampoRequerido('fechaCreacionAcceso')" :error="erroresFecha.fechaCreacionAcceso">
-              <el-date-picker v-model="form.fechaCreacionAcceso" v-bind="attrsFechaDDMMAAAA" @change="actualizarErroresFechas" />
+              <FechaInput
+                v-model="form.fechaCreacionAcceso"
+                value-format="display"
+                placeholder="dd/mm/aaaa"
+                input-class="w-full"
+                :has-error="!!erroresFecha.fechaCreacionAcceso"
+                @change="actualizarErroresFechas"
+                @blur="actualizarErroresFechas"
+              />
             </el-form-item>
             <el-form-item label="Tipo de Acceso de Inicio" :required="esCampoRequerido('tipoAccesoInicio')">
               <el-select v-model="form.tipoAccesoInicio" placeholder="Seleccione" class="w-full" clearable :disabled="form.modalidadTRR === 'Trasplante'" @change="actualizarErroresFechas">
@@ -284,7 +308,15 @@
               </el-select>
             </el-form-item>
             <el-form-item label="Fecha de Inicio de TRR" :required="esCampoRequerido('fechaInicioTRR')" :error="erroresFecha.fechaInicioTRR">
-              <el-date-picker v-model="form.fechaInicioTRR" v-bind="attrsFechaDDMMAAAA" @change="onCambioFechasTRR" />
+              <FechaInput
+                v-model="form.fechaInicioTRR"
+                value-format="display"
+                placeholder="dd/mm/aaaa"
+                input-class="w-full"
+                :has-error="!!erroresFecha.fechaInicioTRR"
+                @change="onCambioFechasTRR"
+                @blur="onCambioFechasTRR"
+              />
             </el-form-item>
             <el-form-item label="Subsistema de Salud" :required="esCampoRequerido('subsistemaSalud')">
               <el-select v-model="form.subsistemaSalud" placeholder="Seleccione" class="w-full" clearable>
@@ -299,7 +331,15 @@
               <el-input v-model="form.edadInicioTRR" readonly placeholder="—" />
             </el-form-item>
             <el-form-item label="Fecha de Primer Ingreso a Unidad" :required="esCampoRequerido('fechaPrimerIngreso')" :error="erroresFecha.fechaPrimerIngreso">
-              <el-date-picker v-model="form.fechaPrimerIngreso" v-bind="attrsFechaDDMMAAAA" clearable @change="actualizarErroresFechas" />
+              <FechaInput
+                v-model="form.fechaPrimerIngreso"
+                value-format="display"
+                placeholder="dd/mm/aaaa"
+                input-class="w-full"
+                :has-error="!!erroresFecha.fechaPrimerIngreso"
+                @change="actualizarErroresFechas"
+                @blur="actualizarErroresFechas"
+              />
             </el-form-item>
             <el-form-item label="Hospital Procedencia TRR en EsSalud" :required="esCampoRequerido('hospitalProcedencia')" class="sm:col-span-2 xl:col-span-2">
               <el-autocomplete
@@ -500,6 +540,7 @@ const form = reactive({
   etiologiaGeneral: '',
   etiologiaEspecifica: '',
   comorbilidades: [],
+  comorbilidadOtra: '',
   modalidadTRR: '',
   fechaInicioTRR: '',
   subsistemaSalud: '',
@@ -584,12 +625,22 @@ const attrsFechaDDMMAAAA = computed(() => ({
   defaultValue: fechaDefaultCalendarioPeriodo.value,
 }));
 
-const FORMATOS_FECHA_ENTRADA = ['DD/MM/YYYY', 'D/M/YYYY', 'DD-MM-YYYY', 'D-M-YYYY', 'YYYY-MM-DD'];
+const FORMATOS_FECHA_ENTRADA = ['DD/MM/YYYY', 'D/M/YYYY', 'DD-MM-YYYY', 'D-M-YYYY', 'YYYY-MM-DD', 'DDMMYYYY', 'DDMMYY'];
 
 const fechaDisplayAISO = (valor) => {
   if (valor == null || valor === '') return '';
   const s = String(valor).trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  // Compacto: 27031997 → 1997-03-27
+  const digitos = s.replace(/\D/g, '');
+  if (/^\d{8}$/.test(digitos) && (s === digitos || !/[/\-.]/.test(s) || /^\d+$/.test(s))) {
+    const d = dayjs(digitos, 'DDMMYYYY', true);
+    if (d.isValid()) return d.format('YYYY-MM-DD');
+  }
+  if (/^\d{6}$/.test(digitos) && s === digitos) {
+    const d = dayjs(digitos, 'DDMMYY', true);
+    if (d.isValid()) return d.format('YYYY-MM-DD');
+  }
   for (const fmt of FORMATOS_FECHA_ENTRADA) {
     const d = dayjs(s, fmt, true);
     if (d.isValid()) return d.format('YYYY-MM-DD');
@@ -720,6 +771,15 @@ const validarFormulario = () => {
   if (!validarFechasFormulario()) {
     ElMessage({
       message: 'Revise las fechas marcadas en rojo antes de continuar.',
+      type: 'warning',
+      plain: true,
+    });
+    return false;
+  }
+
+  if (form.comorbilidades.includes('Otra') && !String(form.comorbilidadOtra || '').trim()) {
+    ElMessage({
+      message: 'Indique la comorbilidad en el campo «Otra».',
       type: 'warning',
       plain: true,
     });
@@ -1097,6 +1157,19 @@ const esSiComorb = (v) => {
   return s === 'sí' || s === 'si' || s === 's';
 };
 
+const esNoComorb = (v) => {
+  const s = String(v || '').trim().toLowerCase();
+  return !s || s === 'no' || s === 'n';
+};
+
+const mostrarComorbilidadOtra = computed(() => form.comorbilidades.includes('Otra'));
+
+const valorEnfOtraParaApi = () => {
+  if (!form.comorbilidades.includes('Otra')) return 'NO';
+  const texto = String(form.comorbilidadOtra || '').trim();
+  return texto || 'Sí';
+};
+
 const mapComorbilidadesDesdeDialisis = (dia) => {
   const cm = [];
   if (esSiComorb(dia.enf_insuficiencia_cardiaca_congestiva)) cm.push('Insuficiencia cardiaca');
@@ -1107,8 +1180,15 @@ const mapComorbilidadesDesdeDialisis = (dia) => {
   if (esSiComorb(dia.enf_tuberculosis)) cm.push('Tuberculosis');
   if (esSiComorb(dia.enf_cerebro_vascular)) cm.push('ACV');
   if (esSiComorb(dia.enf_cancer)) cm.push('Cáncer');
-  if (esSiComorb(dia.enf_otra)) cm.push('Otra');
+  const otra = String(dia.enf_otra || '').trim();
+  if (otra && !esNoComorb(otra)) cm.push('Otra');
   return cm;
+};
+
+const textoComorbilidadOtraDesdeDialisis = (dia) => {
+  const otra = String(dia.enf_otra || '').trim();
+  if (!otra || esNoComorb(otra) || esSiComorb(otra)) return '';
+  return otra;
 };
 
 const inferirCategoriaEtiologiaFromEt = (et) => {
@@ -1875,6 +1955,13 @@ watch(() => form.etiologiaGeneral, (nuevoValor) => {
   }
 });
 
+watch(
+  () => form.comorbilidades.includes('Otra'),
+  (tieneOtra) => {
+    if (!tieneOtra) form.comorbilidadOtra = '';
+  },
+);
+
 // Watcher para limpiar errores cuando se cambia el DNI
 watch(() => form.numeroDocumento, () => {
   errorDNI.value = '';
@@ -1914,7 +2001,7 @@ function construirPayloadPacienteDialisis(idPaciente) {
       enf_diabetes: form.comorbilidades.includes('Diabetes') ? 'Sí' : 'NO',
       enf_hipertension: form.comorbilidades.includes('Hipertensión') ? 'Sí' : 'NO',
       enf_tuberculosis: form.comorbilidades.includes('Tuberculosis') ? 'Sí' : 'NO',
-      enf_otra: form.comorbilidades.includes('Otra') ? 'Sí' : 'NO',
+      enf_otra: valorEnfOtraParaApi(),
     },
   };
 }
@@ -2321,7 +2408,7 @@ async function guardarEdicionSupervisor() {
       enf_diabetes: form.comorbilidades.includes('Diabetes') ? 'Sí' : 'NO',
       enf_hipertension: form.comorbilidades.includes('Hipertensión') ? 'Sí' : 'NO',
       enf_tuberculosis: form.comorbilidades.includes('Tuberculosis') ? 'Sí' : 'NO',
-      enf_otra: form.comorbilidades.includes('Otra') ? 'Sí' : 'NO',
+      enf_otra: valorEnfOtraParaApi(),
     };
     await patchAllIpress(`/pacientesDialisis/${idPacienteDialisisEdicionInterno.value}/`, payloadDialisis);
     await sincronizarUnidadActualEnEdicion();
@@ -2460,6 +2547,7 @@ async function cargarDatosPacienteParaEdicion(idP, idDial) {
     form.fechaPrimerIngreso = fechaIsoADDisplay(dia.fecha_primer_ingreso);
     form.hospitalProcedencia = dia.hospital_procedencia_trr || '';
     form.comorbilidades = mapComorbilidadesDesdeDialisis(dia);
+    form.comorbilidadOtra = textoComorbilidadOtraDesdeDialisis(dia);
 
     const unidadActual = await cargarUnidadActualParaEdicion(idP);
     aplicarAccesoInicioEnFormulario(dia, unidadActual);

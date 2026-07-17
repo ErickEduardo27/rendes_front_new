@@ -12,11 +12,19 @@
             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado del formulario</span>
             <span
               class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
-              :class="formularioAbierto ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+              :class="bloqueadoPorNotificacion
+                ? 'bg-amber-100 text-amber-800'
+                : (formularioAbierto ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700')"
             >
               {{ cargandoEstadoFormulario ? 'Consultando...' : estadoFormularioTexto }}
             </span>
           </div>
+          <p
+            v-if="bloqueadoPorNotificacion"
+            class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-xl"
+          >
+            {{ mensajeBloqueoNotificacion }}
+          </p>
         </div>
         <div class="flex items-center gap-2">
           <button
@@ -158,7 +166,7 @@
                             type="button"
                             class="tabla-av-btn tabla-av-btn-editar"
                             :disabled="!formularioAbierto"
-                            :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                            :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
                             @click="abrirModalEditar(r)"
                           >
                             Editar
@@ -167,7 +175,7 @@
                             type="button"
                             class="tabla-av-btn tabla-av-btn-eliminar"
                             :disabled="!formularioAbierto || eliminandoId === r.id_unidad_actual"
-                            :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                            :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
                             @click="eliminarRegistro(r)"
                           >
                             {{ eliminandoId === r.id_unidad_actual ? '…' : 'Eliminar' }}
@@ -270,7 +278,7 @@
                             type="button"
                             class="tabla-av-btn tabla-av-btn-editar"
                             :disabled="!formularioAbierto"
-                            :title="formularioAbierto ? 'Editar registro' : 'El formulario está cerrado'"
+                            :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
                             @click="abrirModalEditar(fila.registro)"
                           >
                             Editar
@@ -279,7 +287,7 @@
                             type="button"
                             class="tabla-av-btn tabla-av-btn-eliminar"
                             :disabled="!formularioAbierto || eliminandoId === fila.id_unidad_actual"
-                            :title="formularioAbierto ? 'Eliminar registro' : 'El formulario está cerrado'"
+                            :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
                             @click="eliminarRegistro(fila.registro)"
                           >
                             {{ eliminandoId === fila.id_unidad_actual ? '…' : 'Eliminar' }}
@@ -790,10 +798,12 @@ import {
   esCambioAccesoVascular,
   fechaCreacionAccesoColumna,
 } from '@/utils/accesoVascularValidacion';
+import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const { bloqueadoPorNotificacion, mensajeBloqueoNotificacion } = useBloqueoNotificacionRevision();
 const route = useRoute();
 const router = useRouter();
 const HISTORIAL_CARGAS_KEY = 'acceso_vascular_historial_cargas';
@@ -893,11 +903,16 @@ const tituloModalFormulario = computed(() => (
   registroEdicion.value ? 'Editar registro de Acceso Vascular' : 'Nuevo registro de Acceso Vascular'
 ));
 
-const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO');
+const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO' && !bloqueadoPorNotificacion.value);
 
 const estadoFormularioTexto = computed(() => {
-  return formularioAbierto.value ? 'Abierto' : 'Cerrado';
+  if (bloqueadoPorNotificacion.value) return 'Bloqueado (Notificado)';
+  return estadoFormulario.value === 'ABIERTO' ? 'Abierto' : 'Cerrado';
 });
+
+const motivoFormularioNoEditable = computed(() => (
+  bloqueadoPorNotificacion.value ? mensajeBloqueoNotificacion : 'El formulario está cerrado'
+));
 
 const periodoActualTexto = computed(() => {
   const item = periodos.value.find((periodo) => String(periodo.id_periodo) === String(periodoNumero.value));

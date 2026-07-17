@@ -57,12 +57,12 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Inicio de Hospitalización</label>
-                            <input v-model="form.fIniHos" type="date" :min="modoCompletarAlta ? undefined : rangoFechasPeriodo.min" :max="modoCompletarAlta ? undefined : rangoFechasPeriodo.max" :readonly="modoCompletarAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{ 'bg-gray-100 cursor-not-allowed': modoCompletarAlta }" />
+                            <FechaInput v-model="form.fIniHos" :min="modoCompletarAlta ? undefined : rangoFechasPeriodo.min" :max="modoCompletarAlta ? undefined : rangoFechasPeriodo.max" :readonly="modoCompletarAlta" input-class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" />
                             <p v-if="!modoCompletarAlta && rangoFechasPeriodo.min" class="text-xs text-gray-500 mt-1">Dentro del periodo ({{ rangoFechasPeriodo.min }} a {{ rangoFechasPeriodo.max }})</p>
                         </div>
                         <div v-if="form.desenlace !== 'Fallecimiento'">
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Alta de Hospitalización</label>
-                            <input v-model="form.fAltHos" type="date" :min="minFechaAlta" :max="maxFechaAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{'border-red-500 focus:ring-red-500 focus:border-red-500': errorFechaAlta}" />
+                            <FechaInput v-model="form.fAltHos" :min="minFechaAlta" :max="maxFechaAlta" :has-error="errorFechaAlta" input-class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" />
                             <p v-if="maxFechaAlta" class="text-xs text-gray-500 mt-1">No debe salir del periodo (máx. {{ maxFechaAlta }})</p>
                             <div v-if="errorFechaAlta" class="text-red-500 text-xs mt-1.5 font-medium">{{ errorFechaAlta }}</div>
                         </div>
@@ -85,27 +85,88 @@
                         </div>
                     </div>
 
-                    <div v-if="form.desenlace === 'Fallecimiento'" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Fallecimiento <span class="text-red-500">*</span></label>
-                            <input
-                                v-model="form.fechaFallecimiento"
-                                type="date"
-                                :min="minFechaAlta || rangoFechasPeriodo.min"
-                                :max="rangoFechasPeriodo.max"
-                                class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white"
-                            />
-                            <p v-if="rangoFechasPeriodo.max" class="text-xs text-gray-500 mt-1">Dentro del periodo (máx. {{ rangoFechasPeriodo.max }})</p>
+                    <div v-if="form.desenlace === 'Fallecimiento'" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Fallecimiento <span class="text-red-500">*</span></label>
+                                <FechaInput
+                                    v-model="form.fechaFallecimiento"
+                                    :min="minFechaAlta || rangoFechasPeriodo.min"
+                                    :max="rangoFechasPeriodo.max"
+                                    input-class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white"
+                                />
+                                <p v-if="rangoFechasPeriodo.max" class="text-xs text-gray-500 mt-1">Dentro del periodo (máx. {{ rangoFechasPeriodo.max }})</p>
+                            </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Causa de Muerte <span class="text-red-500">*</span></label>
-                            <input
-                                v-model="form.causaMuerte"
-                                type="text"
-                                maxlength="500"
-                                placeholder="Describa la causa de muerte"
-                                class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white"
-                            />
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                                Causa de Muerte (CIE-10) <span class="text-red-500">*</span>
+                            </label>
+
+                            <div
+                                v-if="form.causaMuerte"
+                                class="bg-rose-50 border border-rose-100 p-3 rounded-md flex justify-between items-center gap-3"
+                            >
+                                <span class="text-sm text-rose-900">
+                                    <strong>{{ causaMuerteCodigoMostrar }}</strong>
+                                    <span v-if="causaMuerteDescripcionMostrar"> – {{ causaMuerteDescripcionMostrar }}</span>
+                                </span>
+                                <button
+                                    type="button"
+                                    class="text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded text-xs font-semibold transition-colors shrink-0"
+                                    @click="quitarCausaMuerte"
+                                >
+                                    Quitar
+                                </button>
+                            </div>
+
+                            <template v-else>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Código CIE-10</label>
+                                        <input
+                                            v-model="form.filtroCodigoCausa"
+                                            type="text"
+                                            placeholder="Ej. J96.0"
+                                            class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-gray-50 focus:bg-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Descripción</label>
+                                        <input
+                                            v-model="form.filtroDescripcionCausa"
+                                            type="text"
+                                            placeholder="Mín. 3 caracteres"
+                                            class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-gray-50 focus:bg-white"
+                                        />
+                                    </div>
+                                </div>
+                                <div
+                                    v-if="mostrarListaCausaMuerte"
+                                    class="border border-gray-200 rounded-md max-h-48 overflow-y-auto bg-white"
+                                >
+                                    <button
+                                        v-for="item in resultadosCausaMuerte"
+                                        :key="`causa-${item.id}`"
+                                        type="button"
+                                        class="w-full text-left flex items-start gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-rose-50 transition-colors"
+                                        @click="seleccionarCausaMuerte(item)"
+                                    >
+                                        <span class="text-sm text-gray-700">
+                                            <strong>{{ item.codigo }}</strong> - {{ item.descripcion }}
+                                        </span>
+                                    </button>
+                                </div>
+                                <p
+                                    v-else-if="hayBusquedaCausaMuerte"
+                                    class="italic text-sm text-gray-500 bg-gray-50 p-3 rounded-md border border-gray-200"
+                                >
+                                    No se encontraron resultados.
+                                </p>
+                                <p v-else class="text-xs text-gray-400 mt-1">
+                                    Busque por código o descripción (mín. 3 letras) y seleccione la causa de muerte.
+                                </p>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -223,6 +284,8 @@ function limpiarFormularioNuevo() {
     form.value.seleccionados = [];
     form.value.filtroCodigo = '';
     form.value.filtroDescripcion = '';
+    form.value.filtroCodigoCausa = '';
+    form.value.filtroDescripcionCausa = '';
     errorFechaAlta.value = '';
 }
 
@@ -253,6 +316,8 @@ function cargarRegistroEdicion(registro) {
     form.value.seleccionados = diagnosticosDesdeRegistro(registro);
     form.value.filtroCodigo = '';
     form.value.filtroDescripcion = '';
+    form.value.filtroCodigoCausa = '';
+    form.value.filtroDescripcionCausa = '';
 }
 
 const items = ref([
@@ -1087,6 +1152,8 @@ const items = ref([
 const form = ref({
     filtroCodigo: '',
     filtroDescripcion: '',
+    filtroCodigoCausa: '',
+    filtroDescripcionCausa: '',
     seleccionados: [],
     fIniHos: '',
     fAltHos: '',
@@ -1139,6 +1206,8 @@ const fetchUltimoRegistroHospitalizacion = async () => {
             form.value.seleccionados = diagnosticosDesdeRegistro(ultimo);
             form.value.filtroCodigo = '';
             form.value.filtroDescripcion = '';
+            form.value.filtroCodigoCausa = '';
+            form.value.filtroDescripcionCausa = '';
         } else {
             limpiarFormularioNuevo();
         }
@@ -1184,6 +1253,8 @@ watch(() => form.value.desenlace, (valor) => {
     } else {
         form.value.fechaFallecimiento = '';
         form.value.causaMuerte = '';
+        form.value.filtroCodigoCausa = '';
+        form.value.filtroDescripcionCausa = '';
     }
 });
 
@@ -1207,7 +1278,7 @@ async function validarDatosFallecimiento() {
         return false;
     }
     if (!form.value.causaMuerte?.trim()) {
-        await alertaSwal('Indique la causa de muerte.');
+        await alertaSwal('Seleccione la causa de muerte desde el catálogo CIE-10.');
         return false;
     }
     const rango = rangoFechasPeriodo.value;
@@ -1253,6 +1324,60 @@ const hayBusqueda = computed(() =>
 const mostrarLista = computed(() =>
     hayBusqueda.value && resultadosFiltrados.value.length > 0
 );
+
+const resultadosCausaMuerte = computed(() => {
+    const cod = String(form.value.filtroCodigoCausa || '').trim().toLowerCase();
+    const desc = String(form.value.filtroDescripcionCausa || '').trim().toLowerCase();
+    return items.value.filter((item) => {
+        const matchCod = cod ? String(item.codigo).toLowerCase().includes(cod) : true;
+        const matchDesc = desc.length >= 3
+            ? String(item.descripcion).toLowerCase().includes(desc)
+            : (desc.length === 0 ? true : false);
+        // Si solo hay código, filtrar por código; si hay descripción corta (<3) sin código, no listar
+        if (!cod && desc.length > 0 && desc.length < 3) return false;
+        if (!cod && !desc) return false;
+        return matchCod && (desc.length >= 3 ? matchDesc : true);
+    }).slice(0, 80);
+});
+
+const hayBusquedaCausaMuerte = computed(() => {
+    const cod = String(form.value.filtroCodigoCausa || '').trim();
+    const desc = String(form.value.filtroDescripcionCausa || '').trim();
+    return cod.length > 0 || desc.length >= 3;
+});
+
+const mostrarListaCausaMuerte = computed(() =>
+    hayBusquedaCausaMuerte.value && resultadosCausaMuerte.value.length > 0
+);
+
+const causaMuerteCodigoMostrar = computed(() => {
+    const t = String(form.value.causaMuerte || '').trim();
+    if (!t) return '';
+    const sep = t.indexOf(' - ');
+    if (sep > 0) return t.slice(0, sep);
+    return t;
+});
+
+const causaMuerteDescripcionMostrar = computed(() => {
+    const t = String(form.value.causaMuerte || '').trim();
+    if (!t) return '';
+    const sep = t.indexOf(' - ');
+    if (sep > 0) return t.slice(sep + 3);
+    return '';
+});
+
+function seleccionarCausaMuerte(item) {
+    if (!item) return;
+    form.value.causaMuerte = `${item.codigo} - ${item.descripcion}`.slice(0, 500);
+    form.value.filtroCodigoCausa = '';
+    form.value.filtroDescripcionCausa = '';
+}
+
+function quitarCausaMuerte() {
+    form.value.causaMuerte = '';
+    form.value.filtroCodigoCausa = '';
+    form.value.filtroDescripcionCausa = '';
+}
 
 const limpiarFiltrosBusqueda = () => {
     form.value.filtroCodigo = '';

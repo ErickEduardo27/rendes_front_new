@@ -5,17 +5,31 @@
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">Gestión de Movimientos de Pacientes</h1>
                 <p class="text-sm text-gray-600 mt-1">Último movimiento por paciente del periodo, IPRESS y modalidad seleccionados. Use «Historial» para ver todos los movimientos del paciente.</p>
+                <p
+                    v-if="bloqueadoPorNotificacion"
+                    class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-2xl"
+                >
+                    {{ mensajeBloqueoNotificacion }}
+                </p>
             </div>
             <div class="flex gap-2">
                 <button
                     type="button"
-                    class="bg-sky-500 text-white px-3 py-1.5 rounded text-xs font-semibold shadow hover:bg-sky-600 transition flex items-center gap-1.5"
+                    class="bg-sky-500 text-white px-3 py-1.5 rounded text-xs font-semibold shadow hover:bg-sky-600 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="bloqueadoPorNotificacion"
+                    :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : 'Captar paciente'"
                     @click="abrirModalConsultaDocumento"
                 >
                     <span>➕</span>
                     <span>Captar Paciente</span>
                 </button>
-                <button @click="abrirModalEgresar" class="bg-red-500 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-red-600 flex items-center gap-1.5">
+                <button
+                    type="button"
+                    class="bg-red-500 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-red-600 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="bloqueadoPorNotificacion"
+                    :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : 'Egresar paciente'"
+                    @click="abrirModalEgresar"
+                >
                     <span>➖</span>
                     <span>Egresar Paciente</span>
                 </button>
@@ -149,11 +163,13 @@
                                     <button
                                         type="button"
                                         class="font-semibold text-[11px] px-2 py-1 rounded transition"
-                                        :class="movimiento.tipo === 'CAMBIO_MODALIDAD'
+                                        :class="(movimiento.tipo === 'CAMBIO_MODALIDAD' || bloqueadoPorNotificacion)
                                             ? 'text-gray-400 cursor-not-allowed'
                                             : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'"
-                                        :disabled="movimiento.tipo === 'CAMBIO_MODALIDAD'"
-                                        :title="movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'Los cambios de modalidad no se editan desde aquí' : 'Editar movimiento'"
+                                        :disabled="movimiento.tipo === 'CAMBIO_MODALIDAD' || bloqueadoPorNotificacion"
+                                        :title="bloqueadoPorNotificacion
+                                            ? mensajeBloqueoNotificacion
+                                            : (movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'Los cambios de modalidad no se editan desde aquí' : 'Editar movimiento')"
                                         @click="editarMovimiento(movimiento)"
                                     >
                                         Editar
@@ -517,10 +533,9 @@
                     <!-- Fecha de Ingreso/Reingreso -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Ingreso/Reingreso*</label>
-                        <input
+                        <FechaInput
                             v-model="formCaptar.fecha"
-                            type="date"
-                            class="w-full border rounded p-2 text-sm"
+                            input-class="w-full border rounded p-2 text-sm"
                             :min="rangoFechaCapturaPaciente.min"
                             :max="rangoFechaCapturaPaciente.max"
                         />
@@ -640,13 +655,11 @@
                     <!-- Fecha de Egreso (solo fechas dentro del periodo seleccionado) -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Fecha de Egreso*</label>
-                        <input
+                        <FechaInput
                             v-model="formEgresar.fecha"
-                            type="date"
-                            class="w-full border rounded p-2 text-sm"
+                            input-class="w-full border rounded p-2 text-sm"
                             :min="minFechaEgresoInput"
                             :max="rangoFechaEgresoPaciente.max"
-                            :placeholder="rangoFechaEgresoPaciente.placeholder"
                         />
                         <p v-if="rangoFechaEgresoPaciente.placeholder" class="text-xs text-amber-600 mt-1">{{ rangoFechaEgresoPaciente.placeholder }}</p>
                         <p v-else-if="rangoFechaEgresoPaciente.fechaPrimerIngreso || rangoFechaEgresoPaciente.fechaUltimoIngresoReingreso || rangoFechaEgresoPaciente.ultimaFechaRegistros" class="text-xs text-gray-500 mt-1 space-y-0.5">
@@ -753,11 +766,13 @@ import { ElMessage } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import FormularioPaciente from '../inicio/FormularioPaciente.vue';
 import Form4 from '@/components/forms/Form4.vue';
+import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 
 // Estados globales del sistema (NavBar: periodo, clínica, modalidad)
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const { bloqueadoPorNotificacion, mensajeBloqueoNotificacion } = useBloqueoNotificacionRevision();
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
@@ -1276,6 +1291,10 @@ const cerrarModalConsultaDocumento = () => {
 };
 
 const abrirModalConsultaDocumento = () => {
+    if (bloqueadoPorNotificacion.value) {
+        ElMessage.warning(mensajeBloqueoNotificacion);
+        return;
+    }
     docConsulta.value = '';
     errorConsultaDoc.value = '';
     pacienteConsultaResultado.value = null;
@@ -1490,6 +1509,10 @@ const abrirModalEgresarEdicion = async (mov) => {
 };
 
 const editarMovimiento = async (mov) => {
+    if (bloqueadoPorNotificacion.value) {
+        ElMessage.warning(mensajeBloqueoNotificacion);
+        return;
+    }
     if (mov.tipo === 'CAMBIO_MODALIDAD') {
         ElMessage({
             message: 'Los cambios de modalidad no se editan desde esta pantalla.',
@@ -1837,6 +1860,10 @@ const captarPaciente = async () => {
 
 // Funciones de Modal Egresar (clínica y periodo se toman del estado global)
 const abrirModalEgresar = async () => {
+    if (bloqueadoPorNotificacion.value) {
+        ElMessage.warning(mensajeBloqueoNotificacion);
+        return;
+    }
     if (periodoGlobal.value == null || periodoGlobal.value === '') {
         ElMessage({
             message: 'Seleccione el periodo en la barra superior antes de egresar un paciente.',

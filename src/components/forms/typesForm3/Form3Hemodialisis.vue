@@ -75,10 +75,10 @@
                   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div class="space-y-0.5">
                       <label class="form3-label">Fecha de evento</label>
-                      <input v-model="evento.feEvento" type="date"
+                      <FechaInput v-model="evento.feEvento"
                         :min="minFechaEventoInfeccion(evento.feEvento)"
                         :max="rangoFechasPeriodo.max"
-                        class="form3-control"
+                        input-class="form3-control"
                         @change="onCambioFechaEvento(index)" />
                       <p v-if="rangoFechasPeriodo.min" class="form3-hint">Dentro del periodo ({{ rangoFechasPeriodo.min }} a {{ rangoFechasPeriodo.max }})</p>
                       <p v-if="hintFechaEventoFistula(evento.feEvento)" class="form3-hint text-cyan-800">{{ hintFechaEventoFistula(evento.feEvento) }}</p>
@@ -158,13 +158,23 @@
                        </div>
                     </div>
 
-                    <div v-if="evento.hemocultivoPositivo && mostrarHemocultivo(evento)" class="lg:col-span-4 animate-fadeIn">
-                       <div class="bg-cyan-50 border border-cyan-100 rounded-lg p-2 flex items-center gap-3">
+                    <div v-if="evento.hemocultivoPositivo && mostrarHemocultivo(evento)" class="lg:col-span-4 animate-fadeIn space-y-2">
+                       <div class="bg-cyan-50 border border-cyan-100 rounded-lg p-2 flex flex-wrap items-center gap-3">
                           <label class="text-xs font-bold text-cyan-800 whitespace-nowrap">Germen identificado:</label>
-                          <select v-model="evento.tpGermen" class="form3-control form3-control--inline">
+                          <select v-model="evento.tpGermen" class="form3-control form3-control--inline" @change="onCambioGermen(evento)">
                             <option value="">-- Seleccione --</option>
                             <option v-for="germen in getOpcionesGermenes(evento.tpInfeccion)" :key="germen.value" :value="germen.value">{{ germen.label }}</option>
                           </select>
+                       </div>
+                       <div v-if="evento.tpGermen === 'Otro'" class="bg-cyan-50/70 border border-cyan-100 rounded-lg p-2 flex flex-wrap items-center gap-3 animate-fadeIn">
+                          <label class="text-xs font-bold text-cyan-800 whitespace-nowrap">Especifique el germen:</label>
+                          <input
+                            v-model="evento.germenOtro"
+                            type="text"
+                            maxlength="100"
+                            class="form3-control form3-control--inline flex-1 min-w-[12rem]"
+                            placeholder="Escriba el germen identificado…"
+                          />
                        </div>
                     </div>
 
@@ -399,6 +409,7 @@ const eventosInfecciosos = ref([
     vancomicinaIV: false,
     hemocultivoPositivo: false,
     tpGermen: '',
+    germenOtro: '',
   }
 ]);
 
@@ -416,15 +427,25 @@ const opcionesGermenes = [
   { value: 'Staphylococcus especies', label: 'Staphylococcus especies' },
   { value: 'Stenotrophomona maltophilia', label: 'Stenotrophomona maltophilia' },
   { value: 'Acinetobacter baumannii', label: 'Acinetobacter baumannii' },
-  { value: 'Hongos', label: 'Hongos' }
+  { value: 'Hongos', label: 'Hongos' },
+];
+
+const OPCIONES_GERMEN_EXTRA = [
+  { value: 'Desconocido', label: 'Desconocido' },
+  { value: 'Otro', label: 'Otro' },
 ];
 
 const getOpcionesGermenes = (tipoInfeccion) => {
+  let base;
   if (tipoInfeccion === 'Fungemia' || tipoInfeccion === '4') {
-    return opcionesGermenes.filter(g => g.value === 'Hongos');
+    base = opcionesGermenes.filter((g) => g.value === 'Hongos');
+  } else {
+    base = opcionesGermenes.filter((g) => g.value !== 'Hongos');
   }
-  return opcionesGermenes.filter(g => g.value !== 'Hongos');
+  return [...base, ...OPCIONES_GERMEN_EXTRA];
 };
+
+const todasOpcionesGermenes = () => [...opcionesGermenes, ...OPCIONES_GERMEN_EXTRA];
 
 function normalizarTipoAccesoVascular(tipoAcceso) {
   const t = String(tipoAcceso || '').trim().toUpperCase();
@@ -506,14 +527,28 @@ function hintFechaEventoFistula(fechaEvento) {
 }
 
 const getNombreGermen = (valor) => {
-  const g = opcionesGermenes.find(op => op.value === valor);
+  const g = todasOpcionesGermenes().find((op) => op.value === valor);
   return g ? g.label : '';
 };
 
-function germenAValor(germen) {
-  if (!germen) return '';
-  const g = opcionesGermenes.find((op) => op.value === germen || op.label === germen);
-  return g?.value || germen;
+function germenDesdeRegistro(germen) {
+  if (!germen) return { tpGermen: '', germenOtro: '' };
+  const texto = String(germen).trim();
+  const g = todasOpcionesGermenes().find((op) => op.value === texto || op.label === texto);
+  if (g) return { tpGermen: g.value, germenOtro: '' };
+  // Texto libre guardado previamente como «Otro»
+  return { tpGermen: 'Otro', germenOtro: texto };
+}
+
+function onCambioGermen(evento) {
+  if (!evento) return;
+  if (evento.tpGermen !== 'Otro') evento.germenOtro = '';
+}
+
+function resolverGermenParaApi(evento) {
+  if (!evento?.tpGermen) return '';
+  if (evento.tpGermen === 'Otro') return String(evento.germenOtro || '').trim();
+  return getNombreGermen(evento.tpGermen) || evento.tpGermen;
 }
 
 function esValorSi(val) {
@@ -529,6 +564,7 @@ function esValorSi(val) {
 function cargarRegistroEdicion(registro) {
   if (!registro) return;
   tieneInfeccion.value = true;
+  const germenMap = germenDesdeRegistro(registro.germen);
   eventosInfecciosos.value = [{
     id: registro.id_evento_acceso_vascular || Date.now(),
     feEvento: registro.fecha_evento || '',
@@ -536,7 +572,8 @@ function cargarRegistroEdicion(registro) {
     tratamientoIV: esValorSi(registro.antmicrobial),
     vancomicinaIV: esValorSi(registro.vancomicina),
     hemocultivoPositivo: esValorSi(registro.hemocultivo_positivo),
-    tpGermen: germenAValor(registro.germen),
+    tpGermen: germenMap.tpGermen,
+    germenOtro: germenMap.germenOtro,
   }];
   form.obligoCambioAcceso = false;
 }
@@ -552,6 +589,7 @@ function aplicarInicioDesdeAcceso() {
     vancomicinaIV: false,
     hemocultivoPositivo: false,
     tpGermen: '',
+    germenOtro: '',
   }];
 }
 
@@ -670,6 +708,7 @@ const resetearHemocultivo = (index) => {
     const evento = eventosInfecciosos.value[index];
     evento.hemocultivoPositivo = false;
     evento.tpGermen = '';
+    evento.germenOtro = '';
     const opciones = getOpcionesTipoInfeccion(evento.feEvento);
     if (evento.tpInfeccion && !opciones.some((op) => op.value === evento.tpInfeccion)) {
       evento.tpInfeccion = '';
@@ -679,7 +718,10 @@ const resetearHemocultivo = (index) => {
 
 const toggleHemocultivo = (evento, index) => {
   evento.hemocultivoPositivo = !evento.hemocultivoPositivo;
-  if (!evento.hemocultivoPositivo) evento.tpGermen = '';
+  if (!evento.hemocultivoPositivo) {
+    evento.tpGermen = '';
+    evento.germenOtro = '';
+  }
 };
 
 const guardarInfeccion = async () => {
@@ -713,6 +755,17 @@ const guardarInfeccion = async () => {
       }
     }
 
+    if (eventoActual.hemocultivoPositivo && mostrarHemocultivo(eventoActual)) {
+      if (!eventoActual.tpGermen) {
+        ElMessage.warning('Seleccione el germen identificado.');
+        return;
+      }
+      if (eventoActual.tpGermen === 'Otro' && !String(eventoActual.germenOtro || '').trim()) {
+        ElMessage.warning('Indique el germen en el campo «Otro».');
+        return;
+      }
+    }
+
     if (enModal.value && props.idPacienteAtencion) {
       const payload = {
         id_paciente_atencion: Number(props.idPacienteAtencion),
@@ -721,7 +774,7 @@ const guardarInfeccion = async () => {
         antmicrobial: eventoActual.tratamientoIV ? 'SÍ' : 'NO',
         vancomicina: eventoActual.vancomicinaIV ? 'SÍ' : 'NO',
         hemocultivo_positivo: eventoActual.hemocultivoPositivo ? 'SÍ' : 'NO',
-        germen: getNombreGermen(eventoActual.tpGermen) || eventoActual.tpGermen || ''
+        germen: resolverGermenParaApi(eventoActual),
       };
       const idEdicion = props.registroEdicion?.id_evento_acceso_vascular;
       if (idEdicion) {
@@ -745,7 +798,8 @@ const guardarInfeccion = async () => {
         tratamientoIV: false,
         vancomicinaIV: false,
         hemocultivoPositivo: false,
-        tpGermen: ''
+        tpGermen: '',
+        germenOtro: '',
       }];
       form.obligoCambioAcceso = false;
       return;
@@ -753,6 +807,7 @@ const guardarInfeccion = async () => {
 
     historialInfecciones.value.push({
       ...eventoActual,
+      germenLabel: resolverGermenParaApi(eventoActual),
       obligoCambioAcceso: form.obligoCambioAcceso
     });
     ElMessage.success('Infección registrada en el historial.');
@@ -764,7 +819,8 @@ const guardarInfeccion = async () => {
       tratamientoIV: false,
       vancomicinaIV: false,
       hemocultivoPositivo: false,
-      tpGermen: ''
+      tpGermen: '',
+      germenOtro: '',
     }];
     form.obligoCambioAcceso = false;
     if (form.obligoCambioAcceso === true) {

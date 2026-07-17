@@ -47,7 +47,7 @@
 
                 <div class="form-group">
                     <label for="fechaNacimiento">Fecha de Nacimiento *</label>
-                    <input id="fechaNacimiento" type="date" v-model="formData.fechaNacimiento" readonly />
+                    <input id="fechaNacimiento" type="text" v-model="formData.fechaNacimiento" readonly placeholder="dd/mm/aaaa" />
                 </div>
                 <div class="form-group">
                     <label for="genero">Sexo *</label>
