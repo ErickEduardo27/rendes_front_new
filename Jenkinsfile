@@ -39,7 +39,19 @@ pipeline {
         stage('Build Image') {
             agent { label "${env.agent}" }
             options { skipDefaultCheckout true }
-            steps { script { dockerLib.buildImage() } }
+
+            steps {
+                sh '''
+                docker build \
+                --no-cache \
+                --pull \
+                -t jenkins/rendes-web:dev \
+                --build-arg DIST_PATH=dist \
+                --build-arg BUILD=dev \
+                --build-arg BASE_HREF=/rendes/ \
+                .
+                '''
+            }
         }
 
         stage('Run Container') {
