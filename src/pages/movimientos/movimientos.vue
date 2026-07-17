@@ -93,7 +93,7 @@
                         </tr>
                         <tr v-for="movimiento in movimientosPaginados" :key="movimiento.id" class="hover:bg-gray-50">
                             <td class="px-3 py-2 text-gray-900 whitespace-nowrap">
-                                {{ movimiento.fecha }}
+                                {{ fechaCelda(movimiento.fecha) }}
                             </td>
                             <td class="px-3 py-2 text-gray-900 font-medium whitespace-nowrap">
                                 {{ movimiento.paciente_nombre }}
@@ -255,7 +255,7 @@
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 <tr v-for="h in historialMovimientosPaginados" :key="h.id" class="hover:bg-slate-50">
-                                    <td class="px-3 py-2 whitespace-nowrap">{{ h.fecha }}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap">{{ fechaCelda(h.fecha) }}</td>
                                     <td class="px-3 py-2">
                                         <span
                                             class="inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full"
@@ -377,7 +377,7 @@
                             <div><span class="font-medium text-slate-500">Nombre:</span> {{ pacienteConsultaResultado.paciente || '—' }}</div>
                             <div><span class="font-medium text-slate-500">Documento:</span> {{ pacienteConsultaResultado.documento || '—' }}</div>
                             <div><span class="font-medium text-slate-500">Tipo doc.:</span> {{ pacienteConsultaResultado.tipo_documento || '—' }}</div>
-                            <div><span class="font-medium text-slate-500">F. nacimiento:</span> {{ pacienteConsultaResultado.fecha_nacimiento || '—' }}</div>
+                            <div><span class="font-medium text-slate-500">F. nacimiento:</span> {{ fechaCelda(pacienteConsultaResultado.fecha_nacimiento) }}</div>
                             <div><span class="font-medium text-slate-500">Género:</span> {{ pacienteConsultaResultado.genero || '—' }}</div>
                         </dl>
                         <button
@@ -497,7 +497,7 @@
                         <div class="bg-yellow-50 p-3 rounded border border-yellow-200">
                             <div v-if="ultimoEgreso" class="text-sm">
                                 <p><strong>Tipo de Egreso:</strong> {{ ultimoEgreso.tipo_egreso }}</p>
-                                <p><strong>Fecha:</strong> {{ ultimoEgreso.fecha }}</p>
+                                <p><strong>Fecha:</strong> {{ fechaCelda(ultimoEgreso.fecha) }}</p>
                             </div>
                             <div v-else class="text-red-500 text-sm">
                                 ⚠️ No se encontró un egreso previo
@@ -528,7 +528,7 @@
                             Debe estar en el mes del periodo seleccionado en la barra superior (incluido el día 1).
                             <span v-if="rangoFechaCapturaPaciente.placeholder" class="block text-amber-700 mt-0.5">{{ rangoFechaCapturaPaciente.placeholder }}</span>
                             <span v-if="rangoFechaCapturaPaciente.fechaUltimoEgreso" class="block mt-0.5">
-                                No anterior al último egreso del paciente ({{ rangoFechaCapturaPaciente.fechaUltimoEgreso }}).
+                                No anterior al último egreso del paciente ({{ fechaCelda(rangoFechaCapturaPaciente.fechaUltimoEgreso) }}).
                             </span>
                         </p>
                     </div>
@@ -609,14 +609,14 @@
                                 <strong>Clínica:</strong> {{ pacienteSeleccionadoEgresar.nombre_clinica }}
                             </div>
                             <div v-if="fechaPrimerIngresoEgresar" class="col-span-2">
-                                <strong>Primer ingreso a unidad:</strong> {{ fechaPrimerIngresoEgresar }}
+                                <strong>Primer ingreso a unidad:</strong> {{ fechaCelda(fechaPrimerIngresoEgresar) }}
                             </div>
                             <div v-if="fechaUltimoIngresoReingresoEgresar" class="col-span-2">
-                                <strong>Último ingreso / reingreso:</strong> {{ fechaUltimoIngresoReingresoEgresar }}
+                                <strong>Último ingreso / reingreso:</strong> {{ fechaCelda(fechaUltimoIngresoReingresoEgresar) }}
                             </div>
                             <div class="col-span-2">
                                 <strong>Último registro en periodo:</strong>
-                                {{ ultimaFechaRegistrosEgresar || 'Sin registros clínicos en el periodo' }}
+                                {{ fechaCelda(ultimaFechaRegistrosEgresar) || 'Sin registros clínicos en el periodo' }}
                             </div>
                         </div>
                     </div>
@@ -651,13 +651,13 @@
                         <p v-if="rangoFechaEgresoPaciente.placeholder" class="text-xs text-amber-600 mt-1">{{ rangoFechaEgresoPaciente.placeholder }}</p>
                         <p v-else-if="rangoFechaEgresoPaciente.fechaPrimerIngreso || rangoFechaEgresoPaciente.fechaUltimoIngresoReingreso || rangoFechaEgresoPaciente.ultimaFechaRegistros" class="text-xs text-gray-500 mt-1 space-y-0.5">
                             <span v-if="rangoFechaEgresoPaciente.fechaPrimerIngreso" class="block">
-                                No anterior al primer ingreso a la unidad ({{ rangoFechaEgresoPaciente.fechaPrimerIngreso }}).
+                                No anterior al primer ingreso a la unidad ({{ fechaCelda(rangoFechaEgresoPaciente.fechaPrimerIngreso) }}).
                             </span>
                             <span v-if="rangoFechaEgresoPaciente.fechaUltimoIngresoReingreso" class="block">
-                                Posterior al último ingreso o reingreso ({{ rangoFechaEgresoPaciente.fechaUltimoIngresoReingreso }}).
+                                Posterior al último ingreso o reingreso ({{ fechaCelda(rangoFechaEgresoPaciente.fechaUltimoIngresoReingreso) }}).
                             </span>
                             <span v-if="rangoFechaEgresoPaciente.ultimaFechaRegistros" class="block">
-                                No anterior al último registro del periodo, clínica y modalidad actuales ({{ rangoFechaEgresoPaciente.ultimaFechaRegistros }}).
+                                No anterior al último registro del periodo, clínica y modalidad actuales ({{ fechaCelda(rangoFechaEgresoPaciente.ultimaFechaRegistros) }}).
                             </span>
                         </p>
                     </div>
@@ -747,6 +747,7 @@ import { ref, computed, onMounted, reactive, inject, watch } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 import { debeLimitarClinicasAlUsuario } from '@/utils/perfil';
+import { fechaCelda, formatFechaDDMMAAAA, parseFechaAISO } from '@/utils/fechaFormat';
 import { useAuthStore } from '@/store/auth';
 import { ElMessage } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
@@ -1684,7 +1685,7 @@ const captarPaciente = async () => {
         || (await obtenerUltimoEgresoPaciente(formCaptar.paciente))?.fechaIso;
     if (fechaUltimoEgreso && String(formCaptar.fecha) < String(fechaUltimoEgreso)) {
         ElMessage({
-            message: `La fecha de ingreso/reingreso no puede ser anterior al último egreso del paciente (${fechaUltimoEgreso}).`,
+            message: `La fecha de ingreso/reingreso no puede ser anterior al último egreso del paciente (${formatFechaDDMMAAAA(fechaUltimoEgreso) || fechaUltimoEgreso}).`,
             type: 'error',
             plain: true,
             duration: 6000,
@@ -1959,13 +1960,7 @@ async function onGuardadoForm4Hospitalizacion() {
 }
 
 function isoDesdeValorApi(valor) {
-    if (!valor) return null;
-    const s = String(valor).trim();
-    if (!s) return null;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
-    if (/^\d{4}-\d{2}-\d{2}\s/.test(s)) return s.slice(0, 10);
-    return null;
+    return parseFechaAISO(valor);
 }
 
 function maxIso(a, b) {
@@ -2284,19 +2279,19 @@ function validarFechaMinimaEgresoPaciente(fechaEgreso, { fechaPrimerIngreso, fec
     if (fechaPrimerIngreso && String(fechaEgreso) < String(fechaPrimerIngreso)) {
         return {
             valido: false,
-            mensaje: `La fecha de egreso no puede ser anterior al primer ingreso a la unidad (${fechaPrimerIngreso}).`,
+            mensaje: `La fecha de egreso no puede ser anterior al primer ingreso a la unidad (${formatFechaDDMMAAAA(fechaPrimerIngreso) || fechaPrimerIngreso}).`,
         };
     }
     if (fechaUltimoIngresoReingreso && String(fechaEgreso) <= String(fechaUltimoIngresoReingreso)) {
         return {
             valido: false,
-            mensaje: `La fecha de egreso debe ser posterior al último ingreso o reingreso (${fechaUltimoIngresoReingreso}).`,
+            mensaje: `La fecha de egreso debe ser posterior al último ingreso o reingreso (${formatFechaDDMMAAAA(fechaUltimoIngresoReingreso) || fechaUltimoIngresoReingreso}).`,
         };
     }
     if (ultimaFechaRegistros && String(fechaEgreso) < String(ultimaFechaRegistros)) {
         return {
             valido: false,
-            mensaje: `La fecha de egreso no puede ser anterior al último registro del paciente en el periodo, clínica y modalidad actuales (${ultimaFechaRegistros}).`,
+            mensaje: `La fecha de egreso no puede ser anterior al último registro del paciente en el periodo, clínica y modalidad actuales (${formatFechaDDMMAAAA(ultimaFechaRegistros) || ultimaFechaRegistros}).`,
         };
     }
     return { valido: true };

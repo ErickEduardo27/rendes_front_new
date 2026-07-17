@@ -449,6 +449,7 @@ import {
 import { useAuthStore } from '@/store/auth';
 import { debeLimitarClinicasAlUsuario } from '@/utils/perfil';
 import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
+import { formatFechaHoraDDMMAAAA, fechaCelda } from '@/utils/fechaFormat';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
@@ -513,11 +514,8 @@ const notificacionClinica = ref({
 const textoFechaNotificacion = computed(() => {
   const iso = notificacionClinica.value?.notificado_en;
   if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
-  } catch {
-    return String(iso);
-  }
+  const f = formatFechaHoraDDMMAAAA(iso);
+  return f === '—' ? String(iso) : f;
 });
 
 async function fetchNotificacionEnvioRevision() {
@@ -545,12 +543,7 @@ function onNotificacionRevisionEvent() {
 }
 
 function formatoFechaNotifRow(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
-  } catch {
-    return String(iso);
-  }
+  return formatFechaHoraDDMMAAAA(iso);
 }
 
 async function cargarIpressAsignadasUsuario() {
@@ -1013,6 +1006,9 @@ function valorCeldaTabla(r, col) {
     if (raw === true || raw === 1 || raw === '1' || String(raw).toLowerCase() === 'true') return 'Sí';
     if (raw === false || raw === 0 || raw === '0' || String(raw).toLowerCase() === 'false') return 'No';
     return raw != null && raw !== '' ? String(raw) : '—';
+  }
+  if (String(col.key || '').startsWith('fecha_') || col.type === 'date') {
+    return fechaCelda(raw);
   }
   if (raw === 0 || raw === '0') return raw;
   return raw != null && raw !== '' ? raw : '—';

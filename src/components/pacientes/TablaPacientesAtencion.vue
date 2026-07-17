@@ -223,6 +223,7 @@ import { ref, computed, watch, inject, onMounted } from 'vue';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
+import { fechaCelda } from '@/utils/fechaFormat';
 import FormularioPaciente from '@/pages/inicio/FormularioPaciente.vue';
 
 const props = defineProps({
@@ -322,32 +323,6 @@ const claveModalFormularioPaciente = computed(() => {
 function celda(val) {
   const s = val != null && String(val).trim() !== '' ? String(val).trim() : '';
   return s || '—';
-}
-
-function parseFechaAISO(value) {
-  const s = String(value ?? '').trim();
-  if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-  const dmY = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-  if (dmY) {
-    const d = dmY[1].padStart(2, '0');
-    const m = dmY[2].padStart(2, '0');
-    const y = dmY[3];
-    return `${y}-${m}-${d}`;
-  }
-  return null;
-}
-
-function formatFechaDDMMAAAA(value) {
-  const iso = parseFechaAISO(value);
-  if (!iso) return null;
-  const [y, m, d] = iso.split('-');
-  return `${d}-${m}-${y}`;
-}
-
-function fechaCelda(val) {
-  if (val == null || String(val).trim() === '') return '—';
-  return formatFechaDDMMAAAA(val) || String(val).trim();
 }
 
 function esSiComorb(v) {

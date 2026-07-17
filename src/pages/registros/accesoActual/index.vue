@@ -242,7 +242,7 @@
                     <td class="tabla-av-td text-slate-600">{{ fila.documento || '—' }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.tipo_acceso || '—' }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.localizacion_acceso || '—' }}</td>
-                    <td class="tabla-av-td text-slate-600">{{ fila.fecha_creacion_acceso || '—' }}</td>
+                    <td class="tabla-av-td text-slate-600">{{ fechaCelda(fila.fecha_creacion_acceso) }}</td>
                     <td class="tabla-av-td text-slate-600">{{ textoCanulacionRegistro(fila) }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.motivo_cambio || '—' }}</td>
                     <td class="tabla-av-td">
@@ -543,7 +543,7 @@
                     <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.paciente || '—' }}</td>
                     <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.tipo_acceso || '—' }}</td>
                     <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.localizacion_acceso || '—' }}</td>
-                    <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.fecha_creacion_acceso || '—' }}</td>
+                    <td class="px-3 py-2 text-sm text-slate-700">{{ fechaCelda(detalle.fecha_creacion_acceso) }}</td>
                     <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.fecha_inicio_canulacion || '—' }}</td>
                     <td class="px-3 py-2 text-sm text-slate-700">{{ detalle.motivo_cambio || '—' }}</td>
                     <td class="px-3 py-2 text-sm font-semibold whitespace-nowrap" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
@@ -729,7 +729,7 @@
                     <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.paciente || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.tipo_acceso || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.localizacion_acceso || '—' }}</td>
-                    <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.fecha_creacion_acceso || '—' }}</td>
+                    <td class="px-4 py-3 text-sm text-slate-700">{{ fechaCelda(detalle.fecha_creacion_acceso) }}</td>
                     <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.fecha_inicio_canulacion || '—' }}</td>
                     <td class="px-4 py-3 text-sm text-slate-700">{{ detalle.motivo_cambio || '—' }}</td>
                     <td class="px-4 py-3 text-sm font-semibold" :class="detalle.guardado ? 'text-green-700' : 'text-red-700'">
@@ -773,6 +773,7 @@ import { useRoute, useRouter } from 'vue-router';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
+import { fechaCelda } from '@/utils/fechaFormat';
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
 import { ElMessage } from 'element-plus';

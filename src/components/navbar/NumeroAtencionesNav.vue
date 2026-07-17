@@ -40,6 +40,7 @@
 import { ref, computed, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
+import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat';
 
 const props = defineProps({
   periodo: { type: [Number, String], default: null },
@@ -77,14 +78,8 @@ function buildQs() {
 }
 
 function formatearFecha(iso) {
-  if (!iso) return '';
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
-  } catch {
-    return iso;
-  }
+  const f = formatFechaHoraDDMMAAAA(iso);
+  return f === '—' ? '' : f;
 }
 
 async function cargarNumeroAtenciones() {

@@ -103,7 +103,7 @@
                 <tr v-for="r in registrosPaginados" :key="r.id_evento_acceso_vascular" class="hover:bg-slate-50 transition-colors">
                   <td class="tabla-ei-td font-medium text-slate-800">{{ nombrePaciente(r) }}</td>
                   <td class="tabla-ei-td text-slate-600">{{ documentoPaciente(r) }}</td>
-                  <td class="tabla-ei-td text-slate-600">{{ r.fecha_evento || '—' }}</td>
+                  <td class="tabla-ei-td text-slate-600">{{ fechaCelda(r.fecha_evento) }}</td>
                   <td class="tabla-ei-td text-slate-600">{{ r.tipo_infeccion || '—' }}</td>
                   <td class="tabla-ei-td text-slate-600">{{ r.antmicrobial || '—' }}</td>
                   <td class="tabla-ei-td text-slate-600">{{ r.vancomicina || '—' }}</td>
@@ -187,7 +187,7 @@
                 <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
                   <td class="tabla-ei-td font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
                   <td class="tabla-ei-td text-slate-600">{{ fila.documento || '—' }}</td>
-                  <td class="tabla-ei-td text-slate-600">{{ fila.fecha_evento || '—' }}</td>
+                  <td class="tabla-ei-td text-slate-600">{{ fechaCelda(fila.fecha_evento) }}</td>
                   <td class="tabla-ei-td text-slate-600">{{ fila.tipo_infeccion || '—' }}</td>
                   <td class="tabla-ei-td text-slate-600">{{ fila.antmicrobial || '—' }}</td>
                   <td class="tabla-ei-td text-slate-600">{{ fila.vancomicina || '—' }}</td>
@@ -366,6 +366,7 @@ import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
+import { fechaCelda } from '@/utils/fechaFormat';
 import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 import DashboardInfeccionesPaciente from '@/components/registros/DashboardInfeccionesPaciente.vue';

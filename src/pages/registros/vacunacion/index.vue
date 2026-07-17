@@ -5,7 +5,7 @@
         <div>
           <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <span class="w-1.5 h-8 bg-[#008f9c] rounded-full"></span>
-            Vacunación
+            Serología y Vacunación
           </h1>
           <p class="text-slate-500 mt-1 text-sm">
             Registros de serología y vacunación por periodo, IPRESS y modalidad.
@@ -193,8 +193,8 @@
                   <td class="tabla-vac-td text-slate-600">{{ fila.titulo_acHbs ?? '—' }}</td>
                   <td class="tabla-vac-td text-slate-600">{{ fila.dosis_hepatitis_b ?? '—' }}</td>
                   <td class="tabla-vac-td text-slate-600">{{ fila.dosis_covid ?? '—' }}</td>
-                  <td class="tabla-vac-td text-slate-600">{{ fila.fecha_influenza ?? '—' }}</td>
-                  <td class="tabla-vac-td text-slate-600">{{ fila.fecha_neumococo ?? '—' }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fechaCelda(fila.fecha_influenza) }}</td>
+                  <td class="tabla-vac-td text-slate-600">{{ fechaCelda(fila.fecha_neumococo) }}</td>
                   <td class="tabla-vac-td">
                     <span class="tabla-vac-badge inline-flex rounded-full px-2 py-0.5 font-semibold whitespace-nowrap" :class="estadoAprobacionClase(fila.estado_aprobacion)">{{ fila.estado_aprobacion || (fila.tieneRegistro ? 'PENDIENTE' : 'SIN REGISTRO') }}</span>
                   </td>
@@ -444,6 +444,7 @@ import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
+import { fechaCelda } from '@/utils/fechaFormat';
 import Form7 from '@/components/forms/Form7.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 

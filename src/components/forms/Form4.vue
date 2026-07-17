@@ -131,6 +131,17 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
 import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
+import Swal from 'sweetalert2';
+
+async function alertaSwal(texto, { title = 'Atención', icon = 'warning' } = {}) {
+    await Swal.fire({
+        title,
+        text: texto,
+        icon,
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#008f9c',
+    });
+}
 
 // 👇 defineProps debe estar fuera de cualquier función
 const props = defineProps({
@@ -1189,23 +1200,23 @@ function datosFallecimientoPayload() {
     };
 }
 
-function validarDatosFallecimiento() {
+async function validarDatosFallecimiento() {
     if (form.value.desenlace !== 'Fallecimiento') return true;
     if (!form.value.fechaFallecimiento) {
-        alert('Indique la fecha de fallecimiento.');
+        await alertaSwal('Indique la fecha de fallecimiento.');
         return false;
     }
     if (!form.value.causaMuerte?.trim()) {
-        alert('Indique la causa de muerte.');
+        await alertaSwal('Indique la causa de muerte.');
         return false;
     }
     const rango = rangoFechasPeriodo.value;
     if (rango.min && rango.max && (form.value.fechaFallecimiento < rango.min || form.value.fechaFallecimiento > rango.max)) {
-        alert(`La fecha de fallecimiento debe estar dentro del periodo (${rango.min} a ${rango.max}).`);
+        await alertaSwal(`La fecha de fallecimiento debe estar dentro del periodo (${rango.min} a ${rango.max}).`);
         return false;
     }
     if (form.value.fIniHos && form.value.fechaFallecimiento < form.value.fIniHos) {
-        alert('La fecha de fallecimiento no puede ser anterior a la fecha de inicio de hospitalización.');
+        await alertaSwal('La fecha de fallecimiento no puede ser anterior a la fecha de inicio de hospitalización.');
         return false;
     }
     return true;
@@ -1260,27 +1271,31 @@ const quitarSeleccion = (item) => {
 
 const postForm = async (url = null) => {
     const esFallecimiento = form.value.desenlace === 'Fallecimiento';
-    if (!esFallecimiento && errorFechaAlta.value) {
-        alert('Por favor corrija los errores en las fechas antes de continuar.');
+    if (!modoCompletarAlta.value && (!form.value.seleccionados || form.value.seleccionados.length === 0)) {
+        await alertaSwal('Debe completar el diagnostico, incluso presuntivo');
         return;
     }
-    if (!validarDatosFallecimiento()) return;
+    if (!esFallecimiento && errorFechaAlta.value) {
+        await alertaSwal('Por favor corrija los errores en las fechas antes de continuar.');
+        return;
+    }
+    if (!(await validarDatosFallecimiento())) return;
     if (!esFallecimiento && form.value.fIniHos && form.value.fAltHos && form.value.fAltHos < form.value.fIniHos) {
-        alert('La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización.');
+        await alertaSwal('La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización.');
         return;
     }
     if (!esFallecimiento && fechaAltaAnterior.value && form.value.fAltHos && form.value.fAltHos <= fechaAltaAnterior.value) {
-        alert('La fecha de alta debe ser mayor a la fecha de alta anterior.');
+        await alertaSwal('La fecha de alta debe ser mayor a la fecha de alta anterior.');
         return;
     }
     const rango = rangoFechasPeriodo.value;
     if (rango.min && rango.max) {
         if (form.value.fIniHos && (form.value.fIniHos < rango.min || form.value.fIniHos > rango.max)) {
-            alert(`La fecha de hospitalización debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
+            await alertaSwal(`La fecha de hospitalización debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
             return;
         }
         if (!esFallecimiento && form.value.fAltHos && (form.value.fAltHos < rango.min || form.value.fAltHos > rango.max)) {
-            alert(`La fecha de alta debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
+            await alertaSwal(`La fecha de alta debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
             return;
         }
     }
@@ -1292,7 +1307,10 @@ const postForm = async (url = null) => {
                 ...datosFallecimientoPayload(),
             });
             if (idPacienteAtencion != null && idPacienteAtencion !== '') emit('guardado');
-            else { alert('Se registró la fecha de alta con éxito.'); window.location.reload(); }
+            else {
+                await alertaSwal('Se registró la fecha de alta con éxito.', { title: 'Registro guardado', icon: 'success' });
+                window.location.reload();
+            }
             return;
         }
         let payload;
@@ -1328,10 +1346,11 @@ const postForm = async (url = null) => {
             return;
         }
         pacienteSeleccionado.value = respuesta;
-        alert("Se registro con exito");
+        await alertaSwal('Se registró con éxito.', { title: 'Registro guardado', icon: 'success' });
         window.location.reload();
     } catch (error) {
         console.error('Error al guardar:', error);
+        await alertaSwal('No se pudo guardar el registro. Intente nuevamente.', { title: 'Error', icon: 'error' });
     }
 };
 

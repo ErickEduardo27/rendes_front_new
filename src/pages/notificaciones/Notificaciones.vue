@@ -80,6 +80,7 @@
 <script setup>
 import { ref, computed, inject, watch, onMounted } from 'vue'
 import { getAllIpress, patchAllIpress, postAllIpress } from '@/services/ipress/Ipress.service'
+import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat'
 
 const periodoGlobal = inject('periodoGlobal', ref(null))
 const clinicaGlobal = inject('clinicaGlobal', ref(null))
@@ -126,13 +127,7 @@ function chipClass(tipo) {
 }
 
 function formatearFecha(iso) {
-  if (!iso) return '—'
-  try {
-    const d = new Date(iso)
-    return d.toLocaleString()
-  } catch {
-    return iso
-  }
+  return formatFechaHoraDDMMAAAA(iso)
 }
 
 async function cargar() {

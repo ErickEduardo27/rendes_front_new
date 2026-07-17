@@ -105,7 +105,7 @@
                   <td class="tabla-morbilidad-td text-slate-600">{{ documentoPaciente(r) }}</td>
                   <td class="tabla-morbilidad-td tabla-morbilidad-col-diagnostico text-slate-600" :title="r.diagnostico || ''">{{ r.diagnostico || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ r.codigo_diagnostico || '—' }}</td>
-                  <td class="tabla-morbilidad-td text-slate-600">{{ r.fecha_hospitalizacion || '—' }}</td>
+                  <td class="tabla-morbilidad-td text-slate-600">{{ fechaCelda(r.fecha_hospitalizacion) }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ r.fecha_alta_hospitalizacion || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ r.desenlace || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ r.fuente || '—' }}</td>
@@ -181,8 +181,8 @@
                   <td class="tabla-morbilidad-td text-slate-600">{{ fila.documento || '—' }}</td>
                   <td class="tabla-morbilidad-td tabla-morbilidad-col-diagnostico text-slate-600" :title="fila.diagnostico || ''">{{ fila.diagnostico || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ fila.codigo_diagnostico || '—' }}</td>
-                  <td class="tabla-morbilidad-td text-slate-600">{{ fila.fecha_hospitalizacion || '—' }}</td>
-                  <td class="tabla-morbilidad-td text-slate-600">{{ fila.fecha_alta_hospitalizacion || '—' }}</td>
+                  <td class="tabla-morbilidad-td text-slate-600">{{ fechaCelda(fila.fecha_hospitalizacion) }}</td>
+                  <td class="tabla-morbilidad-td text-slate-600">{{ fechaCelda(fila.fecha_alta_hospitalizacion) }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ fila.desenlace || '—' }}</td>
                   <td class="tabla-morbilidad-td text-slate-600">{{ fila.fuente || '—' }}</td>
                   <td class="tabla-morbilidad-td">
@@ -352,6 +352,7 @@ import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
+import { fechaCelda } from '@/utils/fechaFormat';
 import Form4 from '@/components/forms/Form4.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 

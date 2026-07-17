@@ -27,9 +27,9 @@
               { label: 'Acceso Vascular', to: '/acceso-vascular' },
               { label: 'Eventos Infecciosos', to: '/eventos-infecciosos' },
               { label: 'Morbilidad Hospitalaria', to: '/morbilidad-hospitalaria' },
-              { label: 'Resultados Clínicos', to: '/resultados-clinicos' },
-              { label: 'Vacunación', to: '/vacunacion' },
-              { label: 'Prueba de Agua', to: '/calidad-agua' }
+              { label: 'Resultados Clínicos y tratamiento', to: '/resultados-clinicos' },
+              { label: 'Serología y Vacunación', to: '/vacunacion' },
+              { label: 'Calidad de agua y LD', to: '/calidad-agua' }
             ]"
         />
 

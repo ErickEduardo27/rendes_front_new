@@ -253,6 +253,7 @@ import { ref, onMounted, computed, reactive, watch, inject } from 'vue'
 import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
 import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
+import { parseFechaAISO, formatFechaDDMMAAAA } from '@/utils/fechaFormat';
 // Importamos la librería de confeti
 //import confetti from 'canvas-confetti';
 
@@ -466,28 +467,7 @@ function validarFechasVacunasDuplicadas() {
   return mensajeGlobal
 }
 
-/** Convierte dd-mm-aaaa, dd/mm/aaaa o aaaa-mm-dd a yyyy-mm-dd (comparación y calendario). */
-function parseFechaAISO(value) {
-  const s = String(value ?? '').trim()
-  if (!s) return null
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
-  const dmY = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/)
-  if (dmY) {
-    const d = dmY[1].padStart(2, '0')
-    const m = dmY[2].padStart(2, '0')
-    const y = dmY[3]
-    return `${y}-${m}-${d}`
-  }
-  return null
-}
-
-/** Formato visible y de guardado: dd-mm-aaaa */
-function formatFechaDDMMAAAA(value) {
-  const iso = parseFechaAISO(value)
-  if (!iso) return null
-  const [y, m, d] = iso.split('-')
-  return `${d}-${m}-${y}`
-}
+/** (parseFechaAISO / formatFechaDDMMAAAA desde @/utils/fechaFormat) */
 
 function fechaDDMMAAAAValida(value) {
   const iso = parseFechaAISO(value)

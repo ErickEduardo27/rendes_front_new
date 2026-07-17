@@ -5,7 +5,7 @@
         <div>
           <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <span class="w-1.5 h-8 bg-cyan-500 rounded-full"></span>
-            Resultados Clínicos
+            Resultados Clínicos y tratamiento
           </h1>
           <p class="text-slate-500 mt-1 text-sm">Registros de resultados clínicos por periodo, IPRESS y modalidad.</p>
           <div class="mt-3 flex items-center gap-2">
