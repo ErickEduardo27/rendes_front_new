@@ -16,7 +16,7 @@
             </div>
         </div>
 
-        <!-- Filtro y búsqueda -->
+        <!-- Búsqueda y filtros-->
         <div class="flex items-center gap-4 mb-4">
             <div class="relative w-full max-w-md">
                 <input v-model="search" type="text" placeholder="Buscar por perfil..."
