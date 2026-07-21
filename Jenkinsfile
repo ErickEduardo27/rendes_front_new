@@ -45,8 +45,30 @@ pipeline {
         stage('Run Container') {
             agent { label "${env.agent}" }
             options { skipDefaultCheckout true }
-            steps { script { dockerLib.runContainer() } }
-            post { always { cleanWs() } }
+        
+            steps {
+                sh '''
+                    docker rm -f $(docker ps --format '{{.ID}} {{.Ports}}' | grep '9574' | awk '{print $1}') || true
+                    docker rm -f rendes-web || true
+        
+                    docker run \
+                      -p 9574:8080 \
+                      --env-file ./jenkins-config/global.env \
+                      --env-file ./jenkins-config/rendes-web/deploy.env \
+                      --security-opt seccomp=unconfined \
+                      --restart=unless-stopped \
+                      --name rendes-web \
+                      -d jenkins/rendes-web:dev
+        
+                    docker ps -n 5
+                '''
+            }
+        
+            post {
+                always {
+                    cleanWs()
+                }
+            }
         }
     }
 
