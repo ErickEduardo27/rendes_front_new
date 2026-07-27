@@ -132,7 +132,7 @@
                   </td>
                   <td class="tabla-vac-td tabla-vac-col-comentario text-slate-600" :title="r.comentario_evaluacion || ''">{{ r.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-vac-td tabla-vac-td-acciones">
-                    <div class="inline-flex items-center gap-1.5">
+                    <div v-if="!registroDePacienteEgresado(r, listadoAtenciones)" class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
                         class="tabla-vac-btn tabla-vac-btn-editar"
@@ -152,6 +152,7 @@
                         {{ eliminandoId === r.id_vacunacion ? '…' : 'Eliminar' }}
                       </button>
                     </div>
+                    <span v-else class="text-[10px] text-slate-500 font-medium">EGRESADO</span>
                   </td>
                 </tr>
               </tbody>
@@ -193,7 +194,10 @@
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
-                  <td class="tabla-vac-td font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
+                  <td class="tabla-vac-td font-medium text-slate-800">
+                    {{ fila.paciente || '—' }}
+                    <span v-if="fila.es_egresado" class="ml-1 inline text-[10px] font-semibold uppercase text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded">EGRESADO</span>
+                  </td>
                   <td class="tabla-vac-td text-slate-600">{{ fila.documento || '—' }}</td>
                   <td class="tabla-vac-td text-slate-600">{{ fila.vhb ?? '—' }}</td>
                   <td class="tabla-vac-td text-slate-600">{{ fila.vhc ?? '—' }}</td>
@@ -212,7 +216,7 @@
                   </td>
                   <td class="tabla-vac-td tabla-vac-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-vac-td tabla-vac-td-acciones">
-                    <div class="inline-flex items-center gap-1.5">
+                    <div v-if="!fila.es_egresado" class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
                         class="tabla-vac-btn tabla-vac-btn-historial"
@@ -242,6 +246,7 @@
                         </button>
                       </template>
                     </div>
+                    <span v-else class="text-[10px] text-slate-500 font-medium">Sin acciones</span>
                   </td>
                 </tr>
               </tbody>
@@ -451,7 +456,7 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva, esPacienteEgresadoEnListado, registroDePacienteEgresado } from '@/composables/useAtencionesRegistro';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import { fechaCelda } from '@/utils/fechaFormat';
 import Form7 from '@/components/forms/Form7.vue';
@@ -649,7 +654,10 @@ function textoComentarioSupervisor(text) {
   return s.length > 64 ? `${s.slice(0, 64)}…` : s;
 }
 
-const pacientesDisponibles = computed(() => Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : []);
+const pacientesDisponibles = computed(() =>
+  (Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [])
+    .filter((a) => !esPacienteEgresadoEnListado(a))
+);
 const pacientesFiltrados = computed(() => {
   const texto = busquedaPaciente.value.trim().toLowerCase();
   if (!texto) return pacientesDisponibles.value;
@@ -670,6 +678,7 @@ const todosPacientesLista = computed(() => {
     const r = registroParaAtencionActiva(a, porAtencion, porPaciente);
     const paciente = a.datosPaciente?.paciente ?? '—';
     const documento = a.datosPaciente?.documento ?? '—';
+    const esEgresado = esPacienteEgresadoEnListado(a);
     if (r) {
       return {
         id_paciente: idPaciente ?? r.datosPacienteAtencion?.id_paciente ?? r.datosPaciente?.id_paciente ?? null,
@@ -690,6 +699,7 @@ const todosPacientesLista = computed(() => {
         estado_aprobacion: r.estado_aprobacion || 'PENDIENTE',
         supervisor_edito_registro: !!r.supervisor_edito_registro,
         comentario_evaluacion: r.comentario_evaluacion || '',
+        es_egresado: esEgresado,
       };
     }
     return {
@@ -706,9 +716,10 @@ const todosPacientesLista = computed(() => {
       dosis_covid: '',
       fecha_influenza: '',
       fecha_neumococo: '',
-      estado_aprobacion: 'SIN REGISTRO',
+      estado_aprobacion: esEgresado ? 'EGRESADO' : 'SIN REGISTRO',
       supervisor_edito_registro: false,
       comentario_evaluacion: '',
+      es_egresado: esEgresado,
     };
   });
 });
@@ -831,6 +842,10 @@ function ordenFechaHistorial(fecha) {
 
 async function abrirModalHistorialVacunas(fila) {
   if (!fila) return;
+  if (fila.es_egresado) {
+    ElMessage.warning('Paciente egresado: no se puede consultar el historial.');
+    return;
+  }
   const idPaciente = fila.id_paciente
     ?? fila.registro?.datosPacienteAtencion?.id_paciente
     ?? fila.registro?.datosPaciente?.id_paciente
@@ -1041,6 +1056,10 @@ function abrirModalNuevo() {
 
 function abrirModalEditar(registro) {
   if (!formularioAbierto.value || !registro) return;
+  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
+    ElMessage.warning('Paciente egresado: no se puede editar el registro.');
+    return;
+  }
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {

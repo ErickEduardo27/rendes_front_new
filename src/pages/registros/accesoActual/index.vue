@@ -161,7 +161,7 @@
                       </td>
                       <td class="tabla-av-td tabla-av-col-comentario text-slate-600" :title="r.comentario_evaluacion || ''">{{ r.comentario_evaluacion?.trim() || '—' }}</td>
                       <td class="tabla-av-td tabla-av-td-acciones">
-                        <div class="inline-flex items-center gap-1">
+                        <div v-if="!registroDePacienteEgresado(r, listadoAtenciones)" class="inline-flex items-center gap-1">
                           <button
                             type="button"
                             class="tabla-av-btn tabla-av-btn-editar"
@@ -181,6 +181,7 @@
                             {{ eliminandoId === r.id_unidad_actual ? '…' : 'Eliminar' }}
                           </button>
                         </div>
+                        <span v-else class="text-[10px] text-slate-500 font-medium">EGRESADO</span>
                       </td>
                     </tr>
                   </tbody>
@@ -246,7 +247,10 @@
                     ]"
                     :title="fila.tieneRegistro ? motivoAccesoAntiguo(fila.registro || fila) : (fila.desdeFichaDialisis ? 'Datos tomados de la ficha de diálisis del paciente' : '')"
                   >
-                    <td class="tabla-av-td font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
+                    <td class="tabla-av-td font-medium text-slate-800">
+                      {{ fila.paciente || '—' }}
+                      <span v-if="fila.es_egresado" class="ml-1 inline text-[10px] font-semibold uppercase text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded">EGRESADO</span>
+                    </td>
                     <td class="tabla-av-td text-slate-600">{{ fila.documento || '—' }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.tipo_acceso || '—' }}</td>
                     <td class="tabla-av-td text-slate-600">{{ fila.localizacion_acceso || '—' }}</td>
@@ -264,7 +268,7 @@
                     </td>
                     <td class="tabla-av-td tabla-av-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                     <td class="tabla-av-td tabla-av-td-acciones">
-                      <div class="inline-flex items-center gap-1">
+                      <div v-if="!fila.es_egresado" class="inline-flex items-center gap-1">
                         <button
                           type="button"
                           class="tabla-av-btn tabla-av-btn-historial"
@@ -294,6 +298,7 @@
                           </button>
                         </template>
                       </div>
+                      <span v-else class="text-[10px] text-slate-500 font-medium">Sin acciones</span>
                     </td>
                   </tr>
                 </tbody>
@@ -780,7 +785,7 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, esPacienteEgresadoEnListado, registroDePacienteEgresado } from '@/composables/useAtencionesRegistro';
 import { fechaCelda } from '@/utils/fechaFormat';
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
@@ -1065,9 +1070,10 @@ function filaDesdeFichaDialisis(a, dialisis) {
   };
 }
 
-const pacientesDisponibles = computed(() => {
-  return Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [];
-});
+const pacientesDisponibles = computed(() =>
+  (Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [])
+    .filter((a) => !esPacienteEgresadoEnListado(a))
+);
 
 const pacientesFiltrados = computed(() => {
   const texto = busquedaPaciente.value.trim().toLowerCase();
@@ -1204,11 +1210,12 @@ const todosPacientesLista = computed(() => {
   const ultimoPorPaciente = construirUltimoAccesoPorPaciente(registrosHistorialCompleto.value);
   const dialisisMap = dialisisPorPaciente.value || {};
   return atenciones.map((a) => {
+    const esEgresado = esPacienteEgresadoEnListado(a);
     const pid = a.id_paciente ?? a.datosPaciente?.id_paciente;
     const historico = pid != null ? ultimoPorPaciente[String(pid)] : null;
-    if (historico) return filaDesdeUnidadHistorica(a, historico);
+    if (historico) return { ...filaDesdeUnidadHistorica(a, historico), es_egresado: esEgresado };
     const dialisis = pid != null ? dialisisMap[String(pid)] : null;
-    if (tieneDatosAccesoDialisis(dialisis)) return filaDesdeFichaDialisis(a, dialisis);
+    if (tieneDatosAccesoDialisis(dialisis)) return { ...filaDesdeFichaDialisis(a, dialisis), es_egresado: esEgresado };
     return {
       id_paciente: pid ?? null,
       id_paciente_atencion: a.id_paciente_atencion,
@@ -1221,9 +1228,10 @@ const todosPacientesLista = computed(() => {
       fecha_creacion_acceso: '',
       fecha_inicio_canulacion: '',
       motivo_cambio: '',
-      estado_aprobacion: 'SIN REGISTRO',
+      estado_aprobacion: esEgresado ? 'EGRESADO' : 'SIN REGISTRO',
       supervisor_edito_registro: false,
       comentario_evaluacion: '',
+      es_egresado: esEgresado,
     };
   });
 });
@@ -1607,6 +1615,10 @@ async function fetchEstadoFormulario() {
 
 function abrirModalHistorialPaciente(fila) {
   if (!fila) return;
+  if (fila.es_egresado) {
+    ElMessage.warning('Paciente egresado: no se puede consultar el historial.');
+    return;
+  }
   pacienteHistorial.value = {
     id_paciente: fila.id_paciente ?? fila.registro?.datosPacienteAtencion?.id_paciente ?? null,
     paciente: fila.paciente || '—',
@@ -1687,6 +1699,10 @@ function abrirModalNuevo() {
 
 function abrirModalEditar(registro) {
   if (!formularioAbierto.value || !registro) return;
+  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
+    ElMessage.warning('Paciente egresado: no se puede editar el registro.');
+    return;
+  }
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {

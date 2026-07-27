@@ -119,8 +119,8 @@
                 <button
                   type="button"
                   class="text-xs px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-                  :disabled="row.sin_registro_dialisis || !row.id_paciente_dialisis"
-                  :title="row.sin_registro_dialisis ? 'Sin ficha de diálisis: complete el registro antes de editar' : 'Editar datos del paciente y ficha de diálisis'"
+                  :disabled="!puedeEditarFila(row)"
+                  :title="tituloBotonEditar(row)"
                   @click="abrirEdicionSupervisor(row)"
                 >
                   Editar
@@ -129,7 +129,7 @@
                   v-if="mostrarAprobacion && mostrarBotonAprobar(row)"
                   type="button"
                   class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-semibold disabled:opacity-40"
-                  :disabled="aprobandoId === row.id_paciente_atencion"
+                  :disabled="aprobandoId === row.id_paciente_atencion || esPacienteEgresadoEnListado(row)"
                   @click="aprobarPaciente(row)"
                 >
                   {{ aprobandoId === row.id_paciente_atencion ? '…' : 'Aprobar' }}
@@ -225,6 +225,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import { fechaCelda } from '@/utils/fechaFormat';
 import FormularioPaciente from '@/pages/inicio/FormularioPaciente.vue';
+import { esPacienteEgresadoEnListado } from '@/composables/useAtencionesRegistro';
 
 const props = defineProps({
   mostrarAcciones: { type: Boolean, default: true },
@@ -363,12 +364,13 @@ function etiologiaEspecificaTexto(row) {
 }
 
 function condicionPacienteTexto(row) {
+  if (esPacienteEgresadoEnListado(row)) return 'EGRESADO';
   const at = row?.datosPacienteAtencion;
   const estado = String(
     row?.estado_atencion ?? at?.estado ?? row?.estado ?? row?.datosPaciente?.estado ?? '',
   ).trim().toUpperCase();
   const tipo = String(row?.tipo_atencion ?? at?.tipo_atencion ?? '').trim().toUpperCase();
-  if (estado === 'EGRESADO' || tipo === 'EGRESO') return 'Egresado';
+  if (estado === 'EGRESADO' || tipo === 'EGRESO') return 'EGRESADO';
   if (tipo.includes('REINGRESO')) return 'Reingresado';
   if (tipo === 'NUEVO' || estado === 'NUEVO') return 'Nuevo';
   if (tipo === 'CONTINUADOR') return 'Continuador';
@@ -377,12 +379,43 @@ function condicionPacienteTexto(row) {
   return '—';
 }
 
+function puedeEditarFila(row) {
+  if (esPacienteEgresadoEnListado(row)) return false;
+  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return false;
+  return true;
+}
+
+function tituloBotonEditar(row) {
+  if (esPacienteEgresadoEnListado(row)) return 'Paciente egresado: no se puede editar';
+  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
+    return 'Sin ficha de diálisis: complete el registro antes de editar';
+  }
+  return 'Editar datos del paciente y ficha de diálisis';
+}
+
 function enriquecerFilasConAtencion(filas, atenciones) {
   const porPaciente = new Map();
   const porAtencion = new Map();
   (Array.isArray(atenciones) ? atenciones : []).forEach((a) => {
     const pid = a.id_paciente ?? a.datosPaciente?.id_paciente;
-    if (pid != null) porPaciente.set(String(pid), a);
+    if (pid != null) {
+      const key = String(pid);
+      const prev = porPaciente.get(key);
+      if (!prev) porPaciente.set(key, a);
+      else {
+        const rank = (x) => {
+          const e = String(x.estado || '').toUpperCase();
+          const t = String(x.tipo_atencion || '').toUpperCase();
+          if (e === 'ACTIVO') return 3;
+          if (e === 'CERRADO' || e === 'CERRADA') return 2;
+          if (e === 'EGRESADO' || t === 'EGRESO') return 1;
+          return 0;
+        };
+        if (rank(a) > rank(prev) || (rank(a) === rank(prev) && (Number(a.id_paciente_atencion) || 0) > (Number(prev.id_paciente_atencion) || 0))) {
+          porPaciente.set(key, a);
+        }
+      }
+    }
     if (a.id_paciente_atencion != null) {
       porAtencion.set(String(a.id_paciente_atencion), a);
     }
@@ -395,14 +428,19 @@ function enriquecerFilasConAtencion(filas, atenciones) {
       const pid = row.id_paciente ?? row.datosPaciente?.id_paciente;
       if (pid != null) at = porPaciente.get(String(pid));
     }
-    if (!at) return row;
+    const esEgresado = row.es_egresado === true
+      || (at && String(at.estado || '').toUpperCase() !== 'ACTIVO'
+        && (['CERRADO', 'CERRADA', 'EGRESADO'].includes(String(at.estado || '').toUpperCase())
+          || String(at.tipo_atencion || '').toUpperCase() === 'EGRESO'));
+    if (!at && !esEgresado) return row;
     return {
       ...row,
-      id_paciente_atencion: row.id_paciente_atencion ?? at.id_paciente_atencion,
-      tipo_atencion: row.tipo_atencion ?? at.tipo_atencion,
-      estado_atencion: row.estado_atencion ?? at.estado,
-      estado_aprobacion: row.estado_aprobacion ?? at.estado_aprobacion ?? 'PENDIENTE',
+      id_paciente_atencion: row.id_paciente_atencion ?? at?.id_paciente_atencion,
+      tipo_atencion: esEgresado ? 'EGRESO' : (row.tipo_atencion ?? at?.tipo_atencion),
+      estado_atencion: esEgresado ? 'EGRESADO' : (row.estado_atencion ?? at?.estado),
+      estado_aprobacion: row.estado_aprobacion ?? at?.estado_aprobacion ?? 'PENDIENTE',
       datosPacienteAtencion: row.datosPacienteAtencion ?? at,
+      es_egresado: esEgresado || row.es_egresado === true,
     };
   });
 }
@@ -421,6 +459,7 @@ function claseEstadoAprobacion(row) {
 }
 
 function mostrarBotonAprobar(row) {
+  if (esPacienteEgresadoEnListado(row)) return false;
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return false;
   if (!row?.id_paciente_atencion) return false;
   return textoEstadoAprobacion(row) !== 'APROBADO';
@@ -581,7 +620,7 @@ async function sincronizarDesdeFiltrosGlobales() {
 }
 
 function abrirEdicionSupervisor(row) {
-  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return;
+  if (!puedeEditarFila(row)) return;
   filaEdicionSupervisor.value = row;
   mostrarModalEdicionSupervisor.value = true;
 }

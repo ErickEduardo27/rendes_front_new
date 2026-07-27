@@ -154,7 +154,7 @@
                   </td>
                   <td class="tabla-rc-td tabla-rc-col-comentario text-slate-600" :title="r.comentario_evaluacion || ''">{{ r.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-rc-td tabla-rc-td-acciones">
-                    <div class="inline-flex items-center gap-1.5">
+                    <div v-if="!registroDePacienteEgresado(r, listadoAtenciones)" class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
                         class="tabla-rc-btn tabla-rc-btn-editar"
@@ -174,6 +174,7 @@
                         {{ eliminandoId === r.id_resultado_clinico ? '…' : 'Eliminar' }}
                       </button>
                     </div>
+                    <span v-else class="text-[10px] text-slate-500 font-medium">EGRESADO</span>
                   </td>
                 </tr>
               </tbody>
@@ -218,7 +219,10 @@
               </thead>
               <tbody class="divide-y divide-slate-100">
                 <tr v-for="fila in todosPacientesPaginados" :key="fila.id_paciente_atencion" class="hover:bg-slate-50 transition-colors" :class="{ 'bg-amber-50/50': !fila.tieneRegistro }">
-                  <td class="tabla-rc-td font-medium text-slate-800">{{ fila.paciente || '—' }}</td>
+                  <td class="tabla-rc-td font-medium text-slate-800">
+                    {{ fila.paciente || '—' }}
+                    <span v-if="fila.es_egresado" class="ml-1 inline text-[10px] font-semibold uppercase text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded">EGRESADO</span>
+                  </td>
                   <td class="tabla-rc-td text-slate-600">{{ fila.documento || '—' }}</td>
                   <td class="tabla-rc-td text-slate-600">{{ fila.Hb ?? fila.hb ?? '—' }}</td>
                   <td class="tabla-rc-td text-slate-600">{{ fila.calcio ?? '—' }}</td>
@@ -240,7 +244,7 @@
                   </td>
                   <td class="tabla-rc-td tabla-rc-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-rc-td tabla-rc-td-acciones">
-                    <div v-if="fila.tieneRegistro" class="inline-flex items-center gap-1.5">
+                    <div v-if="fila.tieneRegistro && !fila.es_egresado" class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
                         class="tabla-rc-btn tabla-rc-btn-editar"
@@ -260,6 +264,7 @@
                         {{ eliminandoId === fila.id_resultado_clinico ? '…' : 'Eliminar' }}
                       </button>
                     </div>
+                    <span v-else-if="fila.es_egresado" class="text-[10px] text-slate-500 font-medium">Sin acciones</span>
                     <span v-else class="text-slate-400">—</span>
                   </td>
                 </tr>
@@ -594,7 +599,7 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva, esPacienteEgresadoEnListado, registroDePacienteEgresado } from '@/composables/useAtencionesRegistro';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import {
   MENSAJE_TIEMPO_DIALISIS_INVALIDO,
@@ -789,7 +794,10 @@ function formatearTiempoDialisisTabla(val) {
   return str;
 }
 
-const pacientesDisponibles = computed(() => Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : []);
+const pacientesDisponibles = computed(() =>
+  (Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [])
+    .filter((a) => !esPacienteEgresadoEnListado(a))
+);
 const pacientesFiltrados = computed(() => {
   const texto = busquedaPaciente.value.trim().toLowerCase();
   if (!texto) return pacientesDisponibles.value;
@@ -909,6 +917,7 @@ const todosPacientesLista = computed(() => {
     const r = registroParaAtencionActiva(a, porAtencion, porPaciente);
     const paciente = a.datosPaciente?.paciente ?? '—';
     const documento = a.datosPaciente?.documento ?? '—';
+    const esEgresado = esPacienteEgresadoEnListado(a);
     if (r) {
       return {
         id_paciente_atencion: id,
@@ -931,6 +940,7 @@ const todosPacientesLista = computed(() => {
         estado_aprobacion: r.estado_aprobacion || 'PENDIENTE',
         supervisor_edito_registro: !!r.supervisor_edito_registro,
         comentario_evaluacion: r.comentario_evaluacion || '',
+        es_egresado: esEgresado,
       };
     }
     return {
@@ -949,9 +959,10 @@ const todosPacientesLista = computed(() => {
       eritoproyetina: null,
       hierro: null,
       calcitriol: null,
-      estado_aprobacion: 'SIN REGISTRO',
+      estado_aprobacion: esEgresado ? 'EGRESADO' : 'SIN REGISTRO',
       supervisor_edito_registro: false,
       comentario_evaluacion: '',
+      es_egresado: esEgresado,
     };
   });
 });
@@ -1405,6 +1416,10 @@ function abrirModalNuevo() {
 
 function abrirModalEditar(registro) {
   if (!formularioAbierto.value || !registro) return;
+  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
+    ElMessage.warning('Paciente egresado: no se puede editar el registro.');
+    return;
+  }
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {
