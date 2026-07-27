@@ -754,35 +754,40 @@ function camposObligatoriosActuales() {
   });
 }
 
-const validarFormulario = () => {
+async function alertaCampoObligatorio(texto, { title = 'Campo obligatorio', icon = 'warning' } = {}) {
+  await Swal.fire({
+    title,
+    text: texto,
+    icon,
+    confirmButtonText: 'Entendido',
+    confirmButtonColor: '#008f9c',
+  });
+}
+
+const validarFormulario = async () => {
   for (const campo of camposObligatoriosActuales()) {
     const val = form[campo];
     const vacio = val == null || val === '' || (Array.isArray(val) && val.length === 0);
     if (vacio) {
-      ElMessage({
-        message: `Por favor complete el campo: ${ETIQUETAS_CAMPO_FORMULARIO[campo] || campo}`,
-        type: 'warning',
-        plain: true,
-      });
+      const etiqueta = ETIQUETAS_CAMPO_FORMULARIO[campo] || campo;
+      await alertaCampoObligatorio(`Complete el campo «${etiqueta}».`);
       return false;
     }
   }
 
   if (!validarFechasFormulario()) {
-    ElMessage({
-      message: 'Revise las fechas marcadas en rojo antes de continuar.',
-      type: 'warning',
-      plain: true,
-    });
+    const primerError = CAMPOS_FECHA_VALIDACION.find(
+      (c) => erroresFecha[c.key] && String(erroresFecha[c.key]).trim(),
+    );
+    const detalle = primerError
+      ? `${primerError.label}: ${erroresFecha[primerError.key]}`
+      : 'Revise las fechas marcadas en rojo antes de continuar.';
+    await alertaCampoObligatorio(detalle, { title: 'Fecha inválida' });
     return false;
   }
 
   if (form.comorbilidades.includes('Otra') && !String(form.comorbilidadOtra || '').trim()) {
-    ElMessage({
-      message: 'Indique la comorbilidad en el campo «Otra».',
-      type: 'warning',
-      plain: true,
-    });
+    await alertaCampoObligatorio('Indique la comorbilidad en el campo «Otra».');
     return false;
   }
 
@@ -1875,13 +1880,7 @@ const validarOrden = (e) => {
     e.preventDefault();  // Evita que el select se despliegue
     e.stopPropagation(); // Evita que el evento siga propagándose
 
-    // 3. Mostramos la alerta
-    ElMessage({
-      message: '⚠️ Primero debe seleccionar el "Tipo de Acceso de Inicio".',
-      type: 'warning',
-      duration: 3000,
-      plain: true,
-    });
+    alertaCampoObligatorio('Primero debe seleccionar el «Tipo de Acceso de Inicio».');
   }
 };
 
@@ -2042,36 +2041,33 @@ const registrarPaciente = async () => {
     await guardarEdicionSupervisor();
     return;
   }
-  if (!validarFormulario()) return;
+  if (!(await validarFormulario())) return;
   if (!(await confirmarSinComorbilidades())) return;
   calcularEdadInicioTRR();
   const idPeriodo = getIdPeriodoParaAtencion();
   if (idPeriodo == null) {
-    ElMessage({
-      message: 'Seleccione el periodo en la barra superior antes de registrar el paciente.',
-      type: 'warning',
-      plain: true,
-    });
+    await alertaCampoObligatorio(
+      'Seleccione el periodo en la barra superior antes de registrar el paciente.',
+      { title: 'Atención' },
+    );
     return;
   }
 
   const idModalidadAtencion = getIdModalidadParaAtencion();
   if (idModalidadAtencion == null) {
-    ElMessage({
-      message: 'Seleccione la modalidad TRR en el formulario o en la barra superior.',
-      type: 'warning',
-      plain: true,
-    });
+    await alertaCampoObligatorio(
+      'Seleccione la modalidad TRR en el formulario o en la barra superior.',
+      { title: 'Atención' },
+    );
     return;
   }
 
   const idIpress = idIpressListado.value;
   if (idIpress == null || Number.isNaN(Number(idIpress))) {
-    ElMessage({
-      message: 'Seleccione la clínica (IPRESS) en la barra superior antes de registrar el paciente.',
-      type: 'warning',
-      plain: true,
-    });
+    await alertaCampoObligatorio(
+      'Seleccione la clínica (IPRESS) en la barra superior antes de registrar el paciente.',
+      { title: 'Atención' },
+    );
     return;
   }
 
@@ -2356,16 +2352,15 @@ async function guardarEdicionSupervisor() {
     });
     return;
   }
-  if (!validarFormulario()) return;
+  if (!(await validarFormulario())) return;
   if (!(await confirmarSinComorbilidades())) return;
   calcularEdadInicioTRR();
   const idPeriodo = getIdPeriodoParaPayload();
   if (idPeriodo == null) {
-    ElMessage({
-      message: 'Indique la Fecha de Inicio de TRR (periodo válido) o seleccione un periodo registrado en el sistema.',
-      type: 'warning',
-      plain: true,
-    });
+    await alertaCampoObligatorio(
+      'Indique la Fecha de Inicio de TRR (periodo válido) o seleccione un periodo registrado en el sistema.',
+      { title: 'Atención' },
+    );
     return;
   }
   const idEtiologia =
@@ -2373,7 +2368,7 @@ async function guardarEdicionSupervisor() {
       ? Number(form.etiologiaEspecifica) || parseInt(form.etiologiaEspecifica, 10)
       : null;
   if (idEtiologia == null || Number.isNaN(idEtiologia)) {
-    ElMessage({ message: 'Seleccione una etiología específica de la lista.', type: 'warning', plain: true });
+    await alertaCampoObligatorio('Seleccione una etiología específica de la lista.');
     return;
   }
 

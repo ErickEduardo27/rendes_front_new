@@ -176,12 +176,73 @@
                     <button @click="$emit('cancelar')" class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
                         Cancelar
                     </button>
-                    <button @click="postForm()" class="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
+                    <button @click="solicitarRegistro()" class="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
                         {{ modoCompletarAlta ? 'Guardar fecha de alta' : (idMorbilidadEdicion ? 'Guardar cambios' : 'Registrar') }}
                     </button>
                 </div>
             </div>
             
+        </div>
+
+        <!-- Confirmación: efecto de la hospitalización sobre movimientos -->
+        <div
+            v-if="mostrarModalEfectoMovimiento"
+            class="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+                <div class="bg-cyan-700 px-5 py-4">
+                    <h3 class="text-white font-bold text-base">Confirmación de hospitalización</h3>
+                    <p class="text-cyan-100 text-xs mt-1">Seleccione una opción obligatoria antes de registrar.</p>
+                </div>
+                <div class="p-5 space-y-3">
+                    <label
+                        v-for="op in opcionesEfectoDisponibles"
+                        :key="op.value"
+                        class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                        :class="efectoMovimientoSeleccionado === op.value
+                            ? 'border-cyan-500 bg-cyan-50'
+                            : 'border-slate-200 hover:border-cyan-300 hover:bg-slate-50'"
+                    >
+                        <input
+                            v-model="efectoMovimientoSeleccionado"
+                            type="radio"
+                            class="mt-1 text-cyan-600 focus:ring-cyan-500"
+                            :value="op.value"
+                            name="efecto_movimiento_hospitalizacion"
+                        />
+                        <span class="text-sm text-slate-800 leading-snug">{{ op.label }}</span>
+                    </label>
+                    <p v-if="efectoMovimientoSeleccionado === '1'" class="text-xs text-slate-500 pl-1">
+                        Se generará egreso con la fecha de inicio de hospitalización y reingreso con la fecha de alta.
+                    </p>
+                    <p v-else-if="efectoMovimientoSeleccionado === '2'" class="text-xs text-slate-500 pl-1">
+                        Se generará egreso automático
+                        {{ form.desenlace === 'Fallecimiento' ? 'con la fecha de fallecimiento' : 'con la fecha de inicio de hospitalización' }}.
+                    </p>
+                    <p v-else-if="efectoMovimientoSeleccionado === '3'" class="text-xs text-slate-500 pl-1">
+                        Solo se guardará el registro de hospitalización; no se crearán movimientos.
+                    </p>
+                    <p v-if="errorEfectoMovimiento" class="text-xs text-red-600 font-medium">{{ errorEfectoMovimiento }}</p>
+                </div>
+                <div class="px-5 py-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50">
+                    <button
+                        type="button"
+                        class="px-4 py-2 text-sm font-medium rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-100"
+                        :disabled="guardandoFormulario"
+                        @click="cancelarModalEfecto"
+                    >
+                        Volver
+                    </button>
+                    <button
+                        type="button"
+                        class="px-4 py-2 text-sm font-medium rounded-md text-white bg-cyan-700 hover:bg-cyan-800 disabled:opacity-50"
+                        :disabled="guardandoFormulario"
+                        @click="confirmarYRegistrar"
+                    >
+                        {{ guardandoFormulario ? 'Guardando…' : 'Confirmar y registrar' }}
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -193,6 +254,11 @@ import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/I
 import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
 import Swal from 'sweetalert2';
+import {
+    OPCIONES_EFECTO_HOSPITALIZACION,
+    EFECTO_HOSP,
+    aplicarEfectoMovimientoHospitalizacion,
+} from '@/utils/movimientosHospitalizacion';
 
 async function alertaSwal(texto, { title = 'Atención', icon = 'warning' } = {}) {
     await Swal.fire({
@@ -260,6 +326,27 @@ const ultimoRegistroHospitalizacion = ref(null);
 const modoCompletarAlta = ref(false);
 const idMorbilidadCompletar = ref(null);
 const idMorbilidadEdicion = ref(null);
+
+const mostrarModalEfectoMovimiento = ref(false);
+const efectoMovimientoSeleccionado = ref('');
+const errorEfectoMovimiento = ref('');
+const guardandoFormulario = ref(false);
+
+const opcionesEfectoDisponibles = computed(() => {
+    const esFallecimiento = form.value.desenlace === 'Fallecimiento';
+    const tieneAlta = Boolean(form.value.fAltHos);
+    return OPCIONES_EFECTO_HOSPITALIZACION.filter((op) => {
+        if (op.requiereAlta && (esFallecimiento || !tieneAlta)) return false;
+        return true;
+    });
+});
+
+/** Pide confirmación de efecto (movimientos) solo en registro nuevo o completar alta. */
+const debeConfirmarEfectoMovimiento = computed(() => {
+    if (idMorbilidadEdicion.value != null) return false;
+    if (idPacienteAtencion == null || idPacienteAtencion === '') return false;
+    return true;
+});
 
 function toInputDate(value) {
     if (value == null || value === '') return '';
@@ -1394,45 +1481,125 @@ const quitarSeleccion = (item) => {
     form.value.seleccionados = form.value.seleccionados.filter(i => i.id !== item.id);
 };
 
-const postForm = async (url = null) => {
+const validarAntesDeGuardar = async () => {
     const esFallecimiento = form.value.desenlace === 'Fallecimiento';
     if (!modoCompletarAlta.value && (!form.value.seleccionados || form.value.seleccionados.length === 0)) {
         await alertaSwal('Debe completar el diagnostico, incluso presuntivo');
-        return;
+        return false;
     }
     if (!esFallecimiento && errorFechaAlta.value) {
         await alertaSwal('Por favor corrija los errores en las fechas antes de continuar.');
-        return;
+        return false;
     }
-    if (!(await validarDatosFallecimiento())) return;
+    if (!(await validarDatosFallecimiento())) return false;
     if (!esFallecimiento && form.value.fIniHos && form.value.fAltHos && form.value.fAltHos < form.value.fIniHos) {
         await alertaSwal('La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización.');
-        return;
+        return false;
     }
     if (!esFallecimiento && fechaAltaAnterior.value && form.value.fAltHos && form.value.fAltHos <= fechaAltaAnterior.value) {
         await alertaSwal('La fecha de alta debe ser mayor a la fecha de alta anterior.');
-        return;
+        return false;
     }
     const rango = rangoFechasPeriodo.value;
     if (rango.min && rango.max) {
         if (form.value.fIniHos && (form.value.fIniHos < rango.min || form.value.fIniHos > rango.max)) {
             await alertaSwal(`La fecha de hospitalización debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
-            return;
+            return false;
         }
         if (!esFallecimiento && form.value.fAltHos && (form.value.fAltHos < rango.min || form.value.fAltHos > rango.max)) {
             await alertaSwal(`La fecha de alta debe estar dentro del periodo seleccionado (${rango.min} a ${rango.max}).`);
-            return;
+            return false;
         }
     }
+    return true;
+};
+
+const solicitarRegistro = async () => {
+    if (!(await validarAntesDeGuardar())) return;
+    if (debeConfirmarEfectoMovimiento.value) {
+        efectoMovimientoSeleccionado.value = '';
+        errorEfectoMovimiento.value = '';
+        mostrarModalEfectoMovimiento.value = true;
+        return;
+    }
+    await postForm();
+};
+
+const cancelarModalEfecto = () => {
+    if (guardandoFormulario.value) return;
+    mostrarModalEfectoMovimiento.value = false;
+    errorEfectoMovimiento.value = '';
+};
+
+const confirmarYRegistrar = async () => {
+    if (!efectoMovimientoSeleccionado.value) {
+        errorEfectoMovimiento.value = 'Debe marcar una de las opciones para continuar.';
+        return;
+    }
+    const disponible = opcionesEfectoDisponibles.value.some(
+        (o) => o.value === efectoMovimientoSeleccionado.value,
+    );
+    if (!disponible) {
+        errorEfectoMovimiento.value = 'La opción seleccionada no aplica con los datos actuales (revise fecha de alta / desenlace).';
+        return;
+    }
+    if (
+        (efectoMovimientoSeleccionado.value === EFECTO_HOSP.EGRESO
+            || efectoMovimientoSeleccionado.value === EFECTO_HOSP.EGRESO_Y_REINGRESO)
+        && !form.value.fIniHos
+        && form.value.desenlace !== 'Fallecimiento'
+    ) {
+        errorEfectoMovimiento.value = 'Indique la fecha de inicio de hospitalización para generar el egreso.';
+        return;
+    }
+    if (
+        efectoMovimientoSeleccionado.value === EFECTO_HOSP.EGRESO
+        && form.value.desenlace === 'Fallecimiento'
+        && !form.value.fechaFallecimiento
+    ) {
+        errorEfectoMovimiento.value = 'Indique la fecha de fallecimiento para generar el egreso.';
+        return;
+    }
+    errorEfectoMovimiento.value = '';
+    await postForm({ efectoMovimiento: efectoMovimientoSeleccionado.value });
+};
+
+const postForm = async (opts = {}) => {
+    const efectoMovimiento = opts.efectoMovimiento || null;
+    const esFallecimiento = form.value.desenlace === 'Fallecimiento';
+    if (!(await validarAntesDeGuardar())) return;
+
+    guardandoFormulario.value = true;
     try {
         if (modoCompletarAlta.value && idMorbilidadCompletar.value != null) {
-            await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, {
+            const patchPayload = {
                 fecha_alta_hospitalizacion: esFallecimiento ? null : (form.value.fAltHos || null),
                 desenlace: form.value.desenlace || '',
                 ...datosFallecimientoPayload(),
-            });
-            if (idPacienteAtencion != null && idPacienteAtencion !== '') emit('guardado');
-            else {
+            };
+            if (efectoMovimiento) {
+                patchPayload.efecto_movimiento_hospitalizacion = efectoMovimiento;
+            }
+            await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, patchPayload);
+            let errorMovimientos = null;
+            if (efectoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+                try {
+                    await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento);
+                } catch (e) {
+                    errorMovimientos = e;
+                    console.error(e);
+                }
+            }
+            mostrarModalEfectoMovimiento.value = false;
+            if (idPacienteAtencion != null && idPacienteAtencion !== '') {
+                if (errorMovimientos) {
+                    await alertaSwal(
+                        'La hospitalización se guardó, pero no se pudieron generar los movimientos automáticamente. Revise en Movimientos.',
+                        { title: 'Atención', icon: 'warning' },
+                    );
+                }
+                emit('guardado', { efectoMovimiento: efectoMovimiento || EFECTO_HOSP.SIN_EGRESO });
+            } else {
                 await alertaSwal('Se registró la fecha de alta con éxito.', { title: 'Registro guardado', icon: 'success' });
                 window.location.reload();
             }
@@ -1450,13 +1617,16 @@ const postForm = async (url = null) => {
                 fuente: form.value.fuente || '',
                 ...datosFallecimientoPayload(),
             };
+            if (efectoMovimiento) {
+                payload.efecto_movimiento_hospitalizacion = efectoMovimiento;
+            }
             if (idMorbilidadEdicion.value != null) {
                 if (props.modoSupervisor) {
                     await guardarComoSupervisor('morbilidadesHospitalarias', idMorbilidadEdicion.value, payload);
                 } else {
                     await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadEdicion.value}/`, payload);
                 }
-                emit('guardado');
+                emit('guardado', { efectoMovimiento: null });
                 return;
             }
         } else {
@@ -1465,19 +1635,63 @@ const postForm = async (url = null) => {
                 seleccionados: form.value.seleccionados.map(item => item.codigo).join(',')
             };
         }
-        const respuesta = await postAllIpress(url ?? "/morbilidadesHospitalarias/", payload);
+        await postAllIpress(opts.url ?? "/morbilidadesHospitalarias/", payload);
+        let errorMovimientos = null;
+        if (efectoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+            try {
+                await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento);
+            } catch (e) {
+                errorMovimientos = e;
+                console.error(e);
+            }
+        }
+        mostrarModalEfectoMovimiento.value = false;
         if (idPacienteAtencion != null && idPacienteAtencion !== '') {
-            emit('guardado');
+            if (errorMovimientos) {
+                await alertaSwal(
+                    'La hospitalización se guardó, pero no se pudieron generar los movimientos automáticamente. Revise en Movimientos.',
+                    { title: 'Atención', icon: 'warning' },
+                );
+            }
+            emit('guardado', { efectoMovimiento: efectoMovimiento || EFECTO_HOSP.SIN_EGRESO });
             return;
         }
-        pacienteSeleccionado.value = respuesta;
         await alertaSwal('Se registró con éxito.', { title: 'Registro guardado', icon: 'success' });
         window.location.reload();
     } catch (error) {
         console.error('Error al guardar:', error);
-        await alertaSwal('No se pudo guardar el registro. Intente nuevamente.', { title: 'Error', icon: 'error' });
+        const detalle = error?.response?.data
+            || error?.data
+            || error?.message
+            || (error instanceof Error ? error.message : null);
+        const texto = typeof detalle === 'string'
+            ? detalle
+            : (detalle?.detail || detalle?.error || 'No se pudo guardar el registro. Intente nuevamente.');
+        await alertaSwal(String(texto), { title: 'Error', icon: 'error' });
+    } finally {
+        guardandoFormulario.value = false;
     }
 };
+
+async function ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento) {
+    if (!efectoMovimiento || efectoMovimiento === EFECTO_HOSP.SIN_EGRESO) return;
+    try {
+        const atencion = await getAllIpress(`/pacienteAtencion/${Number(idPacienteAtencion)}/`);
+        await aplicarEfectoMovimientoHospitalizacion({
+            efecto: efectoMovimiento,
+            atencion,
+            fechaHospitalizacion: form.value.fIniHos || null,
+            fechaAlta: esFallecimiento ? null : (form.value.fAltHos || null),
+            fechaFallecimiento: esFallecimiento ? (form.value.fechaFallecimiento || null) : null,
+        });
+    } catch (e) {
+        console.error('Error al generar movimientos por hospitalización:', e);
+        throw new Error(
+            e?.message
+            || 'La hospitalización se guardó, pero no se pudieron generar los movimientos automáticamente.',
+        );
+    }
+}
 
 const fetchPeriodo = async () => {
     try {

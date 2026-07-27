@@ -1929,6 +1929,22 @@ async function tieneMorbilidadHospitalariaRegistrada(idPacienteAtencion) {
     }
 }
 
+async function obtenerEfectoMorbilidadHospitalaria(idPacienteAtencion) {
+    if (idPacienteAtencion == null || idPacienteAtencion === '') return null;
+    try {
+        const res = await getAllIpress(`/morbilidadesHospitalarias/?id_paciente_atencion=${idPacienteAtencion}`);
+        const lista = Array.isArray(res) ? res : (res?.results || []);
+        if (!lista.length) return null;
+        const ordenada = [...lista].sort(
+            (a, b) => (Number(b.id_morbilidad_hospitalaria) || 0) - (Number(a.id_morbilidad_hospitalaria) || 0),
+        );
+        return String(ordenada[0]?.efecto_movimiento_hospitalizacion || '').trim() || null;
+    } catch (e) {
+        console.warn('No se pudo leer efecto de hospitalización:', e);
+        return null;
+    }
+}
+
 async function abrirModalForm4DesdeEgreso(idPacienteAtencion) {
     if (idPacienteAtencion == null || idPacienteAtencion === '') {
         ElMessage({
@@ -1975,8 +1991,39 @@ function onCancelarForm4Hospitalizacion() {
     idPacienteAtencionForm4.value = null;
 }
 
-async function onGuardadoForm4Hospitalizacion() {
+async function onGuardadoForm4Hospitalizacion(payload = {}) {
     onCancelarForm4Hospitalizacion();
+    const efecto = String(payload?.efectoMovimiento || '').trim();
+
+    if (efecto === '1' || efecto === '2') {
+        ElMessage({
+            message: efecto === '1'
+                ? 'Hospitalización registrada. Se generaron egreso y reingreso automáticamente.'
+                : 'Hospitalización registrada. Se generó el egreso automáticamente.',
+            type: 'success',
+            plain: true,
+            duration: 5000,
+        });
+        cerrarModalEgresar();
+        await fetchMovimientos({
+            idPeriodo: formEgresar.periodo || periodoGlobal.value,
+            idIpress: formEgresar.clinica || clinicaGlobal.value,
+            idModalidad: pacienteSeleccionadoEgresar.value?.id_modalidad ?? modalidadGlobal.value,
+        });
+        return;
+    }
+
+    if (efecto === '3') {
+        ElMessage({
+            message: 'Hospitalización registrada sin generar egreso. El paciente permanece activo.',
+            type: 'info',
+            plain: true,
+            duration: 5000,
+        });
+        return;
+    }
+
+    // Compatibilidad: si no vino efecto, continuar con el flujo de egreso manual
     hospitalizacionConfirmadaEgreso.value = true;
     ElMessage({
         message: 'Hospitalización registrada. Continuando con el egreso…',
@@ -2420,6 +2467,19 @@ const egresarPaciente = async () => {
             const tieneMorbilidad = await tieneMorbilidadHospitalariaRegistrada(idPacienteAtencionValidacion);
             if (!tieneMorbilidad) {
                 await abrirModalForm4DesdeEgreso(idPacienteAtencionValidacion);
+                return;
+            }
+            // Si la morbilidad ya generó egreso (opciones 1 o 2), no duplicar el movimiento
+            const efectoPrev = await obtenerEfectoMorbilidadHospitalaria(idPacienteAtencionValidacion);
+            if (efectoPrev === '1' || efectoPrev === '2') {
+                ElMessage({
+                    message: efectoPrev === '1'
+                        ? 'Esta hospitalización ya generó egreso y reingreso automáticamente.'
+                        : 'Esta hospitalización ya generó el egreso automáticamente. Use reingreso si el paciente debe volver a la unidad.',
+                    type: 'warning',
+                    plain: true,
+                    duration: 6000,
+                });
                 return;
             }
             hospitalizacionConfirmadaEgreso.value = true;

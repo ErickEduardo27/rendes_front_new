@@ -45,12 +45,16 @@
                     <FechaInput v-model="form.fecha_creacion_acceso_nuevo"
                         :input-class="['w-full border text-slate-800 text-sm rounded-lg p-2.5', erroresNuevoAcceso.fecha_creacion_acceso_nuevo ? 'border-red-500' : 'border-slate-300']"
                         :has-error="!!erroresNuevoAcceso.fecha_creacion_acceso_nuevo"
-                        :min="minFechaNuevoAccesoVascular || undefined"
+                        :min="minFechaCreacionMostrada"
                         :max="rangoFechasPeriodo.max || undefined"
                         @change="erroresNuevoAcceso.fecha_creacion_acceso_nuevo = ''" />
                     <p v-if="erroresNuevoAcceso.fecha_creacion_acceso_nuevo"
                         class="text-[11px] text-red-500 mt-1 font-medium">
                         {{ erroresNuevoAcceso.fecha_creacion_acceso_nuevo }}
+                    </p>
+                    <p v-else-if="esTipoAccesoFistulaNuevo"
+                        class="text-[11px] text-slate-500 mt-1">
+                        Fístula: la fecha de creación puede ser anterior al acceso vigente o al periodo.
                     </p>
                     <p v-else-if="esFechaCambioAccesoVascular && fechaCreacionAccesoActualISO"
                         class="text-[11px] text-slate-500 mt-1">
@@ -232,12 +236,15 @@
                                 <FechaInput v-model="form.fecha_creacion_acceso_nuevo"
                                     :input-class="['w-full border text-slate-800 text-sm rounded-lg p-2.5', erroresNuevoAcceso.fecha_creacion_acceso_nuevo ? 'border-red-500' : 'border-slate-300']"
                                     :has-error="!!erroresNuevoAcceso.fecha_creacion_acceso_nuevo"
-                                    :min="minFechaNuevoAccesoVascular || undefined"
+                                    :min="minFechaCreacionMostrada"
                                     :max="rangoFechasPeriodo.max || undefined"
                                     @change="erroresNuevoAcceso.fecha_creacion_acceso_nuevo = ''" />
                                 <p v-if="erroresNuevoAcceso.fecha_creacion_acceso_nuevo"
                                     class="text-[11px] text-red-500 mt-1 font-medium">
                                     {{ erroresNuevoAcceso.fecha_creacion_acceso_nuevo }}
+                                </p>
+                                <p v-else-if="esTipoAccesoFistulaNuevo" class="text-[11px] text-slate-500 mt-1">
+                                    Fístula: la fecha de creación puede ser anterior al acceso vigente o al periodo.
                                 </p>
                                 <p v-else-if="fechaCreacionAccesoActualISO && esFechaCambioAccesoVascular" class="text-[11px] text-slate-500 mt-1">
                                     Puede ser anterior al periodo, pero no anterior al acceso vigente ({{ fechaCreacionAccesoActualISO }}).
@@ -663,13 +670,10 @@ const listaLocalizacionesNuevo = [
     { value: 'Catéter peritoneal', label: 'Catéter peritoneal', tipo: 'Catéter peritoneal' }
 ];
 
-const tiposAccesoNuevoFiltrados = computed(() => {
-    const idModalidad = Number(pacienteSeleccionado.value?.id_modalidad ?? paciente?.id_modalidad ?? 1);
-    if (idModalidad === 1) {
-        return listaTiposNuevo.filter(t => t.value !== 'Catéter peritoneal');
-    }
-    return listaTiposNuevo.filter(t => t.value === 'Catéter peritoneal');
-});
+/** En Form2 (hemodiálisis) el tipo nuevo siempre lista accesos de HD, aunque el actual sea peritoneal. */
+const tiposAccesoNuevoFiltrados = computed(() =>
+    listaTiposNuevo.filter(t => t.value !== 'Catéter peritoneal')
+);
 
 /** Requiere id de atención para el POST a /unidadesActuales/ */
 const puedeRegistrarAcceso = computed(() => {
@@ -795,8 +799,10 @@ const esFechaCambioAccesoVascular = computed(() => {
     return false;
 });
 
-/** Mínimo: en cambio solo acceso vigente; en acceso inicial, periodo y/o vigente */
+/** Mínimo: en cambio solo acceso vigente; en acceso inicial, periodo y/o vigente.
+ *  Fístula: sin mínimo (creación puede ser anterior al acceso vigente / periodo). */
 const minFechaNuevoAccesoVascular = computed(() => {
+    if (esTipoAccesoFistulaNuevo.value) return null;
     if (esFechaCambioAccesoVascular.value) {
         return fechaCreacionAccesoActualISO.value || null;
     }
@@ -804,6 +810,12 @@ const minFechaNuevoAccesoVascular = computed(() => {
     const vig = fechaCreacionAccesoActualISO.value;
     if (rMin && vig) return rMin > vig ? rMin : vig;
     return rMin || vig || null;
+});
+
+/** Min del input de creación: libre si es fístula. */
+const minFechaCreacionMostrada = computed(() => {
+    if (esTipoAccesoFistulaNuevo.value) return undefined;
+    return minFechaNuevoAccesoVascular.value || undefined;
 });
 
 const validarFormulario = () => {
@@ -837,8 +849,18 @@ const validarFormulario = () => {
 
     const rango = rangoFechasPeriodo.value;
     const f = form.fecha_creacion_acceso_nuevo;
+    const esFistula = esTipoAccesoFistulaNuevo.value;
 
-    if (esFechaCambioAccesoVascular.value) {
+    if (esFistula) {
+        // Fístula: fecha de creación libre respecto al acceso vigente y al inicio del periodo;
+        // solo no puede pasar del fin del periodo seleccionado.
+        if (rango.max && f && f > rango.max) {
+            const msg = `La fecha no puede ser posterior al periodo seleccionado (${rango.max}).`;
+            erroresNuevoAcceso.fecha_creacion_acceso_nuevo = msg;
+            ElMessage({ message: msg, type: 'warning', plain: true });
+            return false;
+        }
+    } else if (esFechaCambioAccesoVascular.value) {
         const vig = fechaCreacionAccesoActualISO.value;
         if (vig && f && f < vig) {
             const msg = 'La fecha del cambio no puede ser anterior a la fecha del acceso vigente.';

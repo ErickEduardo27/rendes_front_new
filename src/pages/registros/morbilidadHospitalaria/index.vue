@@ -787,8 +787,16 @@ function cerrarModalNuevo() {
   fetchRegistros();
 }
 
-function onGuardado() {
+function onGuardado(payload = {}) {
   cerrarModalNuevo();
+  const efecto = String(payload?.efectoMovimiento || '').trim();
+  if (efecto === '1') {
+    ElMessage.success('Registro guardado. Se generaron egreso y reingreso automáticamente.');
+  } else if (efecto === '2') {
+    ElMessage.success('Registro guardado. Se generó el egreso automáticamente.');
+  } else if (efecto === '3') {
+    ElMessage.success('Registro guardado sin generar egreso.');
+  }
 }
 
 async function abrirFormularioDesdeEgreso(idPacienteAtencion) {

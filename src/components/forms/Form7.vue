@@ -16,14 +16,15 @@
       </div>
     </div>
 
-    <p v-if="rangoFechasPeriodo.min" class="text-[11px] text-gray-500">
-      Fechas dentro del periodo ({{ rangoFechasPeriodoTexto.min }} a {{ rangoFechasPeriodoTexto.max }}). Formato: dd-mm-aaaa. También puede usar el calendario.
+    <p v-if="rangoFechasPeriodo.max" class="text-[11px] text-gray-500">
+      Fechas de serología dentro del periodo ({{ rangoFechasPeriodoTexto.min }} a {{ rangoFechasPeriodoTexto.max }}).
+      Las fechas de vacunación pueden ser anteriores al periodo (máx. {{ rangoFechasPeriodoTexto.max }}). Formato: dd/mm/aaaa.
     </p>
 
     <div class="space-y-4">
       <div class="border-l-4 border-[#008f9c] pl-3">
         <h2 class="text-base font-bold text-gray-800">Serología y vacunación</h2>
-        <p class="text-xs text-gray-500">Todos los campos son opcionales. Si ingresa fechas, deben estar en el periodo y con formato dd-mm-aaaa.</p>
+        <p class="text-xs text-gray-500">Campos opcionales en general. Si selecciona una dosis de Hepatitis B o Covid-19, la fecha de esa vacuna es obligatoria.</p>
       </div>
 
       <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
@@ -125,18 +126,17 @@
               :min="0"
               :max="2000"
               :step="0.01"
-              :disabled="esEstadoDesconocido(form.estadoAcHBs)"
             />
+            <p class="text-[10px] text-slate-500 mt-1">El estado se calcula automáticamente según el título.</p>
           </div>
           <div class="form7-field">
             <label class="form7-label">Estado según AcHBs</label>
-            <select class="form7-control" v-model="form.estadoAcHBs" @change="onCambioEstadoAcHBs">
-              <option :value="null">Seleccione</option>
-              <option>Desconocido</option>
-              <option>No Responde</option>
-              <option>Respuesta pobre</option>
-              <option>Óptimo</option>
-              <option>Excelente</option>
+            <select class="form7-control form7-control--readonly" v-model="form.estadoAcHBs" disabled>
+              <option value="Desconocido">Desconocido</option>
+              <option value="No Responde">No Responde</option>
+              <option value="Respuesta pobre">Respuesta pobre</option>
+              <option value="Óptimo">Óptimo</option>
+              <option value="Excelente">Excelente</option>
             </select>
           </div>
           <div v-if="!esEstadoDesconocido(form.estadoAcHBs)" class="form7-field">
@@ -172,7 +172,7 @@
             <p v-if="resumenDosisHepatitis" class="text-[10px] text-slate-500 mt-1">{{ resumenDosisHepatitis }}</p>
           </div>
           <div class="form7-field">
-            <label class="form7-label">Hepatitis B — fecha</label>
+            <label class="form7-label">Hepatitis B — fecha <span v-if="form.dosisHepatitisB" class="text-red-500">*</span></label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.fechaHepatitisB" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaHepatitisB }" @input="onInputFechaTexto('fechaHepatitisB', $event)" @blur="validarCampoFechaEnBlur('fechaHepatitisB')" />
               <input :ref="(el) => setDatePickerRef('fechaHepatitisB', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaHepatitisB')" :min="minPickerVacuna('fechaHepatitisB')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaHepatitisB', $event)" />
@@ -199,7 +199,7 @@
             <p v-if="resumenDosisCovid" class="text-[10px] text-slate-500 mt-1">{{ resumenDosisCovid }}</p>
           </div>
           <div class="form7-field">
-            <label class="form7-label">Covid-19 — fecha</label>
+            <label class="form7-label">Covid-19 — fecha <span v-if="form.dosisCovid" class="text-red-500">*</span></label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.fechaCovid" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaCovid }" @input="onInputFechaTexto('fechaCovid', $event)" @blur="validarCampoFechaEnBlur('fechaCovid')" />
               <input :ref="(el) => setDatePickerRef('fechaCovid', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaCovid')" :min="minPickerVacuna('fechaCovid')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaCovid', $event)" />
@@ -333,12 +333,7 @@ function cargarRegistroEdicion(registro) {
   if (esEstadoDesconocido(form.antiHbcEstado)) form.antiHbcFecha = null
   if (esEstadoDesconocido(form.vhcEstado)) form.vhcFecha = null
   if (esEstadoDesconocido(form.vihEstado)) form.vihFecha = null
-  if (esEstadoDesconocido(form.estadoAcHBs)) {
-    form.vacunaHepatitis = null
-    form.fechaVacHepatitis = null
-  } else if (!form.estadoAcHBs && (form.vacunaHepatitis == null || form.vacunaHepatitis === '')) {
-    form.estadoAcHBs = 'Desconocido'
-  }
+  recalcularEstadoAcHBs()
 }
 
 const periodoVisibleId = computed(() => periodoGlobal.value ?? periodo ?? null)
@@ -429,12 +424,37 @@ function onCambioEstadoSerologico(estadoKey, fechaKey) {
   }
 }
 
-function onCambioEstadoAcHBs() {
-  if (esEstadoDesconocido(form.estadoAcHBs)) {
-    form.vacunaHepatitis = null
+/** Calcula estado AcHBs según título (mUI/mL). Vacío → Desconocido. */
+function recalcularEstadoAcHBs() {
+  const nuevoValor = form.vacunaHepatitis
+  if (nuevoValor !== null && nuevoValor !== undefined && nuevoValor !== '' && Number(nuevoValor) > 2000) {
+    form.vacunaHepatitis = 2000
+    return
+  }
+
+  if (nuevoValor === null || nuevoValor === undefined || nuevoValor === '' || Number.isNaN(Number(nuevoValor))) {
+    form.estadoAcHBs = 'Desconocido'
     form.fechaVacHepatitis = null
     erroresFecha.fechaVacHepatitis = ''
+    return
   }
+
+  const valor = Number(nuevoValor)
+  if (valor < 10) {
+    form.estadoAcHBs = 'No Responde'
+  } else if (valor >= 10 && valor < 100) {
+    form.estadoAcHBs = 'Respuesta pobre'
+  } else if (valor >= 100 && valor < 1000) {
+    form.estadoAcHBs = 'Óptimo'
+  } else if (valor >= 1000 && valor <= 2000) {
+    form.estadoAcHBs = 'Excelente'
+  } else {
+    form.estadoAcHBs = 'Desconocido'
+  }
+}
+
+function esCampoFechaVacuna(key) {
+  return CAMPOS_FECHA.some((c) => c.key === key && c.vacuna)
 }
 
 function validarFechasVacunasDuplicadas() {
@@ -515,8 +535,15 @@ function mensajeErrorFecha(key) {
   const iso = parseFechaAISO(fecha)
   const rango = rangoFechasPeriodo.value
   const rangoTxt = rangoFechasPeriodoTexto.value
-  if (rango.min && rango.max && iso && (iso < rango.min || iso > rango.max)) {
-    return `Debe estar entre ${rangoTxt.min} y ${rangoTxt.max}`
+  if (rango.max && iso) {
+    if (esCampoFechaVacuna(key)) {
+      // Vacunas: pueden ser anteriores al periodo; no posteriores al fin del periodo
+      if (iso > rango.max) {
+        return `No puede ser posterior a ${rangoTxt.max}`
+      }
+    } else if (rango.min && (iso < rango.min || iso > rango.max)) {
+      return `Debe estar entre ${rangoTxt.min} y ${rangoTxt.max}`
+    }
   }
   const minDosis = fechaMinimaPorDosisPrevias(key)
   if (minDosis && iso && iso < minDosis) {
@@ -607,10 +634,14 @@ function validarFechasPeriodo() {
     const fecha = form[key]
     if (!fecha) continue
     if (!fechaDDMMAAAAValida(fecha)) {
-      return `${label}: use el formato dd-mm-aaaa`
+      return `${label}: use el formato dd/mm/aaaa`
     }
     const iso = parseFechaAISO(fecha)
-    if (rango.min && rango.max && (iso < rango.min || iso > rango.max)) {
+    if (campo.vacuna) {
+      if (rango.max && iso > rango.max) {
+        return `${label} no puede ser posterior a ${rangoTxt.max}`
+      }
+    } else if (rango.min && rango.max && (iso < rango.min || iso > rango.max)) {
       return `${label} debe estar entre ${rangoTxt.min} y ${rangoTxt.max}`
     }
     const minDosis = fechaMinimaPorDosisPrevias(key)
@@ -631,7 +662,7 @@ const form = reactive({
   antiHbcEstado: null,
   antiHbcFecha: null,
   vacunaHepatitis: null,
-  estadoAcHBs: null,
+  estadoAcHBs: 'Desconocido',
   fechaVacHepatitis: null,
   dosisHepatitisB: null,
   fechaHepatitisB: null,
@@ -733,12 +764,9 @@ function fechaMinimaPorDosisPrevias(key) {
   return null
 }
 
-/** min del date picker: mayor entre inicio de periodo y dosis previa. */
+/** min del date picker de vacunas: solo dosis previa (pueden ser anteriores al periodo). */
 function minPickerVacuna(key) {
-  const periodoMin = rangoFechasPeriodo.value.min || null
-  const dosisMin = fechaMinimaPorDosisPrevias(key)
-  if (periodoMin && dosisMin) return dosisMin > periodoMin ? dosisMin : periodoMin
-  return dosisMin || periodoMin || undefined
+  return fechaMinimaPorDosisPrevias(key) || undefined
 }
 
 function hintFechaMinDosis(key) {
@@ -930,40 +958,33 @@ function buildPayload() {
   return payload
 }
 
-watch(() => form.vacunaHepatitis, (nuevoValor) => {
-  if (esEstadoDesconocido(form.estadoAcHBs)) return
-
-  if (nuevoValor > 2000) {
-    form.vacunaHepatitis = 2000;
-    return;
-  }
-
-  if (nuevoValor === null || nuevoValor === undefined || nuevoValor === '' || isNaN(nuevoValor)) {
-    form.estadoAcHBs = 'Desconocido';
-    return;
-  }
-
-  const valor = Number(nuevoValor);
-
-  if (valor < 10) {
-    form.estadoAcHBs = 'No Responde';
-  } else if (valor >= 10 && valor < 100) {
-    form.estadoAcHBs = 'Respuesta pobre';
-  } else if (valor >= 100 && valor < 1000) {
-    form.estadoAcHBs = 'Óptimo';
-  } else if (valor >= 1000 && valor <= 2000) {
-    form.estadoAcHBs = 'Excelente';
-  } else {
-    form.estadoAcHBs = 'Desconocido';
-  }
-});
-
+watch(() => form.vacunaHepatitis, () => {
+  recalcularEstadoAcHBs()
+})
 
 const router = useRouter()
 const pacienteSeleccionado = paciente
 
+function validarDosisConFecha() {
+  if (form.dosisHepatitisB && !parseFechaAISO(form.fechaHepatitisB)) {
+    erroresFecha.fechaHepatitisB = 'Obligatoria si selecciona una dosis'
+    return 'Indique la fecha de vacunación de Hepatitis B (obligatoria al seleccionar dosis).'
+  }
+  if (form.dosisCovid && !parseFechaAISO(form.fechaCovid)) {
+    erroresFecha.fechaCovid = 'Obligatoria si selecciona una dosis'
+    return 'Indique la fecha de vacunación de Covid-19 (obligatoria al seleccionar dosis).'
+  }
+  return null
+}
+
 const postForm = async () => {
   normalizarTodasLasFechas()
+  recalcularEstadoAcHBs()
+  const errorDosisFecha = validarDosisConFecha()
+  if (errorDosisFecha) {
+    alert(errorDosisFecha)
+    return
+  }
   const errorFecha = validarFechasPeriodo();
   if (errorFecha) {
     alert(errorFecha);
@@ -1233,7 +1254,9 @@ const motivosNoVacunacion = [
 }
 
 .form7-shell input.form7-control--readonly,
-.form7-shell input.form7-control:disabled {
+.form7-shell input.form7-control:disabled,
+.form7-shell select.form7-control--readonly,
+.form7-shell select.form7-control:disabled {
   background-color: #f1f5f9;
   color: #64748b;
   cursor: not-allowed;
