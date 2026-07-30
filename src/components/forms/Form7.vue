@@ -24,7 +24,7 @@
     <div class="space-y-4">
       <div class="border-l-4 border-[#008f9c] pl-3">
         <h2 class="text-base font-bold text-gray-800">Serología y vacunación</h2>
-        <p class="text-xs text-gray-500">Campos opcionales en general. Si selecciona una dosis de Hepatitis B o Covid-19, la fecha de esa vacuna es obligatoria.</p>
+        <p class="text-xs text-gray-500">Si selecciona Positivo o Negativo en serología, la fecha de examen es obligatoria. Si selecciona una dosis de Hepatitis B o Covid-19, la fecha de esa vacuna es obligatoria.</p>
       </div>
 
       <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
@@ -38,8 +38,8 @@
               <option>Negativo</option>
               <option>Desconocido</option>
             </select>
-            <template v-if="!esEstadoDesconocido(form.vhbEstado)">
-            <label class="form7-label-sub">Fecha examen</label>
+            <template v-if="estadoSerologiaRequiereFecha(form.vhbEstado)">
+            <label class="form7-label-sub">Fecha examen <span class="text-red-500">*</span></label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.vhbFecha" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhbFecha }" @input="onInputFechaTexto('vhbFecha', $event)" @blur="validarCampoFechaEnBlur('vhbFecha')" />
               <input :ref="(el) => setDatePickerRef('vhbFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('vhbFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('vhbFecha', $event)" />
@@ -58,8 +58,8 @@
               <option>Negativo</option>
               <option>Desconocido</option>
             </select>
-            <template v-if="!esEstadoDesconocido(form.antiHbcEstado)">
-            <label class="form7-label-sub">Fecha examen</label>
+            <template v-if="estadoSerologiaRequiereFecha(form.antiHbcEstado)">
+            <label class="form7-label-sub">Fecha examen <span class="text-red-500">*</span></label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.antiHbcFecha" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.antiHbcFecha }" @input="onInputFechaTexto('antiHbcFecha', $event)" @blur="validarCampoFechaEnBlur('antiHbcFecha')" />
               <input :ref="(el) => setDatePickerRef('antiHbcFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('antiHbcFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('antiHbcFecha', $event)" />
@@ -78,8 +78,8 @@
               <option>Negativo</option>
               <option>Desconocido</option>
             </select>
-            <template v-if="!esEstadoDesconocido(form.vhcEstado)">
-            <label class="form7-label-sub">Fecha examen</label>
+            <template v-if="estadoSerologiaRequiereFecha(form.vhcEstado)">
+            <label class="form7-label-sub">Fecha examen <span class="text-red-500">*</span></label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.vhcFecha" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vhcFecha }" @input="onInputFechaTexto('vhcFecha', $event)" @blur="validarCampoFechaEnBlur('vhcFecha')" />
               <input :ref="(el) => setDatePickerRef('vhcFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('vhcFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('vhcFecha', $event)" />
@@ -98,8 +98,8 @@
               <option>Negativo</option>
               <option>Desconocido</option>
             </select>
-            <template v-if="!esEstadoDesconocido(form.vihEstado)">
-            <label class="form7-label-sub">Fecha examen</label>
+            <template v-if="estadoSerologiaRequiereFecha(form.vihEstado)">
+            <label class="form7-label-sub">Fecha examen <span class="text-red-500">*</span></label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.vihFecha" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.vihFecha }" @input="onInputFechaTexto('vihFecha', $event)" @blur="validarCampoFechaEnBlur('vihFecha')" />
               <input :ref="(el) => setDatePickerRef('vihFecha', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('vihFecha')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('vihFecha', $event)" />
@@ -139,8 +139,8 @@
               <option value="Excelente">Excelente</option>
             </select>
           </div>
-          <div v-if="!esEstadoDesconocido(form.estadoAcHBs)" class="form7-field">
-            <label class="form7-label">Fecha de prueba</label>
+          <div v-if="estadoSerologiaRequiereFecha(form.estadoAcHBs)" class="form7-field">
+            <label class="form7-label">Fecha de prueba <span class="text-red-500">*</span></label>
             <div class="form7-date-wrap">
               <input type="text" class="form7-control form7-control--date" v-model="form.fechaVacHepatitis" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaVacHepatitis }" @input="onInputFechaTexto('fechaVacHepatitis', $event)" @blur="validarCampoFechaEnBlur('fechaVacHepatitis')" />
               <input :ref="(el) => setDatePickerRef('fechaVacHepatitis', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaVacHepatitis')" :min="rangoFechasPeriodo.min || undefined" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaVacHepatitis', $event)" />
@@ -411,6 +411,13 @@ function esEstadoDesconocido(estado) {
   return String(estado || '').trim().toLowerCase() === 'desconocido'
 }
 
+/** Positivo/Negativo (u otro valor distinto de vacío/Desconocido) exige fecha de examen. */
+function estadoSerologiaRequiereFecha(estado) {
+  const t = String(estado || '').trim()
+  if (!t) return false
+  return !esEstadoDesconocido(t)
+}
+
 function fechaSerologiaAplica(campo) {
   if (campo.estadoKey && esEstadoDesconocido(form[campo.estadoKey])) return false
   if (campo.achbs && esEstadoDesconocido(form.estadoAcHBs)) return false
@@ -418,10 +425,36 @@ function fechaSerologiaAplica(campo) {
 }
 
 function onCambioEstadoSerologico(estadoKey, fechaKey) {
-  if (esEstadoDesconocido(form[estadoKey])) {
+  if (esEstadoDesconocido(form[estadoKey]) || !form[estadoKey]) {
     form[fechaKey] = null
     erroresFecha[fechaKey] = ''
+    return
   }
+  // Al elegir Positivo/Negativo, limpiar error previo hasta que validen al guardar
+  if (erroresFecha[fechaKey] === 'Obligatoria si selecciona el resultado') {
+    erroresFecha[fechaKey] = ''
+  }
+}
+
+function validarFechasSerologiaObligatorias() {
+  const pares = [
+    { estadoKey: 'vhbEstado', fechaKey: 'vhbFecha', label: 'VHB' },
+    { estadoKey: 'antiHbcEstado', fechaKey: 'antiHbcFecha', label: 'Anti-HBc total' },
+    { estadoKey: 'vhcEstado', fechaKey: 'vhcFecha', label: 'VHC' },
+    { estadoKey: 'vihEstado', fechaKey: 'vihFecha', label: 'VIH' },
+  ]
+  for (const { estadoKey, fechaKey, label } of pares) {
+    if (!estadoSerologiaRequiereFecha(form[estadoKey])) continue
+    if (!parseFechaAISO(form[fechaKey])) {
+      erroresFecha[fechaKey] = 'Obligatoria si selecciona el resultado'
+      return `Indique la fecha de examen de ${label} (obligatoria al seleccionar Positivo o Negativo).`
+    }
+  }
+  if (estadoSerologiaRequiereFecha(form.estadoAcHBs) && !parseFechaAISO(form.fechaVacHepatitis)) {
+    erroresFecha.fechaVacHepatitis = 'Obligatoria si hay título AcHBs'
+    return 'Indique la fecha de prueba AcHBs (obligatoria cuando hay título).'
+  }
+  return null
 }
 
 /** Calcula estado AcHBs según título (mUI/mL). Vacío → Desconocido. */
@@ -980,6 +1013,11 @@ function validarDosisConFecha() {
 const postForm = async () => {
   normalizarTodasLasFechas()
   recalcularEstadoAcHBs()
+  const errorSerologiaFecha = validarFechasSerologiaObligatorias()
+  if (errorSerologiaFecha) {
+    alert(errorSerologiaFecha)
+    return
+  }
   const errorDosisFecha = validarDosisConFecha()
   if (errorDosisFecha) {
     alert(errorDosisFecha)
