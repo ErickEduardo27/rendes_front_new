@@ -8,11 +8,14 @@
             Calidad de agua y LD
           </h1>
 
-          
+
           <p class="text-slate-500 text-xs mt-1 max-w-2xl">
             Registros de recuento bacteriano y endotoxinas en agua tratada y líquido de diálisis.
           </p>
         </div>
+
+
+        
         <div class="flex flex-wrap items-end gap-2">
           <button
             type="button"
