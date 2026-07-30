@@ -171,3 +171,15 @@ export function registroDePacienteEgresado(registro, listadoAtenciones) {
   }
   return false;
 }
+
+
+export function registroParaAtencionActiva(registro, listadoAtenciones) {
+  if (!registro) return null;
+  const lista = Array.isArray(listadoAtenciones) ? listadoAtenciones : [];
+  const idAten = idAtencionDeRegistro(registro);
+  if (idAten != null) {
+    const a = lista.find((x) => String(x.id_paciente_atencion) === String(idAten));
+    if (a) return registro;
+  }
+  return null;
+}
