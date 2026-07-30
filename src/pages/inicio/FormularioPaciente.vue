@@ -698,16 +698,27 @@ const ETIQUETAS_CAMPO_FORMULARIO = {
   hospitalProcedencia: 'Hospital Procedencia TRR en EsSalud',
 };
 
+/** Etiquetas de campos tal como los valida el API (snake_case). */
+const ETIQUETAS_CAMPO_API = {
+  grado_instruccion: 'Grado de Instrucción',
+  genero: 'Sexo',
+  tipo_documento: 'Tipo de Documento',
+  documento: 'Número de Documento',
+  paciente: 'Apellidos y Nombres',
+  fecha_nacimiento: 'Fecha de Nacimiento',
+  id_modalidad: 'Modalidad TRR',
+};
+
 const CAMPOS_OBLIGATORIOS_MINIMOS = [
   'tipoDocumento',
   'numeroDocumento',
   'nombreCompleto',
   'fechaNacimiento',
+  'sexo',
+  'gradoInstruccion',
 ];
 
 const CAMPOS_OBLIGATORIOS_TRR_COMPLETO = [
-  'sexo',
-  'gradoInstruccion',
   'etiologiaGeneral',
   'etiologiaEspecifica',
   'modalidadTRR',
@@ -755,13 +766,47 @@ function camposObligatoriosActuales() {
 }
 
 async function alertaCampoObligatorio(texto, { title = 'Campo obligatorio', icon = 'warning' } = {}) {
+  const contenido = String(texto || '');
   await Swal.fire({
     title,
-    text: texto,
+    html: contenido.includes('\n') ? contenido.replace(/\n/g, '<br>') : undefined,
+    text: contenido.includes('\n') ? undefined : contenido,
     icon,
     confirmButtonText: 'Entendido',
     confirmButtonColor: '#008f9c',
   });
+}
+
+/** Convierte errores DRF ({ campo: ["msg"] }) en texto legible para el usuario. */
+function mensajeErrorApi(error, fallback = 'Ocurrió un error. Intente nuevamente.') {
+  const data = error?.data;
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const lineas = [];
+    for (const [campo, val] of Object.entries(data)) {
+      if (campo === 'error' || campo === 'detail' || campo === 'message') continue;
+      const etiqueta = ETIQUETAS_CAMPO_API[campo]
+        || ETIQUETAS_CAMPO_FORMULARIO[campo]
+        || campo.replace(/_/g, ' ');
+      const msgs = Array.isArray(val) ? val : [val];
+      for (const m of msgs) {
+        const s = String(m ?? '').trim();
+        if (!s) continue;
+        if (/may not be blank|blank|required|this field is required/i.test(s)) {
+          lineas.push(`Complete el campo «${etiqueta}» obligatoriamente.`);
+        } else {
+          lineas.push(`${etiqueta}: ${s}`);
+        }
+      }
+    }
+    if (lineas.length) return lineas.join('\n');
+    if (typeof data.detail === 'string' && data.detail.trim()) return data.detail;
+    if (typeof data.error === 'string' && data.error.trim() && data.error !== 'Unknown error') {
+      return data.error;
+    }
+  }
+  const raw = error?.error || error?.message;
+  if (raw && String(raw) !== 'Unknown error') return String(raw);
+  return fallback;
 }
 
 const validarFormulario = async () => {
@@ -2119,12 +2164,10 @@ const registrarPaciente = async () => {
   } catch (error) {
     console.error('Error en registro de paciente:', error);
     await revertirRegistroParcial(estadoRegistro);
-    ElMessage({
-      message: error?.error || error?.message || 'Error al registrar el paciente. No se guardó ningún dato.',
-      type: 'error',
-      plain: true,
-      duration: 6000,
-    });
+    await alertaCampoObligatorio(
+      mensajeErrorApi(error, 'Error al registrar el paciente. No se guardó ningún dato.'),
+      { title: 'No se pudo registrar', icon: 'error' },
+    );
   } finally {
     guardandoRegistro.value = false;
   }
@@ -2415,11 +2458,10 @@ async function guardarEdicionSupervisor() {
     emit('guardado');
   } catch (error) {
     console.error(error);
-    ElMessage({
-      message: error?.error || error?.message || 'No se pudieron guardar los cambios.',
-      type: 'error',
-      plain: true,
-    });
+    await alertaCampoObligatorio(
+      mensajeErrorApi(error, 'No se pudieron guardar los cambios.'),
+      { title: 'No se pudo guardar', icon: 'error' },
+    );
   } finally {
     cargandoEdicionSupervisor.value = false;
   }

@@ -66,11 +66,35 @@ class ApiClient {
   }
 
   transformErrorData(errorResponse) {
+    const data = errorResponse.data;
+    let errorMsg = null;
+
+    if (typeof data === 'string' && data.trim()) {
+      errorMsg = data.trim();
+    } else if (data && typeof data === 'object') {
+      if (typeof data.error === 'string' && data.error.trim() && data.error !== 'Unknown error') {
+        errorMsg = data.error;
+      } else if (typeof data.detail === 'string' && data.detail.trim()) {
+        errorMsg = data.detail;
+      } else if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
+        errorMsg = data.non_field_errors.join(' ');
+      } else {
+        // Errores por campo de DRF: { grado_instruccion: ["This field may not be blank."] }
+        const partes = [];
+        for (const [campo, val] of Object.entries(data)) {
+          if (['error', 'detail', 'message'].includes(campo)) continue;
+          const msgs = Array.isArray(val) ? val.join(' ') : String(val ?? '');
+          if (msgs.trim()) partes.push(`${campo}: ${msgs.trim()}`);
+        }
+        if (partes.length) errorMsg = partes.join(' | ');
+      }
+    }
+
     return {
-      data: errorResponse.data,
+      data,
       status: errorResponse.status,
       message: errorResponse.statusText || 'Error occurred',
-      error: errorResponse.data?.error || 'Unknown error',
+      error: errorMsg || 'Unknown error',
       headers: errorResponse.headers,
       config: errorResponse.config
     };

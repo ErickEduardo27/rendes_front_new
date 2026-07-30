@@ -289,6 +289,8 @@ const props = defineProps({
         default: null
     },
     modoSupervisor: { type: Boolean, default: false },
+    /** Abierto desde egreso en Movimientos: no pedir efecto ni generar movimientos (el egreso lo hace el padre). */
+    desdeEgresoMovimiento: { type: Boolean, default: false },
 })
 
 const { paciente, periodo, idPacienteAtencion } = props
@@ -341,8 +343,10 @@ const opcionesEfectoDisponibles = computed(() => {
     });
 });
 
-/** Pide confirmación de efecto (movimientos) solo en registro nuevo o completar alta. */
+/** Pide confirmación de efecto (movimientos) solo en registro nuevo o completar alta.
+ *  No aplica si viene del flujo de egreso (Movimientos), donde el egreso lo genera el padre. */
 const debeConfirmarEfectoMovimiento = computed(() => {
+    if (props.desdeEgresoMovimiento) return false;
     if (idMorbilidadEdicion.value != null) return false;
     if (idPacienteAtencion == null || idPacienteAtencion === '') return false;
     return true;
@@ -1582,7 +1586,7 @@ const postForm = async (opts = {}) => {
             }
             await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, patchPayload);
             let errorMovimientos = null;
-            if (efectoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+            if (efectoMovimiento && !props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
                 try {
                     await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento);
                 } catch (e) {
@@ -1598,7 +1602,10 @@ const postForm = async (opts = {}) => {
                         { title: 'Atención', icon: 'warning' },
                     );
                 }
-                emit('guardado', { efectoMovimiento: efectoMovimiento || EFECTO_HOSP.SIN_EGRESO });
+                emit('guardado', {
+                    efectoMovimiento: efectoMovimiento || EFECTO_HOSP.SIN_EGRESO,
+                    continuarEgreso: !!props.desdeEgresoMovimiento,
+                });
             } else {
                 await alertaSwal('Se registró la fecha de alta con éxito.', { title: 'Registro guardado', icon: 'success' });
                 window.location.reload();
@@ -1619,6 +1626,9 @@ const postForm = async (opts = {}) => {
             };
             if (efectoMovimiento) {
                 payload.efecto_movimiento_hospitalizacion = efectoMovimiento;
+            } else if (props.desdeEgresoMovimiento) {
+                // El egreso lo genera Movimientos; no crear movimientos desde Form4
+                payload.efecto_movimiento_hospitalizacion = EFECTO_HOSP.SIN_EGRESO;
             }
             if (idMorbilidadEdicion.value != null) {
                 if (props.modoSupervisor) {
@@ -1626,7 +1636,10 @@ const postForm = async (opts = {}) => {
                 } else {
                     await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadEdicion.value}/`, payload);
                 }
-                emit('guardado', { efectoMovimiento: null });
+                emit('guardado', {
+                    efectoMovimiento: null,
+                    continuarEgreso: !!props.desdeEgresoMovimiento,
+                });
                 return;
             }
         } else {
@@ -1637,7 +1650,7 @@ const postForm = async (opts = {}) => {
         }
         await postAllIpress(opts.url ?? "/morbilidadesHospitalarias/", payload);
         let errorMovimientos = null;
-        if (efectoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+        if (efectoMovimiento && !props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
             try {
                 await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento);
             } catch (e) {
@@ -1653,7 +1666,12 @@ const postForm = async (opts = {}) => {
                     { title: 'Atención', icon: 'warning' },
                 );
             }
-            emit('guardado', { efectoMovimiento: efectoMovimiento || EFECTO_HOSP.SIN_EGRESO });
+            emit('guardado', {
+                efectoMovimiento: props.desdeEgresoMovimiento
+                    ? EFECTO_HOSP.SIN_EGRESO
+                    : (efectoMovimiento || EFECTO_HOSP.SIN_EGRESO),
+                continuarEgreso: !!props.desdeEgresoMovimiento,
+            });
             return;
         }
         await alertaSwal('Se registró con éxito.', { title: 'Registro guardado', icon: 'success' });

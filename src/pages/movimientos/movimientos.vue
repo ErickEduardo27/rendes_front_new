@@ -746,6 +746,7 @@
                         :paciente="pacienteParaForm4"
                         :periodo="Number(formEgresar.periodo || periodoGlobal)"
                         :id-paciente-atencion="idPacienteAtencionForm4"
+                        :desde-egreso-movimiento="true"
                         @cancelar="onCancelarForm4Hospitalizacion"
                         @guardado="onGuardadoForm4Hospitalizacion"
                     />
@@ -1929,22 +1930,6 @@ async function tieneMorbilidadHospitalariaRegistrada(idPacienteAtencion) {
     }
 }
 
-async function obtenerEfectoMorbilidadHospitalaria(idPacienteAtencion) {
-    if (idPacienteAtencion == null || idPacienteAtencion === '') return null;
-    try {
-        const res = await getAllIpress(`/morbilidadesHospitalarias/?id_paciente_atencion=${idPacienteAtencion}`);
-        const lista = Array.isArray(res) ? res : (res?.results || []);
-        if (!lista.length) return null;
-        const ordenada = [...lista].sort(
-            (a, b) => (Number(b.id_morbilidad_hospitalaria) || 0) - (Number(a.id_morbilidad_hospitalaria) || 0),
-        );
-        return String(ordenada[0]?.efecto_movimiento_hospitalizacion || '').trim() || null;
-    } catch (e) {
-        console.warn('No se pudo leer efecto de hospitalización:', e);
-        return null;
-    }
-}
-
 async function abrirModalForm4DesdeEgreso(idPacienteAtencion) {
     if (idPacienteAtencion == null || idPacienteAtencion === '') {
         ElMessage({
@@ -1993,6 +1978,19 @@ function onCancelarForm4Hospitalizacion() {
 
 async function onGuardadoForm4Hospitalizacion(payload = {}) {
     onCancelarForm4Hospitalizacion();
+
+    // Flujo egreso: Form4 solo registró la hospitalización; continuar con el egreso
+    if (payload?.continuarEgreso) {
+        hospitalizacionConfirmadaEgreso.value = true;
+        ElMessage({
+            message: 'Hospitalización registrada. Continuando con el egreso…',
+            type: 'success',
+            plain: true,
+        });
+        await egresarPaciente();
+        return;
+    }
+
     const efecto = String(payload?.efectoMovimiento || '').trim();
 
     if (efecto === '1' || efecto === '2') {
@@ -2469,19 +2467,8 @@ const egresarPaciente = async () => {
                 await abrirModalForm4DesdeEgreso(idPacienteAtencionValidacion);
                 return;
             }
-            // Si la morbilidad ya generó egreso (opciones 1 o 2), no duplicar el movimiento
-            const efectoPrev = await obtenerEfectoMorbilidadHospitalaria(idPacienteAtencionValidacion);
-            if (efectoPrev === '1' || efectoPrev === '2') {
-                ElMessage({
-                    message: efectoPrev === '1'
-                        ? 'Esta hospitalización ya generó egreso y reingreso automáticamente.'
-                        : 'Esta hospitalización ya generó el egreso automáticamente. Use reingreso si el paciente debe volver a la unidad.',
-                    type: 'warning',
-                    plain: true,
-                    duration: 6000,
-                });
-                return;
-            }
+            // Ya hay morbilidad en la atención (p. ej. ciclo previo egreso+reingreso):
+            // se permite un nuevo egreso; no bloquear por el efecto anterior.
             hospitalizacionConfirmadaEgreso.value = true;
         }
     }
