@@ -395,9 +395,16 @@ function diagnosticosDesdeRegistro(registro) {
 
 function cargarRegistroEdicion(registro) {
     if (!registro) return;
-    modoCompletarAlta.value = false;
-    idMorbilidadCompletar.value = null;
-    idMorbilidadEdicion.value = registro.id_morbilidad_hospitalaria;
+    const sinAlta = !registroTieneAlta(registro);
+    if (sinAlta) {
+        modoCompletarAlta.value = true;
+        idMorbilidadCompletar.value = registro.id_morbilidad_hospitalaria;
+        idMorbilidadEdicion.value = null;
+    } else {
+        modoCompletarAlta.value = false;
+        idMorbilidadCompletar.value = null;
+        idMorbilidadEdicion.value = registro.id_morbilidad_hospitalaria;
+    }
     form.value.fIniHos = toInputDate(registro.fecha_hospitalizacion);
     form.value.fAltHos = toInputDate(registro.fecha_alta_hospitalizacion);
     form.value.desenlace = registro.desenlace || '';
@@ -1362,6 +1369,15 @@ function datosFallecimientoPayload() {
     };
 }
 
+function payloadGuardadoEmit(efectoMovimiento) {
+    return {
+        efectoMovimiento,
+        continuarEgreso: !!props.desdeEgresoMovimiento,
+        codigo_diagnostico: (form.value.seleccionados || []).map((item) => item.codigo).filter(Boolean).join(','),
+        fecha_hospitalizacion: form.value.fIniHos || null,
+    };
+}
+
 async function validarDatosFallecimiento() {
     if (form.value.desenlace !== 'Fallecimiento') return true;
     if (!form.value.fechaFallecimiento) {
@@ -1602,10 +1618,7 @@ const postForm = async (opts = {}) => {
                         { title: 'Atención', icon: 'warning' },
                     );
                 }
-                emit('guardado', {
-                    efectoMovimiento: efectoMovimiento || EFECTO_HOSP.SIN_EGRESO,
-                    continuarEgreso: !!props.desdeEgresoMovimiento,
-                });
+                emit('guardado', payloadGuardadoEmit(efectoMovimiento || EFECTO_HOSP.SIN_EGRESO));
             } else {
                 await alertaSwal('Se registró la fecha de alta con éxito.', { title: 'Registro guardado', icon: 'success' });
                 window.location.reload();
@@ -1636,10 +1649,7 @@ const postForm = async (opts = {}) => {
                 } else {
                     await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadEdicion.value}/`, payload);
                 }
-                emit('guardado', {
-                    efectoMovimiento: null,
-                    continuarEgreso: !!props.desdeEgresoMovimiento,
-                });
+                emit('guardado', payloadGuardadoEmit(null));
                 return;
             }
         } else {
@@ -1666,12 +1676,11 @@ const postForm = async (opts = {}) => {
                     { title: 'Atención', icon: 'warning' },
                 );
             }
-            emit('guardado', {
-                efectoMovimiento: props.desdeEgresoMovimiento
+            emit('guardado', payloadGuardadoEmit(
+                props.desdeEgresoMovimiento
                     ? EFECTO_HOSP.SIN_EGRESO
                     : (efectoMovimiento || EFECTO_HOSP.SIN_EGRESO),
-                continuarEgreso: !!props.desdeEgresoMovimiento,
-            });
+            ));
             return;
         }
         await alertaSwal('Se registró con éxito.', { title: 'Registro guardado', icon: 'success' });

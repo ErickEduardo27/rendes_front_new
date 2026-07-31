@@ -328,6 +328,28 @@
       </div>
     </div>
 
+    <div v-if="mostrarModalForm3" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
+        <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center shrink-0">
+          <h3 class="font-bold text-white text-sm uppercase tracking-wide">
+            Registrar evento infeccioso (T82.7)
+          </h3>
+          <button type="button" class="text-white/80 hover:text-white text-xl leading-none" @click="cerrarModalForm3">✕</button>
+        </div>
+        <div class="overflow-y-auto flex-1 p-4">
+          <Form3Hemodialisis
+            :key="form3ModalKey"
+            :paciente="pacienteParaForm3"
+            :id-paciente-atencion="idPacienteAtencionParaForm3"
+            :iniciar-con-infeccion="true"
+            :fecha-evento-inicial="fechaEventoForm3"
+            @cancelar="cerrarModalForm3"
+            @guardado="onGuardadoForm3"
+          />
+        </div>
+      </div>
+    </div>
+
     <div v-if="mostrarModalImportar" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
         <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center">
@@ -368,6 +390,7 @@ import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, r
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import { fechaCelda } from '@/utils/fechaFormat';
 import Form4 from '@/components/forms/Form4.vue';
+import Form3Hemodialisis from '@/components/forms/typesForm3/Form3Hemodialisis.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
@@ -391,6 +414,11 @@ const idPacienteAtencionParaForm = ref(null);
 const registroEdicion = ref(null);
 const form4ModalKey = ref(0);
 const eliminandoId = ref(null);
+const mostrarModalForm3 = ref(false);
+const form3ModalKey = ref(0);
+const pacienteParaForm3 = ref(null);
+const idPacienteAtencionParaForm3 = ref(null);
+const fechaEventoForm3 = ref('');
 const mostrarModalImportar = ref(false);
 const arrastrando = ref(false);
 const archivoSeleccionado = ref(null);
@@ -802,7 +830,41 @@ function cerrarModalNuevo() {
   fetchRegistros();
 }
 
+function incluyeCodigoT827(codigoDiagnostico) {
+  const partes = String(codigoDiagnostico || '')
+    .split(/[,;]/)
+    .map((c) => c.trim().toUpperCase().replace(/\s/g, ''));
+  return partes.some((c) => c === 'T82.7' || c === 'T827');
+}
+
+function abrirModalForm3Infeccion(paciente, idAtencion, fechaEvento = '') {
+  pacienteParaForm3.value = paciente;
+  idPacienteAtencionParaForm3.value = idAtencion;
+  fechaEventoForm3.value = fechaEvento || '';
+  form3ModalKey.value += 1;
+  mostrarModalForm3.value = true;
+}
+
+function cerrarModalForm3() {
+  mostrarModalForm3.value = false;
+  pacienteParaForm3.value = null;
+  idPacienteAtencionParaForm3.value = null;
+  fechaEventoForm3.value = '';
+}
+
+function onGuardadoForm3() {
+  cerrarModalForm3();
+  ElMessage.success('Evento infeccioso registrado correctamente.');
+  fetchRegistros();
+}
+
 function onGuardado(payload = {}) {
+  const paciente = pacienteParaFormulario.value;
+  const idAtencion = idPacienteAtencionParaForm.value;
+  const codigoDiagnostico = payload?.codigo_diagnostico || '';
+  const fechaHospitalizacion = payload?.fecha_hospitalizacion || '';
+  const abrirForm3 = incluyeCodigoT827(codigoDiagnostico) && paciente && idAtencion != null && idAtencion !== '';
+
   cerrarModalNuevo();
   const efecto = String(payload?.efectoMovimiento || '').trim();
   if (efecto === '1') {
@@ -811,6 +873,13 @@ function onGuardado(payload = {}) {
     ElMessage.success('Registro guardado. Se generó el egreso automáticamente.');
   } else if (efecto === '3') {
     ElMessage.success('Registro guardado sin generar egreso.');
+  } else {
+    ElMessage.success('Registro guardado correctamente.');
+  }
+
+  if (abrirForm3) {
+    ElMessage.info('Diagnóstico T82.7: complete el evento infeccioso asociado al acceso.');
+    abrirModalForm3Infeccion(paciente, idAtencion, fechaHospitalizacion);
   }
 }
 

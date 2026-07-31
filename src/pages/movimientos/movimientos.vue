@@ -507,6 +507,50 @@
                         </div>
                     </div>
 
+                    <!-- Hospitalización sin fecha de alta (visible en la clínica donde se capta) -->
+                    <div
+                        v-if="hospitalizacionPendienteAlta"
+                        class="bg-amber-50 p-4 rounded border border-amber-300"
+                    >
+                        <h4 class="font-semibold text-sm text-amber-900 mb-2 flex items-center gap-2">
+                            <span>⚠️</span>
+                            <span>Hospitalización sin fecha de alta</span>
+                        </h4>
+                        <div class="grid grid-cols-2 gap-2 text-sm text-amber-950">
+                            <div class="col-span-2">
+                                <strong>Clínica del registro:</strong>
+                                {{ nombreClinicaHospitalizacionPendiente || '—' }}
+                            </div>
+                            <div class="col-span-2" v-if="nombreClinicaGlobal">
+                                <strong>Clínica donde se capta:</strong>
+                                {{ nombreClinicaGlobal }}
+                            </div>
+                            <div class="col-span-2">
+                                <strong>Diagnóstico:</strong>
+                                {{ hospitalizacionPendienteAlta.diagnostico || '—' }}
+                            </div>
+                            <div>
+                                <strong>Código:</strong>
+                                {{ hospitalizacionPendienteAlta.codigo_diagnostico || '—' }}
+                            </div>
+                            <div>
+                                <strong>F. hospitalización:</strong>
+                                {{ fechaCelda(hospitalizacionPendienteAlta.fecha_hospitalizacion) }}
+                            </div>
+                            <div>
+                                <strong>F. alta:</strong>
+                                <span class="font-semibold text-amber-800">Sin registrar</span>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            class="mt-3 px-3 py-1.5 text-xs font-semibold rounded bg-amber-600 text-white hover:bg-amber-700"
+                            @click="abrirForm4CompletarAltaDesdeCaptar"
+                        >
+                            Registrar fecha de alta
+                        </button>
+                    </div>
+
                     <!-- Egreso Previo (si es REINGRESO) -->
                     <div v-if="condicionAutomatica === 'REINGRESO'">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Registro de Egreso Previo</label>
@@ -636,6 +680,54 @@
                         </div>
                     </div>
 
+                    <!-- Hospitalización sin fecha de alta -->
+                    <div
+                        v-if="hospitalizacionPendienteAlta"
+                        class="bg-amber-50 p-4 rounded border border-amber-300"
+                    >
+                        <h4 class="font-semibold text-sm text-amber-900 mb-2 flex items-center gap-2">
+                            <span>⚠️</span>
+                            <span>Hospitalización sin fecha de alta</span>
+                        </h4>
+                        <div class="grid grid-cols-2 gap-2 text-sm text-amber-950">
+                            <div class="col-span-2">
+                                <strong>Clínica del registro:</strong>
+                                {{ nombreClinicaHospitalizacionPendiente || '—' }}
+                            </div>
+                            <div class="col-span-2" v-if="nombreClinicaEgresar">
+                                <strong>Clínica actual (captura):</strong>
+                                {{ nombreClinicaEgresar }}
+                            </div>
+                            <div class="col-span-2">
+                                <strong>Diagnóstico:</strong>
+                                {{ hospitalizacionPendienteAlta.diagnostico || '—' }}
+                            </div>
+                            <div>
+                                <strong>Código:</strong>
+                                {{ hospitalizacionPendienteAlta.codigo_diagnostico || '—' }}
+                            </div>
+                            <div>
+                                <strong>F. hospitalización:</strong>
+                                {{ fechaCelda(hospitalizacionPendienteAlta.fecha_hospitalizacion) }}
+                            </div>
+                            <div>
+                                <strong>Desenlace:</strong>
+                                {{ hospitalizacionPendienteAlta.desenlace || 'Pendiente' }}
+                            </div>
+                            <div>
+                                <strong>F. alta:</strong>
+                                <span class="font-semibold text-amber-800">Sin registrar</span>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            class="mt-3 px-3 py-1.5 text-xs font-semibold rounded bg-amber-600 text-white hover:bg-amber-700"
+                            @click="abrirForm4CompletarAltaDesdeEgreso"
+                        >
+                            Registrar fecha de alta
+                        </button>
+                    </div>
+
                     <!-- Clínica -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Clínica</label>
@@ -726,9 +818,13 @@
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
                 <div class="bg-[#008f9c] px-6 py-4 flex justify-between items-center gap-3 shrink-0">
                     <div class="min-w-0">
-                        <h3 class="font-bold text-white">Registrar hospitalización</h3>
+                        <h3 class="font-bold text-white">
+                            {{ registroEdicionForm4 ? 'Completar fecha de alta' : 'Registrar hospitalización' }}
+                        </h3>
                         <p class="text-cyan-100 text-sm truncate">
-                            Debe registrar la morbilidad hospitalaria del periodo e IPRESS actuales antes de egresar.
+                            {{ registroEdicionForm4
+                                ? 'La hospitalización no tiene fecha de alta. Regístrela antes de continuar.'
+                                : 'Debe registrar la morbilidad hospitalaria del periodo e IPRESS actuales antes de egresar.' }}
                         </p>
                     </div>
                     <button
@@ -746,7 +842,8 @@
                         :paciente="pacienteParaForm4"
                         :periodo="Number(formEgresar.periodo || periodoGlobal)"
                         :id-paciente-atencion="idPacienteAtencionForm4"
-                        :desde-egreso-movimiento="true"
+                        :registro-edicion="registroEdicionForm4"
+                        :desde-egreso-movimiento="form4DesdeEgreso"
                         @cancelar="onCancelarForm4Hospitalizacion"
                         @guardado="onGuardadoForm4Hospitalizacion"
                     />
@@ -765,6 +862,7 @@ import { fechaCelda, formatFechaDDMMAAAA, parseFechaAISO } from '@/utils/fechaFo
 import { useAuthStore } from '@/store/auth';
 import { ElMessage } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
+import Swal from 'sweetalert2';
 import FormularioPaciente from '../inicio/FormularioPaciente.vue';
 import Form4 from '@/components/forms/Form4.vue';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
@@ -800,6 +898,93 @@ const nombreClinicaEgresar = computed(() => {
   return nombreClinicaGlobal.value;
 });
 
+const nombreClinicaHospitalizacionPendiente = computed(() => {
+  const h = hospitalizacionPendienteAlta.value;
+  if (!h) return '';
+  const ipress = h.datosPacienteAtencion?.datosIpress;
+  return ipress?.nombre_corto || ipress?.ipress || '';
+});
+
+function registroHospitalizacionTieneAlta(registro) {
+  const fecha = String(registro?.fecha_alta_hospitalizacion ?? '').trim();
+  if (!fecha) return false;
+  return /^\d{4}-\d{2}-\d{2}/.test(fecha);
+}
+
+function idAtencionDesdeMorbilidad(registro) {
+  return registro?.id_paciente_atencion
+    ?? registro?.datosPacienteAtencion?.id_paciente_atencion
+    ?? null;
+}
+
+async function listarMorbilidadesPorAtencion(idPacienteAtencion) {
+  if (idPacienteAtencion == null || idPacienteAtencion === '') return [];
+  try {
+    const res = await getAllIpress(`/morbilidadesHospitalarias/?id_paciente_atencion=${idPacienteAtencion}`);
+    return Array.isArray(res) ? res : (res?.results || []);
+  } catch (e) {
+    console.warn('No se pudo listar morbilidades hospitalarias:', e);
+    return [];
+  }
+}
+
+async function buscarHospitalizacionPendienteAlta({ pacienteId = null, idPacienteAtencion = null } = {}) {
+  const idsAtencion = [];
+  if (idPacienteAtencion != null && idPacienteAtencion !== '') {
+    idsAtencion.push(idPacienteAtencion);
+  }
+  if (pacienteId != null && pacienteId !== '') {
+    try {
+      const resAt = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(pacienteId)}`);
+      const listaAt = Array.isArray(resAt) ? resAt : (resAt?.results || []);
+      listaAt
+        .slice()
+        .sort((a, b) => (Number(b.id_paciente_atencion) || 0) - (Number(a.id_paciente_atencion) || 0))
+        .forEach((a) => {
+          const id = a.id_paciente_atencion;
+          if (id != null && !idsAtencion.some((x) => String(x) === String(id))) {
+            idsAtencion.push(id);
+          }
+        });
+    } catch (e) {
+      console.warn('No se pudieron listar atenciones para hospitalización pendiente:', e);
+    }
+  }
+
+  for (const idAt of idsAtencion) {
+    const lista = await listarMorbilidadesPorAtencion(idAt);
+    const pendiente = lista
+      .slice()
+      .sort((a, b) => (Number(b.id_morbilidad_hospitalaria) || 0) - (Number(a.id_morbilidad_hospitalaria) || 0))
+      .find((r) => !registroHospitalizacionTieneAlta(r));
+    if (pendiente) return pendiente;
+  }
+  return null;
+}
+
+async function alertarHospitalizacionSinAlta(registro) {
+  if (!registro) return;
+  const clinicaReg = registro?.datosPacienteAtencion?.datosIpress?.nombre_corto
+    || registro?.datosPacienteAtencion?.datosIpress?.ipress
+    || '—';
+  const clinicaActual = nombreClinicaEgresar.value || nombreClinicaGlobal.value || '—';
+  await Swal.fire({
+    icon: 'warning',
+    title: 'Hospitalización sin alta',
+    html: `
+      <p class="text-left">El paciente tiene una hospitalización <strong>sin fecha de alta</strong>.</p>
+      <p class="text-left mt-2">Debe registrar la fecha de alta antes de continuar.</p>
+      <p class="text-left mt-2 text-sm text-slate-600">
+        Clínica del registro: <strong>${clinicaReg}</strong><br/>
+        Clínica actual: <strong>${clinicaActual}</strong><br/>
+        Diagnóstico: <strong>${registro.diagnostico || '—'}</strong><br/>
+        F. hospitalización: <strong>${fechaCelda(registro.fecha_hospitalizacion)}</strong>
+      </p>
+    `,
+    confirmButtonText: 'Entendido',
+    confirmButtonColor: '#d97706',
+  });
+}
 // Rango de fechas del periodo global (día 1 … último día del mes; mismo criterio para egreso y captación)
 const rangoFechaEgreso = computed(() => {
   const periodoId = periodoGlobal.value;
@@ -914,8 +1099,11 @@ const itemsPorPagina = 10;
 const mostrarModalForm4Hospitalizacion = ref(false);
 const pacienteParaForm4 = ref(null);
 const idPacienteAtencionForm4 = ref(null);
+const registroEdicionForm4 = ref(null);
+const form4DesdeEgreso = ref(true);
 const form4ModalKey = ref(0);
 const hospitalizacionConfirmadaEgreso = ref(false);
+const hospitalizacionPendienteAlta = ref(null);
 const movimientoEnEdicion = ref(null);
 
 const TIPOS_EGRESO_PREDEFINIDOS = [
@@ -1230,6 +1418,12 @@ const handleSelectPaciente = async (item) => {
     formCaptar.paciente = item.id_paciente;
     formCaptar.pacienteBusqueda = `${item.paciente || ''}`.trim();
     await determinarCondicionPaciente(item.id_paciente);
+    hospitalizacionPendienteAlta.value = await buscarHospitalizacionPendienteAlta({
+        pacienteId: item.id_paciente,
+    });
+    if (hospitalizacionPendienteAlta.value) {
+        await alertarHospitalizacionSinAlta(hospitalizacionPendienteAlta.value);
+    }
 };
 
 const handleSelectPacienteEgresar = async (item) => {
@@ -1240,6 +1434,13 @@ const handleSelectPacienteEgresar = async (item) => {
         formEgresar.clinicaNombre = item.nombre_clinica || '';
     }
     await actualizarLimitesFechaEgresarPaciente(item);
+    hospitalizacionPendienteAlta.value = await buscarHospitalizacionPendienteAlta({
+        pacienteId: item.id_paciente,
+        idPacienteAtencion: item.id_paciente_atencion ?? pacienteSeleccionadoEgresar.value?.id_paciente_atencion,
+    });
+    if (hospitalizacionPendienteAlta.value) {
+        await alertarHospitalizacionSinAlta(hospitalizacionPendienteAlta.value);
+    }
 };
 
 function limpiarFechaEgresoSiInvalida() {
@@ -1388,6 +1589,7 @@ const abrirModalCaptarFormulario = async (precargaPaciente = null) => {
     condicionAutomatica.value = '';
     mensajeCondicion.value = '';
     ultimoEgreso.value = null;
+    hospitalizacionPendienteAlta.value = null;
     mostrarModalCaptar.value = true;
 
     if (precargaPaciente && precargaPaciente.id_paciente != null) {
@@ -1437,6 +1639,7 @@ const procesarCaptacionDesdeRuta = async () => {
 
 const cerrarModalCaptar = () => {
     mostrarModalCaptar.value = false;
+    hospitalizacionPendienteAlta.value = null;
     movimientoEnEdicion.value = null;
 };
 
@@ -1905,6 +2108,7 @@ const abrirModalEgresar = async () => {
     fechaUltimoIngresoReingresoEgresar.value = null;
     ultimaFechaRegistrosEgresar.value = null;
     hospitalizacionConfirmadaEgreso.value = false;
+    hospitalizacionPendienteAlta.value = null;
     mostrarModalEgresar.value = true;
 };
 
@@ -1915,6 +2119,7 @@ const cerrarModalEgresar = () => {
     ultimaFechaRegistrosEgresar.value = null;
     movimientoEnEdicion.value = null;
     hospitalizacionConfirmadaEgreso.value = false;
+    hospitalizacionPendienteAlta.value = null;
     onCancelarForm4Hospitalizacion();
 };
 
@@ -1930,7 +2135,7 @@ async function tieneMorbilidadHospitalariaRegistrada(idPacienteAtencion) {
     }
 }
 
-async function abrirModalForm4DesdeEgreso(idPacienteAtencion) {
+async function abrirModalForm4DesdeEgreso(idPacienteAtencion, registroPendiente = null) {
     if (idPacienteAtencion == null || idPacienteAtencion === '') {
         ElMessage({
             message: 'No se encontró la atención del paciente para registrar hospitalización.',
@@ -1952,14 +2157,26 @@ async function abrirModalForm4DesdeEgreso(idPacienteAtencion) {
         }
         pacienteParaForm4.value = paciente;
         idPacienteAtencionForm4.value = Number(idPacienteAtencion);
+        registroEdicionForm4.value = registroPendiente || null;
+        form4DesdeEgreso.value = true;
         form4ModalKey.value += 1;
         mostrarModalForm4Hospitalizacion.value = true;
-        ElMessage({
-            message: 'Debe registrar la hospitalización del periodo e IPRESS actuales antes de egresar.',
-            type: 'warning',
-            plain: true,
-            duration: 6000,
-        });
+        if (registroPendiente) {
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Registre la fecha de alta',
+                text: 'La hospitalización no tiene fecha de alta. Complétela para continuar.',
+                confirmButtonText: 'Continuar',
+                confirmButtonColor: '#d97706',
+            });
+        } else {
+            ElMessage({
+                message: 'Debe registrar la hospitalización del periodo e IPRESS actuales antes de egresar.',
+                type: 'warning',
+                plain: true,
+                duration: 6000,
+            });
+        }
     } catch (e) {
         console.error('Error al abrir Form4 desde egreso:', e);
         ElMessage({
@@ -1970,24 +2187,83 @@ async function abrirModalForm4DesdeEgreso(idPacienteAtencion) {
     }
 }
 
+async function abrirForm4CompletarAltaDesdeEgreso() {
+    const pendiente = hospitalizacionPendienteAlta.value;
+    if (!pendiente) return;
+    const idAt = idAtencionDesdeMorbilidad(pendiente);
+    await abrirModalForm4DesdeEgreso(idAt, pendiente);
+}
+
+async function abrirForm4CompletarAltaDesdeCaptar() {
+    const pendiente = hospitalizacionPendienteAlta.value;
+    if (!pendiente) return;
+    const idAt = idAtencionDesdeMorbilidad(pendiente);
+    if (idAt == null || idAt === '') {
+        ElMessage({ message: 'No se encontró la atención de la hospitalización pendiente.', type: 'error', plain: true });
+        return;
+    }
+    try {
+        const atencion = await getAllIpress(`/pacienteAtencion/${idAt}/`);
+        const paciente = atencion?.datosPaciente;
+        if (!paciente?.id_paciente) {
+            ElMessage({ message: 'No se pudo cargar el paciente para completar el alta.', type: 'error', plain: true });
+            return;
+        }
+        pacienteParaForm4.value = paciente;
+        idPacienteAtencionForm4.value = Number(idAt);
+        registroEdicionForm4.value = pendiente;
+        form4DesdeEgreso.value = false;
+        form4ModalKey.value += 1;
+        mostrarModalForm4Hospitalizacion.value = true;
+        await Swal.fire({
+            icon: 'warning',
+            title: 'Registre la fecha de alta',
+            text: 'Complete la fecha de alta de la hospitalización pendiente.',
+            confirmButtonText: 'Continuar',
+            confirmButtonColor: '#d97706',
+        });
+    } catch (e) {
+        console.error('Error al abrir Form4 desde captar:', e);
+        ElMessage({ message: 'No se pudo abrir el formulario de hospitalización.', type: 'error', plain: true });
+    }
+}
+
 function onCancelarForm4Hospitalizacion() {
     mostrarModalForm4Hospitalizacion.value = false;
     pacienteParaForm4.value = null;
     idPacienteAtencionForm4.value = null;
+    registroEdicionForm4.value = null;
+    form4DesdeEgreso.value = true;
 }
 
 async function onGuardadoForm4Hospitalizacion(payload = {}) {
+    const eraCompletarAlta = !!registroEdicionForm4.value;
+    const desdeEgreso = form4DesdeEgreso.value;
     onCancelarForm4Hospitalizacion();
+    hospitalizacionPendienteAlta.value = null;
 
-    // Flujo egreso: Form4 solo registró la hospitalización; continuar con el egreso
-    if (payload?.continuarEgreso) {
+    // Flujo egreso: Form4 solo registró/completó la hospitalización; continuar con el egreso
+    if (payload?.continuarEgreso && desdeEgreso) {
         hospitalizacionConfirmadaEgreso.value = true;
         ElMessage({
-            message: 'Hospitalización registrada. Continuando con el egreso…',
+            message: eraCompletarAlta
+                ? 'Fecha de alta registrada. Continuando con el egreso…'
+                : 'Hospitalización registrada. Continuando con el egreso…',
             type: 'success',
             plain: true,
         });
         await egresarPaciente();
+        return;
+    }
+
+    if (!desdeEgreso) {
+        ElMessage({
+            message: eraCompletarAlta
+                ? 'Fecha de alta registrada correctamente.'
+                : 'Hospitalización registrada correctamente.',
+            type: 'success',
+            plain: true,
+        });
         return;
     }
 
@@ -2462,6 +2738,20 @@ const egresarPaciente = async () => {
             return;
         }
         if (!hospitalizacionConfirmadaEgreso.value) {
+            // Si hay hospitalización sin alta (en esta u otra atención), exigir completar el alta
+            let pendiente = hospitalizacionPendienteAlta.value;
+            if (!pendiente) {
+                pendiente = await buscarHospitalizacionPendienteAlta({
+                    pacienteId: formEgresar.paciente,
+                    idPacienteAtencion: idPacienteAtencionValidacion,
+                });
+                hospitalizacionPendienteAlta.value = pendiente;
+            }
+            if (pendiente) {
+                const idAtPendiente = idAtencionDesdeMorbilidad(pendiente) || idPacienteAtencionValidacion;
+                await abrirModalForm4DesdeEgreso(idAtPendiente, pendiente);
+                return;
+            }
             const tieneMorbilidad = await tieneMorbilidadHospitalariaRegistrada(idPacienteAtencionValidacion);
             if (!tieneMorbilidad) {
                 await abrirModalForm4DesdeEgreso(idPacienteAtencionValidacion);

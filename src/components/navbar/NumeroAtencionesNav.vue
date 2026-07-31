@@ -5,12 +5,14 @@
       v-model="numeroAtenciones"
       type="number"
       min="0"
+      :max="maxSesiones ?? undefined"
       step="1"
       inputmode="numeric"
       placeholder="Ej. 120"
       class="w-24 border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none disabled:opacity-50"
       :disabled="!filtroListo || guardando || cargando || bloqueadoPorNotificacion"
-      :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : undefined"
+      :title="tituloInput"
+      @input="aplicarTopeSesiones"
     />
     <button
       type="button"
@@ -59,6 +61,8 @@ const guardando = ref(false);
 const ultimaActualizacion = ref('');
 const totalPacientesSistema = ref(null);
 
+const SESIONES_POR_PACIENTE = 13;
+
 const filtroListo = computed(() => {
   return (
     props.periodo != null && props.periodo !== '' &&
@@ -67,12 +71,40 @@ const filtroListo = computed(() => {
   );
 });
 
+/** Máximo: pacientes atendidos × 13 */
+const maxSesiones = computed(() => {
+  if (totalPacientesSistema.value == null) return null;
+  return Number(totalPacientesSistema.value) * SESIONES_POR_PACIENTE;
+});
+
+const tituloInput = computed(() => {
+  if (bloqueadoPorNotificacion.value) return mensajeBloqueoNotificacion;
+  if (maxSesiones.value != null) {
+    return `Máximo: ${maxSesiones.value} (pacientes × ${SESIONES_POR_PACIENTE})`;
+  }
+  return undefined;
+});
+
 const puedeGuardar = computed(() => {
   const texto = String(numeroAtenciones.value ?? '').trim();
   if (!texto) return false;
   const n = Number(texto);
-  return Number.isInteger(n) && n >= 0;
+  if (!Number.isInteger(n) || n < 0) return false;
+  if (maxSesiones.value != null && n > maxSesiones.value) return false;
+  return true;
 });
+
+function aplicarTopeSesiones() {
+  const texto = String(numeroAtenciones.value ?? '').trim();
+  if (!texto || maxSesiones.value == null) return;
+  const n = Number(texto);
+  if (!Number.isFinite(n)) return;
+  if (n > maxSesiones.value) {
+    numeroAtenciones.value = String(maxSesiones.value);
+  } else if (n < 0) {
+    numeroAtenciones.value = '0';
+  }
+}
 
 function buildQs() {
   const params = new URLSearchParams();
@@ -125,7 +157,13 @@ async function guardarNumeroAtenciones() {
     ElMessage.warning(mensajeBloqueoNotificacion);
     return;
   }
-  if (!filtroListo.value || !puedeGuardar.value) return;
+  aplicarTopeSesiones();
+  if (!filtroListo.value || !puedeGuardar.value) {
+    if (maxSesiones.value != null && Number(numeroAtenciones.value) > maxSesiones.value) {
+      ElMessage.warning(`El N° de sesiones no puede superar ${maxSesiones.value} (pacientes × ${SESIONES_POR_PACIENTE}).`);
+    }
+    return;
+  }
   guardando.value = true;
   try {
     const res = await postAllIpress('/guardar_inicio_trr_periodo/', {

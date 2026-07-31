@@ -98,7 +98,7 @@
                 v-if="esPerfilClinicaUsuario && !tieneNumeroAtenciones"
                 class="col-span-2 text-[11px] text-rose-700"
               >
-                Registre el N° de Atenciones en Inicio de TRR antes de notificar.
+                Registre el N° de Sesiones ejecutadas en el mes a notificar.
               </div>
               <div class="flex justify-between col-span-2 pb-1 mb-1 border-b border-slate-200/80">
                 <span>Total pacientes atendidos</span>

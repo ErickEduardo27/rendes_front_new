@@ -1014,6 +1014,13 @@ function textoCanulacionRegistro(row) {
   return row?.fecha_inicio_canulacion || '—';
 }
 
+/** Fecha para ordenar historial: canulación si existe; si no, creación. */
+function fechaOrdenHistorialAcceso(row) {
+  const canul = String(row?.fecha_inicio_canulacion || '').trim().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(canul)) return canul;
+  return String(fechaCreacionAccesoColumna(row) || '').trim().slice(0, 10);
+}
+
 function camposDesdeUnidad(r) {
   return {
     tipo_acceso: r.tipo_acceso || r.tipo_acceso_actual || '',
@@ -1644,9 +1651,11 @@ const historialPacienteLista = computed(() => {
       return pid != null && String(pid) === key;
     })
     .sort((a, b) => {
-      const fa = fechaCreacionAccesoColumna(a);
-      const fb = fechaCreacionAccesoColumna(b);
+      const fa = fechaOrdenHistorialAcceso(a);
+      const fb = fechaOrdenHistorialAcceso(b);
       if (fa && fb && fa !== fb) return fb.localeCompare(fa);
+      if (fa && !fb) return -1;
+      if (!fa && fb) return 1;
       return (Number(b.id_unidad_actual) || 0) - (Number(a.id_unidad_actual) || 0);
     });
 });
