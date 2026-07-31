@@ -126,7 +126,7 @@
                   </td>
                   <td class="tabla-morbilidad-td tabla-morbilidad-col-comentario text-slate-600" :title="r.comentario_evaluacion || ''">{{ r.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-morbilidad-td tabla-morbilidad-td-acciones">
-                    <div v-if="!registroDePacienteEgresado(r, listadoAtenciones)" class="inline-flex items-center gap-1.5">
+                    <div class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
                         class="tabla-morbilidad-btn tabla-morbilidad-btn-editar"
@@ -137,6 +137,7 @@
                         Editar
                       </button>
                       <button
+                        v-if="!registroDePacienteEgresado(r, listadoAtenciones)"
                         type="button"
                         class="tabla-morbilidad-btn tabla-morbilidad-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === r.id_morbilidad_hospitalaria"
@@ -146,7 +147,6 @@
                         {{ eliminandoId === r.id_morbilidad_hospitalaria ? '…' : 'Eliminar' }}
                       </button>
                     </div>
-                    <span v-else class="text-[10px] text-slate-500 font-medium">EGRESADO</span>
                   </td>
                 </tr>
               </tbody>
@@ -206,7 +206,7 @@
                   </td>
                   <td class="tabla-morbilidad-td tabla-morbilidad-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-morbilidad-td tabla-morbilidad-td-acciones">
-                    <div v-if="fila.tieneRegistro && !fila.es_egresado" class="inline-flex items-center gap-1.5">
+                    <div v-if="fila.tieneRegistro" class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
                         class="tabla-morbilidad-btn tabla-morbilidad-btn-editar"
@@ -217,6 +217,7 @@
                         Editar
                       </button>
                       <button
+                        v-if="!fila.es_egresado"
                         type="button"
                         class="tabla-morbilidad-btn tabla-morbilidad-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === fila.id_morbilidad_hospitalaria"
@@ -226,7 +227,6 @@
                         {{ eliminandoId === fila.id_morbilidad_hospitalaria ? '…' : 'Eliminar' }}
                       </button>
                     </div>
-                    <span v-else-if="fila.es_egresado" class="text-[10px] text-slate-500 font-medium">Sin acciones</span>
                     <span v-else class="text-slate-400">—</span>
                   </td>
                 </tr>
@@ -773,10 +773,6 @@ function abrirModalNuevo() {
 
 function abrirModalEditar(registro) {
   if (!formularioAbierto.value || !registro) return;
-  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
-    ElMessage.warning('Paciente egresado: no se puede editar el registro.');
-    return;
-  }
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {
@@ -794,6 +790,10 @@ function abrirModalEditar(registro) {
 
 async function eliminarRegistro(registro) {
   if (!formularioAbierto.value || !registro?.id_morbilidad_hospitalaria) return;
+  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
+    ElMessage.warning('Paciente egresado: solo se puede editar el registro.');
+    return;
+  }
   const nombre = nombrePaciente(registro);
   const confirmar = window.confirm(`¿Eliminar el registro de morbilidad hospitalaria de ${nombre}?`);
   if (!confirmar) return;

@@ -161,7 +161,7 @@
                       </td>
                       <td class="tabla-av-td tabla-av-col-comentario text-slate-600" :title="r.comentario_evaluacion || ''">{{ r.comentario_evaluacion?.trim() || '—' }}</td>
                       <td class="tabla-av-td tabla-av-td-acciones">
-                        <div v-if="!registroDePacienteEgresado(r, listadoAtenciones)" class="inline-flex items-center gap-1">
+                        <div class="inline-flex items-center gap-1">
                           <button
                             type="button"
                             class="tabla-av-btn tabla-av-btn-editar"
@@ -172,6 +172,7 @@
                             Editar
                           </button>
                           <button
+                            v-if="!registroDePacienteEgresado(r, listadoAtenciones)"
                             type="button"
                             class="tabla-av-btn tabla-av-btn-eliminar"
                             :disabled="!formularioAbierto || eliminandoId === r.id_unidad_actual"
@@ -181,7 +182,6 @@
                             {{ eliminandoId === r.id_unidad_actual ? '…' : 'Eliminar' }}
                           </button>
                         </div>
-                        <span v-else class="text-[10px] text-slate-500 font-medium">EGRESADO</span>
                       </td>
                     </tr>
                   </tbody>
@@ -268,7 +268,7 @@
                     </td>
                     <td class="tabla-av-td tabla-av-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                     <td class="tabla-av-td tabla-av-td-acciones">
-                      <div v-if="!fila.es_egresado" class="inline-flex items-center gap-1">
+                      <div class="inline-flex items-center gap-1">
                         <button
                           type="button"
                           class="tabla-av-btn tabla-av-btn-historial"
@@ -288,6 +288,7 @@
                             Editar
                           </button>
                           <button
+                            v-if="!fila.es_egresado"
                             type="button"
                             class="tabla-av-btn tabla-av-btn-eliminar"
                             :disabled="!formularioAbierto || eliminandoId === fila.id_unidad_actual"
@@ -298,7 +299,6 @@
                           </button>
                         </template>
                       </div>
-                      <span v-else class="text-[10px] text-slate-500 font-medium">Sin acciones</span>
                     </td>
                   </tr>
                 </tbody>
@@ -1622,10 +1622,6 @@ async function fetchEstadoFormulario() {
 
 function abrirModalHistorialPaciente(fila) {
   if (!fila) return;
-  if (fila.es_egresado) {
-    ElMessage.warning('Paciente egresado: no se puede consultar el historial.');
-    return;
-  }
   pacienteHistorial.value = {
     id_paciente: fila.id_paciente ?? fila.registro?.datosPacienteAtencion?.id_paciente ?? null,
     paciente: fila.paciente || '—',
@@ -1708,10 +1704,6 @@ function abrirModalNuevo() {
 
 function abrirModalEditar(registro) {
   if (!formularioAbierto.value || !registro) return;
-  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
-    ElMessage.warning('Paciente egresado: no se puede editar el registro.');
-    return;
-  }
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {
@@ -1730,6 +1722,10 @@ function abrirModalEditar(registro) {
 
 async function eliminarRegistro(registro) {
   if (!formularioAbierto.value || !registro?.id_unidad_actual) return;
+  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
+    ElMessage.warning('Paciente egresado: solo se puede editar el registro.');
+    return;
+  }
   const nombre = nombrePaciente(registro);
   const confirmar = window.confirm(`¿Eliminar el registro de acceso vascular de ${nombre}?`);
   if (!confirmar) return;

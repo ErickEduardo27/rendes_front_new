@@ -126,7 +126,7 @@
                   </td>
                   <td class="tabla-ei-td tabla-ei-col-comentario text-slate-600" :title="r.comentario_evaluacion || ''">{{ r.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-ei-td tabla-ei-td-acciones">
-                    <div v-if="!registroDePacienteEgresado(r, listadoAtenciones)" class="inline-flex items-center gap-1">
+                    <div class="inline-flex items-center gap-1">
                       <button
                         type="button"
                         class="tabla-ei-btn tabla-ei-btn-editar"
@@ -137,6 +137,7 @@
                         Editar
                       </button>
                       <button
+                        v-if="!registroDePacienteEgresado(r, listadoAtenciones)"
                         type="button"
                         class="tabla-ei-btn tabla-ei-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === r.id_evento_acceso_vascular"
@@ -154,7 +155,6 @@
                         <ChartBarIcon class="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <span v-else class="text-[10px] text-slate-500 font-medium">EGRESADO</span>
                   </td>
                 </tr>
               </tbody>
@@ -214,7 +214,7 @@
                   </td>
                   <td class="tabla-ei-td tabla-ei-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-ei-td tabla-ei-td-acciones">
-                    <div v-if="fila.tieneRegistro && !fila.es_egresado" class="inline-flex items-center gap-1">
+                    <div v-if="fila.tieneRegistro" class="inline-flex items-center gap-1">
                       <button
                         type="button"
                         class="tabla-ei-btn tabla-ei-btn-editar"
@@ -225,6 +225,7 @@
                         Editar
                       </button>
                       <button
+                        v-if="!fila.es_egresado"
                         type="button"
                         class="tabla-ei-btn tabla-ei-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === fila.id_evento_acceso_vascular"
@@ -243,7 +244,7 @@
                         <ChartBarIcon class="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div v-else-if="!fila.es_egresado" class="inline-flex items-center gap-1">
+                    <div v-else class="inline-flex items-center gap-1">
                       <span class="text-slate-400">—</span>
                       <button
                         type="button"
@@ -255,7 +256,6 @@
                         <ChartBarIcon class="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <span v-else class="text-[10px] text-slate-500 font-medium">Sin acciones</span>
                   </td>
                 </tr>
               </tbody>
@@ -745,10 +745,6 @@ function abrirModalNuevo() {
 
 function abrirModalEditar(registro) {
   if (!formularioAbierto.value || !registro) return;
-  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
-    ElMessage.warning('Paciente egresado: no se puede editar el registro.');
-    return;
-  }
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {
@@ -766,6 +762,10 @@ function abrirModalEditar(registro) {
 
 async function eliminarRegistro(registro) {
   if (!formularioAbierto.value || !registro?.id_evento_acceso_vascular) return;
+  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
+    ElMessage.warning('Paciente egresado: solo se puede editar el registro.');
+    return;
+  }
   const nombre = nombrePaciente(registro);
   const confirmar = window.confirm(`¿Eliminar el evento infeccioso de ${nombre}?`);
   if (!confirmar) return;

@@ -380,16 +380,15 @@ function condicionPacienteTexto(row) {
 }
 
 function puedeEditarFila(row) {
-  if (esPacienteEgresadoEnListado(row)) return false;
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return false;
   return true;
 }
 
 function tituloBotonEditar(row) {
-  if (esPacienteEgresadoEnListado(row)) return 'Paciente egresado: no se puede editar';
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
     return 'Sin ficha de diálisis: complete el registro antes de editar';
   }
+  if (esPacienteEgresadoEnListado(row)) return 'Paciente egresado: solo edición de lo ya registrado';
   return 'Editar datos del paciente y ficha de diálisis';
 }
 

@@ -86,7 +86,7 @@ export function atencionesParaListadoRegistros(atenciones) {
   });
 }
 
-/** Paciente egresado en el listado (no editable / sin nuevo registro). */
+/** Paciente egresado en el listado: puede editarse lo ya registrado, pero no crear registros nuevos. */
 export function esPacienteEgresadoEnListado(atencionOFila) {
   if (!atencionOFila) return false;
   if (atencionOFila.es_egresado === true) return true;

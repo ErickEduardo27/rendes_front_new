@@ -132,7 +132,7 @@
                   </td>
                   <td class="tabla-vac-td tabla-vac-col-comentario text-slate-600" :title="r.comentario_evaluacion || ''">{{ r.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-vac-td tabla-vac-td-acciones">
-                    <div v-if="!registroDePacienteEgresado(r, listadoAtenciones)" class="inline-flex items-center gap-1.5">
+                    <div class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
                         class="tabla-vac-btn tabla-vac-btn-editar"
@@ -143,6 +143,7 @@
                         Editar
                       </button>
                       <button
+                        v-if="!registroDePacienteEgresado(r, listadoAtenciones)"
                         type="button"
                         class="tabla-vac-btn tabla-vac-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === r.id_vacunacion"
@@ -152,7 +153,6 @@
                         {{ eliminandoId === r.id_vacunacion ? '…' : 'Eliminar' }}
                       </button>
                     </div>
-                    <span v-else class="text-[10px] text-slate-500 font-medium">EGRESADO</span>
                   </td>
                 </tr>
               </tbody>
@@ -216,7 +216,7 @@
                   </td>
                   <td class="tabla-vac-td tabla-vac-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-vac-td tabla-vac-td-acciones">
-                    <div v-if="!fila.es_egresado" class="inline-flex items-center gap-1.5">
+                    <div class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
                         class="tabla-vac-btn tabla-vac-btn-historial"
@@ -236,6 +236,7 @@
                           Editar
                         </button>
                         <button
+                          v-if="!fila.es_egresado"
                           type="button"
                           class="tabla-vac-btn tabla-vac-btn-eliminar"
                           :disabled="!formularioAbierto || eliminandoId === fila.id_vacunacion"
@@ -246,7 +247,6 @@
                         </button>
                       </template>
                     </div>
-                    <span v-else class="text-[10px] text-slate-500 font-medium">Sin acciones</span>
                   </td>
                 </tr>
               </tbody>
@@ -842,10 +842,6 @@ function ordenFechaHistorial(fecha) {
 
 async function abrirModalHistorialVacunas(fila) {
   if (!fila) return;
-  if (fila.es_egresado) {
-    ElMessage.warning('Paciente egresado: no se puede consultar el historial.');
-    return;
-  }
   const idPaciente = fila.id_paciente
     ?? fila.registro?.datosPacienteAtencion?.id_paciente
     ?? fila.registro?.datosPaciente?.id_paciente
@@ -1056,10 +1052,6 @@ function abrirModalNuevo() {
 
 function abrirModalEditar(registro) {
   if (!formularioAbierto.value || !registro) return;
-  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
-    ElMessage.warning('Paciente egresado: no se puede editar el registro.');
-    return;
-  }
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {
@@ -1077,6 +1069,10 @@ function abrirModalEditar(registro) {
 
 async function eliminarRegistro(registro) {
   if (!formularioAbierto.value || !registro?.id_vacunacion) return;
+  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
+    ElMessage.warning('Paciente egresado: solo se puede editar el registro.');
+    return;
+  }
   const nombre = nombrePaciente(registro);
   const confirmar = window.confirm(`¿Eliminar el registro de vacunación de ${nombre}?`);
   if (!confirmar) return;
