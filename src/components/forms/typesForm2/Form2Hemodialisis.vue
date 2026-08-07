@@ -91,7 +91,7 @@
                     </p>
                 </div>
                 <div v-if="esTipoAccesoFistulaNuevo">
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de inicio de canulación *</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de inicio de canulación</label>
                     <FechaInput v-model="form.fecha_inicio_canulacion"
                         :input-class="['w-full border text-slate-800 text-sm rounded-lg p-2.5', erroresNuevoAcceso.fecha_inicio_canulacion ? 'border-red-500' : 'border-slate-300']"
                         :has-error="!!erroresNuevoAcceso.fecha_inicio_canulacion"
@@ -102,8 +102,8 @@
                         class="text-[11px] text-red-500 mt-1 font-medium">
                         {{ erroresNuevoAcceso.fecha_inicio_canulacion }}
                     </p>
-                    <p v-else class="text-[11px] text-slate-500 mt-1">
-                        Solo para fístula. No puede ser anterior a la fecha de creación del acceso.
+                    <p v-else class="text-[11px] text-amber-700 mt-1">
+                        Completar fecha de canulación cuando se inicia el uso de la FAV
                     </p>
                 </div>
                 <div v-if="form.motivo_cambio || desdeFormularioInfeccion">
@@ -287,8 +287,7 @@
                                 </p>
                             </div>
                             <div v-if="esTipoAccesoFistulaNuevo">
-                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de inicio de canulación
-                                    *</label>
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Fecha de inicio de canulación</label>
                                 <FechaInput v-model="form.fecha_inicio_canulacion"
                                     :input-class="['w-full border text-slate-800 text-sm rounded-lg p-2.5', erroresNuevoAcceso.fecha_inicio_canulacion ? 'border-red-500' : 'border-slate-300']"
                                     :has-error="!!erroresNuevoAcceso.fecha_inicio_canulacion"
@@ -299,8 +298,8 @@
                                     class="text-[11px] text-red-500 mt-1 font-medium">
                                     {{ erroresNuevoAcceso.fecha_inicio_canulacion }}
                                 </p>
-                                <p v-else class="text-[11px] text-slate-500 mt-1">
-                                    Solo para fístula. No puede ser anterior a la fecha de creación del acceso.
+                                <p v-else class="text-[11px] text-amber-700 mt-1">
+                                    Completar fecha de canulación cuando se inicia el uso de la FAV
                                 </p>
                             </div>
                         </div>
@@ -828,9 +827,6 @@ const validarFormulario = () => {
     ];
     if ((!esEdicionDirecta.value && tieneHistorialAcceso.value) || props.desdeFormularioInfeccion) {
         camposObligatorios.push('motivo_cambio');
-    }
-    if (esTipoAccesoFistulaNuevo.value) {
-        camposObligatorios.push('fecha_inicio_canulacion');
     }
 
     let primerError = '';

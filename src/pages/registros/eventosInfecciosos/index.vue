@@ -129,6 +129,14 @@
                     <div class="inline-flex items-center gap-1">
                       <button
                         type="button"
+                        class="tabla-ei-btn tabla-ei-btn-historial"
+                        title="Ver historial de eventos infecciosos"
+                        @click="abrirModalHistorialPaciente(r)"
+                      >
+                        Historial
+                      </button>
+                      <button
+                        type="button"
                         class="tabla-ei-btn tabla-ei-btn-editar"
                         :disabled="!formularioAbierto"
                         :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
@@ -214,38 +222,36 @@
                   </td>
                   <td class="tabla-ei-td tabla-ei-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-ei-td tabla-ei-td-acciones">
-                    <div v-if="fila.tieneRegistro" class="inline-flex items-center gap-1">
+                    <div class="inline-flex items-center gap-1">
                       <button
                         type="button"
-                        class="tabla-ei-btn tabla-ei-btn-editar"
-                        :disabled="!formularioAbierto"
-                        :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
-                        @click="abrirModalEditar(fila.registro)"
+                        class="tabla-ei-btn tabla-ei-btn-historial"
+                        title="Ver historial de eventos infecciosos"
+                        @click="abrirModalHistorialPaciente(fila)"
                       >
-                        Editar
+                        Historial
                       </button>
-                      <button
-                        v-if="!fila.es_egresado"
-                        type="button"
-                        class="tabla-ei-btn tabla-ei-btn-eliminar"
-                        :disabled="!formularioAbierto || eliminandoId === fila.id_evento_acceso_vascular"
-                        :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
-                        @click="eliminarRegistro(fila.registro)"
-                      >
-                        {{ eliminandoId === fila.id_evento_acceso_vascular ? '…' : 'Eliminar' }}
-                      </button>
-                      <button
-                        type="button"
-                        class="tabla-ei-btn-icon"
-                        title="Ver tendencia y recurrencias"
-                        :disabled="!fila.id_paciente"
-                        @click="abrirDashboardPaciente(fila)"
-                      >
-                        <ChartBarIcon class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div v-else class="inline-flex items-center gap-1">
-                      <span class="text-slate-400">—</span>
+                      <template v-if="fila.tieneRegistro">
+                        <button
+                          type="button"
+                          class="tabla-ei-btn tabla-ei-btn-editar"
+                          :disabled="!formularioAbierto"
+                          :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
+                          @click="abrirModalEditar(fila.registro)"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          v-if="!fila.es_egresado"
+                          type="button"
+                          class="tabla-ei-btn tabla-ei-btn-eliminar"
+                          :disabled="!formularioAbierto || eliminandoId === fila.id_evento_acceso_vascular"
+                          :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
+                          @click="eliminarRegistro(fila.registro)"
+                        >
+                          {{ eliminandoId === fila.id_evento_acceso_vascular ? '…' : 'Eliminar' }}
+                        </button>
+                      </template>
                       <button
                         type="button"
                         class="tabla-ei-btn-icon"
@@ -369,6 +375,101 @@
       :nombre="dashboardPaciente.nombre"
       :documento="dashboardPaciente.documento"
     />
+
+    <!-- Modal historial de eventos infecciosos del paciente -->
+    <div
+      v-if="mostrarModalHistorialPaciente"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      @click.self="cerrarModalHistorialPaciente"
+    >
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center gap-3">
+          <div class="min-w-0">
+            <h3 class="font-bold text-white">Historial de eventos infecciosos</h3>
+            <p class="text-cyan-100 text-sm truncate">
+              {{ pacienteHistorial?.paciente || '—' }}
+              <span v-if="pacienteHistorial?.documento"> · DNI {{ pacienteHistorial.documento }}</span>
+            </p>
+          </div>
+          <button type="button" class="text-white/80 hover:text-white shrink-0 text-lg leading-none" aria-label="Cerrar" @click="cerrarModalHistorialPaciente">✕</button>
+        </div>
+        <div class="p-6 overflow-auto">
+          <p class="text-xs text-slate-500 mb-3">
+            Eventos infecciosos registrados para este paciente (cualquier periodo).
+          </p>
+          <div v-if="cargandoHistorialPaciente" class="py-10 text-center text-slate-500">
+            Cargando historial…
+          </div>
+          <div
+            v-else-if="historialPacienteLista.length === 0"
+            class="py-10 text-center text-slate-500 italic border border-dashed border-slate-200 rounded-xl bg-slate-50/50"
+          >
+            No hay eventos infecciosos registrados para este paciente.
+          </div>
+          <template v-else>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">#</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">F. evento</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Tipo infección</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Antimicrobial</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Vancomicina</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Hemocultivo (+)</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Germen</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr
+                    v-for="(item, idx) in historialPacientePaginado"
+                    :key="item.id_evento_acceso_vascular || idx"
+                    class="hover:bg-slate-50"
+                  >
+                    <td class="px-3 py-2.5 text-slate-500 tabular-nums">{{ indiceHistorialPaciente(idx) }}</td>
+                    <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ fechaCelda(item.fecha_evento) }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.tipo_infeccion || '—' }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.antmicrobial || '—' }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.vancomicina || '—' }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.hemocultivo_positivo || '—' }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.germen || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm border-t border-slate-100 pt-3 mt-3">
+              <div class="flex flex-wrap items-center gap-3 text-slate-600">
+                <span>{{ rangoHistorialPacienteLabel }}</span>
+                <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+                  <span>Por página</span>
+                  <select v-model.number="tamPaginaHistorialPaciente" class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white">
+                    <option :value="5">5</option>
+                    <option :value="10">10</option>
+                    <option :value="25">25</option>
+                  </select>
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialPaciente <= 1" @click="paginaHistorialPaciente = 1">Primera</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialPaciente <= 1" @click="paginaHistorialPaciente--">Anterior</button>
+                <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaHistorialPaciente }} / {{ totalPaginasHistorialPaciente }}</span>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialPaciente >= totalPaginasHistorialPaciente" @click="paginaHistorialPaciente++">Siguiente</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialPaciente >= totalPaginasHistorialPaciente" @click="paginaHistorialPaciente = totalPaginasHistorialPaciente">Última</button>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="px-6 py-3 border-t border-slate-100 flex justify-end bg-slate-50/80">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100"
+            @click="cerrarModalHistorialPaciente"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -436,6 +537,13 @@ const exportandoExcel = ref(false);
 
 const dashboardVisible = ref(false);
 const dashboardPaciente = ref({ id: null, nombre: '', documento: '' });
+
+const mostrarModalHistorialPaciente = ref(false);
+const pacienteHistorial = ref(null);
+const historialPacienteLista = ref([]);
+const cargandoHistorialPaciente = ref(false);
+const paginaHistorialPaciente = ref(1);
+const tamPaginaHistorialPaciente = ref(10);
 
 const puedeExportarEventosInfecciososExcel = computed(() => {
   if (cargando.value) return false;
@@ -533,6 +641,101 @@ function abrirDashboardPaciente(fila) {
   };
   dashboardVisible.value = true;
 }
+
+function ordenFechaHistorial(fecha) {
+  const s = String(fecha || '').trim();
+  if (!s || s === '—') return '';
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return s;
+}
+
+async function abrirModalHistorialPaciente(fila) {
+  if (!fila) return;
+  const idPaciente = idPacienteDesdeFila(fila);
+  pacienteHistorial.value = {
+    id_paciente: idPaciente,
+    paciente: fila.paciente || nombrePaciente(fila) || '—',
+    documento: fila.documento || documentoPaciente(fila) || '—',
+  };
+  paginaHistorialPaciente.value = 1;
+  historialPacienteLista.value = [];
+  mostrarModalHistorialPaciente.value = true;
+  if (idPaciente == null || idPaciente === '') return;
+
+  cargandoHistorialPaciente.value = true;
+  try {
+    const resAt = await getAllIpress(`/pacienteAtencion/?id_paciente=${idPaciente}`);
+    const atenciones = Array.isArray(resAt) ? resAt : (resAt?.results || []);
+    const idsAtencion = [...new Set(
+      atenciones.map((a) => a.id_paciente_atencion).filter((id) => id != null && id !== ''),
+    )];
+    if (idsAtencion.length === 0) {
+      historialPacienteLista.value = [];
+      return;
+    }
+    const respuestas = await Promise.all(
+      idsAtencion.map((id) =>
+        getAllIpress(`/eventosAccesosVasculares/?id_paciente_atencion=${id}`).catch(() => []),
+      ),
+    );
+    const lista = respuestas.flatMap((r) => (Array.isArray(r) ? r : (r?.results || [])));
+    lista.sort((a, b) => {
+      const fa = ordenFechaHistorial(a.fecha_evento);
+      const fb = ordenFechaHistorial(b.fecha_evento);
+      if (fa && fb && fa !== fb) return fb.localeCompare(fa);
+      return (Number(b.id_evento_acceso_vascular) || 0) - (Number(a.id_evento_acceso_vascular) || 0);
+    });
+    historialPacienteLista.value = lista;
+  } catch (e) {
+    console.error('Error al cargar historial de eventos infecciosos:', e);
+    historialPacienteLista.value = [];
+    ElMessage.error('No se pudo cargar el historial de eventos infecciosos.');
+  } finally {
+    cargandoHistorialPaciente.value = false;
+  }
+}
+
+function cerrarModalHistorialPaciente() {
+  mostrarModalHistorialPaciente.value = false;
+  pacienteHistorial.value = null;
+  historialPacienteLista.value = [];
+  paginaHistorialPaciente.value = 1;
+}
+
+const totalPaginasHistorialPaciente = computed(() => {
+  const n = historialPacienteLista.value.length;
+  if (n === 0) return 1;
+  return Math.ceil(n / tamPaginaHistorialPaciente.value);
+});
+
+const historialPacientePaginado = computed(() => {
+  const list = historialPacienteLista.value;
+  const tam = tamPaginaHistorialPaciente.value;
+  const p = Math.min(Math.max(1, paginaHistorialPaciente.value), totalPaginasHistorialPaciente.value);
+  const start = (p - 1) * tam;
+  return list.slice(start, start + tam);
+});
+
+const rangoHistorialPacienteLabel = computed(() => {
+  const total = historialPacienteLista.value.length;
+  if (total === 0) return '0 eventos';
+  const tam = tamPaginaHistorialPaciente.value;
+  const p = Math.min(Math.max(1, paginaHistorialPaciente.value), totalPaginasHistorialPaciente.value);
+  const start = (p - 1) * tam + 1;
+  const end = Math.min(p * tam, total);
+  return `Mostrando ${start}–${end} de ${total}`;
+});
+
+function indiceHistorialPaciente(idx) {
+  return (paginaHistorialPaciente.value - 1) * tamPaginaHistorialPaciente.value + idx + 1;
+}
+
+watch([historialPacienteLista, tamPaginaHistorialPaciente], () => {
+  const tp = Math.max(1, Math.ceil(historialPacienteLista.value.length / tamPaginaHistorialPaciente.value) || 1);
+  if (paginaHistorialPaciente.value > tp) paginaHistorialPaciente.value = tp;
+});
 
 function estadoAprobacionClase(estado) {
   const valor = String(estado || '').toUpperCase();
@@ -979,6 +1182,16 @@ onMounted(() => {
 
 .tabla-ei-btn-editar:hover:not(:disabled) {
   background: #ecfeff;
+}
+
+.tabla-ei-btn-historial {
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+  background: transparent;
+}
+
+.tabla-ei-btn-historial:hover:not(:disabled) {
+  background: #eef2ff;
 }
 
 .tabla-ei-btn-eliminar {

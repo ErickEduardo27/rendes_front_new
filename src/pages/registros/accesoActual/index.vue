@@ -1180,8 +1180,7 @@ const validarFilaImportacion = (obj, cambiosEnLote = null) => {
       return { ok: false, mensaje: MENSAJE_CAMBIO_ACCESO_MISMO_DIA };
     }
   }
-  if (esTipoAccesoFistula(tipoAcceso)) {
-    if (!fechaCanulacion) return { ok: false, mensaje: 'Para fístula, indique la fecha de inicio de canulación.' };
+  if (esTipoAccesoFistula(tipoAcceso) && fechaCanulacion) {
     if (fechaCanulacion < fechaCreacion) {
       return { ok: false, mensaje: 'La canulación no puede ser anterior a la fecha de creación del acceso.' };
     }

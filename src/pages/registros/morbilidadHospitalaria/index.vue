@@ -129,6 +129,14 @@
                     <div class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
+                        class="tabla-morbilidad-btn tabla-morbilidad-btn-historial"
+                        title="Ver historial de hospitalizaciones"
+                        @click="abrirModalHistorialPaciente(r)"
+                      >
+                        Historial
+                      </button>
+                      <button
+                        type="button"
                         class="tabla-morbilidad-btn tabla-morbilidad-btn-editar"
                         :disabled="!formularioAbierto"
                         :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
@@ -206,28 +214,37 @@
                   </td>
                   <td class="tabla-morbilidad-td tabla-morbilidad-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-morbilidad-td tabla-morbilidad-td-acciones">
-                    <div v-if="fila.tieneRegistro" class="inline-flex items-center gap-1.5">
+                    <div class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
-                        class="tabla-morbilidad-btn tabla-morbilidad-btn-editar"
-                        :disabled="!formularioAbierto"
-                        :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
-                        @click="abrirModalEditar(fila.registro)"
+                        class="tabla-morbilidad-btn tabla-morbilidad-btn-historial"
+                        title="Ver historial de hospitalizaciones"
+                        @click="abrirModalHistorialPaciente(fila)"
                       >
-                        Editar
+                        Historial
                       </button>
-                      <button
-                        v-if="!fila.es_egresado"
-                        type="button"
-                        class="tabla-morbilidad-btn tabla-morbilidad-btn-eliminar"
-                        :disabled="!formularioAbierto || eliminandoId === fila.id_morbilidad_hospitalaria"
-                        :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
-                        @click="eliminarRegistro(fila.registro)"
-                      >
-                        {{ eliminandoId === fila.id_morbilidad_hospitalaria ? '…' : 'Eliminar' }}
-                      </button>
+                      <template v-if="fila.tieneRegistro">
+                        <button
+                          type="button"
+                          class="tabla-morbilidad-btn tabla-morbilidad-btn-editar"
+                          :disabled="!formularioAbierto"
+                          :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
+                          @click="abrirModalEditar(fila.registro)"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          v-if="!fila.es_egresado"
+                          type="button"
+                          class="tabla-morbilidad-btn tabla-morbilidad-btn-eliminar"
+                          :disabled="!formularioAbierto || eliminandoId === fila.id_morbilidad_hospitalaria"
+                          :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
+                          @click="eliminarRegistro(fila.registro)"
+                        >
+                          {{ eliminandoId === fila.id_morbilidad_hospitalaria ? '…' : 'Eliminar' }}
+                        </button>
+                      </template>
                     </div>
-                    <span v-else class="text-slate-400">—</span>
                   </td>
                 </tr>
               </tbody>
@@ -377,6 +394,101 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal historial de hospitalizaciones del paciente -->
+    <div
+      v-if="mostrarModalHistorialPaciente"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      @click.self="cerrarModalHistorialPaciente"
+    >
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="bg-cyan-600 px-6 py-4 flex justify-between items-center gap-3">
+          <div class="min-w-0">
+            <h3 class="font-bold text-white">Historial de morbilidad hospitalaria</h3>
+            <p class="text-cyan-100 text-sm truncate">
+              {{ pacienteHistorial?.paciente || '—' }}
+              <span v-if="pacienteHistorial?.documento"> · DNI {{ pacienteHistorial.documento }}</span>
+            </p>
+          </div>
+          <button type="button" class="text-white/80 hover:text-white shrink-0 text-lg leading-none" aria-label="Cerrar" @click="cerrarModalHistorialPaciente">✕</button>
+        </div>
+        <div class="p-6 overflow-auto">
+          <p class="text-xs text-slate-500 mb-3">
+            Hospitalizaciones registradas para este paciente (cualquier periodo).
+          </p>
+          <div v-if="cargandoHistorialPaciente" class="py-10 text-center text-slate-500">
+            Cargando historial…
+          </div>
+          <div
+            v-else-if="historialPacienteLista.length === 0"
+            class="py-10 text-center text-slate-500 italic border border-dashed border-slate-200 rounded-xl bg-slate-50/50"
+          >
+            No hay hospitalizaciones registradas para este paciente.
+          </div>
+          <template v-else>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+              <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">#</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Diagnóstico</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Código</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">F. hospitalización</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">F. alta</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Desenlace</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Fuente</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr
+                    v-for="(item, idx) in historialPacientePaginado"
+                    :key="item.id_morbilidad_hospitalaria || idx"
+                    class="hover:bg-slate-50"
+                  >
+                    <td class="px-3 py-2.5 text-slate-500 tabular-nums">{{ indiceHistorialPaciente(idx) }}</td>
+                    <td class="px-3 py-2.5 text-slate-700 max-w-xs truncate" :title="item.diagnostico || ''">{{ item.diagnostico || '—' }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.codigo_diagnostico || '—' }}</td>
+                    <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ fechaCelda(item.fecha_hospitalizacion) }}</td>
+                    <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ fechaCelda(item.fecha_alta_hospitalizacion) }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.desenlace || '—' }}</td>
+                    <td class="px-3 py-2.5 text-slate-700">{{ item.fuente || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm border-t border-slate-100 pt-3 mt-3">
+              <div class="flex flex-wrap items-center gap-3 text-slate-600">
+                <span>{{ rangoHistorialPacienteLabel }}</span>
+                <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+                  <span>Por página</span>
+                  <select v-model.number="tamPaginaHistorialPaciente" class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white">
+                    <option :value="5">5</option>
+                    <option :value="10">10</option>
+                    <option :value="25">25</option>
+                  </select>
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialPaciente <= 1" @click="paginaHistorialPaciente = 1">Primera</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialPaciente <= 1" @click="paginaHistorialPaciente--">Anterior</button>
+                <span class="px-2 text-slate-700 font-medium tabular-nums">Pág. {{ paginaHistorialPaciente }} / {{ totalPaginasHistorialPaciente }}</span>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialPaciente >= totalPaginasHistorialPaciente" @click="paginaHistorialPaciente++">Siguiente</button>
+                <button type="button" class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium" :disabled="paginaHistorialPaciente >= totalPaginasHistorialPaciente" @click="paginaHistorialPaciente = totalPaginasHistorialPaciente">Última</button>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="px-6 py-3 border-t border-slate-100 flex justify-end bg-slate-50/80">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-semibold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-100"
+            @click="cerrarModalHistorialPaciente"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -427,6 +539,13 @@ const importando = ref(false);
 const resultadoImportacion = ref(null);
 const estadoFormulario = ref('CERRADO');
 const cargandoEstadoFormulario = ref(false);
+
+const mostrarModalHistorialPaciente = ref(false);
+const pacienteHistorial = ref(null);
+const historialPacienteLista = ref([]);
+const cargandoHistorialPaciente = ref(false);
+const paginaHistorialPaciente = ref(1);
+const tamPaginaHistorialPaciente = ref(10);
 
 const PAGE_SIZE_TABLAS = 10;
 const pageSizeTablas = ref(PAGE_SIZE_TABLAS);
@@ -531,6 +650,111 @@ function documentoPaciente(r) {
   return r.datosPacienteAtencion?.datosPaciente?.documento || r.datosPaciente?.documento || '—';
 }
 
+function idPacienteDesdeFila(fila) {
+  if (fila?.id_paciente != null) return fila.id_paciente;
+  return (
+    fila?.datosPacienteAtencion?.datosPaciente?.id_paciente
+    ?? fila?.datosPaciente?.id_paciente
+    ?? fila?.datosPacienteAtencion?.id_paciente
+    ?? null
+  );
+}
+
+function ordenFechaHistorial(fecha) {
+  const s = String(fecha || '').trim();
+  if (!s || s === '—') return '';
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return s;
+}
+
+async function abrirModalHistorialPaciente(fila) {
+  if (!fila) return;
+  const idPaciente = idPacienteDesdeFila(fila);
+  pacienteHistorial.value = {
+    id_paciente: idPaciente,
+    paciente: fila.paciente || nombrePaciente(fila) || '—',
+    documento: fila.documento || documentoPaciente(fila) || '—',
+  };
+  paginaHistorialPaciente.value = 1;
+  historialPacienteLista.value = [];
+  mostrarModalHistorialPaciente.value = true;
+  if (idPaciente == null || idPaciente === '') return;
+
+  cargandoHistorialPaciente.value = true;
+  try {
+    const resAt = await getAllIpress(`/pacienteAtencion/?id_paciente=${idPaciente}`);
+    const atenciones = Array.isArray(resAt) ? resAt : (resAt?.results || []);
+    const idsAtencion = [...new Set(
+      atenciones.map((a) => a.id_paciente_atencion).filter((id) => id != null && id !== ''),
+    )];
+    if (idsAtencion.length === 0) {
+      historialPacienteLista.value = [];
+      return;
+    }
+    const respuestas = await Promise.all(
+      idsAtencion.map((id) =>
+        getAllIpress(`/morbilidadesHospitalarias/?id_paciente_atencion=${id}`).catch(() => []),
+      ),
+    );
+    const lista = respuestas.flatMap((r) => (Array.isArray(r) ? r : (r?.results || [])));
+    lista.sort((a, b) => {
+      const fa = ordenFechaHistorial(a.fecha_hospitalizacion);
+      const fb = ordenFechaHistorial(b.fecha_hospitalizacion);
+      if (fa && fb && fa !== fb) return fb.localeCompare(fa);
+      return (Number(b.id_morbilidad_hospitalaria) || 0) - (Number(a.id_morbilidad_hospitalaria) || 0);
+    });
+    historialPacienteLista.value = lista;
+  } catch (e) {
+    console.error('Error al cargar historial de morbilidad:', e);
+    historialPacienteLista.value = [];
+    ElMessage.error('No se pudo cargar el historial de hospitalizaciones.');
+  } finally {
+    cargandoHistorialPaciente.value = false;
+  }
+}
+
+function cerrarModalHistorialPaciente() {
+  mostrarModalHistorialPaciente.value = false;
+  pacienteHistorial.value = null;
+  historialPacienteLista.value = [];
+  paginaHistorialPaciente.value = 1;
+}
+
+const totalPaginasHistorialPaciente = computed(() => {
+  const n = historialPacienteLista.value.length;
+  if (n === 0) return 1;
+  return Math.ceil(n / tamPaginaHistorialPaciente.value);
+});
+
+const historialPacientePaginado = computed(() => {
+  const list = historialPacienteLista.value;
+  const tam = tamPaginaHistorialPaciente.value;
+  const p = Math.min(Math.max(1, paginaHistorialPaciente.value), totalPaginasHistorialPaciente.value);
+  const start = (p - 1) * tam;
+  return list.slice(start, start + tam);
+});
+
+const rangoHistorialPacienteLabel = computed(() => {
+  const total = historialPacienteLista.value.length;
+  if (total === 0) return '0 hospitalizaciones';
+  const tam = tamPaginaHistorialPaciente.value;
+  const p = Math.min(Math.max(1, paginaHistorialPaciente.value), totalPaginasHistorialPaciente.value);
+  const start = (p - 1) * tam + 1;
+  const end = Math.min(p * tam, total);
+  return `Mostrando ${start}–${end} de ${total}`;
+});
+
+function indiceHistorialPaciente(idx) {
+  return (paginaHistorialPaciente.value - 1) * tamPaginaHistorialPaciente.value + idx + 1;
+}
+
+watch([historialPacienteLista, tamPaginaHistorialPaciente], () => {
+  const tp = Math.max(1, Math.ceil(historialPacienteLista.value.length / tamPaginaHistorialPaciente.value) || 1);
+  if (paginaHistorialPaciente.value > tp) paginaHistorialPaciente.value = tp;
+});
+
 function registroTieneAlta(registro) {
   const fecha = String(registro?.fecha_alta_hospitalizacion ?? '').trim();
   if (!fecha) return false;
@@ -601,6 +825,7 @@ const todosPacientesLista = computed(() => {
     if (r) {
       return {
         id_paciente_atencion: id,
+        id_paciente: a.datosPaciente?.id_paciente ?? a.id_paciente ?? null,
         id_morbilidad_hospitalaria: r.id_morbilidad_hospitalaria,
         tieneRegistro: true,
         registro: r,
@@ -620,6 +845,7 @@ const todosPacientesLista = computed(() => {
     }
     return {
       id_paciente_atencion: id,
+      id_paciente: a.datosPaciente?.id_paciente ?? a.id_paciente ?? null,
       tieneRegistro: false,
       paciente,
       documento,
@@ -1103,6 +1329,16 @@ onMounted(async () => {
 
 .tabla-morbilidad-btn-editar:hover:not(:disabled) {
   background: #ecfeff;
+}
+
+.tabla-morbilidad-btn-historial {
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+  background: transparent;
+}
+
+.tabla-morbilidad-btn-historial:hover:not(:disabled) {
+  background: #eef2ff;
 }
 
 .tabla-morbilidad-btn-eliminar {
