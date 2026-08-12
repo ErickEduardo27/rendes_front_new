@@ -86,7 +86,10 @@ export function atencionesParaListadoRegistros(atenciones) {
   });
 }
 
-/** Paciente egresado en el listado: puede editarse lo ya registrado, pero no crear registros nuevos. */
+/**
+ * Paciente egresado en el listado: se pueden editar y crear registros
+ * con fecha ≤ fecha de egreso (no posteriores).
+ */
 export function esPacienteEgresadoEnListado(atencionOFila) {
   if (!atencionOFila) return false;
   if (atencionOFila.es_egresado === true) return true;
@@ -104,6 +107,38 @@ export function esPacienteEgresadoEnListado(atencionOFila) {
   if (estado === 'EGRESADO' || tipo === 'EGRESO') return true;
   if (estado === 'CERRADO' || estado === 'CERRADA') return true;
   return false;
+}
+
+/** Elige la atención editable del periodo: ACTIVO > CERRADA > EGRESO. */
+export function elegirAtencionEditable(lista) {
+  return (Array.isArray(lista) ? lista : []).reduce(
+    (best, a) => (rankAtencionListado(a) >= 1 ? preferirAtencion(best, a) : best),
+    null,
+  );
+}
+
+/** Fecha de egreso (YYYY-MM-DD) desde atención cerrada/egresada. */
+export function fechaEgresoAtencionISO(atencionOFila) {
+  if (!atencionOFila) return null;
+  const raw = atencionOFila.fecha_fin
+    ?? atencionOFila.fecha_egreso
+    ?? atencionOFila.datosPacienteAtencion?.fecha_fin
+    ?? atencionOFila.fecha_atencion
+    ?? '';
+  const s = String(raw).trim().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+
+export const MENSAJE_FECHA_POSTERIOR_EGRESO =
+  'La fecha del registro no puede ser posterior a la fecha de egreso del paciente.';
+
+/** True si la fecha del registro es posterior al egreso (cuando el paciente está egresado). */
+export function fechaPosteriorAlEgreso(fechaRegistro, atencionOFila) {
+  if (!esPacienteEgresadoEnListado(atencionOFila)) return false;
+  const egreso = fechaEgresoAtencionISO(atencionOFila);
+  const fecha = String(fechaRegistro || '').trim().slice(0, 10);
+  if (!egreso || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return false;
+  return fecha > egreso;
 }
 
 function idPacienteDeRegistro(registro) {

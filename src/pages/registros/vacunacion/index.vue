@@ -655,8 +655,7 @@ function textoComentarioSupervisor(text) {
 }
 
 const pacientesDisponibles = computed(() =>
-  (Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [])
-    .filter((a) => !esPacienteEgresadoEnListado(a))
+  Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [],
 );
 const pacientesFiltrados = computed(() => {
   const texto = busquedaPaciente.value.trim().toLowerCase();
@@ -1070,7 +1069,7 @@ function abrirModalEditar(registro) {
 async function eliminarRegistro(registro) {
   if (!formularioAbierto.value || !registro?.id_vacunacion) return;
   if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
-    ElMessage.warning('Paciente egresado: solo se puede editar el registro.');
+    ElMessage.warning('Paciente egresado: no se puede eliminar el registro.');
     return;
   }
   const nombre = nombrePaciente(registro);

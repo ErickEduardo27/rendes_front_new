@@ -69,6 +69,10 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalResultados: 0,
       totalCalidadAgua: 0,
       totalPacientesAtendidos: 0,
+      nuevos: 0,
+      reingresos: 0,
+      continuadores: 0,
+      egresados: 0,
       numeroAtenciones: null,
       totalResultadosRegistrados: 0,
       totalResultadosCompletos: 0,
@@ -96,7 +100,12 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     const rangoAcceso = rangoFechasDesdePeriodoTexto(periodoItem?.periodo);
     const listaUnidades = listaDesdeResponse(resUnidades);
 
-    const totalPacientesAtendidos = totalPacientesEnAtencionDesdeEstadisticas(resEstadisticasAtencion);
+    const statsAtencion = resEstadisticasAtencion || {};
+    const nuevos = Number(statsAtencion.nuevos || 0);
+    const reingresos = Number(statsAtencion.reingresos || 0);
+    const continuadores = Number(statsAtencion.continuadores || 0);
+    const egresados = Number(statsAtencion.egresados || 0);
+    const totalPacientesAtendidos = totalPacientesEnAtencionDesdeEstadisticas(statsAtencion);
     const numeroAtenciones =
       resInicioTrr?.numero_atenciones != null && resInicioTrr?.numero_atenciones !== ''
         ? Number(resInicioTrr.numero_atenciones)
@@ -125,6 +134,10 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalResultados: countFromResponse(resResultados),
       totalCalidadAgua,
       totalPacientesAtendidos,
+      nuevos,
+      reingresos,
+      continuadores,
+      egresados,
       numeroAtenciones,
       totalResultadosRegistrados,
       totalResultadosCompletos,
@@ -142,6 +155,10 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalResultados: 0,
       totalCalidadAgua: 0,
       totalPacientesAtendidos: 0,
+      nuevos: 0,
+      reingresos: 0,
+      continuadores: 0,
+      egresados: 0,
       numeroAtenciones: null,
       totalResultadosRegistrados: 0,
       totalResultadosCompletos: 0,

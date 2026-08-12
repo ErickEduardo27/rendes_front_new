@@ -291,6 +291,7 @@ const props = defineProps({
     modoSupervisor: { type: Boolean, default: false },
     /** Abierto desde egreso en Movimientos: no pedir efecto ni generar movimientos (el egreso lo hace el padre). */
     desdeEgresoMovimiento: { type: Boolean, default: false },
+    fechaMaximaRegistro: { type: String, default: null },
 })
 
 const { paciente, periodo, idPacienteAtencion } = props
@@ -318,9 +319,12 @@ const rangoFechasPeriodo = computed(() => {
   if (isNaN(year) || isNaN(month)) return { min: null, max: null };
   const firstDay = new Date(year, month - 1, 1);
   const lastDay = new Date(year, month, 0);
+  let max = lastDay.toISOString().split('T')[0];
+  const tope = String(props.fechaMaximaRegistro || '').trim().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(tope) && tope < max) max = tope;
   return {
     min: firstDay.toISOString().split('T')[0],
-    max: lastDay.toISOString().split('T')[0]
+    max,
   };
 });
 

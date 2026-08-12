@@ -33,7 +33,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div>
             <h3 class="text-sm font-semibold text-slate-800">Pacientes registrados en clínica y periodo</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Solo pacientes con atención activa. Los egresados no se pueden editar.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Incluye egresados: puede editar la ficha. Los registros clínicos admiten fechas hasta el día del egreso (no posteriores).</p>
           </div>
           <button
             type="button"
@@ -377,6 +377,7 @@ import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unid
 import { ElMessage, ElConfigProvider, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElButton, ElCheckbox, ElCheckboxGroup, ElDatePicker, ElAutocomplete } from 'element-plus';
 import es from 'element-plus/dist/locale/es.mjs';
 import Swal from 'sweetalert2';
+import { elegirAtencionEditable, esPacienteEgresadoEnListado } from '@/composables/useAtencionesRegistro';
 
 const periodoSeleccionado = ref(null);
 const clinicaSeleccionada = ref('');
@@ -1485,8 +1486,8 @@ async function resolverIdPacienteAtencionParaEdicion(idPaciente) {
   if (mod != null && mod !== '') params.set('id_modalidad', String(mod));
   const res = await getAllIpress(`/pacienteAtencion/?${params}`);
   const lista = Array.isArray(res) ? res : (res?.results || []);
-  const activa = lista.find((a) => String(a.estado || '').toUpperCase() === 'ACTIVO');
-  return activa?.id_paciente_atencion ?? null;
+  const elegida = elegirAtencionEditable(lista);
+  return elegida?.id_paciente_atencion ?? null;
 }
 
 function esAccesoInicioUnidad(unidad) {
@@ -2386,10 +2387,10 @@ async function guardarEdicionSupervisor() {
   ) {
     return;
   }
-  const idAtencionActiva = await resolverIdPacienteAtencionParaEdicion(idPacienteEdicionInterno.value);
-  if (idAtencionActiva == null) {
+  const idAtencion = await resolverIdPacienteAtencionParaEdicion(idPacienteEdicionInterno.value);
+  if (idAtencion == null) {
     ElMessage({
-      message: 'No se puede guardar: el paciente no tiene atención activa (está egresado).',
+      message: 'No se puede guardar: el paciente no tiene atención en el periodo/clínica actuales.',
       type: 'warning',
       plain: true,
     });
@@ -2507,24 +2508,17 @@ async function editarPacienteDesdeTabla(row) {
   await cargarDatosPacienteParaEdicion(Number(idP), Number(idDial));
 }
 
-function esFilaPacienteEgresado(row) {
-  const estado = String(row?.estado_atencion || row?.estado || '').toUpperCase();
-  const tipo = String(row?.tipo_atencion || '').toUpperCase();
-  return estado === 'EGRESADO' || tipo === 'EGRESO';
-}
-
 function puedeEditarPacienteListado(row) {
   if (!row || row.sin_registro_dialisis || !row.id_paciente_dialisis) return false;
-  if (esFilaPacienteEgresado(row)) return false;
   return true;
 }
 
 function tituloBotonEditarListado(row) {
-  if (esFilaPacienteEgresado(row)) {
-    return 'No se puede editar: el paciente está egresado';
-  }
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
     return 'Complete primero el registro de diálisis';
+  }
+  if (esPacienteEgresadoEnListado(row)) {
+    return 'Editar ficha del paciente egresado';
   }
   return 'Editar ficha del paciente';
 }
@@ -2542,10 +2536,10 @@ function cancelarEdicionPaciente() {
 }
 
 async function cargarDatosPacienteParaEdicion(idP, idDial) {
-  const idAtencionActiva = await resolverIdPacienteAtencionParaEdicion(idP);
-  if (idAtencionActiva == null) {
+  const idAtencion = await resolverIdPacienteAtencionParaEdicion(idP);
+  if (idAtencion == null) {
     ElMessage({
-      message: 'No se puede editar: el paciente está egresado o no tiene atención activa en el periodo/clínica actuales.',
+      message: 'No se puede editar: el paciente no tiene atención en el periodo/clínica actuales.',
       type: 'warning',
       plain: true,
     });
@@ -2555,6 +2549,7 @@ async function cargarDatosPacienteParaEdicion(idP, idDial) {
   modoEdicionSupervisor.value = true;
   idPacienteEdicionInterno.value = Number(idP);
   idPacienteDialisisEdicionInterno.value = Number(idDial);
+  idPacienteAtencionEdicionInterno.value = Number(idAtencion);
   cargandoEdicionSupervisor.value = true;
   silenciarWatchsAccesoModalidad.value = true;
 

@@ -337,6 +337,7 @@
               :periodo="periodoNumero"
               :id-paciente-atencion="idPacienteAtencionParaForm"
               :registro-edicion="registroEdicion"
+              :fecha-maxima-registro="fechaMaximaRegistroForm"
               @cancelar="cerrarModalNuevo"
               @guardado="onGuardado"
             />
@@ -498,7 +499,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva, esPacienteEgresadoEnListado, registroDePacienteEgresado } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva, esPacienteEgresadoEnListado, registroDePacienteEgresado, fechaEgresoAtencionISO } from '@/composables/useAtencionesRegistro';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import { fechaCelda } from '@/utils/fechaFormat';
 import Form4 from '@/components/forms/Form4.vue';
@@ -799,9 +800,18 @@ function estadoAprobacionClase(estado) {
 }
 
 const pacientesDisponibles = computed(() =>
-  (Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [])
-    .filter((a) => !esPacienteEgresadoEnListado(a))
+  Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [],
 );
+
+const fechaMaximaRegistroForm = computed(() => {
+  const id = idPacienteAtencionParaForm.value;
+  if (id == null || id === '') return null;
+  const atencion = (listadoAtenciones.value || []).find(
+    (a) => String(a.id_paciente_atencion) === String(id),
+  );
+  if (!atencion || !esPacienteEgresadoEnListado(atencion)) return null;
+  return fechaEgresoAtencionISO(atencion);
+});
 const pacientesFiltrados = computed(() => {
   const texto = busquedaPaciente.value.trim().toLowerCase();
   if (!texto) return pacientesDisponibles.value;
@@ -1017,7 +1027,7 @@ function abrirModalEditar(registro) {
 async function eliminarRegistro(registro) {
   if (!formularioAbierto.value || !registro?.id_morbilidad_hospitalaria) return;
   if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
-    ElMessage.warning('Paciente egresado: solo se puede editar el registro.');
+    ElMessage.warning('Paciente egresado: no se puede eliminar el registro.');
     return;
   }
   const nombre = nombrePaciente(registro);

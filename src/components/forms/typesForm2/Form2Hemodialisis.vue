@@ -97,10 +97,14 @@
                         :has-error="!!erroresNuevoAcceso.fecha_inicio_canulacion"
                         :min="form.fecha_creacion_acceso_nuevo || minFechaNuevoAccesoVascular || undefined"
                         :max="rangoFechasPeriodo.max || undefined"
-                        @change="erroresNuevoAcceso.fecha_inicio_canulacion = ''" />
+                        @change="onCambioFechaCanulacion" />
                     <p v-if="erroresNuevoAcceso.fecha_inicio_canulacion"
                         class="text-[11px] text-red-500 mt-1 font-medium">
                         {{ erroresNuevoAcceso.fecha_inicio_canulacion }}
+                    </p>
+                    <p v-else-if="alertaCanulacionMenorUnMes"
+                        class="text-[11px] text-amber-600 mt-1 font-medium">
+                        {{ MENSAJE_CANULACION_MENOR_UN_MES }}
                     </p>
                     <p v-else class="text-[11px] text-amber-700 mt-1">
                         Completar fecha de canulación cuando se inicia el uso de la FAV
@@ -293,10 +297,14 @@
                                     :has-error="!!erroresNuevoAcceso.fecha_inicio_canulacion"
                                     :min="form.fecha_creacion_acceso_nuevo || minFechaNuevoAccesoVascular || undefined"
                                     :max="rangoFechasPeriodo.max || undefined"
-                                    @change="erroresNuevoAcceso.fecha_inicio_canulacion = ''" />
+                                    @change="onCambioFechaCanulacion" />
                                 <p v-if="erroresNuevoAcceso.fecha_inicio_canulacion"
                                     class="text-[11px] text-red-500 mt-1 font-medium">
                                     {{ erroresNuevoAcceso.fecha_inicio_canulacion }}
+                                </p>
+                                <p v-else-if="alertaCanulacionMenorUnMes"
+                                    class="text-[11px] text-amber-600 mt-1 font-medium">
+                                    {{ MENSAJE_CANULACION_MENOR_UN_MES }}
                                 </p>
                                 <p v-else class="text-[11px] text-amber-700 mt-1">
                                     Completar fecha de canulación cuando se inicia el uso de la FAV
@@ -528,6 +536,7 @@
                         :id-paciente-atencion="idPacienteAtencion"
                         :iniciar-con-infeccion="true"
                         :fecha-evento-inicial="fechaAccesoParaInfeccion"
+                        :fecha-maxima-registro="fechaMaximaRegistro"
                         @guardado="onGuardadoForm3Infeccion"
                         @cancelar="cerrarForm3Infeccion"
                     />
@@ -543,7 +552,14 @@ import { useRouter } from 'vue-router'
 import { ref, onMounted, reactive, computed, watch, inject, defineAsyncComponent } from 'vue';
 import { getAllIpress, patchAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
-import { esTipoAccesoFistula, existeCambioAccesoMismoDia, MENSAJE_CAMBIO_ACCESO_MISMO_DIA } from '@/utils/accesoVascularValidacion';
+import {
+    esTipoAccesoFistula,
+    existeCambioAccesoMismoDia,
+    esCanulacionMenorUnMesDesdeCreacion,
+    MENSAJE_CAMBIO_ACCESO_MISMO_DIA,
+    MENSAJE_CANULACION_MENOR_UN_MES,
+} from '@/utils/accesoVascularValidacion';
+import { MENSAJE_FECHA_POSTERIOR_EGRESO } from '@/composables/useAtencionesRegistro';
 import { ElMessage } from 'element-plus';
 import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
@@ -561,6 +577,8 @@ const props = defineProps({
     /** Preselección de motivo al abrir desde infección (p. ej. Complicación infecciosa). */
     motivoCambioInicial: { type: String, default: '' },
     modoSupervisor: { type: Boolean, default: false },
+    /** Tope de fecha (YYYY-MM-DD) p. ej. fecha de egreso del paciente. */
+    fechaMaximaRegistro: { type: String, default: null },
 })
 const { paciente, periodo, periodoIpress, idPacienteAtencion } = props
 const emit = defineEmits(['cancelar', 'guardado'])
@@ -688,6 +706,24 @@ const opcionesLocalizacionNuevoFiltradas = computed(() => {
 
 const esTipoAccesoFistulaNuevo = computed(() => esTipoAccesoFistula(form.tipo_acceso_nuevo));
 
+const alertaCanulacionMenorUnMes = computed(() => {
+    if (!esTipoAccesoFistulaNuevo.value) return false;
+    const canul = form.fecha_inicio_canulacion;
+    const creacion = form.fecha_creacion_acceso_nuevo;
+    if (!canul || !creacion) return false;
+    return esCanulacionMenorUnMesDesdeCreacion(creacion, canul);
+});
+
+function mostrarAlertaCanulacionMenorUnMes() {
+    if (!alertaCanulacionMenorUnMes.value) return;
+    ElMessage({ message: MENSAJE_CANULACION_MENOR_UN_MES, type: 'warning', plain: true });
+}
+
+function onCambioFechaCanulacion() {
+    erroresNuevoAcceso.fecha_inicio_canulacion = '';
+    mostrarAlertaCanulacionMenorUnMes();
+}
+
 const silenciandoWatchTipoAcceso = ref(false);
 
 watch(() => form.tipo_acceso_nuevo, (val) => {
@@ -774,9 +810,12 @@ const rangoFechasPeriodo = computed(() => {
     if (isNaN(year) || isNaN(month)) return { min: null, max: null };
     const firstDay = new Date(year, month - 1, 1);
     const lastDay = new Date(year, month, 0);
+    let max = lastDay.toISOString().split('T')[0];
+    const tope = String(props.fechaMaximaRegistro || '').trim().slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(tope) && tope < max) max = tope;
     return {
         min: firstDay.toISOString().split('T')[0],
-        max: lastDay.toISOString().split('T')[0]
+        max,
     };
 });
 
@@ -846,6 +885,13 @@ const validarFormulario = () => {
     const rango = rangoFechasPeriodo.value;
     const f = form.fecha_creacion_acceso_nuevo;
     const esFistula = esTipoAccesoFistulaNuevo.value;
+    const topeEgreso = String(props.fechaMaximaRegistro || '').trim().slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(topeEgreso) && f && f > topeEgreso) {
+        const msg = MENSAJE_FECHA_POSTERIOR_EGRESO;
+        erroresNuevoAcceso.fecha_creacion_acceso_nuevo = msg;
+        ElMessage({ message: msg, type: 'warning', plain: true });
+        return false;
+    }
 
     if (esFistula) {
         // Fístula: fecha de creación libre respecto al acceso vigente y al inicio del periodo;
@@ -903,6 +949,7 @@ const validarFormulario = () => {
             ElMessage({ message: msg, type: 'warning', plain: true });
             return false;
         }
+        mostrarAlertaCanulacionMenorUnMes();
     }
 
     if (esMotivoCambioAcceso(form.motivo_cambio)) {

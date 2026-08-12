@@ -432,12 +432,18 @@
                   :class="String(idPacienteSeleccionado) === String(p.id_paciente_atencion) ? 'bg-cyan-50 border-l-4 border-cyan-500' : ''"
                   @click="idPacienteSeleccionado = p.id_paciente_atencion"
                 >
-                  <div class="text-sm font-medium text-slate-800">{{ p.datosPaciente?.paciente || 'Sin nombre' }}</div>
+                  <div class="text-sm font-medium text-slate-800">
+                    {{ p.datosPaciente?.paciente || 'Sin nombre' }}
+                    <span
+                      v-if="esPacienteEgresadoEnListado(p)"
+                      class="ml-1 inline text-[10px] font-semibold uppercase text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded"
+                    >EGRESADO</span>
+                  </div>
                   <div class="text-xs text-slate-500">DNI: {{ p.datosPaciente?.documento || '—' }}</div>
                 </button>
               </div>
             </div>
-            <p class="text-xs text-slate-500">Pacientes con atención en el periodo, IPRESS y modalidad actuales.</p>
+            <p class="text-xs text-slate-500">Pacientes con atención en el periodo, IPRESS y modalidad actuales (incluye egresados; fechas hasta el día del egreso).</p>
             <div class="flex justify-end gap-2 pt-2">
               <button type="button" class="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg" @click="cerrarModalNuevo">Cancelar</button>
               <button
@@ -461,6 +467,7 @@
               :periodo-ipress="idPeriodoIpress"
               :id-paciente-atencion="idPacienteAtencionParaForm"
               :registro-edicion="registroEdicion"
+              :fecha-maxima-registro="fechaMaximaRegistroForm"
               @cancelar="cerrarModalNuevo"
               @guardado="onGuardado"
             />
@@ -785,7 +792,7 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros, esPacienteEgresadoEnListado, registroDePacienteEgresado } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, esPacienteEgresadoEnListado, registroDePacienteEgresado, fechaEgresoAtencionISO } from '@/composables/useAtencionesRegistro';
 import { fechaCelda } from '@/utils/fechaFormat';
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
@@ -797,6 +804,8 @@ import {
   existeCambioAccesoMismoDia,
   claveCambioAccesoMismoDia,
   MENSAJE_CAMBIO_ACCESO_MISMO_DIA,
+  MENSAJE_CANULACION_MENOR_UN_MES,
+  esCanulacionMenorUnMesDesdeCreacion,
   motivoAccesoAntiguo,
   idsAccesosMasAntiguosPorPaciente,
   fechaCreacionAccesoEnPeriodo,
@@ -1078,9 +1087,18 @@ function filaDesdeFichaDialisis(a, dialisis) {
 }
 
 const pacientesDisponibles = computed(() =>
-  (Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [])
-    .filter((a) => !esPacienteEgresadoEnListado(a))
+  Array.isArray(listadoAtenciones.value) ? listadoAtenciones.value : [],
 );
+
+const fechaMaximaRegistroForm = computed(() => {
+  const id = idPacienteAtencionParaForm.value;
+  if (id == null || id === '') return null;
+  const atencion = (listadoAtenciones.value || []).find(
+    (a) => String(a.id_paciente_atencion) === String(id),
+  );
+  if (!atencion || !esPacienteEgresadoEnListado(atencion)) return null;
+  return fechaEgresoAtencionISO(atencion);
+});
 
 const pacientesFiltrados = computed(() => {
   const texto = busquedaPaciente.value.trim().toLowerCase();
@@ -1189,8 +1207,14 @@ const validarFilaImportacion = (obj, cambiosEnLote = null) => {
     }
   }
 
+  const advertenciaCanulacion = esTipoAccesoFistula(tipoAcceso) && fechaCanulacion
+    && esCanulacionMenorUnMesDesdeCreacion(fechaCreacion, fechaCanulacion)
+    ? MENSAJE_CANULACION_MENOR_UN_MES
+    : null;
+
   return {
     ok: true,
+    advertenciaCanulacion,
     payload: prepararPayloadUnidadesActuales({
       id_paciente_atencion: Number(atencion.id_paciente_atencion),
       tipo_acceso: tipoAcceso,
@@ -1722,7 +1746,7 @@ function abrirModalEditar(registro) {
 async function eliminarRegistro(registro) {
   if (!formularioAbierto.value || !registro?.id_unidad_actual) return;
   if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
-    ElMessage.warning('Paciente egresado: solo se puede editar el registro.');
+    ElMessage.warning('Paciente egresado: no se puede eliminar el registro.');
     return;
   }
   const nombre = nombrePaciente(registro);
@@ -2048,9 +2072,12 @@ async function ejecutarImportacion() {
       }
       try {
         await postAllIpress('/unidadesActuales/', validacion.payload);
+        const mensajeGuardado = validacion.advertenciaCanulacion
+          ? `Registro guardado. Advertencia: ${validacion.advertenciaCanulacion}`
+          : 'Registro guardado correctamente.';
         detalles.push(detalleFilaImportacion(validacion.detalle, {
           guardado: true,
-          mensaje: 'Registro guardado correctamente.',
+          mensaje: mensajeGuardado,
         }));
         creados++;
       } catch (e) {

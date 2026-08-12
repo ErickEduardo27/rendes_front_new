@@ -214,3 +214,16 @@ export function filtrarUnidadesAccesoEnPeriodo(lista, rango) {
     (u) => fechaCreacionAccesoEnPeriodo(u, rango) && esCambioAccesoVascular(u),
   );
 }
+
+export const MENSAJE_CANULACION_MENOR_UN_MES =
+  'La fecha de canulación es anterior a un mes desde la fecha de creación de la FAV. Verifique las fechas ingresadas.';
+
+/** True si la canulación ocurre antes de cumplirse un mes desde la creación del acceso. */
+export function esCanulacionMenorUnMesDesdeCreacion(fechaCreacion, fechaCanulacion) {
+  const creacion = parseFechaAcceso(fechaCreacion);
+  const canulacion = parseFechaAcceso(fechaCanulacion);
+  if (!creacion || !canulacion || canulacion < creacion) return false;
+  const unMesDespues = new Date(creacion);
+  unMesDespues.setMonth(unMesDespues.getMonth() + 1);
+  return canulacion < unMesDespues;
+}

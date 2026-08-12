@@ -88,7 +88,7 @@
             <div v-else class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 border border-slate-100 rounded-lg p-3 bg-slate-50/80">
               <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1">Resumen del periodo</div>
               <div class="flex justify-between col-span-2">
-                <span>N° de Sesiones</span>
+                <span>N° de sesiones del mes</span>
                 <span
                   class="font-semibold"
                   :class="tieneNumeroAtenciones ? 'text-slate-800' : 'text-rose-700'"
@@ -98,30 +98,38 @@
                 v-if="esPerfilClinicaUsuario && !tieneNumeroAtenciones"
                 class="col-span-2 text-[11px] text-rose-700"
               >
-                Registre el N° de Sesiones ejecutadas en el mes a notificar.
+                Registre el N° de sesiones del mes a notificar.
+              </div>
+              <div class="flex justify-between">
+                <span>Continuadores</span>
+                <span class="font-semibold text-slate-800">{{ statsModal.continuadores }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Egresados</span>
+                <span class="font-semibold text-slate-800">{{ statsModal.egresados }}</span>
               </div>
               <div class="flex justify-between col-span-2 pb-1 mb-1 border-b border-slate-200/80">
                 <span>Total pacientes atendidos</span>
                 <span class="font-semibold text-slate-800">{{ statsModal.totalPacientesAtendidos }}</span>
               </div>
               <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1 mt-1">Registros por formulario</div>
-              <div class="flex justify-between"><span>Cambio Acceso Vascular</span><span class="font-semibold text-sky-700">{{ statsModal.totalUnidades }}</span></div>
-              <div class="flex justify-between"><span>Infecciones</span><span class="font-semibold text-rose-700">{{ statsModal.totalEventos }}</span></div>
-              <div class="flex justify-between"><span>Morbilidad Hosp.</span><span class="font-semibold text-amber-700">{{ statsModal.totalMorbilidades }}</span></div>
+              <div class="flex justify-between"><span>Cambio Acceso Vascular</span><span class="font-semibold text-slate-800">{{ statsModal.totalUnidades }}</span></div>
+              <div class="flex justify-between"><span>Infecciones</span><span class="font-semibold text-slate-800">{{ statsModal.totalEventos }}</span></div>
+              <div class="flex justify-between"><span>Morbilidad Hosp.</span><span class="font-semibold text-slate-800">{{ statsModal.totalMorbilidades }}</span></div>
               <div class="flex justify-between col-span-2">
                 <span>Resultados clínicos (registros)</span>
                 <span
                   class="font-semibold"
-                  :class="statsModal.totalPacientesAtendidos === statsModal.totalResultadosRegistrados && statsModal.totalPacientesAtendidos > 0 ? 'text-emerald-700' : 'text-rose-700'"
+                  :class="resultadosClinicosOk ? 'text-slate-800' : 'text-rose-700'"
                 >{{ statsModal.totalResultadosRegistrados }}</span>
               </div>
               <div
-                v-if="esPerfilClinicaUsuario && statsModal.totalPacientesAtendidos !== statsModal.totalResultadosRegistrados"
+                v-if="esPerfilClinicaUsuario && !resultadosClinicosOk"
                 class="col-span-2 text-[11px] text-rose-700"
               >
                 Debe haber un registro de resultados clínicos por cada paciente en atención ({{ statsModal.totalPacientesAtendidos }} paciente(s) / {{ statsModal.totalResultadosRegistrados }} registro(s)).
               </div>
-              <div class="flex justify-between col-span-2"><span>Calidad de agua</span><span class="font-semibold text-teal-700">{{ statsModal.totalCalidadAgua }}</span></div>
+              <div class="flex justify-between col-span-2"><span>Calidad de agua</span><span class="font-semibold text-slate-800">{{ statsModal.totalCalidadAgua }}</span></div>
             </div>
             <p
               v-if="mensajeBloqueoNotificacion"
@@ -225,6 +233,10 @@ const statsModal = ref({
   totalResultados: 0,
   totalCalidadAgua: 0,
   totalPacientesAtendidos: 0,
+  nuevos: 0,
+  reingresos: 0,
+  continuadores: 0,
+  egresados: 0,
   numeroAtenciones: null,
   totalResultadosRegistrados: 0,
   totalResultadosCompletos: 0,
@@ -242,6 +254,12 @@ const etiquetaNumeroAtenciones = computed(() => {
 const tieneNumeroAtenciones = computed(() =>
   tieneNumeroAtencionesRegistrado(statsModal.value.numeroAtenciones),
 )
+
+const resultadosClinicosOk = computed(() => {
+  const total = Number(statsModal.value.totalPacientesAtendidos || 0)
+  const regs = Number(statsModal.value.totalResultadosRegistrados || 0)
+  return total > 0 && total === regs
+})
 
 const mensajeBloqueoNotificacion = computed(() => {
   if (!esPerfilClinicaUsuario.value || statsModal.value.puedeNotificarClinica) return ''
@@ -393,6 +411,10 @@ async function cargarStatsNotificacion() {
       totalResultados: 0,
       totalCalidadAgua: 0,
       totalPacientesAtendidos: 0,
+      nuevos: 0,
+      reingresos: 0,
+      continuadores: 0,
+      egresados: 0,
       numeroAtenciones: null,
       totalResultadosRegistrados: 0,
       totalResultadosCompletos: 0,
