@@ -100,17 +100,25 @@
               >
                 Registre el N° de sesiones del mes a notificar.
               </div>
+              <div class="flex justify-between col-span-2">
+                <span>Total</span>
+                <span class="font-semibold text-slate-800">{{ totalPacientesResumen }}</span>
+              </div>
               <div class="flex justify-between">
+                <span>Nuevos</span>
+                <span class="font-semibold text-slate-800">{{ statsModal.nuevos }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Reingresos</span>
+                <span class="font-semibold text-slate-800">{{ statsModal.reingresos }}</span>
+              </div>
+              <div class="flex justify-between pb-1 mb-1 border-b border-slate-200/80">
                 <span>Continuadores</span>
                 <span class="font-semibold text-slate-800">{{ statsModal.continuadores }}</span>
               </div>
-              <div class="flex justify-between">
-                <span>Egresados</span>
+              <div class="flex justify-between pb-1 mb-1 border-b border-slate-200/80">
+                <span>Egresos</span>
                 <span class="font-semibold text-slate-800">{{ statsModal.egresados }}</span>
-              </div>
-              <div class="flex justify-between col-span-2 pb-1 mb-1 border-b border-slate-200/80">
-                <span>Total pacientes atendidos</span>
-                <span class="font-semibold text-slate-800">{{ statsModal.totalPacientesAtendidos }}</span>
               </div>
               <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1 mt-1">Registros por formulario</div>
               <div class="flex justify-between"><span>Cambio Acceso Vascular</span><span class="font-semibold text-slate-800">{{ statsModal.totalUnidades }}</span></div>
@@ -254,6 +262,13 @@ const etiquetaNumeroAtenciones = computed(() => {
 const tieneNumeroAtenciones = computed(() =>
   tieneNumeroAtencionesRegistrado(statsModal.value.numeroAtenciones),
 )
+
+const totalPacientesResumen = computed(() => (
+  Number(statsModal.value.nuevos || 0)
+  + Number(statsModal.value.reingresos || 0)
+  + Number(statsModal.value.continuadores || 0)
+  + Number(statsModal.value.egresados || 0)
+))
 
 const resultadosClinicosOk = computed(() => {
   const total = Number(statsModal.value.totalPacientesAtendidos || 0)

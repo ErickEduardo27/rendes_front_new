@@ -554,6 +554,8 @@ import { getAllIpress, patchAllIpress, postAllIpress } from "@/services/ipress/I
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import {
     esTipoAccesoFistula,
+    esFistulaSinCanulacion,
+    elegirAccesoActual,
     existeCambioAccesoMismoDia,
     esCanulacionMenorUnMesDesdeCreacion,
     MENSAJE_CAMBIO_ACCESO_MISMO_DIA,
@@ -1202,19 +1204,32 @@ const fetchUnidadesActualesPaciente = async () => {
             return;
         }
         const ordenados = [...lista].sort((a, b) => (b.id_unidad_actual || 0) - (a.id_unidad_actual || 0));
-        const actual = ordenados[0];
-        form.fecha_creacion_acceso_actual = actual.fecha_creacion_acceso || actual.fecha_creacion_acceso_actual || null;
-        form.tipo_acceso_actual = normalizarTipoAcceso(actual.tipo_acceso || actual.tipo_acceso_actual) || null;
-        const locApi = actual.localizacion_acceso || actual.localizacion_acceso_actual;
-        form.localizacion_acceso_actual = normalizarLocalizacion(locApi) ?? null;
+        const actual = elegirAccesoActual(lista);
+        if (actual) {
+            form.fecha_creacion_acceso_actual = actual.fecha_creacion_acceso || actual.fecha_creacion_acceso_actual || null;
+            form.tipo_acceso_actual = normalizarTipoAcceso(actual.tipo_acceso || actual.tipo_acceso_actual) || null;
+            const locApi = actual.localizacion_acceso || actual.localizacion_acceso_actual;
+            form.localizacion_acceso_actual = normalizarLocalizacion(locApi) ?? null;
+        } else {
+            form.fecha_creacion_acceso_actual = null;
+            form.tipo_acceso_actual = null;
+            form.localizacion_acceso_actual = null;
+        }
+        const idActual = actual?.id_unidad_actual != null ? String(actual.id_unidad_actual) : null;
         const motivoLabels = { '1': 'Complicación mecánica', '2': 'Complicación infecciosa', '3': 'Prescripción Médica' };
-        historialAcceso.value = ordenados.map((r, i) => ({
-            fecha: r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
-            tipo_acceso: normalizarTipoAcceso(r.tipo_acceso || r.tipo_acceso_actual) || '—',
-            localizacion: describirLocalizacion(r.localizacion_acceso || r.localizacion_acceso_actual) || '—',
-            motivo: motivoLabels[r.motivo_cambio] || r.motivo_cambio || '',
-            estado: i === 0 ? 'Activo' : 'Anterior'
-        }));
+        historialAcceso.value = ordenados.map((r) => {
+            const esActual = idActual != null && String(r.id_unidad_actual) === idActual;
+            let estado = 'Anterior';
+            if (esActual) estado = 'Activo';
+            else if (esFistulaSinCanulacion(r)) estado = 'Pendiente canulación';
+            return {
+                fecha: r.fecha_creacion_acceso || r.fecha_creacion_acceso_actual || '',
+                tipo_acceso: normalizarTipoAcceso(r.tipo_acceso || r.tipo_acceso_actual) || '—',
+                localizacion: describirLocalizacion(r.localizacion_acceso || r.localizacion_acceso_actual) || '—',
+                motivo: motivoLabels[r.motivo_cambio] || r.motivo_cambio || '',
+                estado,
+            };
+        });
     } catch (error) {
         console.error('Error al obtener unidades actuales del paciente:', error);
         historialAcceso.value = [];

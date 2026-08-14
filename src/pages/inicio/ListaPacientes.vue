@@ -5,7 +5,7 @@
       <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Resumen del periodo</p>
-          <p class="text-xs text-gray-400">Pacientes en atención y registros cargados · periodo, IPRESS y modalidad</p>
+          <p class="text-xs text-gray-400">Último estado de cada paciente · periodo, IPRESS y modalidad</p>
           <p
             v-if="bloqueadoPorNotificacion"
             class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-xl"
@@ -602,10 +602,16 @@ const totalRegistrosPeriodo = computed(() => {
 // --- ESTADÍSTICAS DEL DASHBOARD ---
 const estadisticas = computed(() => {
   const e = estadisticasAtencion.value;
-  // Mismo criterio que Movimientos: pacientes distintos en periodo/IPRESS/modalidad
+  const nuevos = Number(e.nuevos || 0);
+  const reingresos = Number(e.reingresos || 0);
+  const continuadores = Number(e.continuadores || 0);
+  const egresados = Number(e.egresados || 0);
   return {
-    ...e,
-    total: Number(e.total || 0),
+    nuevos,
+    reingresos,
+    continuadores,
+    egresados,
+    total: nuevos + reingresos + continuadores + egresados,
   };
 });
 // -----------------------------------

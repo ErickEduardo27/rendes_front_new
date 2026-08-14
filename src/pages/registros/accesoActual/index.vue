@@ -631,6 +631,7 @@
         <div class="p-6 overflow-auto">
           <p class="text-xs text-slate-500 mb-3">
             Todos los cambios de acceso registrados para este paciente (cualquier periodo).
+            Una fístula sin fecha de canulación aparece aquí, pero no se toma como acceso actual hasta completar la canulación.
           </p>
           <div v-if="historialPacienteLista.length === 0" class="py-10 text-center text-slate-500 italic border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
             No hay cambios de acceso vascular registrados para este paciente.
@@ -646,6 +647,7 @@
                     <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">F. creación</th>
                     <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">F. inicio canulación</th>
                     <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
+                    <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Estado</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -661,6 +663,13 @@
                     <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ fechaCreacionAccesoColumna(r) || '—' }}</td>
                     <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ textoCanulacionRegistro(r) }}</td>
                     <td class="px-3 py-2.5 text-slate-700">{{ r.motivo_cambio || '—' }}</td>
+                    <td class="px-3 py-2.5">
+                      <span
+                        v-if="!esAccesoUsableComoActual(r)"
+                        class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 whitespace-nowrap"
+                      >Pendiente canulación</span>
+                      <span v-else class="text-slate-400">—</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -801,6 +810,7 @@ import {
   claseFilaAccesoAntiguo,
   esAccesoVascularAntiguo,
   esTipoAccesoFistula,
+  esAccesoUsableComoActual,
   existeCambioAccesoMismoDia,
   claveCambioAccesoMismoDia,
   MENSAJE_CAMBIO_ACCESO_MISMO_DIA,
@@ -997,6 +1007,8 @@ function textoTipoAcceso(valor) {
 function construirUltimoAccesoPorPaciente(regs) {
   const map = {};
   (Array.isArray(regs) ? regs : []).forEach((r) => {
+    // FAV sin canulación: no desplaza al acceso actual aunque sea el más reciente por creación/id.
+    if (!esAccesoUsableComoActual(r)) return;
     const pid = idPacienteDesdeRegistro(r);
     if (pid == null) return;
     const key = String(pid);

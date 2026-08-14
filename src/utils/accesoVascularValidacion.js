@@ -76,12 +76,44 @@ export function existeCambioAccesoMismoDia(registros, { idPaciente, fecha, exclu
   });
 }
 
-/** Para FAV con canulación registrada, la vigencia del acceso usa esa fecha; si no, fecha de creación. */
+/** FAV registrada sin fecha de canulación: aún no entra en uso. */
+export function esFistulaSinCanulacion(unidad) {
+  const tipo = unidad?.tipo_acceso || unidad?.tipo_acceso_actual || '';
+  if (!esTipoAccesoFistula(tipo)) return false;
+  const canulacion = String(unidad?.fecha_inicio_canulacion || '').trim().slice(0, 10);
+  return !canulacion;
+}
+
+/**
+ * Acceso usable como «actual» / vigente.
+ * Una FAV sin canulación no desplaza al acceso previo aunque su creación sea más reciente.
+ */
+export function esAccesoUsableComoActual(unidad) {
+  if (!unidad) return false;
+  return !esFistulaSinCanulacion(unidad);
+}
+
+/** Elige el acceso actual entre unidades (excluye FAV sin canulación). */
+export function elegirAccesoActual(unidades) {
+  const lista = (Array.isArray(unidades) ? unidades : []).filter(esAccesoUsableComoActual);
+  if (!lista.length) return null;
+  return [...lista].sort(
+    (a, b) => (Number(b.id_unidad_actual) || 0) - (Number(a.id_unidad_actual) || 0),
+  )[0] || null;
+}
+
+/**
+ * Para FAV con canulación, la vigencia usa esa fecha.
+ * FAV sin canulación: sin fecha de vigencia (no cuenta como acceso en uso).
+ * Otros tipos: fecha de creación.
+ */
 export function fechaReferenciaVigenciaAcceso(unidad) {
   const tipo = unidad?.tipo_acceso || unidad?.tipo_acceso_actual || '';
   const creacion = unidad?.fecha_creacion_acceso || unidad?.fecha_creacion_acceso_actual || '';
   const canulacion = String(unidad?.fecha_inicio_canulacion || '').trim().slice(0, 10);
-  if (esTipoAccesoFistula(tipo) && canulacion) return canulacion;
+  if (esTipoAccesoFistula(tipo)) {
+    return canulacion || '';
+  }
   return creacion;
 }
 
@@ -89,6 +121,7 @@ export function fechaReferenciaVigenciaAcceso(unidad) {
 export function accesoVigenteEnFechaEvento(unidades, fechaEvento) {
   if (!fechaEvento || !Array.isArray(unidades) || !unidades.length) return null;
   const ordenados = [...unidades]
+    .filter(esAccesoUsableComoActual)
     .map((u) => {
       const fechaCreacion = String(u.fecha_creacion_acceso || u.fecha_creacion_acceso_actual || '').trim().slice(0, 10);
       const fechaRef = String(fechaReferenciaVigenciaAcceso(u) || '').trim().slice(0, 10);
