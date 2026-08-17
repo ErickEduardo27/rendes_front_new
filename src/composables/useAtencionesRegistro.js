@@ -208,13 +208,25 @@ export function registroDePacienteEgresado(registro, listadoAtenciones) {
 }
 
 
-export function registroParaAtencionActiva(registro, listadoAtenciones) {
-  if (!registro) return null;
-  const lista = Array.isArray(listadoAtenciones) ? listadoAtenciones : [];
-  const idAten = idAtencionDeRegistro(registro);
+/**
+ * Registro clínico asociado a una atención del listado «Todos los pacientes».
+ * Busca primero por id_paciente_atencion; si no hay match (p. ej. registro ligado
+ * a atención cerrada tras egreso/reingreso), busca por id_paciente.
+ */
+export function registroParaAtencionActiva(atencion, porAtencion = {}, porPaciente = {}) {
+  if (!atencion) return null;
+  const idAten = atencion.id_paciente_atencion
+    ?? atencion.datosPacienteAtencion?.id_paciente_atencion
+    ?? null;
   if (idAten != null) {
-    const a = lista.find((x) => String(x.id_paciente_atencion) === String(idAten));
-    if (a) return registro;
+    const r = porAtencion?.[String(idAten)];
+    if (r) return r;
+  }
+  const pid = atencion.id_paciente
+    ?? atencion.datosPaciente?.id_paciente
+    ?? null;
+  if (pid != null) {
+    return porPaciente?.[String(pid)] || null;
   }
   return null;
 }

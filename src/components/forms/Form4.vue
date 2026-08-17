@@ -49,7 +49,7 @@
                     </div>
 
                     <div v-if="modoCompletarAlta" class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <p class="text-sm font-medium text-amber-800">Registro sin fecha de alta. Complete la fecha de alta de hospitalización (debe estar dentro del periodo seleccionado).</p>
+                        <p class="text-sm font-medium text-amber-800">Registro sin fecha de alta. Complete la fecha de alta (puede ajustar también fecha de inicio y fuente).</p>
                     </div>
 
                     <hr class="border-gray-100 my-4" />
@@ -57,8 +57,13 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Inicio de Hospitalización</label>
-                            <FechaInput v-model="form.fIniHos" :min="modoCompletarAlta ? undefined : rangoFechasPeriodo.min" :max="modoCompletarAlta ? undefined : rangoFechasPeriodo.max" :readonly="modoCompletarAlta" input-class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" />
-                            <p v-if="!modoCompletarAlta && rangoFechasPeriodo.min" class="text-xs text-gray-500 mt-1">Dentro del periodo ({{ rangoFechasPeriodo.min }} a {{ rangoFechasPeriodo.max }})</p>
+                            <FechaInput
+                                v-model="form.fIniHos"
+                                :min="rangoFechasPeriodo.min"
+                                :max="rangoFechasPeriodo.max"
+                                input-class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white"
+                            />
+                            <p v-if="rangoFechasPeriodo.min" class="text-xs text-gray-500 mt-1">Dentro del periodo ({{ rangoFechasPeriodo.min }} a {{ rangoFechasPeriodo.max }})</p>
                         </div>
                         <div v-if="form.desenlace !== 'Fallecimiento'">
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fecha de Alta de Hospitalización</label>
@@ -76,7 +81,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fuente</label>
-                            <select v-model="form.fuente" :disabled="modoCompletarAlta" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white" :class="{ 'bg-gray-100 cursor-not-allowed': modoCompletarAlta }">
+                            <select v-model="form.fuente" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
                                 <option value="">Seleccione</option>
                                 <option value="Epicrisis">Epicrisis</option>
                                 <option value="Informe de Alta">Informe de Alta</option>
@@ -1597,8 +1602,10 @@ const postForm = async (opts = {}) => {
     try {
         if (modoCompletarAlta.value && idMorbilidadCompletar.value != null) {
             const patchPayload = {
+                fecha_hospitalizacion: form.value.fIniHos || null,
                 fecha_alta_hospitalizacion: esFallecimiento ? null : (form.value.fAltHos || null),
                 desenlace: form.value.desenlace || '',
+                fuente: form.value.fuente || '',
                 ...datosFallecimientoPayload(),
             };
             if (efectoMovimiento) {
