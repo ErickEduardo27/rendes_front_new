@@ -5,7 +5,7 @@
       <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <p class="text-xs text-gray-500 font-bold uppercase tracking-wider mb-1">Resumen del periodo</p>
-          <p class="text-xs text-gray-400">Último estado de cada paciente · periodo, IPRESS y modalidad</p>
+          <p class="text-xs text-gray-400">Condición inicial (ingreso al mes) y condición final (último estado) · periodo, IPRESS y modalidad</p>
           <p
             v-if="bloqueadoPorNotificacion"
             class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-xl"
@@ -34,27 +34,89 @@
         </div>
       </div>
 
-      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Pacientes en atención</p>
+      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Pacientes atendidos — condición inicial</p>
+      <p class="text-[11px] text-slate-400 mb-2">Condición con la que el paciente ingresó al mes y clínica.</p>
       <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
         <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
           <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 leading-tight">Total</p>
-          <p class="text-2xl font-bold text-gray-800 mt-1 tabular-nums">{{ estadisticas.total }}</p>
+          <p class="text-2xl font-bold text-gray-800 mt-1 tabular-nums">{{ estadisticasInicial.total }}</p>
         </div>
         <div class="rounded-lg border border-violet-100 bg-violet-50/60 px-3 py-2.5">
           <p class="text-[10px] font-bold uppercase tracking-wide text-violet-600 leading-tight">Nuevos</p>
-          <p class="text-2xl font-bold text-violet-700 mt-1 tabular-nums">{{ estadisticas.nuevos }}</p>
+          <p class="text-2xl font-bold text-violet-700 mt-1 tabular-nums">{{ estadisticasInicial.nuevos }}</p>
         </div>
         <div class="rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2.5">
           <p class="text-[10px] font-bold uppercase tracking-wide text-amber-600 leading-tight">Reingresos</p>
-          <p class="text-2xl font-bold text-amber-700 mt-1 tabular-nums">{{ estadisticas.reingresos }}</p>
+          <p class="text-2xl font-bold text-amber-700 mt-1 tabular-nums">{{ estadisticasInicial.reingresos }}</p>
         </div>
         <div class="rounded-lg border border-sky-100 bg-sky-50/60 px-3 py-2.5">
           <p class="text-[10px] font-bold uppercase tracking-wide text-sky-600 leading-tight">Continuadores</p>
-          <p class="text-2xl font-bold text-sky-700 mt-1 tabular-nums">{{ estadisticas.continuadores }}</p>
+          <p class="text-2xl font-bold text-sky-700 mt-1 tabular-nums">{{ estadisticasInicial.continuadores }}</p>
         </div>
         <div class="rounded-lg border border-slate-200 bg-slate-100/80 px-3 py-2.5">
           <p class="text-[10px] font-bold uppercase tracking-wide text-slate-600 leading-tight">Egresos</p>
-          <p class="text-2xl font-bold text-slate-700 mt-1 tabular-nums">{{ estadisticas.egresados }}</p>
+          <p class="text-2xl font-bold text-slate-700 mt-1 tabular-nums">{{ estadisticasInicial.egresados }}</p>
+        </div>
+      </div>
+
+      <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Pacientes atendidos — condición final</p>
+      <p class="text-[11px] text-slate-400 mb-2">Última condición registrada del paciente en el periodo.</p>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+        <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 leading-tight">Total</p>
+          <p class="text-2xl font-bold text-gray-800 mt-1 tabular-nums">{{ estadisticasFinal.total }}</p>
+        </div>
+        <div class="rounded-lg border border-violet-100 bg-violet-50/60 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-violet-600 leading-tight">Nuevos</p>
+          <p class="text-2xl font-bold text-violet-700 mt-1 tabular-nums">{{ estadisticasFinal.nuevos }}</p>
+        </div>
+        <div class="rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-amber-600 leading-tight">Reingresos</p>
+          <p class="text-2xl font-bold text-amber-700 mt-1 tabular-nums">{{ estadisticasFinal.reingresos }}</p>
+        </div>
+        <div class="rounded-lg border border-sky-100 bg-sky-50/60 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-sky-600 leading-tight">Continuadores</p>
+          <p class="text-2xl font-bold text-sky-700 mt-1 tabular-nums">{{ estadisticasFinal.continuadores }}</p>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-100/80 px-3 py-2.5">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-600 leading-tight">Egresos</p>
+          <p class="text-2xl font-bold text-slate-700 mt-1 tabular-nums">{{ estadisticasFinal.egresados }}</p>
+        </div>
+      </div>
+
+      <div class="mb-5">
+        <button
+          type="button"
+          class="text-[11px] font-semibold text-slate-500 hover:text-slate-700 underline-offset-2 hover:underline"
+          @click="mostrarCondicionActual = !mostrarCondicionActual"
+        >
+          {{ mostrarCondicionActual ? 'Ocultar condición actual' : 'Mostrar condición actual' }}
+        </button>
+        <div v-if="mostrarCondicionActual" class="mt-2">
+          <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-2">Pacientes atendidos — condición actual</p>
+          <p class="text-[11px] text-slate-400 mb-2">Atención activa vigente; si no hay activa, se cuenta el egreso.</p>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 leading-tight">Total</p>
+              <p class="text-2xl font-bold text-gray-800 mt-1 tabular-nums">{{ estadisticasActual.total }}</p>
+            </div>
+            <div class="rounded-lg border border-violet-100 bg-violet-50/60 px-3 py-2.5">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-violet-600 leading-tight">Nuevos</p>
+              <p class="text-2xl font-bold text-violet-700 mt-1 tabular-nums">{{ estadisticasActual.nuevos }}</p>
+            </div>
+            <div class="rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2.5">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-amber-600 leading-tight">Reingresos</p>
+              <p class="text-2xl font-bold text-amber-700 mt-1 tabular-nums">{{ estadisticasActual.reingresos }}</p>
+            </div>
+            <div class="rounded-lg border border-sky-100 bg-sky-50/60 px-3 py-2.5">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-sky-600 leading-tight">Continuadores</p>
+              <p class="text-2xl font-bold text-sky-700 mt-1 tabular-nums">{{ estadisticasActual.continuadores }}</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-100/80 px-3 py-2.5">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-slate-600 leading-tight">Egresos</p>
+              <p class="text-2xl font-bold text-slate-700 mt-1 tabular-nums">{{ estadisticasActual.egresados }}</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -453,7 +515,94 @@ const esSupervisor = computed(() => {
 });
 
 // Estadísticas de pacientes desde tabla paciente_atencion (por periodo, ipress, modalidad)
-const estadisticasAtencion = ref({ total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 });
+function vacioConteoAtencion() {
+  return { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 };
+}
+
+function normalizarConteoAtencion(obj) {
+  const o = obj && typeof obj === 'object' ? obj : {};
+  const nuevos = Number(o.nuevos || 0);
+  const reingresos = Number(o.reingresos || 0);
+  const continuadores = Number(o.continuadores || 0);
+  const egresados = Number(o.egresados || 0);
+  return {
+    nuevos,
+    reingresos,
+    continuadores,
+    egresados,
+    total: Number(o.total || 0) || (nuevos + reingresos + continuadores + egresados),
+  };
+}
+
+function conteoTieneDatos(obj) {
+  const c = normalizarConteoAtencion(obj);
+  return c.total > 0 || c.nuevos > 0 || c.reingresos > 0 || c.continuadores > 0 || c.egresados > 0;
+}
+
+function idPacienteDeAtencion(a) {
+  return a?.id_paciente ?? a?.datosPaciente?.id_paciente ?? null;
+}
+
+function clasificarCondicionAtencion(at, porIngreso = false) {
+  const estado = String(at?.estado || '').trim().toUpperCase();
+  const tipo = String(at?.tipo_atencion || '').trim().toUpperCase();
+  if (porIngreso) {
+    if (tipo === 'EGRESO' || estado === 'EGRESADO') return 'egresados';
+  } else if (['EGRESADO', 'CERRADO', 'CERRADA'].includes(estado) || tipo === 'EGRESO') {
+    return 'egresados';
+  }
+  if (tipo.includes('REINGRESO')) return 'reingresos';
+  if (tipo === 'NUEVO' || estado === 'NUEVO') return 'nuevos';
+  return 'continuadores';
+}
+
+function contarCondicionesAtencion(ats, porIngreso = false) {
+  const c = vacioConteoAtencion();
+  for (const at of ats) {
+    c[clasificarCondicionAtencion(at, porIngreso)] += 1;
+  }
+  c.total = c.nuevos + c.reingresos + c.continuadores + c.egresados;
+  return c;
+}
+
+/** Primera, última y activa por paciente a partir del listado de atenciones. */
+function conteosCondicionDesdeAtenciones(lista) {
+  const porPaciente = new Map();
+  for (const a of Array.isArray(lista) ? lista : []) {
+    const pid = idPacienteDeAtencion(a);
+    if (pid == null) continue;
+    const key = String(pid);
+    if (!porPaciente.has(key)) porPaciente.set(key, []);
+    porPaciente.get(key).push(a);
+  }
+  const primeras = [];
+  const ultimas = [];
+  const actuales = [];
+  for (const ats of porPaciente.values()) {
+    const sorted = [...ats].sort(
+      (a, b) => (Number(a.id_paciente_atencion) || 0) - (Number(b.id_paciente_atencion) || 0),
+    );
+    const primera = sorted[0];
+    const ultima = sorted[sorted.length - 1];
+    const activos = sorted.filter((x) => String(x.estado || '').toUpperCase() === 'ACTIVO');
+    primeras.push(primera);
+    ultimas.push(ultima);
+    actuales.push(activos.length ? activos[activos.length - 1] : ultima);
+  }
+  return {
+    inicial: contarCondicionesAtencion(primeras, true),
+    final: contarCondicionesAtencion(ultimas, false),
+    actual: contarCondicionesAtencion(actuales, false),
+  };
+}
+
+const mostrarCondicionActual = ref(false);
+const estadisticasAtencion = ref({
+  ...vacioConteoAtencion(),
+  inicial: vacioConteoAtencion(),
+  final: vacioConteoAtencion(),
+  actual: vacioConteoAtencion(),
+});
 
 const fetchEstadisticasAtencion = async () => {
   const idPeriodo = periodoGlobal.value;
@@ -465,21 +614,45 @@ const fetchEstadisticasAtencion = async () => {
   if (idModalidad != null && idModalidad !== '') params.set('id_modalidad', idModalidad);
   const qs = params.toString();
   if (!qs) {
-    estadisticasAtencion.value = { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 };
+    estadisticasAtencion.value = {
+      ...vacioConteoAtencion(),
+      inicial: vacioConteoAtencion(),
+      final: vacioConteoAtencion(),
+      actual: vacioConteoAtencion(),
+    };
     return;
   }
   try {
     const res = await getAllIpress(`/pacienteAtencion/estadisticas/?${qs}`);
+    const finalApi = normalizarConteoAtencion(res?.final || res);
+    let inicial = normalizarConteoAtencion(res?.inicial);
+    let actual = normalizarConteoAtencion(res?.actual);
+    let final = finalApi;
+
+    // QA u otros backends antiguos no envían inicial/final/actual.
+    if (!conteoTieneDatos(res?.inicial) && conteoTieneDatos(finalApi)) {
+      const listRes = await getAllIpress(`/pacienteAtencion/?${qs}`);
+      const lista = Array.isArray(listRes) ? listRes : (listRes?.results || []);
+      const cortes = conteosCondicionDesdeAtenciones(lista);
+      inicial = cortes.inicial;
+      final = cortes.final;
+      actual = cortes.actual;
+    }
+
     estadisticasAtencion.value = {
-      total: res?.total ?? 0,
-      nuevos: res?.nuevos ?? 0,
-      reingresos: res?.reingresos ?? 0,
-      continuadores: res?.continuadores ?? 0,
-      egresados: res?.egresados ?? 0,
+      ...final,
+      inicial,
+      final,
+      actual,
     };
   } catch (e) {
     console.error('Error al obtener estadísticas de atención:', e);
-    estadisticasAtencion.value = { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 };
+    estadisticasAtencion.value = {
+      ...vacioConteoAtencion(),
+      inicial: vacioConteoAtencion(),
+      final: vacioConteoAtencion(),
+      actual: vacioConteoAtencion(),
+    };
   }
 };
 
@@ -599,22 +772,10 @@ const totalRegistrosPeriodo = computed(() => {
   );
 });
 
-// --- ESTADÍSTICAS DEL DASHBOARD ---
-const estadisticas = computed(() => {
-  const e = estadisticasAtencion.value;
-  const nuevos = Number(e.nuevos || 0);
-  const reingresos = Number(e.reingresos || 0);
-  const continuadores = Number(e.continuadores || 0);
-  const egresados = Number(e.egresados || 0);
-  return {
-    nuevos,
-    reingresos,
-    continuadores,
-    egresados,
-    total: nuevos + reingresos + continuadores + egresados,
-  };
-});
-// -----------------------------------
+const estadisticasInicial = computed(() => normalizarConteoAtencion(estadisticasAtencion.value.inicial));
+const estadisticasFinal = computed(() => normalizarConteoAtencion(estadisticasAtencion.value.final || estadisticasAtencion.value));
+const estadisticasActual = computed(() => normalizarConteoAtencion(estadisticasAtencion.value.actual));
+const estadisticas = computed(() => estadisticasFinal.value);
 
 /** Último registro por id_paciente_atencion: indicador de edición del supervisor y comentario (vista por formulario). */
 const metaFormularioPorAtencion = ref({});

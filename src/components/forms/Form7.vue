@@ -126,6 +126,7 @@
               :min="0"
               :max="2000"
               :step="0.01"
+              @blur="onBlurTituloAcHBs"
             />
             <p class="text-[10px] text-slate-500 mt-1">El estado se calcula automáticamente según el título.</p>
           </div>
@@ -155,84 +156,109 @@
         <hr class="border-gray-100" />
 
         <h3 class="form7-section-title">Vacunación</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <div class="form7-field">
-            <label class="form7-label">Hepatitis B — dosis</label>
-            <select class="form7-control" v-model="form.dosisHepatitisB" @change="onCambioDosisVacuna('fechaHepatitisB')">
-              <option :value="null">Seleccione</option>
-              <option
-                v-for="op in opcionesDosisHepatitis"
-                :key="`hb-${op}`"
-                :value="op"
-                :disabled="dosisHepatitisBloqueada(op)"
-              >
-                {{ op }}{{ dosisHepatitisBloqueada(op) ? ' (ya registrada)' : '' }}
-              </option>
-            </select>
-            <p v-if="resumenDosisHepatitis" class="text-[10px] text-slate-500 mt-1">{{ resumenDosisHepatitis }}</p>
-          </div>
-          <div class="form7-field">
-            <label class="form7-label">Hepatitis B — fecha <span v-if="form.dosisHepatitisB" class="text-red-500">*</span></label>
-            <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.fechaHepatitisB" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaHepatitisB }" @input="onInputFechaTexto('fechaHepatitisB', $event)" @blur="validarCampoFechaEnBlur('fechaHepatitisB')" />
-              <input :ref="(el) => setDatePickerRef('fechaHepatitisB', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaHepatitisB')" :min="minPickerVacuna('fechaHepatitisB')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaHepatitisB', $event)" />
-              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaHepatitisB')">
-                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-              </button>
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs font-semibold text-slate-600 mb-2">Hepatitis B</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="form7-field">
+                <label class="form7-label">Dosis</label>
+                <select class="form7-control" v-model="form.dosisHepatitisB" @change="onCambioDosisVacuna('fechaHepatitisB')">
+                  <option :value="null">Seleccione</option>
+                  <option
+                    v-for="op in opcionesDosisHepatitis"
+                    :key="`hb-${op}`"
+                    :value="op"
+                    :disabled="dosisHepatitisBloqueada(op)"
+                  >
+                    {{ op }}{{ dosisHepatitisBloqueada(op) ? ' (ya registrada)' : '' }}
+                  </option>
+                </select>
+                <p v-if="resumenDosisHepatitis" class="text-[10px] text-slate-500 mt-1">{{ resumenDosisHepatitis }}</p>
+              </div>
+              <div class="form7-field">
+                <label class="form7-label">Fecha de la dosis <span v-if="form.dosisHepatitisB" class="text-red-500">*</span></label>
+                <div class="form7-date-wrap">
+                  <input type="text" class="form7-control form7-control--date" v-model="form.fechaHepatitisB" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaHepatitisB }" @input="onInputFechaTexto('fechaHepatitisB', $event)" @blur="validarCampoFechaEnBlur('fechaHepatitisB')" />
+                  <input :ref="(el) => setDatePickerRef('fechaHepatitisB', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaHepatitisB')" :min="minPickerVacuna('fechaHepatitisB')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaHepatitisB', $event)" />
+                  <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaHepatitisB')">
+                    <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                  </button>
+                </div>
+                <p v-if="hintFechaMinDosis('fechaHepatitisB')" class="text-[10px] text-slate-500 mt-1">{{ hintFechaMinDosis('fechaHepatitisB') }}</p>
+                <p v-if="erroresFecha.fechaHepatitisB" class="form7-date-error">{{ erroresFecha.fechaHepatitisB }}</p>
+              </div>
             </div>
-            <p v-if="hintFechaMinDosis('fechaHepatitisB')" class="text-[10px] text-slate-500 mt-1">{{ hintFechaMinDosis('fechaHepatitisB') }}</p>
-            <p v-if="erroresFecha.fechaHepatitisB" class="form7-date-error">{{ erroresFecha.fechaHepatitisB }}</p>
           </div>
-          <div class="form7-field">
-            <label class="form7-label">Covid-19 — dosis</label>
-            <select class="form7-control" v-model="form.dosisCovid" @change="onCambioDosisVacuna('fechaCovid')">
-              <option :value="null">Seleccione</option>
-              <option
-                v-for="op in opcionesDosisCovid"
-                :key="`cv-${op}`"
-                :value="op"
-                :disabled="dosisCovidBloqueada(op)"
-              >
-                {{ op }}{{ dosisCovidBloqueada(op) ? ' (ya registrada)' : '' }}
-              </option>
-            </select>
-            <p v-if="resumenDosisCovid" class="text-[10px] text-slate-500 mt-1">{{ resumenDosisCovid }}</p>
-          </div>
-          <div class="form7-field">
-            <label class="form7-label">Covid-19 — fecha <span v-if="form.dosisCovid" class="text-red-500">*</span></label>
-            <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.fechaCovid" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaCovid }" @input="onInputFechaTexto('fechaCovid', $event)" @blur="validarCampoFechaEnBlur('fechaCovid')" />
-              <input :ref="(el) => setDatePickerRef('fechaCovid', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaCovid')" :min="minPickerVacuna('fechaCovid')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaCovid', $event)" />
-              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaCovid')">
-                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-              </button>
+
+          <div>
+            <p class="text-xs font-semibold text-slate-600 mb-2">Covid-19</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="form7-field">
+                <label class="form7-label">Dosis</label>
+                <select class="form7-control" v-model="form.dosisCovid" @change="onCambioDosisVacuna('fechaCovid')">
+                  <option :value="null">Seleccione</option>
+                  <option
+                    v-for="op in opcionesDosisCovid"
+                    :key="`cv-${op}`"
+                    :value="op"
+                    :disabled="dosisCovidBloqueada(op)"
+                  >
+                    {{ op }}{{ dosisCovidBloqueada(op) ? ' (ya registrada)' : '' }}
+                  </option>
+                </select>
+                <p v-if="resumenDosisCovid" class="text-[10px] text-slate-500 mt-1">{{ resumenDosisCovid }}</p>
+              </div>
+              <div class="form7-field">
+                <label class="form7-label">Fecha de la dosis <span v-if="form.dosisCovid" class="text-red-500">*</span></label>
+                <div class="form7-date-wrap">
+                  <input type="text" class="form7-control form7-control--date" v-model="form.fechaCovid" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaCovid }" @input="onInputFechaTexto('fechaCovid', $event)" @blur="validarCampoFechaEnBlur('fechaCovid')" />
+                  <input :ref="(el) => setDatePickerRef('fechaCovid', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaCovid')" :min="minPickerVacuna('fechaCovid')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaCovid', $event)" />
+                  <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaCovid')">
+                    <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                  </button>
+                </div>
+                <p v-if="hintFechaMinDosis('fechaCovid')" class="text-[10px] text-slate-500 mt-1">{{ hintFechaMinDosis('fechaCovid') }}</p>
+                <p v-if="erroresFecha.fechaCovid" class="form7-date-error">{{ erroresFecha.fechaCovid }}</p>
+              </div>
             </div>
-            <p v-if="hintFechaMinDosis('fechaCovid')" class="text-[10px] text-slate-500 mt-1">{{ hintFechaMinDosis('fechaCovid') }}</p>
-            <p v-if="erroresFecha.fechaCovid" class="form7-date-error">{{ erroresFecha.fechaCovid }}</p>
           </div>
-          <div class="form7-field">
-            <label class="form7-label">Influenza — fecha</label>
-            <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.fechaInfluenza" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaInfluenza }" @input="onInputFechaTexto('fechaInfluenza', $event)" @blur="validarCampoFechaEnBlur('fechaInfluenza')" />
-              <input :ref="(el) => setDatePickerRef('fechaInfluenza', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaInfluenza')" :min="minPickerVacuna('fechaInfluenza')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaInfluenza', $event)" />
-              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaInfluenza')">
-                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-              </button>
+
+          <div>
+            <p class="text-xs font-semibold text-slate-600 mb-2">Influenza</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="form7-field hidden sm:block"></div>
+              <div class="form7-field">
+                <label class="form7-label">Fecha de la dosis</label>
+                <div class="form7-date-wrap">
+                  <input type="text" class="form7-control form7-control--date" v-model="form.fechaInfluenza" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaInfluenza }" @input="onInputFechaTexto('fechaInfluenza', $event)" @blur="validarCampoFechaEnBlur('fechaInfluenza')" />
+                  <input :ref="(el) => setDatePickerRef('fechaInfluenza', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaInfluenza')" :min="minPickerVacuna('fechaInfluenza')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaInfluenza', $event)" />
+                  <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaInfluenza')">
+                    <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                  </button>
+                </div>
+                <p v-if="hintFechaMinDosis('fechaInfluenza')" class="text-[10px] text-slate-500 mt-1">{{ hintFechaMinDosis('fechaInfluenza') }}</p>
+                <p v-if="erroresFecha.fechaInfluenza" class="form7-date-error">{{ erroresFecha.fechaInfluenza }}</p>
+              </div>
             </div>
-            <p v-if="hintFechaMinDosis('fechaInfluenza')" class="text-[10px] text-slate-500 mt-1">{{ hintFechaMinDosis('fechaInfluenza') }}</p>
-            <p v-if="erroresFecha.fechaInfluenza" class="form7-date-error">{{ erroresFecha.fechaInfluenza }}</p>
           </div>
-          <div class="form7-field">
-            <label class="form7-label">Neumococo — fecha</label>
-            <div class="form7-date-wrap">
-              <input type="text" class="form7-control form7-control--date" v-model="form.fechaNeumococo" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaNeumococo }" @input="onInputFechaTexto('fechaNeumococo', $event)" @blur="validarCampoFechaEnBlur('fechaNeumococo')" />
-              <input :ref="(el) => setDatePickerRef('fechaNeumococo', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaNeumococo')" :min="minPickerVacuna('fechaNeumococo')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaNeumococo', $event)" />
-              <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaNeumococo')">
-                <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-              </button>
+
+          <div>
+            <p class="text-xs font-semibold text-slate-600 mb-2">Neumococo</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="form7-field hidden sm:block"></div>
+              <div class="form7-field">
+                <label class="form7-label">Fecha de la dosis</label>
+                <div class="form7-date-wrap">
+                  <input type="text" class="form7-control form7-control--date" v-model="form.fechaNeumococo" placeholder="dd/mm/aaaa" maxlength="10" :class="{ 'form7-control--error': erroresFecha.fechaNeumococo }" @input="onInputFechaTexto('fechaNeumococo', $event)" @blur="validarCampoFechaEnBlur('fechaNeumococo')" />
+                  <input :ref="(el) => setDatePickerRef('fechaNeumococo', el)" type="date" class="form7-date-native" tabindex="-1" aria-hidden="true" :value="fechaPickerValue('fechaNeumococo')" :min="minPickerVacuna('fechaNeumococo')" :max="rangoFechasPeriodo.max || undefined" @change="onFechaPickerChange('fechaNeumococo', $event)" />
+                  <button type="button" class="form7-date-btn" title="Seleccionar fecha" @click="abrirSelectorFecha('fechaNeumococo')">
+                    <svg class="form7-date-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                  </button>
+                </div>
+                <p v-if="hintFechaMinDosis('fechaNeumococo')" class="text-[10px] text-slate-500 mt-1">{{ hintFechaMinDosis('fechaNeumococo') }}</p>
+                <p v-if="erroresFecha.fechaNeumococo" class="form7-date-error">{{ erroresFecha.fechaNeumococo }}</p>
+              </div>
             </div>
-            <p v-if="hintFechaMinDosis('fechaNeumococo')" class="text-[10px] text-slate-500 mt-1">{{ hintFechaMinDosis('fechaNeumococo') }}</p>
-            <p v-if="erroresFecha.fechaNeumococo" class="form7-date-error">{{ erroresFecha.fechaNeumococo }}</p>
           </div>
         </div>
       </div>
@@ -254,6 +280,7 @@ import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/I
 import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
 import { parseFechaAISO, formatFechaDDMMAAAA } from '@/utils/fechaFormat';
+import Swal from 'sweetalert2';
 // Importamos la librería de confeti
 //import confetti from 'canvas-confetti';
 
@@ -486,6 +513,30 @@ function recalcularEstadoAcHBs() {
   }
 }
 
+function tituloAcHbsRequiereRevaluacion() {
+  const valor = form.vacunaHepatitis
+  if (valor === null || valor === undefined || valor === '') return false
+  const n = Number(valor)
+  return Number.isFinite(n) && n < 100
+}
+
+async function alertaRevaluarVacunacion() {
+  await Swal.fire({
+    title: 'Atención',
+    text: 'Revaluar estado de vacunación',
+    icon: 'warning',
+    confirmButtonText: 'Entendido',
+    confirmButtonColor: '#008f9c',
+  })
+}
+
+async function onBlurTituloAcHBs() {
+  recalcularEstadoAcHBs()
+  if (tituloAcHbsRequiereRevaluacion()) {
+    await alertaRevaluarVacunacion()
+  }
+}
+
 function esCampoFechaVacuna(key) {
   return CAMPOS_FECHA.some((c) => c.key === key && c.vacuna)
 }
@@ -705,18 +756,18 @@ const form = reactive({
   fechaNeumococo: null,
 })
 
-/** Esquema Hepatitis B (primaria 1-3 + refuerzos anuales hasta 10). */
+/** Esquema Hepatitis B: 1er esquema, 2do esquema y refuerzos. */
 const OPCIONES_DOSIS_HEPATITIS = [
-  '1ra dosis',
-  '2da dosis',
-  '3ra dosis',
-  '4ta dosis (1er refuerzo)',
-  '5ta dosis (2do refuerzo)',
-  '6ta dosis (3er refuerzo)',
-  '7ma dosis',
-  '8va dosis',
-  '9na dosis',
-  '10ma dosis',
+  '1era dosis (1er esquema)',
+  '2da dosis (1er esquema)',
+  '3era dosis (1er esquema)',
+  '1era dosis (2do esquema)',
+  '2da dosis (2do esquema)',
+  '3era dosis (2do esquema)',
+  '1er refuerzo',
+  '2do refuerzo',
+  '3er refuerzo',
+  '4to refuerzo',
 ]
 
 /** Esquema Covid-19 (serie primaria + refuerzos sucesivos). */
@@ -746,23 +797,41 @@ const fechaUltimaInfluenza = ref(null)
 const fechaUltimaNeumococo = ref(null)
 const cargandoDosisPrevias = ref(false)
 
-function normalizarClaveDosis(texto) {
-  const raw = String(texto || '').trim().toLowerCase()
-  if (!raw) return ''
-  const t = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  const numMatch = t.match(/(\d+)\s*(er|ra|da|ta|ma|mo|na|va)?/)
-    || t.match(/(1er|1ra|2da|3ra|4ta|5ta|6ta|7ma|8va|9na|9no|10ma|10mo)/)
-  if (numMatch) {
-    const digitos = String(numMatch[0]).match(/\d+/)
-    if (digitos) return `dosis-${Number(digitos[0])}`
-  }
-  if (t.includes('refuerzo')) return 'refuerzo'
-  return t
+const ALIAS_CLAVE_DOSIS_HEPATITIS = {
+  '1ra-dosis': '1era-dosis-1er-esquema',
+  '1era-dosis': '1era-dosis-1er-esquema',
+  '2da-dosis': '2da-dosis-1er-esquema',
+  '3ra-dosis': '3era-dosis-1er-esquema',
+  '3era-dosis': '3era-dosis-1er-esquema',
+  '4ta-dosis-1er-refuerzo': '1er-refuerzo',
+  '5ta-dosis-2do-refuerzo': '2do-refuerzo',
+  '6ta-dosis-3er-refuerzo': '3er-refuerzo',
 }
 
-function numeroDesdeClaveDosis(clave) {
-  const m = String(clave || '').match(/dosis-(\d+)/)
-  return m ? Number(m[1]) : null
+function slugTextoDosis(texto) {
+  return String(texto || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function normalizarClaveDosis(texto, opciones = null) {
+  const slug = slugTextoDosis(texto)
+  if (!slug) return ''
+  if (opciones === OPCIONES_DOSIS_HEPATITIS && ALIAS_CLAVE_DOSIS_HEPATITIS[slug]) {
+    return ALIAS_CLAVE_DOSIS_HEPATITIS[slug]
+  }
+  return slug
+}
+
+function indiceDosisEnEsquema(texto, opciones) {
+  const clave = normalizarClaveDosis(texto, opciones)
+  if (!clave) return null
+  const idx = (opciones || []).findIndex((op) => normalizarClaveDosis(op, opciones) === clave)
+  return idx >= 0 ? idx : null
 }
 
 function registrarFechaDosis(mapa, clave, fechaRaw) {
@@ -772,25 +841,25 @@ function registrarFechaDosis(mapa, clave, fechaRaw) {
   if (!prev || iso > prev) mapa[clave] = iso
 }
 
-function fechaMaximaDosisAnteriores(mapaFechas, dosisSeleccionada) {
-  const n = numeroDesdeClaveDosis(normalizarClaveDosis(dosisSeleccionada))
-  if (n == null) return null
+function fechaMaximaDosisAnteriores(mapaFechas, dosisSeleccionada, opciones) {
+  const idxSel = indiceDosisEnEsquema(dosisSeleccionada, opciones)
+  if (idxSel == null) return null
   let max = null
-  for (const [clave, iso] of Object.entries(mapaFechas || {})) {
-    const num = numeroDesdeClaveDosis(clave)
-    if (num == null || num >= n || !iso) continue
-    if (!max || iso > max) max = iso
-  }
+  opciones.forEach((op, i) => {
+    if (i >= idxSel) return
+    const iso = mapaFechas?.[normalizarClaveDosis(op, opciones)]
+    if (iso && (!max || iso > max)) max = iso
+  })
   return max
 }
 
 /** Fecha mínima por dosis previas del mismo tipo de vacuna (ISO). */
 function fechaMinimaPorDosisPrevias(key) {
   if (key === 'fechaHepatitisB') {
-    return fechaMaximaDosisAnteriores(fechasDosisHepatitis.value, form.dosisHepatitisB)
+    return fechaMaximaDosisAnteriores(fechasDosisHepatitis.value, form.dosisHepatitisB, OPCIONES_DOSIS_HEPATITIS)
   }
   if (key === 'fechaCovid') {
-    return fechaMaximaDosisAnteriores(fechasDosisCovid.value, form.dosisCovid)
+    return fechaMaximaDosisAnteriores(fechasDosisCovid.value, form.dosisCovid, OPCIONES_DOSIS_COVID)
   }
   if (key === 'fechaInfluenza') return fechaUltimaInfluenza.value
   if (key === 'fechaNeumococo') return fechaUltimaNeumococo.value
@@ -818,35 +887,35 @@ function hintFechaMinDosis(key) {
 }
 
 function etiquetaCanonicaDosis(texto, opciones) {
-  const clave = normalizarClaveDosis(texto)
+  const clave = normalizarClaveDosis(texto, opciones)
   if (!clave) return null
-  const match = opciones.find((op) => normalizarClaveDosis(op) === clave)
+  const match = opciones.find((op) => normalizarClaveDosis(op, opciones) === clave)
   return match || String(texto || '').trim() || null
 }
 
 function dosisHepatitisBloqueada(opcion) {
-  const clave = normalizarClaveDosis(opcion)
+  const clave = normalizarClaveDosis(opcion, OPCIONES_DOSIS_HEPATITIS)
   if (!clave || !dosisHepatitisUsadas.value.has(clave)) return false
   // Al editar, la dosis del registro actual permanece habilitada
-  if (idVacunacionEdicion.value != null && normalizarClaveDosis(form.dosisHepatitisB) === clave) {
+  if (idVacunacionEdicion.value != null && normalizarClaveDosis(form.dosisHepatitisB, OPCIONES_DOSIS_HEPATITIS) === clave) {
     return false
   }
   return true
 }
 
 function dosisCovidBloqueada(opcion) {
-  const clave = normalizarClaveDosis(opcion)
+  const clave = normalizarClaveDosis(opcion, OPCIONES_DOSIS_COVID)
   if (!clave || !dosisCovidUsadas.value.has(clave)) return false
-  if (idVacunacionEdicion.value != null && normalizarClaveDosis(form.dosisCovid) === clave) {
+  if (idVacunacionEdicion.value != null && normalizarClaveDosis(form.dosisCovid, OPCIONES_DOSIS_COVID) === clave) {
     return false
   }
   return true
 }
 
 function siguienteDosisDisponible(opciones, usadas, dosisActual = null) {
-  const claveActual = normalizarClaveDosis(dosisActual)
+  const claveActual = normalizarClaveDosis(dosisActual, opciones)
   for (const op of opciones) {
-    const clave = normalizarClaveDosis(op)
+    const clave = normalizarClaveDosis(op, opciones)
     if (!clave) continue
     if (claveActual && clave === claveActual) return op
     if (!usadas.has(clave)) return op
@@ -858,7 +927,7 @@ const resumenDosisHepatitis = computed(() => {
   if (cargandoDosisPrevias.value) return 'Consultando dosis previas…'
   const n = dosisHepatitisUsadas.value.size
   const siguiente = siguienteDosisDisponible(OPCIONES_DOSIS_HEPATITIS, dosisHepatitisUsadas.value)
-  if (n === 0) return 'Sin dosis de Hepatitis B registradas. Puede iniciar con la 1ra dosis.'
+  if (n === 0) return 'Sin dosis de Hepatitis B registradas. Puede iniciar con la 1era dosis (1er esquema).'
   if (!siguiente) return `${n} dosis de Hepatitis B registradas. Esquema completo.`
   return `${n} dosis ya registrada(s). Siguiente disponible: ${siguiente}.`
 })
@@ -919,8 +988,8 @@ async function cargarDosisPreviasPaciente() {
       if (idVacunacionEdicion.value != null && String(reg.id_vacunacion) === String(idVacunacionEdicion.value)) {
         continue
       }
-      const claveHb = normalizarClaveDosis(reg.dosis_hepatitis_b)
-      const claveCv = normalizarClaveDosis(reg.dosis_covid)
+      const claveHb = normalizarClaveDosis(reg.dosis_hepatitis_b, OPCIONES_DOSIS_HEPATITIS)
+      const claveCv = normalizarClaveDosis(reg.dosis_covid, OPCIONES_DOSIS_COVID)
       if (claveHb) {
         hb.add(claveHb)
         registrarFechaDosis(fechasHb, claveHb, reg.fecha_hepatitis_b)
@@ -1013,6 +1082,9 @@ function validarDosisConFecha() {
 const postForm = async () => {
   normalizarTodasLasFechas()
   recalcularEstadoAcHBs()
+  if (tituloAcHbsRequiereRevaluacion()) {
+    await alertaRevaluarVacunacion()
+  }
   const errorSerologiaFecha = validarFechasSerologiaObligatorias()
   if (errorSerologiaFecha) {
     alert(errorSerologiaFecha)
