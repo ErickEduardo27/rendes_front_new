@@ -45,20 +45,25 @@ export function contarResultadosClinicosCompletos(rows) {
   return ultimosResultadosPorAtencion(rows).filter(esResultadoClinicoCompleto).length;
 }
 
-/** Pacientes en atención activa (nuevos + reingresos + continuadores, sin egresos). */
+/**
+ * Pacientes atendidos del periodo (condición final):
+ * nuevos + reingresos + continuadores + egresos.
+ * Para notificar, todos deben tener resultados clínicos, incluidos los egresados.
+ */
 export function totalPacientesEnAtencionDesdeEstadisticas(stats) {
   if (!stats || typeof stats !== 'object') return 0;
   return (
     Number(stats.nuevos || 0)
     + Number(stats.reingresos || 0)
     + Number(stats.continuadores || 0)
+    + Number(stats.egresados || 0)
   );
 }
 
 export function mensajeBloqueoNotificacionClinica(totalPacientes, totalRegistros) {
   if (Number(totalPacientes) === Number(totalRegistros)) return '';
   return (
-    `No puede notificar: hay ${totalPacientes} paciente(s) en atención y ${totalRegistros} ` +
+    `No puede notificar: hay ${totalPacientes} paciente(s) atendidos (incluidos egresos) y ${totalRegistros} ` +
     'registro(s) de resultados clínicos. Ambas cantidades deben ser iguales antes de enviar a revisión.'
   );
 }
@@ -70,4 +75,4 @@ export function tieneNumeroAtencionesRegistrado(numeroAtenciones) {
 }
 
 export const MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES =
-  'No puede notificar: debe registrar el N° de Atenciones en Inicio de TRR para el periodo, clínica y modalidad seleccionados.';
+  'No puede notificar: debe registrar el N° de Sesiones del mes para el periodo, clínica y modalidad seleccionados.';

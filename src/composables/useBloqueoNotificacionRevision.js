@@ -6,16 +6,15 @@ import { esPerfilClinica } from '@/utils/perfil'
 const estadoRevisionShared = ref('POR_NOTIFICAR')
 
 export const MENSAJE_BLOQUEO_NOTIFICADO =
-  'El periodo ya fue notificado. No puede registrar pacientes, hacer movimientos ni llenar/editar registros hasta que el supervisor envíe una observación.'
+  'El periodo ya fue notificado. No puede registrar pacientes, hacer movimientos ni llenar/editar registros, salvo el que el supervisor haya observado.'
 
 export function setEstadoRevisionShared(estado) {
   estadoRevisionShared.value = estado === 'NOTIFICADO' ? 'NOTIFICADO' : 'POR_NOTIFICAR'
 }
 
 /**
- * Bloqueo de clínica mientras el envío está en estado NOTIFICADO.
- * Se libera cuando el supervisor marca observación (backend borra el envío → POR_NOTIFICAR)
- * o cuando requiere_renotificacion (edición del supervisor).
+ * Bloqueo de clínica mientras exista envío a revisión (notificado=true).
+ * Observar un registro NO debe desbloquear el formulario: solo ese registro queda editable.
  */
 export function useBloqueoNotificacionRevision() {
   const periodoGlobal = inject('periodoGlobal', ref(null))
@@ -46,7 +45,9 @@ export function useBloqueoNotificacionRevision() {
         id_modalidad: String(idModalidad),
       })
       const r = await getAllIpress(`/consulta_notificacion_envio_revision/?${params.toString()}`)
-      setEstadoRevisionShared(r?.estado === 'NOTIFICADO' ? 'NOTIFICADO' : 'POR_NOTIFICAR')
+      // Si ya existe el envío, el formulario sigue bloqueado aunque QA devuelva POR_NOTIFICAR.
+      const sigueNotificado = r?.notificado === true || r?.estado === 'NOTIFICADO'
+      setEstadoRevisionShared(sigueNotificado ? 'NOTIFICADO' : 'POR_NOTIFICAR')
     } catch {
       // Conservar último estado conocido ante error de red.
     }

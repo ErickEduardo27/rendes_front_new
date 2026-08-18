@@ -165,8 +165,8 @@
                           <button
                             type="button"
                             class="tabla-av-btn tabla-av-btn-editar"
-                            :disabled="!formularioAbierto"
-                            :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
+                            :disabled="!puedeEditarFila(r)"
+                            :title="tituloEdicionFila(r)"
                             @click="abrirModalEditar(r)"
                           >
                             Editar
@@ -281,8 +281,8 @@
                           <button
                             type="button"
                             class="tabla-av-btn tabla-av-btn-editar"
-                            :disabled="!formularioAbierto"
-                            :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
+                            :disabled="!puedeEditarFila(fila.registro)"
+                            :title="tituloEdicionFila(fila.registro)"
                             @click="abrirModalEditar(fila.registro)"
                           >
                             Editar
@@ -823,6 +823,7 @@ import {
   fechaCreacionAccesoColumna,
 } from '@/utils/accesoVascularValidacion';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
+import { puedeEditarRegistroClinica, tituloEdicionRegistroClinica, registroEstaObservado } from '@/utils/edicionRegistroObservado';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
@@ -920,7 +921,7 @@ const modalidadActualTexto = computed(() => {
 });
 
 const mostrarBotonNuevo = computed(() => {
-  return formularioAbierto.value;
+  return formularioAbierto.value && !(registros.value || []).some((r) => registroEstaObservado(r));
 });
 
 const tituloModalFormulario = computed(() => (
@@ -928,6 +929,22 @@ const tituloModalFormulario = computed(() => (
 ));
 
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO' && !bloqueadoPorNotificacion.value);
+
+function puedeEditarFila(registro) {
+  return puedeEditarRegistroClinica(registro, {
+    formularioAbierto: formularioAbierto.value,
+    bloqueadoPorNotificacion: bloqueadoPorNotificacion.value,
+    hayObservados: (registros.value || []).some((r) => registroEstaObservado(r)),
+  });
+}
+function tituloEdicionFila(registro) {
+  return tituloEdicionRegistroClinica(registro, {
+    formularioAbierto: formularioAbierto.value,
+    bloqueadoPorNotificacion: bloqueadoPorNotificacion.value,
+    hayObservados: (registros.value || []).some((r) => registroEstaObservado(r)),
+    motivoCerrado: motivoFormularioNoEditable.value,
+  });
+}
 
 const estadoFormularioTexto = computed(() => {
   if (bloqueadoPorNotificacion.value) return 'Bloqueado (Notificado)';
@@ -969,6 +986,7 @@ function documentoPaciente(r) {
 function estadoAprobacionClase(estado) {
   const valor = String(estado || '').toUpperCase();
   if (valor === 'APROBADO') return 'bg-emerald-100 text-emerald-700';
+  if (valor === 'OBSERVADO') return 'bg-amber-100 text-amber-800';
   if (valor === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
   if (valor === 'SIN REGISTRO') return 'bg-slate-100 text-slate-500';
   if (valor === 'DESDE FICHA') return 'bg-sky-100 text-sky-800';
@@ -1738,7 +1756,7 @@ function abrirModalNuevo() {
 }
 
 function abrirModalEditar(registro) {
-  if (!formularioAbierto.value || !registro) return;
+  if (!puedeEditarFila(registro) || !registro) return;
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {

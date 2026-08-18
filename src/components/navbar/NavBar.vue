@@ -101,7 +101,7 @@
                 Registre el N° de sesiones del mes a notificar.
               </div>
               <div class="flex justify-between col-span-2">
-                <span>Total</span>
+                <span>Total al final del mes</span>
                 <span class="font-semibold text-slate-800">{{ totalPacientesResumen }}</span>
               </div>
               <div class="flex justify-between">
@@ -135,7 +135,7 @@
                 v-if="esPerfilClinicaUsuario && !resultadosClinicosOk"
                 class="col-span-2 text-[11px] text-rose-700"
               >
-                Debe haber un registro de resultados clínicos por cada paciente en atención ({{ statsModal.totalPacientesAtendidos }} paciente(s) / {{ statsModal.totalResultadosRegistrados }} registro(s)).
+                Debe haber un registro de resultados clínicos por cada paciente atendido, incluidos egresos ({{ statsModal.totalPacientesAtendidos }} paciente(s) / {{ statsModal.totalResultadosRegistrados }} registro(s)).
               </div>
               <div class="flex justify-between col-span-2"><span>Calidad de agua</span><span class="font-semibold text-slate-800">{{ statsModal.totalCalidadAgua }}</span></div>
             </div>
@@ -394,9 +394,9 @@ async function cargarEstadoNotificacionRevision() {
       id_modalidad: String(modalidad.value),
     })
     const r = await getAllIpress(`/consulta_notificacion_envio_revision/?${params.toString()}`)
-    const estado = r?.estado === 'NOTIFICADO' ? 'NOTIFICADO' : 'POR_NOTIFICAR'
+    const estado = (r?.notificado === true || r?.estado === 'NOTIFICADO') ? 'NOTIFICADO' : 'POR_NOTIFICAR'
     estadoNotificacionRevision.value = {
-      notificado: Boolean(r?.notificado),
+      notificado: Boolean(r?.notificado) || estado === 'NOTIFICADO',
       notificado_en: r?.notificado_en ?? null,
       usuario_nombre: r?.usuario_nombre ?? null,
       estado,

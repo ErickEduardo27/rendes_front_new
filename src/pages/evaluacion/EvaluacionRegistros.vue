@@ -10,7 +10,7 @@
           Revise los registros cargados por las clínicas: puede <strong>editar</strong> datos y dejar un comentario visible para la clínica; luego <strong>aprobar</strong>. Use el mismo periodo, IPRESS y modalidad de la barra superior.
         </p>
         <p class="text-xs text-slate-500 mt-2">
-          <strong>Editar</strong> guarda correcciones y comentario del supervisor; <strong>Aprobar</strong> marca el registro como revisado favorablemente.
+          <strong>Editar</strong> guarda correcciones y comentario del supervisor; <strong>Aprobar</strong> marca el registro como revisado favorablemente. Si aprueba todos los registros del módulo, el formulario se cierra solo. <strong>Observar</strong> deja un comentario y habilita únicamente ese registro para que la clínica lo corrija.
         </p>
         <p class="text-xs text-slate-500 mt-1">
           En los formularios se listan <strong>todos los pacientes en atención</strong> del periodo, clínica y modalidad; si no hay registro en ese módulo, la fila aparece como <strong>SIN REGISTRO</strong>.
@@ -209,6 +209,13 @@
                           :disabled="evaluando === claveFila(modulo, idFilaRegistro(r))"
                           @click="evaluar(modulo, r, 'APROBADO')"
                         >Aprobar</button>
+                        <button
+                          v-if="mostrarBotonObservar(r)"
+                          type="button"
+                          class="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-900 hover:bg-amber-200 font-semibold disabled:opacity-40"
+                          :disabled="evaluando === claveFila(modulo, idFilaRegistro(r))"
+                          @click="observarRegistro(modulo, r)"
+                        >Observar</button>
                       </div>
                     </td>
                   </tr>
@@ -431,7 +438,7 @@
 
 <script setup>
 import { ref, computed, watch, inject, onMounted, onUnmounted } from 'vue';
-import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
+import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
 import TablaPacientesAtencion from '@/components/pacientes/TablaPacientesAtencion.vue';
@@ -1061,6 +1068,7 @@ async function aprobarTodosPendientes() {
   if (ok) ElMessage.success(`Se aprobaron ${ok} registro(s).`);
   if (fail) ElMessage.warning(`No se pudieron aprobar ${fail} registro(s).`);
   await cargarModuloActual();
+  await cerrarFormularioAutomaticoSiTodoAprobado();
 }
 
 const filtroListo = computed(() => {
@@ -1122,6 +1130,7 @@ function claseEstado(estado, row) {
   if (row?.sin_registro_modulo) return 'bg-slate-100 text-slate-600';
   const v = String(estado || '').toUpperCase();
   if (v === 'APROBADO') return 'bg-emerald-100 text-emerald-700';
+  if (v === 'OBSERVADO') return 'bg-amber-100 text-amber-800';
   if (v === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
   return 'bg-amber-100 text-amber-700';
 }
@@ -1327,6 +1336,11 @@ function mostrarBotonAprobar(estado, row) {
   return String(estado || '').toUpperCase() !== 'APROBADO';
 }
 
+function mostrarBotonObservar(row) {
+  if (row?.sin_registro_modulo) return false;
+  return String(row?.estado_aprobacion || '').toUpperCase() !== 'APROBADO';
+}
+
 async function fetchEstadoFormularioActual() {
   if (!filtroListo.value || !esModuloRegistros.value) {
     formularioEstaAbierto.value = null;
@@ -1459,11 +1473,91 @@ async function evaluar(mod, row, estadoAprobacion) {
     await postAllIpress(`/${cfg.path}/${id}/evaluar/`, { estado_aprobacion: estadoAprobacion });
     ElMessage.success('Registro aprobado.');
     await cargarModuloActual();
+    await cerrarFormularioAutomaticoSiTodoAprobado();
   } catch (e) {
     console.error(e);
     ElMessage.error(e?.detail || e?.error || 'No se pudo actualizar el registro.');
   } finally {
     evaluando.value = null;
+  }
+}
+
+async function observarRegistro(mod, row) {
+  const cfg = ENDPOINTS[mod];
+  const id = row?.[cfg.idKey];
+  if (id == null) return;
+  let comentario = '';
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `Indique la observación para «${nombrePaciente(row)}». Solo este registro quedará habilitado para que la clínica lo corrija.`,
+      'Observar registro',
+      {
+        type: 'warning',
+        confirmButtonText: 'Enviar observación',
+        cancelButtonText: 'Cancelar',
+        inputType: 'textarea',
+        inputPlaceholder: 'Describa qué debe corregir la clínica…',
+        inputValidator: (v) => {
+          if (!String(v || '').trim() || String(v).trim().length < 5) {
+            return 'Ingrese al menos 5 caracteres.';
+          }
+          return true;
+        },
+      },
+    );
+    comentario = String(value || '').trim();
+  } catch {
+    return;
+  }
+  const key = claveFila(mod, id);
+  evaluando.value = key;
+    try {
+    await postAllIpress(`/${cfg.path}/${id}/evaluar/`, {
+      estado_aprobacion: 'OBSERVADO',
+      comentario_evaluacion: comentario,
+    }).catch(async (err) => {
+      const msg = String(err?.detail || err?.error || err?.message || '').toLowerCase();
+      const status = Number(err?.status || 0);
+      const evaluarNoAceptaObservado =
+        status === 400 || status === 404 || msg.includes('aprobado') || msg.includes('not found');
+      if (!evaluarNoAceptaObservado) throw err;
+      // QA u otros backends que aún no aceptan OBSERVADO en /evaluar/
+      await patchAllIpress(`/${cfg.path}/${id}/`, {
+        estado_aprobacion: 'OBSERVADO',
+        comentario_evaluacion: comentario,
+      });
+    });
+    ElMessage.success('Observación enviada. La clínica solo podrá editar este registro.');
+    await cargarModuloActual();
+  } catch (e) {
+    console.error(e);
+    ElMessage.error(e?.detail || e?.error || 'No se pudo registrar la observación.');
+  } finally {
+    evaluando.value = null;
+  }
+}
+
+async function cerrarFormularioAutomaticoSiTodoAprobado() {
+  if (!filtroListo.value || !esModuloRegistros.value) return;
+  await fetchEstadoFormularioActual();
+  if (formularioEstaAbierto.value !== true) return;
+  const rows = listaMostrada.value.filter(registroConDatos);
+  if (!rows.length) return;
+  const todosAprobados = rows.every((r) => String(r.estado_aprobacion || '').toUpperCase() === 'APROBADO');
+  if (!todosAprobados) return;
+  try {
+    const cfg = ENDPOINTS[modulo.value];
+    await postAllIpress('/cerrar_mes/', {
+      id_periodo: Number(periodoGlobal.value),
+      id_ipress: Number(clinicaGlobal.value),
+      id_modalidad: Number(modalidadGlobal.value),
+      id_formulario: cfg.idFormulario,
+      estado: 2,
+    });
+    ElMessage.success('Todos los registros están aprobados. El formulario se cerró automáticamente.');
+    await fetchEstadoFormularioActual();
+  } catch (e) {
+    console.error(e);
   }
 }
 

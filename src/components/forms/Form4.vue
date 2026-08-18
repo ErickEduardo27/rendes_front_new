@@ -12,7 +12,7 @@
                 
                 <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-6">
                     
-                    <div v-if="!modoCompletarAlta" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Búsqueda de Diagnóstico por CIE-10</label>
                             <input v-model="form.filtroCodigo" type="text" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none transition-all bg-gray-50 focus:bg-white" />
@@ -23,22 +23,15 @@
                         </div>
                     </div>
 
-                    <div v-if="modoCompletarAlta && form.seleccionados.length" class="mb-4">
-                        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Diagnósticos del registro (solo complete la fecha de alta)</h3>
-                        <ul class="space-y-1 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-md p-3">
-                            <li v-for="item in form.seleccionados" :key="item.id"><strong>{{ item.codigo }}</strong> – {{ item.descripcion }}</li>
-                        </ul>
-                    </div>
-
-                    <div v-if="!modoCompletarAlta && mostrarLista" class="border border-gray-200 rounded-md max-h-48 overflow-y-auto bg-white">
+                    <div v-if="mostrarLista" class="border border-gray-200 rounded-md max-h-48 overflow-y-auto bg-white">
                         <div v-for="item in resultadosFiltrados" :key="item.id" class="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-cyan-50 transition-colors">
                             <input type="checkbox" :value="item" v-model="form.seleccionados" class="w-4 h-4 text-cyan-600 rounded border-gray-300 focus:ring-cyan-500 cursor-pointer" @change="onDiagnosticoSeleccionado($event)" />
                             <span class="text-sm text-gray-700 cursor-default"><strong>{{ item.codigo }}</strong> - {{ item.descripcion }}</span>
                         </div>
                     </div>
-                    <p v-if="!modoCompletarAlta && hayBusqueda && !mostrarLista" class="italic text-sm text-gray-500 bg-gray-50 p-3 rounded-md border border-gray-200">No se encontraron resultados.</p>
+                    <p v-if="hayBusqueda && !mostrarLista" class="italic text-sm text-gray-500 bg-gray-50 p-3 rounded-md border border-gray-200">No se encontraron resultados.</p>
 
-                    <div v-if="!modoCompletarAlta && form.seleccionados.length" class="pt-2">
+                    <div v-if="form.seleccionados.length" class="pt-2">
                         <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Diágnosticos seleccionados:</h3>
                         <ul class="space-y-2">
                             <li v-for="item in form.seleccionados" :key="item.id" class="bg-cyan-50 border border-cyan-100 p-3 rounded-md flex justify-between items-center">
@@ -48,7 +41,7 @@
                         </ul>
                     </div>
 
-                    <div v-if="modoCompletarAlta" class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div v-if="modoCompletarAlta && form.desenlace !== 'Fallecimiento'" class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                         <p class="text-sm font-medium text-amber-800">Registro sin fecha de alta. Complete la fecha de alta (puede ajustar también fecha de inicio y fuente).</p>
                     </div>
 
@@ -182,7 +175,7 @@
                         Cancelar
                     </button>
                     <button @click="solicitarRegistro()" class="bg-blue-600 text-white px-6 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-                        {{ modoCompletarAlta ? 'Guardar fecha de alta' : (idMorbilidadEdicion ? 'Guardar cambios' : 'Registrar') }}
+                        {{ modoCompletarAlta && form.desenlace !== 'Fallecimiento' ? 'Guardar fecha de alta' : (idMorbilidadEdicion || modoCompletarAlta ? 'Guardar cambios' : 'Registrar') }}
                     </button>
                 </div>
             </div>
@@ -1512,7 +1505,7 @@ const quitarSeleccion = (item) => {
 
 const validarAntesDeGuardar = async () => {
     const esFallecimiento = form.value.desenlace === 'Fallecimiento';
-    if (!modoCompletarAlta.value && (!form.value.seleccionados || form.value.seleccionados.length === 0)) {
+    if (!form.value.seleccionados || form.value.seleccionados.length === 0) {
         await alertaSwal('Debe completar el diagnostico, incluso presuntivo');
         return false;
     }
@@ -1604,6 +1597,8 @@ const postForm = async (opts = {}) => {
             const patchPayload = {
                 fecha_hospitalizacion: form.value.fIniHos || null,
                 fecha_alta_hospitalizacion: esFallecimiento ? null : (form.value.fAltHos || null),
+                diagnostico: form.value.seleccionados.map(item => item.descripcion || '').join(', '),
+                codigo_diagnostico: form.value.seleccionados.map(item => item.codigo).join(','),
                 desenlace: form.value.desenlace || '',
                 fuente: form.value.fuente || '',
                 ...datosFallecimientoPayload(),

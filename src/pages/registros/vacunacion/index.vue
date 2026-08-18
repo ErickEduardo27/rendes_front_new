@@ -136,8 +136,8 @@
                       <button
                         type="button"
                         class="tabla-vac-btn tabla-vac-btn-editar"
-                        :disabled="!formularioAbierto"
-                        :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
+                        :disabled="!puedeEditarFila(r)"
+                        :title="tituloEdicionFila(r)"
                         @click="abrirModalEditar(r)"
                       >
                         Editar
@@ -229,8 +229,8 @@
                         <button
                           type="button"
                           class="tabla-vac-btn tabla-vac-btn-editar"
-                          :disabled="!formularioAbierto"
-                          :title="formularioAbierto ? 'Editar registro' : motivoFormularioNoEditable"
+                          :disabled="!puedeEditarFila(fila.registro)"
+                          :title="tituloEdicionFila(fila.registro)"
                           @click="abrirModalEditar(fila.registro)"
                         >
                           Editar
@@ -539,6 +539,7 @@ import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva, esPacienteEgresadoEnListado, registroDePacienteEgresado } from '@/composables/useAtencionesRegistro';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
+import { puedeEditarRegistroClinica, tituloEdicionRegistroClinica, registroEstaObservado } from '@/utils/edicionRegistroObservado';
 import { fechaCelda } from '@/utils/fechaFormat';
 import Form7 from '@/components/forms/Form7.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
@@ -591,6 +592,21 @@ const paginaRegistros = ref(1);
 const paginaTodos = ref(1);
 
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO' && !bloqueadoPorNotificacion.value);
+function puedeEditarFila(registro) {
+  return puedeEditarRegistroClinica(registro, {
+    formularioAbierto: formularioAbierto.value,
+    bloqueadoPorNotificacion: bloqueadoPorNotificacion.value,
+    hayObservados: (registros.value || []).some((r) => registroEstaObservado(r)),
+  });
+}
+function tituloEdicionFila(registro) {
+  return tituloEdicionRegistroClinica(registro, {
+    formularioAbierto: formularioAbierto.value,
+    bloqueadoPorNotificacion: bloqueadoPorNotificacion.value,
+    hayObservados: (registros.value || []).some((r) => registroEstaObservado(r)),
+    motivoCerrado: motivoFormularioNoEditable.value,
+  });
+}
 const estadoFormularioTexto = computed(() => {
   if (bloqueadoPorNotificacion.value) return 'Bloqueado (Notificado)';
   return estadoFormulario.value === 'ABIERTO' ? 'Abierto' : 'Cerrado';
@@ -598,7 +614,7 @@ const estadoFormularioTexto = computed(() => {
 const motivoFormularioNoEditable = computed(() => (
   bloqueadoPorNotificacion.value ? mensajeBloqueoNotificacion : 'El formulario está cerrado'
 ));
-const mostrarBotonNuevo = computed(() => formularioAbierto.value);
+const mostrarBotonNuevo = computed(() => formularioAbierto.value && !(registros.value || []).some((r) => registroEstaObservado(r)));
 
 const exportandoExcel = ref(false);
 
@@ -728,6 +744,7 @@ const tituloModalFormulario = computed(() => (
 function estadoAprobacionClase(estado) {
   const valor = String(estado || '').toUpperCase();
   if (valor === 'APROBADO') return 'bg-emerald-100 text-emerald-700';
+  if (valor === 'OBSERVADO') return 'bg-amber-100 text-amber-800';
   if (valor === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
   if (valor === 'SIN REGISTRO') return 'bg-slate-100 text-slate-500';
   return 'bg-amber-100 text-amber-700';
@@ -1197,7 +1214,7 @@ function abrirModalNuevo() {
 }
 
 function abrirModalEditar(registro) {
-  if (!formularioAbierto.value || !registro) return;
+  if (!puedeEditarFila(registro) || !registro) return;
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {
