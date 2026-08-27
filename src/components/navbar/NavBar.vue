@@ -33,6 +33,21 @@
       >
         {{ etiquetaBotonNotificar }}
       </button>
+      <button
+        v-if="mostrarBotonAccionesSupervisor"
+        type="button"
+        class="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-amber-900 shrink-0 hover:bg-amber-100 transition-colors"
+        title="Ver observaciones y correcciones del supervisor"
+        @click="abrirModalAccionesSupervisor"
+      >
+        Acciones supervisor
+        <span
+          v-if="totalAccionesSupervisor > 0"
+          class="inline-flex min-w-[1.25rem] h-5 px-1 items-center justify-center rounded-full bg-amber-600 text-[10px] font-bold text-white"
+        >
+          {{ totalAccionesSupervisor > 99 ? '99+' : totalAccionesSupervisor }}
+        </span>
+      </button>
       <router-link
         to="/notificaciones"
         class="relative inline-flex p-1 rounded-lg hover:bg-cyan-50 transition-colors"
@@ -75,19 +90,18 @@
       class="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4"
       @click.self="cerrarModalNotificar"
     >
-      <div class="bg-white rounded-xl shadow-xl w-full max-w-md border border-slate-200 overflow-hidden">
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-lg border border-slate-200 overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-cyan-50/80">
           <h2 class="text-base font-bold text-slate-800">Notificar envío a revisión</h2>
           <button type="button" class="text-slate-500 hover:text-slate-800 text-lg leading-none" aria-label="Cerrar" @click="cerrarModalNotificar">✕</button>
         </div>
-        <div class="p-5 space-y-4">
+        <div class="p-5 space-y-4 max-h-[min(80vh,36rem)] overflow-y-auto">
           <p v-if="!filtroSelectorListo" class="text-sm text-amber-700">Seleccione periodo, clínica y modalidad en la barra superior.</p>
           <template v-else>
             <p class="text-sm text-slate-600">Registros cargados según el filtro actual:</p>
             <div v-if="cargandoStats" class="text-sm text-slate-500 py-4 text-center">Cargando conteos…</div>
-            <div v-else class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600 border border-slate-100 rounded-lg p-3 bg-slate-50/80">
-              <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1">Resumen del periodo</div>
-              <div class="flex justify-between col-span-2">
+            <div v-else class="space-y-3 text-xs text-slate-600 border border-slate-100 rounded-lg p-3 bg-slate-50/80">
+              <div class="flex justify-between">
                 <span>N° de sesiones del mes</span>
                 <span
                   class="font-semibold"
@@ -96,48 +110,51 @@
               </div>
               <div
                 v-if="esPerfilClinicaUsuario && !tieneNumeroAtenciones"
-                class="col-span-2 text-[11px] text-rose-700"
+                class="text-[11px] text-rose-700"
               >
                 Registre el N° de sesiones del mes a notificar.
               </div>
-              <div class="flex justify-between col-span-2">
-                <span>Total al final del mes</span>
-                <span class="font-semibold text-slate-800">{{ totalPacientesResumen }}</span>
+
+              <p class="font-semibold text-slate-500 uppercase tracking-wide text-[10px] pt-1">Pacientes atendidos — condición inicial</p>
+              <p class="text-[11px] text-slate-400 -mt-1">Condición con la que el paciente ingresó al mes y clínica.</p>
+              <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                <div class="flex justify-between col-span-2"><span>Total</span><span class="font-semibold text-slate-800">{{ statsModal.inicial?.total ?? 0 }}</span></div>
+                <div class="flex justify-between"><span>Nuevos</span><span class="font-semibold text-slate-800">{{ statsModal.inicial?.nuevos ?? 0 }}</span></div>
+                <div class="flex justify-between"><span>Reingresos</span><span class="font-semibold text-slate-800">{{ statsModal.inicial?.reingresos ?? 0 }}</span></div>
+                <div class="flex justify-between"><span>Continuadores</span><span class="font-semibold text-slate-800">{{ statsModal.inicial?.continuadores ?? 0 }}</span></div>
+                <div class="flex justify-between"><span>Egresos</span><span class="font-semibold text-slate-800">{{ statsModal.inicial?.egresados ?? 0 }}</span></div>
               </div>
-              <div class="flex justify-between">
-                <span>Nuevos</span>
-                <span class="font-semibold text-slate-800">{{ statsModal.nuevos }}</span>
+
+              <p class="font-semibold text-slate-500 uppercase tracking-wide text-[10px] pt-2 border-t border-slate-200/80">Pacientes atendidos — condición final</p>
+              <p class="text-[11px] text-slate-400 -mt-1">Última condición registrada del paciente en el periodo.</p>
+              <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                <div class="flex justify-between col-span-2"><span>Total</span><span class="font-semibold text-slate-800">{{ totalPacientesResumen }}</span></div>
+                <div class="flex justify-between"><span>Nuevos</span><span class="font-semibold text-slate-800">{{ statsModal.final?.nuevos ?? statsModal.nuevos }}</span></div>
+                <div class="flex justify-between"><span>Reingresos</span><span class="font-semibold text-slate-800">{{ statsModal.final?.reingresos ?? statsModal.reingresos }}</span></div>
+                <div class="flex justify-between"><span>Continuadores</span><span class="font-semibold text-slate-800">{{ statsModal.final?.continuadores ?? statsModal.continuadores }}</span></div>
+                <div class="flex justify-between"><span>Egresos</span><span class="font-semibold text-slate-800">{{ statsModal.final?.egresados ?? statsModal.egresados }}</span></div>
               </div>
-              <div class="flex justify-between">
-                <span>Reingresos</span>
-                <span class="font-semibold text-slate-800">{{ statsModal.reingresos }}</span>
+
+              <p class="font-semibold text-slate-500 uppercase tracking-wide text-[10px] pt-2 border-t border-slate-200/80">Registros por formulario</p>
+              <div class="grid grid-cols-1 gap-y-1">
+                <div class="flex justify-between"><span>Cambio Acceso Vascular</span><span class="font-semibold text-slate-800">{{ statsModal.totalUnidades }}</span></div>
+                <div class="flex justify-between"><span>Infecciones</span><span class="font-semibold text-slate-800">{{ statsModal.totalEventos }}</span></div>
+                <div class="flex justify-between"><span>Morbilidad Hosp.</span><span class="font-semibold text-slate-800">{{ statsModal.totalMorbilidades }}</span></div>
+                <div class="flex justify-between">
+                  <span>Resultados clínicos (registros)</span>
+                  <span
+                    class="font-semibold"
+                    :class="resultadosClinicosOk ? 'text-slate-800' : 'text-rose-700'"
+                  >{{ statsModal.totalResultadosRegistrados }}</span>
+                </div>
+                <div
+                  v-if="esPerfilClinicaUsuario && !resultadosClinicosOk"
+                  class="text-[11px] text-rose-700"
+                >
+                  Debe haber un registro de resultados clínicos por cada paciente atendido, incluidos egresos ({{ statsModal.totalPacientesAtendidos }} paciente(s) / {{ statsModal.totalResultadosRegistrados }} registro(s)).
+                </div>
+                <div class="flex justify-between"><span>Calidad de agua</span><span class="font-semibold text-slate-800">{{ statsModal.totalCalidadAgua }}</span></div>
               </div>
-              <div class="flex justify-between pb-1 mb-1 border-b border-slate-200/80">
-                <span>Continuadores</span>
-                <span class="font-semibold text-slate-800">{{ statsModal.continuadores }}</span>
-              </div>
-              <div class="flex justify-between pb-1 mb-1 border-b border-slate-200/80">
-                <span>Egresos</span>
-                <span class="font-semibold text-slate-800">{{ statsModal.egresados }}</span>
-              </div>
-              <div class="flex justify-between col-span-2 font-semibold text-slate-500 uppercase tracking-wide text-[10px] mb-1 mt-1">Registros por formulario</div>
-              <div class="flex justify-between"><span>Cambio Acceso Vascular</span><span class="font-semibold text-slate-800">{{ statsModal.totalUnidades }}</span></div>
-              <div class="flex justify-between"><span>Infecciones</span><span class="font-semibold text-slate-800">{{ statsModal.totalEventos }}</span></div>
-              <div class="flex justify-between"><span>Morbilidad Hosp.</span><span class="font-semibold text-slate-800">{{ statsModal.totalMorbilidades }}</span></div>
-              <div class="flex justify-between col-span-2">
-                <span>Resultados clínicos (registros)</span>
-                <span
-                  class="font-semibold"
-                  :class="resultadosClinicosOk ? 'text-slate-800' : 'text-rose-700'"
-                >{{ statsModal.totalResultadosRegistrados }}</span>
-              </div>
-              <div
-                v-if="esPerfilClinicaUsuario && !resultadosClinicosOk"
-                class="col-span-2 text-[11px] text-rose-700"
-              >
-                Debe haber un registro de resultados clínicos por cada paciente atendido, incluidos egresos ({{ statsModal.totalPacientesAtendidos }} paciente(s) / {{ statsModal.totalResultadosRegistrados }} registro(s)).
-              </div>
-              <div class="flex justify-between col-span-2"><span>Calidad de agua</span><span class="font-semibold text-slate-800">{{ statsModal.totalCalidadAgua }}</span></div>
             </div>
             <p
               v-if="mensajeBloqueoNotificacion"
@@ -155,9 +172,91 @@
           <button
             type="button"
             class="px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 disabled:opacity-50"
-            :disabled="!filtroSelectorListo || enviandoNotificacion || estadoNotificacionRevision.estado === 'NOTIFICADO' || (esPerfilClinicaUsuario && !statsModal.puedeNotificarClinica)"
+            :disabled="!filtroSelectorListo || enviandoNotificacion || periodoConforme || estadoNotificacionRevision.estado === 'NOTIFICADO' || (esPerfilClinicaUsuario && !statsModal.puedeNotificarClinica)"
             @click="confirmarNotificacion"
-          >{{ enviandoNotificacion ? 'Enviando…' : 'Sí, notificar' }}</button>
+          >{{ enviandoNotificacion ? 'Enviando…' : (periodoConforme ? 'Conforme' : 'Sí, notificar') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="modalAccionesSupervisorAbierto"
+      class="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4"
+      @click.self="cerrarModalAccionesSupervisor"
+    >
+      <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+        <div class="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-amber-50/80 shrink-0">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">Acciones del supervisor</h2>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Observaciones y correcciones del periodo, clínica y modalidad actuales.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="text-slate-500 hover:text-slate-800 text-lg leading-none"
+            aria-label="Cerrar"
+            @click="cerrarModalAccionesSupervisor"
+          >✕</button>
+        </div>
+        <div class="p-5 overflow-auto flex-1">
+          <p v-if="!filtroSelectorListo" class="text-sm text-amber-700">Seleccione periodo, clínica y modalidad en la barra superior.</p>
+          <div v-else-if="cargandoAccionesSupervisor" class="py-10 text-center text-sm text-slate-500">Cargando acciones…</div>
+          <div v-else-if="!accionesSupervisor.length" class="py-10 text-center text-sm text-slate-500">
+            No hay observaciones ni ediciones del supervisor para este filtro.
+          </div>
+          <div v-else class="overflow-x-auto border border-slate-100 rounded-lg">
+            <table class="w-full text-xs">
+              <thead class="bg-slate-50 border-b">
+                <tr>
+                  <th class="px-3 py-2 text-left font-semibold text-slate-600 uppercase tracking-wide">Fecha</th>
+                  <th class="px-3 py-2 text-left font-semibold text-slate-600 uppercase tracking-wide">Acción</th>
+                  <th class="px-3 py-2 text-left font-semibold text-slate-600 uppercase tracking-wide">Formulario</th>
+                  <th class="px-3 py-2 text-left font-semibold text-slate-600 uppercase tracking-wide">Paciente</th>
+                  <th class="px-3 py-2 text-left font-semibold text-slate-600 uppercase tracking-wide">Detalle</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr
+                  v-for="(item, idx) in accionesSupervisor"
+                  :key="`${item.tipo}-${item.id_registro || idx}-${item.creado_en || idx}`"
+                  class="hover:bg-slate-50/80"
+                >
+                  <td class="px-3 py-2 whitespace-nowrap text-slate-800 tabular-nums">
+                    {{ formatFechaAccionSupervisor(item.creado_en) }}
+                  </td>
+                  <td class="px-3 py-2">
+                    <span
+                      class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold"
+                      :class="claseTipoAccionSupervisor(item.tipo)"
+                    >
+                      {{ item.tipo_label || item.tipo }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-slate-700">{{ item.formulario || '—' }}</td>
+                  <td class="px-3 py-2 text-slate-800">
+                    <span class="font-medium">{{ item.paciente || '—' }}</span>
+                    <span v-if="item.documento && item.documento !== '—'" class="block text-[10px] text-slate-500">
+                      {{ item.documento }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-slate-600 max-w-sm whitespace-pre-wrap break-words">
+                    {{ item.comentario || item.mensaje || '—' }}
+                    <span v-if="item.usuario_nombre" class="block mt-1 text-[10px] text-slate-400">
+                      Por: {{ item.usuario_nombre }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="px-5 py-3 border-t border-slate-100 flex justify-end bg-slate-50 shrink-0">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-lg"
+            @click="cerrarModalAccionesSupervisor"
+          >Cerrar</button>
         </div>
       </div>
     </div>
@@ -184,6 +283,7 @@ import SelectorPeriodo from '@/components/SelectorPeriodo.vue'
 import NumeroAtencionesNav from '@/components/navbar/NumeroAtencionesNav.vue'
 import { esSupervisor, debeLimitarClinicasAlUsuario, esPerfilClinica } from '@/utils/perfil'
 import { setEstadoRevisionShared } from '@/composables/useBloqueoNotificacionRevision'
+import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat'
 
 const props = defineProps({
   periodo: { type: [Number, String], default: null },
@@ -224,16 +324,24 @@ const noLeidas = ref(0)
 let pollTimer = null
 
 const modalNotificarAbierto = ref(false)
+const modalAccionesSupervisorAbierto = ref(false)
 const cargandoStats = ref(false)
 const cargandoEstadoRevision = ref(false)
+const cargandoAccionesSupervisor = ref(false)
 const enviandoNotificacion = ref(false)
+const accionesSupervisor = ref([])
 const estadoNotificacionRevision = ref({
   notificado: false,
   notificado_en: null,
   usuario_nombre: null,
   estado: 'POR_NOTIFICAR',
   requiere_renotificacion: false,
+  ya_dio_conformidad: false,
+  conformidad_en: null,
+  conformidad_usuario_nombre: null,
 })
+
+const periodoConforme = computed(() => Boolean(estadoNotificacionRevision.value.ya_dio_conformidad))
 const statsModal = ref({
   totalUnidades: 0,
   totalEventos: 0,
@@ -249,6 +357,8 @@ const statsModal = ref({
   totalResultadosRegistrados: 0,
   totalResultadosCompletos: 0,
   puedeNotificarClinica: false,
+  inicial: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
+  final: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
 })
 
 const esPerfilClinicaUsuario = computed(() => esPerfilClinica())
@@ -263,12 +373,25 @@ const tieneNumeroAtenciones = computed(() =>
   tieneNumeroAtencionesRegistrado(statsModal.value.numeroAtenciones),
 )
 
-const totalPacientesResumen = computed(() => (
-  Number(statsModal.value.nuevos || 0)
-  + Number(statsModal.value.reingresos || 0)
-  + Number(statsModal.value.continuadores || 0)
-  + Number(statsModal.value.egresados || 0)
-))
+const totalPacientesResumen = computed(() => {
+  const f = statsModal.value.final
+  if (f && typeof f === 'object') {
+    const t = Number(f.total || 0)
+    if (t > 0) return t
+    return (
+      Number(f.nuevos || 0)
+      + Number(f.reingresos || 0)
+      + Number(f.continuadores || 0)
+      + Number(f.egresados || 0)
+    )
+  }
+  return (
+    Number(statsModal.value.nuevos || 0)
+    + Number(statsModal.value.reingresos || 0)
+    + Number(statsModal.value.continuadores || 0)
+    + Number(statsModal.value.egresados || 0)
+  )
+})
 
 const resultadosClinicosOk = computed(() => {
   const total = Number(statsModal.value.totalPacientesAtendidos || 0)
@@ -289,6 +412,7 @@ const mensajeBloqueoNotificacion = computed(() => {
 
 const botonNotificarHabilitado = computed(() => {
   if (!filtroSelectorListo.value || cargandoStats.value || cargandoEstadoRevision.value) return false
+  if (periodoConforme.value) return false
   if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') return false
   if (esPerfilClinicaUsuario.value && !statsModal.value.puedeNotificarClinica) return false
   return true
@@ -296,12 +420,14 @@ const botonNotificarHabilitado = computed(() => {
 
 const botonNotificarClickeable = computed(() => {
   if (!filtroSelectorListo.value || cargandoEstadoRevision.value) return false
+  if (periodoConforme.value) return false
   if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') return false
   return true
 })
 
 const etiquetaBotonNotificar = computed(() => {
   if (!filtroSelectorListo.value || cargandoEstadoRevision.value) return 'Por notificar'
+  if (periodoConforme.value) return 'Conforme'
   if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') return 'Notificado'
   if (estadoNotificacionRevision.value.requiere_renotificacion) return 'Por notificar'
   return 'Por notificar'
@@ -310,6 +436,9 @@ const etiquetaBotonNotificar = computed(() => {
 const clasesBotonNotificar = computed(() => {
   if (!filtroSelectorListo.value || cargandoEstadoRevision.value) {
     return 'border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed'
+  }
+  if (periodoConforme.value) {
+    return 'border-emerald-400 bg-emerald-100 text-emerald-900 cursor-not-allowed'
   }
   if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') {
     return 'border-emerald-300 bg-emerald-50 text-emerald-800 cursor-default'
@@ -322,6 +451,14 @@ const clasesBotonNotificar = computed(() => {
 
 const tituloBotonNotificar = computed(() => {
   if (!filtroSelectorListo.value) return 'Seleccione periodo, clínica y modalidad'
+  if (periodoConforme.value) {
+    const fecha = estadoNotificacionRevision.value.conformidad_en
+    const quien = estadoNotificacionRevision.value.conformidad_usuario_nombre
+    let t = 'Ya se registró la conformidad para este periodo, clínica y modalidad. No puede volver a notificar.'
+    if (fecha) t += ` ${new Date(fecha).toLocaleString('es-PE')}.`
+    if (quien) t += ` Por: ${quien}.`
+    return t
+  }
   if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') {
     const fecha = estadoNotificacionRevision.value.notificado_en
     const quien = estadoNotificacionRevision.value.usuario_nombre
@@ -366,6 +503,8 @@ const mostrarBotonNotificar = computed(() => {
   return route.matched.some((r) => r.meta?.mostrarNotificarRegistros === true)
 })
 
+const totalAccionesSupervisor = computed(() => accionesSupervisor.value.length)
+
 const filtroSelectorListo = computed(() => {
   return (
     periodo.value != null && periodo.value !== '' &&
@@ -373,6 +512,127 @@ const filtroSelectorListo = computed(() => {
     modalidad.value != null && modalidad.value !== ''
   )
 })
+
+const mostrarBotonAccionesSupervisor = computed(() => {
+  if (!mostrarBotonNotificar.value || !filtroSelectorListo.value) return false
+  if (estadoNotificacionRevision.value.requiere_renotificacion) return true
+  return totalAccionesSupervisor.value > 0
+})
+
+function claseTipoAccionSupervisor(tipo) {
+  if (tipo === 'OBSERVADO' || tipo === 'OBSERVACION_ENVIO') return 'bg-amber-100 text-amber-900'
+  if (tipo === 'EDICION_SUPERVISOR') return 'bg-violet-100 text-violet-900'
+  return 'bg-slate-100 text-slate-700'
+}
+
+function formatFechaAccionSupervisor(iso) {
+  return formatFechaHoraDDMMAAAA(iso) || '—'
+}
+
+async function cargarAccionesSupervisorDesdeModulos() {
+  const params = new URLSearchParams({
+    id_periodo: String(periodo.value),
+    id_ipress: String(clinica.value),
+    id_modalidad: String(modalidad.value),
+  })
+  const qs = params.toString()
+  const endpoints = [
+    { path: 'unidadesActuales', idKey: 'id_unidad_actual', form: 'Acceso vascular' },
+    { path: 'eventosAccesosVasculares', idKey: 'id_evento_acceso_vascular', form: 'Eventos infecciosos' },
+    { path: 'morbilidadesHospitalarias', idKey: 'id_morbilidad_hospitalaria', form: 'Morbilidad hospitalaria' },
+    { path: 'resultadosClinicos', idKey: 'id_resultado_clinico', form: 'Resultados clínicos' },
+    { path: 'vacunaciones', idKey: 'id_vacunacion', form: 'Vacunación' },
+  ]
+  const items = []
+  const responses = await Promise.all(
+    endpoints.map((ep) => getAllIpress(`/${ep.path}/?${qs}`).catch(() => [])),
+  )
+  responses.forEach((res, i) => {
+    const ep = endpoints[i]
+    const lista = Array.isArray(res) ? res : (res?.results || [])
+    for (const r of lista) {
+      const estado = String(r?.estado_aprobacion || '').toUpperCase()
+      const editado = !!r?.supervisor_edito_registro
+      if (estado !== 'OBSERVADO' && !editado) continue
+      const paciente = r?.datosPaciente?.paciente
+        || r?.datosPacienteAtencion?.datosPaciente?.paciente
+        || '—'
+      const documento = r?.datosPaciente?.documento
+        || r?.datosPacienteAtencion?.datosPaciente?.documento
+        || '—'
+      const comentario = String(r?.comentario_evaluacion || '').trim()
+      items.push({
+        tipo: estado === 'OBSERVADO' ? 'OBSERVADO' : 'EDICION_SUPERVISOR',
+        tipo_label: estado === 'OBSERVADO' ? 'Registro observado' : 'Registro editado por supervisor',
+        formulario: ep.form,
+        paciente,
+        documento,
+        comentario,
+        mensaje: comentario || (estado === 'OBSERVADO' ? 'Registro observado' : 'Registro editado por supervisor'),
+        id_registro: r?.[ep.idKey] ?? null,
+        usuario_nombre: r?.datosEvaluadoPor?.nombre || r?.datosEvaluadoPor?.usuario || null,
+        creado_en: r?.fecha_edicion_supervisor || r?.fecha_evaluacion || null,
+      })
+    }
+  })
+  try {
+    const hist = await getAllIpress(`/historial_notificacion_revision/?${qs}`)
+    const rows = Array.isArray(hist?.results) ? hist.results : []
+    for (const h of rows) {
+      if (String(h?.tipo || '').toUpperCase() !== 'OBSERVACION') continue
+      items.push({
+        tipo: 'OBSERVACION_ENVIO',
+        tipo_label: h.tipo_label || 'Observación del supervisor',
+        formulario: 'Envío a revisión',
+        paciente: '—',
+        documento: '—',
+        comentario: h.mensaje || '',
+        mensaje: h.mensaje || 'Observación del supervisor.',
+        id_registro: null,
+        usuario_nombre: h.usuario_nombre || null,
+        creado_en: h.creado_en || null,
+      })
+    }
+  } catch {
+    /* ignore */
+  }
+  items.sort((a, b) => String(b.creado_en || '').localeCompare(String(a.creado_en || '')))
+  return items
+}
+
+async function cargarAccionesSupervisor() {
+  if (!filtroSelectorListo.value) {
+    accionesSupervisor.value = []
+    return
+  }
+  cargandoAccionesSupervisor.value = true
+  try {
+    const params = new URLSearchParams({
+      id_periodo: String(periodo.value),
+      id_ipress: String(clinica.value),
+      id_modalidad: String(modalidad.value),
+    })
+    const r = await getAllIpress(`/acciones_supervisor_revision/?${params.toString()}`)
+    accionesSupervisor.value = Array.isArray(r?.results) ? r.results : []
+  } catch {
+    try {
+      accionesSupervisor.value = await cargarAccionesSupervisorDesdeModulos()
+    } catch {
+      accionesSupervisor.value = []
+    }
+  } finally {
+    cargandoAccionesSupervisor.value = false
+  }
+}
+
+async function abrirModalAccionesSupervisor() {
+  modalAccionesSupervisorAbierto.value = true
+  await cargarAccionesSupervisor()
+}
+
+function cerrarModalAccionesSupervisor() {
+  modalAccionesSupervisorAbierto.value = false
+}
 
 async function cargarEstadoNotificacionRevision() {
   if (!filtroSelectorListo.value) {
@@ -382,6 +642,9 @@ async function cargarEstadoNotificacionRevision() {
       usuario_nombre: null,
       estado: 'POR_NOTIFICAR',
       requiere_renotificacion: false,
+      ya_dio_conformidad: false,
+      conformidad_en: null,
+      conformidad_usuario_nombre: null,
     }
     setEstadoRevisionShared('POR_NOTIFICAR')
     return
@@ -394,13 +657,36 @@ async function cargarEstadoNotificacionRevision() {
       id_modalidad: String(modalidad.value),
     })
     const r = await getAllIpress(`/consulta_notificacion_envio_revision/?${params.toString()}`)
+    let yaConforme = Boolean(r?.ya_dio_conformidad)
+    let conformidadEn = r?.conformidad_en ?? null
+    let conformidadUsuario = r?.conformidad_usuario_nombre ?? null
+
+    // QA antiguo sin campos de conformidad: respaldar con historial.
+    if (r && r.ya_dio_conformidad == null) {
+      try {
+        const hist = await getAllIpress(`/historial_notificacion_revision/?${params.toString()}`)
+        const conf = (Array.isArray(hist?.results) ? hist.results : [])
+          .find((x) => String(x?.tipo || '').toUpperCase() === 'CONFORMIDAD')
+        if (conf) {
+          yaConforme = true
+          conformidadEn = conf.creado_en ?? null
+          conformidadUsuario = conf.usuario_nombre ?? null
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     const estado = (r?.notificado === true || r?.estado === 'NOTIFICADO') ? 'NOTIFICADO' : 'POR_NOTIFICAR'
     estadoNotificacionRevision.value = {
       notificado: Boolean(r?.notificado) || estado === 'NOTIFICADO',
       notificado_en: r?.notificado_en ?? null,
       usuario_nombre: r?.usuario_nombre ?? null,
       estado,
-      requiere_renotificacion: Boolean(r?.requiere_renotificacion),
+      requiere_renotificacion: yaConforme ? false : Boolean(r?.requiere_renotificacion),
+      ya_dio_conformidad: yaConforme,
+      conformidad_en: conformidadEn,
+      conformidad_usuario_nombre: conformidadUsuario,
     }
     setEstadoRevisionShared(estado)
   } catch {
@@ -410,6 +696,9 @@ async function cargarEstadoNotificacionRevision() {
       usuario_nombre: null,
       estado: 'POR_NOTIFICAR',
       requiere_renotificacion: false,
+      ya_dio_conformidad: false,
+      conformidad_en: null,
+      conformidad_usuario_nombre: null,
     }
     setEstadoRevisionShared('POR_NOTIFICAR')
   } finally {
@@ -434,6 +723,8 @@ async function cargarStatsNotificacion() {
       totalResultadosRegistrados: 0,
       totalResultadosCompletos: 0,
       puedeNotificarClinica: false,
+      inicial: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
+      final: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
     }
     return
   }
@@ -452,6 +743,10 @@ async function cargarStatsNotificacion() {
 async function onClickNotificar() {
   if (!filtroSelectorListo.value) {
     ElMessage.warning('Seleccione periodo, clínica y modalidad en la barra superior.')
+    return
+  }
+  if (periodoConforme.value) {
+    ElMessage.info('Ya se registró la conformidad. No puede volver a notificar.')
     return
   }
   if (estadoNotificacionRevision.value.estado === 'NOTIFICADO') {
@@ -473,6 +768,10 @@ function cerrarModalNotificar() {
 
 async function confirmarNotificacion() {
   if (!filtroSelectorListo.value) return
+  if (periodoConforme.value) {
+    ElMessage.info('Ya se registró la conformidad. No puede volver a notificar.')
+    return
+  }
   if (esPerfilClinicaUsuario.value && !statsModal.value.puedeNotificarClinica) {
     ElMessage.warning(mensajeBloqueoNotificacion.value)
     return
@@ -521,6 +820,8 @@ onMounted(() => {
   window.addEventListener('registros-formularios:actualizar', cargarStatsNotificacion)
   window.addEventListener('notificacion-revision:actualizar', cargarEstadoNotificacionRevision)
   window.addEventListener('notificaciones:actualizar', cargarEstadoNotificacionRevision)
+  window.addEventListener('notificacion-revision:actualizar', cargarAccionesSupervisor)
+  window.addEventListener('notificaciones:actualizar', cargarAccionesSupervisor)
 })
 
 onUnmounted(() => {
@@ -530,6 +831,8 @@ onUnmounted(() => {
   window.removeEventListener('registros-formularios:actualizar', cargarStatsNotificacion)
   window.removeEventListener('notificacion-revision:actualizar', cargarEstadoNotificacionRevision)
   window.removeEventListener('notificaciones:actualizar', cargarEstadoNotificacionRevision)
+  window.removeEventListener('notificacion-revision:actualizar', cargarAccionesSupervisor)
+  window.removeEventListener('notificaciones:actualizar', cargarAccionesSupervisor)
 })
 
 watch(
@@ -538,6 +841,7 @@ watch(
     if (mostrarBotonNotificar.value) {
       cargarStatsNotificacion()
       cargarEstadoNotificacionRevision()
+      cargarAccionesSupervisor()
     }
   },
   { immediate: true },
