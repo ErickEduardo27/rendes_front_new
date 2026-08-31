@@ -15,6 +15,16 @@
         </div>
         <div class="flex flex-wrap items-center gap-2 shrink-0">
           <button
+            v-if="periodoConforme"
+            type="button"
+            class="bg-emerald-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-emerald-700 transition disabled:opacity-50"
+            :disabled="exportandoConstanciaPdf || !filtroListoConstancia"
+            title="Descargar constancia de cumplimiento del reporte (PDF)"
+            @click="exportarConstanciaCumplimiento"
+          >
+            {{ exportandoConstanciaPdf ? 'Generando PDF…' : 'Exportar constancia PDF' }}
+          </button>
+          <button
             type="button"
             class="bg-violet-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-violet-700 transition"
             title="Ver historial de notificaciones, observaciones y conformidades"
@@ -401,7 +411,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, inject } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
@@ -414,8 +424,139 @@ import {
 } from '@/utils/accesoVascularValidacion';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat';
+import { exportConstanciaCumplimientoPdf } from '@/utils/exportConstanciaCumplimientoPdf';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
+
+const MODALIDADES_NOMBRE = {
+  1: 'Hemodiálisis',
+  2: 'Diálisis Peritoneal',
+  3: 'Trasplante',
+};
+
+const exportandoConstanciaPdf = ref(false);
+const estadoConformidad = ref({
+  ya_dio_conformidad: false,
+  conformidad_en: null,
+  conformidad_usuario_nombre: null,
+});
+const numeroAtencionesPeriodo = ref(null);
+
+const filtroListoConstancia = computed(() => (
+  periodoGlobal.value != null && periodoGlobal.value !== ''
+  && clinicaGlobal.value != null && clinicaGlobal.value !== ''
+  && modalidadGlobal.value != null && modalidadGlobal.value !== ''
+));
+
+const periodoConforme = computed(() => Boolean(estadoConformidad.value.ya_dio_conformidad));
+
+async function cargarEstadoConformidad() {
+  if (!filtroListoConstancia.value) {
+    estadoConformidad.value = {
+      ya_dio_conformidad: false,
+      conformidad_en: null,
+      conformidad_usuario_nombre: null,
+    };
+    numeroAtencionesPeriodo.value = null;
+    return;
+  }
+  const params = new URLSearchParams({
+    id_periodo: String(periodoGlobal.value),
+    id_ipress: String(clinicaGlobal.value),
+    id_modalidad: String(modalidadGlobal.value),
+  });
+  try {
+    const [rev, trr] = await Promise.all([
+      getAllIpress(`/consulta_notificacion_envio_revision/?${params.toString()}`),
+      getAllIpress(`/consulta_inicio_trr_periodo/?${params.toString()}`),
+    ]);
+    let yaConforme = Boolean(rev?.ya_dio_conformidad);
+    let conformidadEn = rev?.conformidad_en ?? null;
+    let conformidadUsuario = rev?.conformidad_usuario_nombre ?? null;
+    if (rev && rev.ya_dio_conformidad == null) {
+      try {
+        const hist = await getAllIpress(`/historial_notificacion_revision/?${params.toString()}`);
+        const conf = (Array.isArray(hist?.results) ? hist.results : [])
+          .find((x) => String(x?.tipo || '').toUpperCase() === 'CONFORMIDAD');
+        if (conf) {
+          yaConforme = true;
+          conformidadEn = conf.creado_en ?? null;
+          conformidadUsuario = conf.usuario_nombre ?? null;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    estadoConformidad.value = {
+      ya_dio_conformidad: yaConforme,
+      conformidad_en: conformidadEn,
+      conformidad_usuario_nombre: conformidadUsuario,
+    };
+    numeroAtencionesPeriodo.value = trr?.numero_atenciones ?? null;
+  } catch {
+    estadoConformidad.value = {
+      ya_dio_conformidad: false,
+      conformidad_en: null,
+      conformidad_usuario_nombre: null,
+    };
+    numeroAtencionesPeriodo.value = null;
+  }
+}
+
+async function exportarConstanciaCumplimiento() {
+  if (!periodoConforme.value) {
+    ElMessage.warning('La constancia solo está disponible cuando el supervisor dio conformidad.');
+    return;
+  }
+  if (!filtroListoConstancia.value) {
+    ElMessage.warning('Seleccione periodo, clínica y modalidad.');
+    return;
+  }
+  exportandoConstanciaPdf.value = true;
+  try {
+    await Promise.all([fetchEstadisticasAtencion(), fetchEstadisticasRegistros(), cargarEstadoConformidad()]);
+    let clinica = ipress.value.find((i) => String(i.id_ipress) === String(clinicaGlobal.value));
+    if (!clinica?.datosUbigeo) {
+      try {
+        clinica = await getAllIpress(`/ipress/${clinicaGlobal.value}/`);
+      } catch {
+        /* usar datos parciales */
+      }
+    }
+    const periodoItem = periodos.value.find((p) => String(p.id_periodo) === String(periodoGlobal.value));
+    const modalidadNombre = clinica?.datosModalidad?.modalidad
+      || MODALIDADES_NOMBRE[Number(modalidadGlobal.value)]
+      || '—';
+    const tel = clinica?.responsable_lic1_telefono || '';
+    const tel2 = clinica?.responsable_lic2_telefono || '';
+    exportConstanciaCumplimientoPdf({
+      codigoDocumento: idPeriodoIpress.value || clinicaGlobal.value,
+      modalidad: modalidadNombre,
+      periodoTexto: periodoItem?.periodo || String(periodoGlobal.value),
+      ubigeo: clinica?.datosUbigeo || null,
+      unidad: clinica?.nombre_corto || clinica?.ipress || clinicaSeleccionada.value || '—',
+      redAsistencial: clinica?.datosRed?.red || '—',
+      responsable: clinica?.responsable_lic1_nombre || '—',
+      correo: clinica?.responsable_lic1_correo || '—',
+      telefono: tel,
+      celular: tel2 || tel,
+      pacientes: estadisticasFinal.value.total,
+      sesiones: numeroAtencionesPeriodo.value ?? '—',
+      inicial: estadisticasInicial.value,
+      final: estadisticasFinal.value,
+      actual: estadisticasActual.value,
+      registros: estadisticasRegistros.value,
+      validadoPor: estadoConformidad.value.conformidad_usuario_nombre || '—',
+      conformidadEn: estadoConformidad.value.conformidad_en,
+    });
+    ElMessage.success('Constancia exportada en PDF.');
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('No se pudo generar la constancia PDF.');
+  } finally {
+    exportandoConstanciaPdf.value = false;
+  }
+}
 
 // Estado global: periodo, clínica (ipress) y modalidad (si el layout los provee)
 const router = useRouter();
@@ -1137,6 +1278,7 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], async () => {
   await searchPeriodoIpress();
   await fetchEstadisticasAtencion();
   await fetchEstadisticasRegistros();
+  await cargarEstadoConformidad();
 }, { deep: true });
 
 onMounted(async () => {
@@ -1146,6 +1288,14 @@ onMounted(async () => {
   await searchPeriodoIpress();
   await fetchEstadisticasAtencion();
   await fetchEstadisticasRegistros();
+  await cargarEstadoConformidad();
+  window.addEventListener('notificacion-revision:actualizar', cargarEstadoConformidad);
+  window.addEventListener('notificaciones:actualizar', cargarEstadoConformidad);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('notificacion-revision:actualizar', cargarEstadoConformidad);
+  window.removeEventListener('notificaciones:actualizar', cargarEstadoConformidad);
 });
 </script>
 
