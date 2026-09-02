@@ -42,3 +42,15 @@ export async function deleteAllIpress(url = "/ipress/") {
     const response = await apiClient.delete(url);
     return response;
 }
+
+export async function postArchivoIpress(url, formData) {
+    const token = TokenService.getToken();
+    const base = (RUTA_API || '').replace(/\/$/, '');
+    const path = url.startsWith('/') ? url : `/${url}`;
+    const response = await axios.post(`${base}${path}`, formData, {
+        headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+    });
+    return response.data;
+}

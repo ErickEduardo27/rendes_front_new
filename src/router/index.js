@@ -125,6 +125,12 @@ const routes = [
         meta: { mostrarNotificarRegistros: true, bloqueadoSupervisor: true },
       },
       {
+        path: 'importacion-tiempo-dialisis',
+        name: 'ImportacionTiempoDialisis',
+        component: () => import('@/pages/registros/importacionTiempoDialisis/index.vue'),
+        meta: { bloqueadoSupervisor: true },
+      },
+      {
         path: 'descarga-datos-analista',
         name: 'DescargaMasivaAnalista',
         component: () => import('@/pages/analista/DescargaMasivaDatos.vue'),

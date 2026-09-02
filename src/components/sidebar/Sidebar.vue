@@ -28,6 +28,7 @@
               { label: 'Eventos Infecciosos', to: '/eventos-infecciosos' },
               { label: 'Morbilidad Hospitalaria', to: '/morbilidad-hospitalaria' },
               { label: 'Resultados Clínicos y tratamiento', to: '/resultados-clinicos' },
+              { label: 'Importación tiempo de diálisis', to: '/importacion-tiempo-dialisis' },
               { label: 'Serología y Vacunación', to: '/vacunacion' },
               { label: 'Calidad de agua y LD', to: '/calidad-agua' }
             ]"
