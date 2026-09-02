@@ -28,13 +28,18 @@
               { label: 'Eventos Infecciosos', to: '/eventos-infecciosos' },
               { label: 'Morbilidad Hospitalaria', to: '/morbilidad-hospitalaria' },
               { label: 'Resultados Clínicos y tratamiento', to: '/resultados-clinicos' },
-              { label: 'Importación tiempo de diálisis', to: '/importacion-tiempo-dialisis' },
               { label: 'Serología y Vacunación', to: '/vacunacion' },
               { label: 'Calidad de agua y LD', to: '/calidad-agua' }
             ]"
         />
 
         <SidebarItem v-if="['Supervisor', 'Admin','Clinicas','Hospitales'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
+        <SidebarItem
+            v-if="['Admin','Clinicas','Hospitales'].includes(perfil)"
+            :icon="ArrowUpTrayIcon"
+            label="Importación tiempo de diálisis"
+            to="/importacion-tiempo-dialisis"
+        />
         <SidebarItem v-if="['Supervisor', 'Admin'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Evaluación" to="/evaluacion"/>
         <SidebarItem v-if="['Supervisor', 'Admin'].includes(perfil)" :icon="ChartBarIcon" label="Reporte" to="/reporte-supervisor"/>
 
@@ -83,7 +88,7 @@ import SidebarItem from './SidebarItem.vue';
 import { useAuthStore } from "@/store/auth";
 import { 
   HomeIcon, UserIcon, DocumentMagnifyingGlassIcon, 
-  ChartBarIcon, ArrowsRightLeftIcon, BellAlertIcon, ArrowDownTrayIcon
+  ChartBarIcon, ArrowsRightLeftIcon, BellAlertIcon, ArrowDownTrayIcon, ArrowUpTrayIcon
 } from '@heroicons/vue/24/outline';
 
 const authStore = useAuthStore();

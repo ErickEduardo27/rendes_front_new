@@ -1,51 +1,33 @@
 <template>
   <div class="flex flex-wrap items-center gap-2 border-l border-gray-200 pl-4 min-w-0">
     <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide shrink-0">N° Sesiones:</h2>
-    <input
-      v-model="numeroAtenciones"
-      type="number"
-      min="0"
-      :max="maxSesiones ?? undefined"
-      step="1"
-      inputmode="numeric"
-      placeholder="Ej. 120"
-      class="w-24 border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none disabled:opacity-50"
-      :disabled="!filtroListo || guardando || cargando || bloqueadoPorNotificacion"
-      :title="tituloInput"
-      @input="aplicarTopeSesiones"
-    />
-    <button
-      type="button"
-      class="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#008f9c] hover:bg-[#007a86] disabled:opacity-50 shrink-0"
-      :disabled="!filtroListo || guardando || cargando || !puedeGuardar || bloqueadoPorNotificacion"
-      :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : undefined"
-      @click="guardarNumeroAtenciones"
+    <div
+      class="min-w-[4.5rem] border border-slate-200 bg-slate-50 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-slate-800 tabular-nums"
+      :title="tituloValor"
     >
-      {{ guardando ? 'Guardando…' : 'Guardar' }}
-    </button>
+      {{ textoSesiones }}
+    </div>
     <span v-if="cargando" class="text-[11px] text-slate-500 shrink-0">Cargando…</span>
-    <span
-      v-else-if="filtroListo && totalPacientesSistema != null"
-      class="text-[11px] text-slate-500 shrink-0 hidden lg:inline"
-      :title="ultimaActualizacion ? `Última actualización: ${ultimaActualizacion}` : undefined"
-    >
-      <!-- Pacientes: <strong>{{ totalPacientesSistema }}</strong> -->
-    </span>
     <span
       v-else-if="!filtroListo"
       class="text-[11px] text-amber-700 shrink-0"
     >
       Complete los filtros
     </span>
+    <span
+      v-else-if="!tieneImportacion"
+      class="text-[11px] text-slate-500 shrink-0 hidden lg:inline"
+      title="Importe el reporte de producción HD para ver el N° de sesiones"
+    >
+      Sin importación
+    </span>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
-import { ElMessage } from 'element-plus';
-import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
-import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat';
-import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { getAllIpress } from '@/services/ipress/Ipress.service';
+import { leerImportacionLocal, esErrorEndpointNoDisponible } from '@/utils/importacionProduccionHdStorage';
 
 const props = defineProps({
   periodo: { type: [Number, String], default: null },
@@ -53,58 +35,29 @@ const props = defineProps({
   modalidad: { type: [Number, String], default: null },
 });
 
-const { bloqueadoPorNotificacion, mensajeBloqueoNotificacion } = useBloqueoNotificacionRevision();
-
-const numeroAtenciones = ref('');
 const cargando = ref(false);
-const guardando = ref(false);
-const ultimaActualizacion = ref('');
-const totalPacientesSistema = ref(null);
+const atencionesEjecutadas = ref(null);
+const tieneImportacion = ref(false);
 
-const SESIONES_POR_PACIENTE = 13;
+const filtroListo = computed(() => (
+  props.periodo != null && props.periodo !== ''
+  && props.clinica != null && props.clinica !== ''
+  && props.modalidad != null && props.modalidad !== ''
+));
 
-const filtroListo = computed(() => {
-  return (
-    props.periodo != null && props.periodo !== '' &&
-    props.clinica != null && props.clinica !== '' &&
-    props.modalidad != null && props.modalidad !== ''
-  );
+const textoSesiones = computed(() => {
+  if (!filtroListo.value) return '—';
+  if (cargando.value) return '…';
+  if (atencionesEjecutadas.value == null || atencionesEjecutadas.value === '') return '—';
+  return String(atencionesEjecutadas.value);
 });
 
-/** Máximo: pacientes atendidos × 13 */
-const maxSesiones = computed(() => {
-  if (totalPacientesSistema.value == null) return null;
-  return Number(totalPacientesSistema.value) * SESIONES_POR_PACIENTE;
-});
-
-const tituloInput = computed(() => {
-  if (bloqueadoPorNotificacion.value) return mensajeBloqueoNotificacion;
-  if (maxSesiones.value != null) {
-    return `Máximo: ${maxSesiones.value} (pacientes × ${SESIONES_POR_PACIENTE})`;
+const tituloValor = computed(() => {
+  if (!tieneImportacion.value) {
+    return 'Valor de atenciones ejecutadas de la importación de tiempo de diálisis';
   }
-  return undefined;
+  return 'Atenciones ejecutadas (importación de producción HD)';
 });
-
-const puedeGuardar = computed(() => {
-  const texto = String(numeroAtenciones.value ?? '').trim();
-  if (!texto) return false;
-  const n = Number(texto);
-  if (!Number.isInteger(n) || n < 0) return false;
-  if (maxSesiones.value != null && n > maxSesiones.value) return false;
-  return true;
-});
-
-function aplicarTopeSesiones() {
-  const texto = String(numeroAtenciones.value ?? '').trim();
-  if (!texto || maxSesiones.value == null) return;
-  const n = Number(texto);
-  if (!Number.isFinite(n)) return;
-  if (n > maxSesiones.value) {
-    numeroAtenciones.value = String(maxSesiones.value);
-  } else if (n < 0) {
-    numeroAtenciones.value = '0';
-  }
-}
 
 function buildQs() {
   const params = new URLSearchParams();
@@ -114,80 +67,59 @@ function buildQs() {
   return params.toString();
 }
 
-function formatearFecha(iso) {
-  const f = formatFechaHoraDDMMAAAA(iso);
-  return f === '—' ? '' : f;
+function aplicarPayload(data) {
+  if (!data?.importado) {
+    atencionesEjecutadas.value = null;
+    tieneImportacion.value = false;
+    return;
+  }
+  tieneImportacion.value = true;
+  atencionesEjecutadas.value =
+    data.atenciones_ejecutadas != null && data.atenciones_ejecutadas !== ''
+      ? data.atenciones_ejecutadas
+      : null;
 }
 
-async function cargarNumeroAtenciones() {
+async function cargarSesionesDesdeImportacion() {
   if (!filtroListo.value) {
-    numeroAtenciones.value = '';
-    ultimaActualizacion.value = '';
-    totalPacientesSistema.value = null;
+    atencionesEjecutadas.value = null;
+    tieneImportacion.value = false;
     return;
   }
   cargando.value = true;
+  let encontrado = false;
   try {
-    const qs = buildQs();
-    const [resInicio, resStats] = await Promise.all([
-      getAllIpress(`/consulta_inicio_trr_periodo/?${qs}`),
-      getAllIpress(`/pacienteAtencion/estadisticas/?${qs}`),
-    ]);
-    numeroAtenciones.value =
-      resInicio?.numero_atenciones != null && resInicio?.numero_atenciones !== ''
-        ? String(resInicio.numero_atenciones)
-        : '';
-    ultimaActualizacion.value = formatearFecha(resInicio?.actualizado_en);
-    const stats = resStats || {};
-    totalPacientesSistema.value =
-      Number(stats.nuevos || 0)
-      + Number(stats.reingresos || 0)
-      + Number(stats.continuadores || 0)
-      + Number(stats.egresados || 0);
-  } catch (e) {
-    console.error(e);
-    ElMessage.error('No se pudo cargar el N° de atenciones.');
-  } finally {
-    cargando.value = false;
-  }
-}
-
-async function guardarNumeroAtenciones() {
-  if (bloqueadoPorNotificacion.value) {
-    ElMessage.warning(mensajeBloqueoNotificacion);
-    return;
-  }
-  aplicarTopeSesiones();
-  if (!filtroListo.value || !puedeGuardar.value) {
-    if (maxSesiones.value != null && Number(numeroAtenciones.value) > maxSesiones.value) {
-      ElMessage.warning(`El N° de sesiones no puede superar ${maxSesiones.value} (pacientes × ${SESIONES_POR_PACIENTE}).`);
+    const data = await getAllIpress(`/consulta_importacion_produccion_hd/?${buildQs()}`);
+    if (data?.importado) {
+      aplicarPayload(data);
+      encontrado = true;
     }
-    return;
-  }
-  guardando.value = true;
-  try {
-    const res = await postAllIpress('/guardar_inicio_trr_periodo/', {
-      id_periodo: Number(props.periodo),
-      id_ipress: Number(props.clinica),
-      id_modalidad: Number(props.modalidad),
-      numero_atenciones: Number(numeroAtenciones.value),
-    });
-    ultimaActualizacion.value = formatearFecha(res?.actualizado_en);
-    ElMessage.success('N° de atenciones guardado correctamente.');
-    window.dispatchEvent(new CustomEvent('registros-formularios:actualizar'));
   } catch (e) {
-    const msg = e?.detail || e?.error || e?.response?.data?.detail || e?.message || 'No se pudo guardar.';
-    ElMessage.error(typeof msg === 'string' ? msg : 'No se pudo guardar.');
-  } finally {
-    guardando.value = false;
+    if (!esErrorEndpointNoDisponible(e)) {
+      console.warn('N° Sesiones (importación):', e);
+    }
   }
+
+  if (!encontrado) {
+    const local = leerImportacionLocal(props.periodo, props.clinica, props.modalidad);
+    aplicarPayload(local);
+  }
+  cargando.value = false;
 }
 
 watch(
   () => [props.periodo, props.clinica, props.modalidad],
   () => {
-    cargarNumeroAtenciones();
+    cargarSesionesDesdeImportacion();
   },
   { deep: true, immediate: true },
 );
+
+onMounted(() => {
+  window.addEventListener('importacion-produccion-hd:actualizar', cargarSesionesDesdeImportacion);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('importacion-produccion-hd:actualizar', cargarSesionesDesdeImportacion);
+});
 </script>

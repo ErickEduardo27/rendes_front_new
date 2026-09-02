@@ -145,7 +145,6 @@
                         Editar
                       </button>
                       <button
-                        v-if="!registroDePacienteEgresado(r, listadoAtenciones)"
                         type="button"
                         class="tabla-ei-btn tabla-ei-btn-eliminar"
                         :disabled="!formularioAbierto || eliminandoId === r.id_evento_acceso_vascular"
@@ -242,7 +241,6 @@
                           Editar
                         </button>
                         <button
-                          v-if="!fila.es_egresado"
                           type="button"
                           class="tabla-ei-btn tabla-ei-btn-eliminar"
                           :disabled="!formularioAbierto || eliminandoId === fila.id_evento_acceso_vascular"
@@ -480,7 +478,7 @@ import { ElMessage } from 'element-plus';
 import { ChartBarIcon } from '@heroicons/vue/24/outline';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva, esPacienteEgresadoEnListado, registroDePacienteEgresado, fechaEgresoAtencionISO } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva, esPacienteEgresadoEnListado, fechaEgresoAtencionISO } from '@/composables/useAtencionesRegistro';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import { puedeEditarRegistroClinica, tituloEdicionRegistroClinica, registroEstaObservado } from '@/utils/edicionRegistroObservado';
 import { fechaCelda } from '@/utils/fechaFormat';
@@ -992,10 +990,6 @@ function abrirModalEditar(registro) {
 
 async function eliminarRegistro(registro) {
   if (!formularioAbierto.value || !registro?.id_evento_acceso_vascular) return;
-  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
-    ElMessage.warning('Paciente egresado: no se puede eliminar el registro.');
-    return;
-  }
   const nombre = nombrePaciente(registro);
   const confirmar = window.confirm(`¿Eliminar el evento infeccioso de ${nombre}?`);
   if (!confirmar) return;

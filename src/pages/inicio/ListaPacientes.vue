@@ -723,12 +723,19 @@ function conteosCondicionDesdeAtenciones(lista) {
     const sorted = [...ats].sort(
       (a, b) => (Number(a.id_paciente_atencion) || 0) - (Number(b.id_paciente_atencion) || 0),
     );
-    const primera = sorted[0];
-    const ultima = sorted[sorted.length - 1];
-    const activos = sorted.filter((x) => String(x.estado || '').toUpperCase() === 'ACTIVO');
+    const relevantes = sorted.filter((x) => {
+      const estado = String(x.estado || '').toUpperCase();
+      const tipo = String(x.tipo_atencion || '').toUpperCase();
+      return tipo !== 'CAMBIO_MODALIDAD' && estado !== 'HISTORICO';
+    });
+    const base = relevantes.length ? relevantes : sorted;
+    const primera = base[0];
+    const activos = base.filter((x) => String(x.estado || '').toUpperCase() === 'ACTIVO');
+    // Condición final = ACTIVO si existe (reingreso reactivado); si no, última relevante.
+    const ultima = activos.length ? activos[activos.length - 1] : base[base.length - 1];
     primeras.push(primera);
     ultimas.push(ultima);
-    actuales.push(activos.length ? activos[activos.length - 1] : ultima);
+    actuales.push(ultima);
   }
   return {
     inicial: contarCondicionesAtencion(primeras, true),
@@ -770,14 +777,25 @@ const fetchEstadisticasAtencion = async () => {
     let actual = normalizarConteoAtencion(res?.actual);
     let final = finalApi;
 
-    // QA u otros backends antiguos no envían inicial/final/actual.
-    if (!conteoTieneDatos(res?.inicial) && conteoTieneDatos(finalApi)) {
+    // Recalcular desde el listado: al reingresar se reactiva la atención CERRADA
+    // (id menor) y queda un EGRESO con id mayor; la condición final debe ser la ACTIVA,
+    // igual que en Movimientos.
+    try {
       const listRes = await getAllIpress(`/pacienteAtencion/?${qs}`);
       const lista = Array.isArray(listRes) ? listRes : (listRes?.results || []);
-      const cortes = conteosCondicionDesdeAtenciones(lista);
-      inicial = cortes.inicial;
-      final = cortes.final;
-      actual = cortes.actual;
+      if (lista.length) {
+        const cortes = conteosCondicionDesdeAtenciones(lista);
+        inicial = cortes.inicial;
+        final = cortes.final;
+        actual = cortes.actual;
+      } else if (!conteoTieneDatos(res?.inicial) && conteoTieneDatos(finalApi)) {
+        inicial = { ...finalApi };
+      }
+    } catch (eLista) {
+      console.warn('Recálculo de condiciones desde listado:', eLista);
+      if (!conteoTieneDatos(res?.inicial) && conteoTieneDatos(finalApi)) {
+        inicial = { ...finalApi };
+      }
     }
 
     estadisticasAtencion.value = {
@@ -1156,16 +1174,41 @@ const verificandoClinicaPaciente = ref(false);
 /** Paciente encontrado sin IPRESS en atención ACTIVA: se muestra la pregunta antes de ir a Captar. */
 const pacienteSinClinicaCaptar = ref(null);
 
+/** Atención ACTIVA con IPRESS en el periodo seleccionado = “tiene clínica actualmente”. */
 const pacienteTieneAtencionActivaConIpress = async (idPaciente) => {
   if (idPaciente == null || idPaciente === '') return false;
   try {
-    const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(idPaciente)}`);
+    const params = new URLSearchParams({ id_paciente: String(idPaciente) });
+    if (periodoGlobal.value != null && periodoGlobal.value !== '') {
+      params.set('id_periodo', String(periodoGlobal.value));
+    }
+    const res = await getAllIpress(`/pacienteAtencion/?${params.toString()}`);
     const list = Array.isArray(res) ? res : (res?.results || []);
-    return list.some((a) => {
+    const periodoId = periodoGlobal.value;
+    const delPeriodo = list.filter((a) => {
+      if (periodoId == null || periodoId === '') return true;
+      return String(a.id_periodo) === String(periodoId);
+    });
+
+    const activas = delPeriodo.filter((a) => {
       const activo = String(a.estado || '').toUpperCase() === 'ACTIVO';
       const ip = a.id_ipress;
-      const tieneIpress = ip != null && ip !== '';
-      return activo && tieneIpress;
+      return activo && ip != null && ip !== '';
+    });
+    if (!activas.length) return false;
+
+    return activas.some((act) => {
+      const idAct = Number(act.id_paciente_atencion) || 0;
+      const ipAct = String(act.id_ipress);
+      const tieneEgresoPosterior = delPeriodo.some((a) => {
+        if (String(a.id_ipress) !== ipAct) return false;
+        const est = String(a.estado || '').toUpperCase();
+        const tipo = String(a.tipo_atencion || '').toUpperCase();
+        const esEgreso = est === 'EGRESADO' || tipo === 'EGRESO';
+        if (!esEgreso) return false;
+        return (Number(a.id_paciente_atencion) || 0) > idAct;
+      });
+      return !tieneEgresoPosterior;
     });
   } catch (e) {
     console.error(e);

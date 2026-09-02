@@ -201,6 +201,16 @@
             <p>Pacientes detectados: <strong>{{ preview.resumen.total_pacientes }}</strong></p>
             <p>Atenciones ejecutadas (pie de Excel): <strong>{{ preview.resumen.atenciones_ejecutadas ?? '—' }}</strong></p>
             <p>Sesiones con tiempo HD: <strong>{{ preview.resumen.total_sesiones_tiempo }}</strong></p>
+            <div
+              v-if="validacionPeriodo"
+              class="mt-3 rounded-lg px-3 py-2 text-sm"
+              :class="validacionPeriodo.ok
+                ? 'border border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border border-rose-200 bg-rose-50 text-rose-800'"
+            >
+              <p class="font-semibold">{{ validacionPeriodo.ok ? 'Periodo válido' : 'Periodo no coincide' }}</p>
+              <p class="mt-0.5">{{ validacionPeriodo.mensaje }}</p>
+            </div>
           </div>
           <p v-if="errorArchivo" class="text-sm text-rose-600">{{ errorArchivo }}</p>
         </div>
@@ -209,7 +219,8 @@
           <button
             type="button"
             class="px-4 py-2 rounded bg-cyan-600 text-white font-semibold disabled:opacity-50"
-            :disabled="!archivoSeleccionado || importando"
+            :disabled="!puedeConfirmarImportacion"
+            :title="!validacionPeriodo?.ok ? validacionPeriodo?.mensaje : undefined"
             @click="confirmarImportacion"
           >
             {{ importando ? 'Importando…' : 'Confirmar importación' }}
@@ -258,7 +269,7 @@
 import { ref, computed, inject, watch, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { getAllIpress, postArchivoIpress } from '@/services/ipress/Ipress.service';
-import { parseProduccionHdExcel, formatMinutosAHhmm, diasDetallePaciente } from '@/utils/parseProduccionHdExcel';
+import { parseProduccionHdExcel, formatMinutosAHhmm, diasDetallePaciente, validarMesExcelVsPeriodo } from '@/utils/parseProduccionHdExcel';
 import {
   guardarImportacionLocal,
   leerImportacionLocal,
@@ -344,6 +355,22 @@ const detallePaginado = computed(() => {
 });
 
 const diasPacienteDetalle = computed(() => diasDetallePaciente(pacienteDetalle.value));
+
+const validacionPeriodo = computed(() => {
+  if (!preview.value) return null;
+  return validarMesExcelVsPeriodo(
+    preview.value.resumen?.mes_consulta_excel,
+    etiquetaPeriodo.value,
+  );
+});
+
+const puedeConfirmarImportacion = computed(() => (
+  Boolean(archivoSeleccionado.value)
+  && Boolean(preview.value?.detalle?.length)
+  && Boolean(validacionPeriodo.value?.ok)
+  && !importando.value
+  && !errorArchivo.value
+));
 
 function formatearFecha(iso) {
   return formatFechaHoraDDMMAAAA(iso) || iso;
@@ -436,6 +463,14 @@ async function onSeleccionarArchivo(event) {
     preview.value = parseProduccionHdExcel(buffer);
     if (!preview.value.detalle?.length) {
       errorArchivo.value = 'No se encontraron pacientes en el archivo.';
+      return;
+    }
+    const validacion = validarMesExcelVsPeriodo(
+      preview.value.resumen?.mes_consulta_excel,
+      etiquetaPeriodo.value,
+    );
+    if (!validacion.ok) {
+      errorArchivo.value = validacion.mensaje;
     }
   } catch (e) {
     console.error(e);
@@ -447,6 +482,15 @@ async function onSeleccionarArchivo(event) {
 async function confirmarImportacion() {
   if (!archivoSeleccionado.value || !filtroListo.value || !preview.value?.detalle?.length) {
     ElMessage.warning('Seleccione un archivo válido con pacientes.');
+    return;
+  }
+  const validacion = validarMesExcelVsPeriodo(
+    preview.value.resumen?.mes_consulta_excel,
+    etiquetaPeriodo.value,
+  );
+  if (!validacion.ok) {
+    ElMessage.error(validacion.mensaje);
+    errorArchivo.value = validacion.mensaje;
     return;
   }
   importando.value = true;
@@ -463,6 +507,7 @@ async function confirmarImportacion() {
       detalle: Array.isArray(data?.detalle) ? data.detalle : [],
     };
     ElMessage.success('Importación registrada en el servidor.');
+    window.dispatchEvent(new CustomEvent('importacion-produccion-hd:actualizar'));
     mostrarModal.value = false;
     pagina.value = 1;
   } catch (e) {
@@ -486,6 +531,7 @@ async function confirmarImportacion() {
       );
       importacion.value = payload;
       ElMessage.warning('El servidor aún no tiene este módulo. Los datos se guardaron localmente en su navegador.');
+      window.dispatchEvent(new CustomEvent('importacion-produccion-hd:actualizar'));
       mostrarModal.value = false;
       pagina.value = 1;
       return;
@@ -505,6 +551,13 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   pagina.value = 1;
   busqueda.value = '';
   cargarImportacion();
+  if (preview.value) {
+    const validacion = validarMesExcelVsPeriodo(
+      preview.value.resumen?.mes_consulta_excel,
+      etiquetaPeriodo.value,
+    );
+    errorArchivo.value = validacion.ok ? '' : validacion.mensaje;
+  }
 });
 
 watch(busqueda, () => {

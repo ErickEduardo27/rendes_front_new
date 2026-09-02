@@ -174,6 +174,92 @@ export function formatMinutosAHhmm(totalMinutes) {
   return minutesToHhmm(totalMinutes);
 }
 
+const MESES_NOMBRE_A_NUM = {
+  enero: 1,
+  febrero: 2,
+  marzo: 3,
+  abril: 4,
+  mayo: 5,
+  junio: 6,
+  julio: 7,
+  agosto: 8,
+  septiembre: 9,
+  setiembre: 9,
+  octubre: 10,
+  noviembre: 11,
+  diciembre: 12,
+};
+
+const MESES_NUM_A_NOMBRE = [
+  '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+/**
+ * Extrae mes (1-12) desde texto del Excel ("Julio", "JULIO 07", "07", etc.).
+ */
+export function mesNumeroDesdeTextoExcel(mesTexto) {
+  const raw = String(mesTexto || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (!raw) return null;
+  for (const [nombre, num] of Object.entries(MESES_NOMBRE_A_NUM)) {
+    if (raw.includes(nombre)) return num;
+  }
+  const digits = raw.match(/\b(0?[1-9]|1[0-2])\b/);
+  if (digits) return Number(digits[1]);
+  return null;
+}
+
+/**
+ * Extrae mes (1-12) desde etiqueta de periodo ("2026-07", "2026/07", etc.).
+ */
+export function mesNumeroDesdePeriodo(periodoTexto) {
+  const txt = String(periodoTexto || '').trim().replace(/\//g, '-');
+  const m = txt.match(/^(\d{4})-(\d{1,2})/);
+  if (!m) return null;
+  const mes = Number(m[2]);
+  return mes >= 1 && mes <= 12 ? mes : null;
+}
+
+/**
+ * Valida que el mes del Excel coincida con el periodo seleccionado.
+ * @returns {{ ok: boolean, mensaje: string, mesExcel: number|null, mesPeriodo: number|null }}
+ */
+export function validarMesExcelVsPeriodo(mesExcelTexto, periodoTexto) {
+  const mesExcel = mesNumeroDesdeTextoExcel(mesExcelTexto);
+  const mesPeriodo = mesNumeroDesdePeriodo(periodoTexto);
+
+  if (mesPeriodo == null) {
+    return {
+      ok: false,
+      mensaje: `No se pudo interpretar el periodo seleccionado (${periodoTexto || '—'}).`,
+      mesExcel,
+      mesPeriodo,
+    };
+  }
+  if (mesExcel == null) {
+    return {
+      ok: false,
+      mensaje: 'El archivo no indica un mes de consulta válido (MES DE CONSULTA).',
+      mesExcel,
+      mesPeriodo,
+    };
+  }
+  if (mesExcel !== mesPeriodo) {
+    return {
+      ok: false,
+      mensaje: `El mes del archivo (${mesExcelTexto || MESES_NUM_A_NOMBRE[mesExcel]}) no coincide con el periodo seleccionado (${periodoTexto} → ${MESES_NUM_A_NOMBRE[mesPeriodo]}).`,
+      mesExcel,
+      mesPeriodo,
+    };
+  }
+  return {
+    ok: true,
+    mensaje: `El mes del archivo coincide con el periodo (${MESES_NUM_A_NOMBRE[mesPeriodo]}).`,
+    mesExcel,
+    mesPeriodo,
+  };
+}
+
 export function sumarDetalleImportacion(detalle = []) {
   return detalle.reduce((acc, row) => {
     acc.pacientes += 1;

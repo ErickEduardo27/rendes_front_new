@@ -387,7 +387,8 @@
                     <div v-else-if="pacienteConsultaResultado" class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 text-sm">
                         <p class="text-xs font-bold uppercase text-emerald-800 mb-2">Paciente encontrado</p>
                         <p class="text-xs text-emerald-900/90 mb-3">
-                            Tiene una atención activa con clínica (IPRESS) asignada. Si debe ingresar en otra unidad, use el flujo habitual desde su equipo.
+                            Tiene una atención activa con clínica (IPRESS) asignada en el periodo seleccionado.
+                            Si ya lo egresó, verifique el periodo en la barra superior. Si debe ingresar en otra unidad, primero egresarlo de la clínica actual.
                         </p>
                         <dl class="grid grid-cols-1 gap-1 text-slate-700">
                             <div><span class="font-medium text-slate-500">Nombre:</span> {{ pacienteConsultaResultado.paciente || '—' }}</div>
@@ -1166,15 +1167,40 @@ const movimientosFiltrados = computed(() => {
         resultado = resultado.filter(m => m.tipo === filtros.tipo);
     }
 
-    const vistos = new Set();
-    resultado = resultado.filter((m) => {
-        const clave = String(m.id_paciente ?? m.paciente_dni ?? m.id);
-        if (vistos.has(clave)) return false;
-        vistos.add(clave);
-        return true;
-    });
+    // En la vista principal no debe tapar el ingreso/reingreso activo un
+    // registro histórico de "cambio de modalidad".
+    if (!filtros.tipo || filtros.tipo !== 'CAMBIO_MODALIDAD') {
+        resultado = resultado.filter((m) => {
+            const esCambio = m.tipo === 'CAMBIO_MODALIDAD';
+            const esHistorico = String(m.estado || '').toUpperCase() === 'HISTORICO';
+            return !(esCambio && esHistorico);
+        });
+    }
 
-    return resultado;
+    const porPaciente = new Map();
+    for (const m of resultado) {
+        const clave = String(m.id_paciente ?? m.paciente_dni ?? m.id);
+        const prev = porPaciente.get(clave);
+        if (!prev) {
+            porPaciente.set(clave, m);
+            continue;
+        }
+        const score = (row) => {
+            let s = 0;
+            if (String(row.estado || '').toUpperCase() === 'ACTIVO') s += 100;
+            if (row.tipo !== 'CAMBIO_MODALIDAD') s += 10;
+            return s;
+        };
+        const scoreM = score(m);
+        const scorePrev = score(prev);
+        if (scoreM > scorePrev) {
+            porPaciente.set(clave, m);
+        } else if (scoreM === scorePrev && compararMovimientosPorFecha(m, prev, true) < 0) {
+            porPaciente.set(clave, m);
+        }
+    }
+
+    return [...porPaciente.values()].sort((a, b) => compararMovimientosPorFecha(a, b, true));
 });
 
 const totalPaginas = computed(() => Math.ceil(movimientosFiltrados.value.length / itemsPorPagina));
@@ -1505,17 +1531,43 @@ const abrirModalConsultaDocumento = () => {
     mostrarModalConsultaDocumento.value = true;
 };
 
-/** Atención ACTIVA con IPRESS asignada = “tiene clínica actualmente”. */
+/** Atención ACTIVA con IPRESS en el periodo seleccionado = “tiene clínica actualmente”. */
 const pacienteTieneAtencionActivaConIpress = async (idPaciente) => {
     if (idPaciente == null || idPaciente === '') return false;
     try {
-        const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(idPaciente)}`);
+        const params = new URLSearchParams({ id_paciente: String(idPaciente) });
+        if (periodoGlobal.value != null && periodoGlobal.value !== '') {
+            params.set('id_periodo', String(periodoGlobal.value));
+        }
+        const res = await getAllIpress(`/pacienteAtencion/?${params.toString()}`);
         const list = Array.isArray(res) ? res : (res?.results || []);
-        return list.some((a) => {
+        const periodoId = periodoGlobal.value;
+        const delPeriodo = list.filter((a) => {
+            if (periodoId == null || periodoId === '') return true;
+            return String(a.id_periodo) === String(periodoId);
+        });
+
+        const activas = delPeriodo.filter((a) => {
             const activo = String(a.estado || '').toUpperCase() === 'ACTIVO';
             const ip = a.id_ipress;
-            const tieneIpress = ip != null && ip !== '';
-            return activo && tieneIpress;
+            return activo && ip != null && ip !== '';
+        });
+        if (!activas.length) return false;
+
+        // Si ya hay un EGRESO posterior en la misma IPRESS, la ACTIVO quedó huérfana
+        // (p. ej. egreso por trasplante) y no debe bloquear la re-captación.
+        return activas.some((act) => {
+            const idAct = Number(act.id_paciente_atencion) || 0;
+            const ipAct = String(act.id_ipress);
+            const tieneEgresoPosterior = delPeriodo.some((a) => {
+                if (String(a.id_ipress) !== ipAct) return false;
+                const est = String(a.estado || '').toUpperCase();
+                const tipo = String(a.tipo_atencion || '').toUpperCase();
+                const esEgreso = est === 'EGRESADO' || tipo === 'EGRESO';
+                if (!esEgreso) return false;
+                return (Number(a.id_paciente_atencion) || 0) > idAct;
+            });
+            return !tieneEgresoPosterior;
         });
     } catch (e) {
         console.error(e);
@@ -1976,21 +2028,18 @@ const captarPaciente = async () => {
 
     try {
         const modalidadAnterior = await obtenerModalidadActualPaciente(formCaptar.paciente);
+        // Reingreso / ingreso / continuador: no registrar "Cambio de modalidad".
+        // Solo sincronizar la modalidad del paciente si difiere (p. ej. tras egreso por Trasplante).
         if (
             modalidadAnterior != null
             && idModalidad != null
             && String(modalidadAnterior) !== String(idModalidad)
         ) {
-            await registrarCambioModalidadHistorial({
-                pacienteId: formCaptar.paciente,
-                modalidadAnteriorId: modalidadAnterior,
-                modalidadNuevaId: idModalidad,
-                fecha: formCaptar.fecha,
-                periodoId: idPeriodo,
-                ipressId: idIpress,
-                observacionesExtra: formCaptar.observaciones,
-                origen: 'CAPTACION',
-            });
+            try {
+                await patchAllIpress(`/pacientes/${formCaptar.paciente}/`, { id_modalidad: idModalidad });
+            } catch (e) {
+                console.warn('No se sincronizó modalidad del paciente al captar:', e);
+            }
         }
 
         const tipoAtencion = condicionAutomatica.value === 'REINGRESO' ? 'REINGRESO' : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR');
@@ -2860,10 +2909,39 @@ const egresarPaciente = async () => {
         );
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-        await patchAllIpress(`/pacienteAtencion/${atencionActiva.id_paciente_atencion}/`, {
-            estado: 'CERRADO',
-            fecha_fin: formEgresar.fecha,
-        });
+        // Cerrar todas las atenciones ACTIVO del paciente en el mismo periodo + IPRESS
+        // (evita dejar una ACTIVO huérfana que bloquee la re-captación).
+        try {
+            const paramsActivas = new URLSearchParams({
+                id_paciente: String(formEgresar.paciente),
+                id_periodo: String(formEgresar.periodo),
+                id_ipress: String(formEgresar.clinica),
+            });
+            if (modalidadActual != null && modalidadActual !== '') {
+                paramsActivas.set('id_modalidad', String(modalidadActual));
+            }
+            const resActivas = await getAllIpress(`/pacienteAtencion/?${paramsActivas.toString()}`);
+            const listaActivas = Array.isArray(resActivas) ? resActivas : (resActivas?.results || []);
+            const idsCerrar = [...new Set(
+                listaActivas
+                    .filter((a) => String(a.estado || '').toUpperCase() === 'ACTIVO')
+                    .map((a) => a.id_paciente_atencion)
+                    .filter((id) => id != null),
+            )];
+            if (!idsCerrar.includes(atencionActiva.id_paciente_atencion)) {
+                idsCerrar.push(atencionActiva.id_paciente_atencion);
+            }
+            await Promise.all(idsCerrar.map((id) => patchAllIpress(`/pacienteAtencion/${id}/`, {
+                estado: 'CERRADO',
+                fecha_fin: formEgresar.fecha,
+            })));
+        } catch (e) {
+            console.warn('Cierre de atenciones activas al egresar:', e);
+            await patchAllIpress(`/pacienteAtencion/${atencionActiva.id_paciente_atencion}/`, {
+                estado: 'CERRADO',
+                fecha_fin: formEgresar.fecha,
+            });
+        }
 
         await postAllIpress('/pacienteAtencion/', {
             id_paciente: formEgresar.paciente,

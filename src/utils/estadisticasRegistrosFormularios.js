@@ -68,8 +68,15 @@ function conteosCondicionDesdeAtenciones(lista) {
     const sorted = [...ats].sort(
       (a, b) => (Number(a.id_paciente_atencion) || 0) - (Number(b.id_paciente_atencion) || 0),
     );
-    primeras.push(sorted[0]);
-    ultimas.push(sorted[sorted.length - 1]);
+    const relevantes = sorted.filter((x) => {
+      const estado = String(x.estado || '').toUpperCase();
+      const tipo = String(x.tipo_atencion || '').toUpperCase();
+      return tipo !== 'CAMBIO_MODALIDAD' && estado !== 'HISTORICO';
+    });
+    const base = relevantes.length ? relevantes : sorted;
+    const activos = base.filter((x) => String(x.estado || '').toUpperCase() === 'ACTIVO');
+    primeras.push(base[0]);
+    ultimas.push(activos.length ? activos[activos.length - 1] : base[base.length - 1]);
   }
   return {
     inicial: contarCondicionesAtencion(primeras, true),
@@ -81,14 +88,18 @@ async function resolverConteosInicialFinal(statsAtencion, qs) {
   const finalApi = normalizarConteoAtencion(statsAtencion?.final || statsAtencion);
   let inicial = normalizarConteoAtencion(statsAtencion?.inicial);
   let final = finalApi;
-  if (!conteoTieneDatos(statsAtencion?.inicial) && conteoTieneDatos(finalApi)) {
-    try {
-      const lista = listaDesdeResponse(await getAllIpress(`/pacienteAtencion/?${qs}`));
+  try {
+    const lista = listaDesdeResponse(await getAllIpress(`/pacienteAtencion/?${qs}`));
+    if (lista.length) {
       const cortes = conteosCondicionDesdeAtenciones(lista);
       inicial = cortes.inicial;
       final = cortes.final;
-    } catch (e) {
-      console.error('Error al calcular condición inicial/final:', e);
+    } else if (!conteoTieneDatos(statsAtencion?.inicial) && conteoTieneDatos(finalApi)) {
+      inicial = { ...finalApi };
+    }
+  } catch (e) {
+    console.error('Error al calcular condición inicial/final:', e);
+    if (!conteoTieneDatos(statsAtencion?.inicial) && conteoTieneDatos(finalApi)) {
       inicial = { ...finalApi };
     }
   }

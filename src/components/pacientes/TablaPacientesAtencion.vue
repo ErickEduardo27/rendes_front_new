@@ -67,7 +67,7 @@
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Subsistema</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">F. 1er ingreso</th>
             <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Hosp. proced.</th>
-            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap">Condición</th>
+            <th class="text-left px-2 py-2 font-semibold whitespace-nowrap" title="Condición con la que ingresó al periodo (primera atención)">Condición inicial</th>
             <th v-if="mostrarAprobacion" class="text-left px-2 py-2 font-semibold whitespace-nowrap">Estado</th>
             <th v-if="mostrarAcciones" class="text-left px-2 py-2 font-semibold whitespace-nowrap sticky right-0 bg-slate-100">Acciones</th>
           </tr>
@@ -364,6 +364,16 @@ function etiologiaEspecificaTexto(row) {
 }
 
 function condicionPacienteTexto(row) {
+  const tipoInicial = String(
+    row?.tipo_atencion_inicial
+    ?? row?.condicion_inicial
+    ?? '',
+  ).trim().toUpperCase();
+  if (tipoInicial.includes('REINGRESO')) return 'Reingresado';
+  if (tipoInicial === 'NUEVO') return 'Nuevo';
+  if (tipoInicial === 'CONTINUADOR') return 'Continuador';
+
+  // Fallback si aún no hay tipificación inicial resuelta
   if (esPacienteEgresadoEnListado(row)) return 'EGRESADO';
   const at = row?.datosPacienteAtencion;
   const estado = String(
@@ -392,13 +402,51 @@ function tituloBotonEditar(row) {
   return 'Editar datos del paciente y ficha de diálisis';
 }
 
+function esAtencionHistoricaOCambio(a) {
+  const estado = String(a?.estado || '').toUpperCase();
+  const tipo = String(a?.tipo_atencion || '').toUpperCase();
+  return tipo === 'CAMBIO_MODALIDAD' || estado === 'HISTORICO';
+}
+
+/** Primera condición de ingreso al periodo (NUEVO / REINGRESO / CONTINUADOR). */
+function tipoAtencionInicialDeLista(atencionesPaciente) {
+  const lista = (Array.isArray(atencionesPaciente) ? atencionesPaciente : [])
+    .filter((a) => !esAtencionHistoricaOCambio(a))
+    .sort((a, b) => (Number(a.id_paciente_atencion) || 0) - (Number(b.id_paciente_atencion) || 0));
+  if (!lista.length) return null;
+  const primera = lista[0];
+  const tipo = String(primera.tipo_atencion || '').trim().toUpperCase();
+  const estado = String(primera.estado || '').trim().toUpperCase();
+  if (tipo.includes('REINGRESO')) return 'REINGRESO';
+  if (tipo === 'NUEVO' || estado === 'NUEVO') return 'NUEVO';
+  if (tipo === 'CONTINUADOR') return 'CONTINUADOR';
+  if (tipo === 'EGRESO' || estado === 'EGRESADO') {
+    // Si la primera fila útil es egreso, buscar el primer ingreso real
+    const ingreso = lista.find((a) => {
+      const t = String(a.tipo_atencion || '').toUpperCase();
+      return t === 'NUEVO' || t.includes('REINGRESO') || t === 'CONTINUADOR';
+    });
+    if (ingreso) {
+      const t = String(ingreso.tipo_atencion || '').toUpperCase();
+      if (t.includes('REINGRESO')) return 'REINGRESO';
+      if (t === 'NUEVO') return 'NUEVO';
+      if (t === 'CONTINUADOR') return 'CONTINUADOR';
+    }
+  }
+  return tipo || null;
+}
+
 function enriquecerFilasConAtencion(filas, atenciones) {
+  const todasPorPaciente = new Map();
   const porPaciente = new Map();
   const porAtencion = new Map();
   (Array.isArray(atenciones) ? atenciones : []).forEach((a) => {
     const pid = a.id_paciente ?? a.datosPaciente?.id_paciente;
     if (pid != null) {
       const key = String(pid);
+      if (!todasPorPaciente.has(key)) todasPorPaciente.set(key, []);
+      todasPorPaciente.get(key).push(a);
+
       const prev = porPaciente.get(key);
       if (!prev) porPaciente.set(key, a);
       else {
@@ -423,19 +471,23 @@ function enriquecerFilasConAtencion(filas, atenciones) {
     let at = row.id_paciente_atencion != null
       ? porAtencion.get(String(row.id_paciente_atencion))
       : null;
-    if (!at) {
-      const pid = row.id_paciente ?? row.datosPaciente?.id_paciente;
-      if (pid != null) at = porPaciente.get(String(pid));
-    }
+    const pid = row.id_paciente ?? row.datosPaciente?.id_paciente;
+    if (!at && pid != null) at = porPaciente.get(String(pid));
+    const listaPaciente = pid != null ? (todasPorPaciente.get(String(pid)) || []) : [];
+    const tipoInicial = tipoAtencionInicialDeLista(listaPaciente)
+      || tipoAtencionInicialDeLista(at ? [at] : [])
+      || null;
     const esEgresado = row.es_egresado === true
       || (at && String(at.estado || '').toUpperCase() !== 'ACTIVO'
         && (['CERRADO', 'CERRADA', 'EGRESADO'].includes(String(at.estado || '').toUpperCase())
           || String(at.tipo_atencion || '').toUpperCase() === 'EGRESO'));
-    if (!at && !esEgresado) return row;
+    if (!at && !esEgresado && !tipoInicial) return row;
     return {
       ...row,
       id_paciente_atencion: row.id_paciente_atencion ?? at?.id_paciente_atencion,
       tipo_atencion: esEgresado ? 'EGRESO' : (row.tipo_atencion ?? at?.tipo_atencion),
+      tipo_atencion_inicial: tipoInicial,
+      condicion_inicial: tipoInicial,
       estado_atencion: esEgresado ? 'EGRESADO' : (row.estado_atencion ?? at?.estado),
       estado_aprobacion: row.estado_aprobacion ?? at?.estado_aprobacion ?? 'PENDIENTE',
       datosPacienteAtencion: row.datosPacienteAtencion ?? at,

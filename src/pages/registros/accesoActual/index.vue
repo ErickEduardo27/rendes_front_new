@@ -172,7 +172,6 @@
                             Editar
                           </button>
                           <button
-                            v-if="!registroDePacienteEgresado(r, listadoAtenciones)"
                             type="button"
                             class="tabla-av-btn tabla-av-btn-eliminar"
                             :disabled="!formularioAbierto || eliminandoId === r.id_unidad_actual"
@@ -288,7 +287,6 @@
                             Editar
                           </button>
                           <button
-                            v-if="!fila.es_egresado"
                             type="button"
                             class="tabla-av-btn tabla-av-btn-eliminar"
                             :disabled="!formularioAbierto || eliminandoId === fila.id_unidad_actual"
@@ -801,7 +799,7 @@ import { ref, computed, onMounted, watch, inject } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
-import { atencionesParaListadoRegistros, esPacienteEgresadoEnListado, registroDePacienteEgresado, fechaEgresoAtencionISO } from '@/composables/useAtencionesRegistro';
+import { atencionesParaListadoRegistros, esPacienteEgresadoEnListado, fechaEgresoAtencionISO } from '@/composables/useAtencionesRegistro';
 import { fechaCelda } from '@/utils/fechaFormat';
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
@@ -1775,10 +1773,6 @@ function abrirModalEditar(registro) {
 
 async function eliminarRegistro(registro) {
   if (!formularioAbierto.value || !registro?.id_unidad_actual) return;
-  if (registroDePacienteEgresado(registro, listadoAtenciones.value)) {
-    ElMessage.warning('Paciente egresado: no se puede eliminar el registro.');
-    return;
-  }
   const nombre = nombrePaciente(registro);
   const confirmar = window.confirm(`¿Eliminar el registro de acceso vascular de ${nombre}?`);
   if (!confirmar) return;
