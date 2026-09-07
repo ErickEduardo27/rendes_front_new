@@ -20,8 +20,10 @@
           <button
             type="button"
             class="header-accion-btn header-accion-btn-primario"
-            :disabled="existeRegistroEnPeriodoActual"
-            :title="existeRegistroEnPeriodoActual ? 'Ya hay un registro para este periodo. Edítelo desde la tabla.' : undefined"
+            :disabled="!filtroListo || existeRegistroEnPeriodoActual || cargando"
+            :title="!filtroListo
+              ? 'Seleccione periodo y clínica'
+              : (existeRegistroEnPeriodoActual ? 'Ya hay un registro para este periodo. Edítelo desde la tabla.' : undefined)"
             @click="abrirModalNuevo"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -47,33 +49,45 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-for="registro in registrosFiltrados" :key="registro.id" class="hover:bg-slate-50/80 transition-colors">
-                <td class="tabla-cm-td font-medium text-slate-800">{{ formatoFechaTabla(registro.fechaRegistro || registro.periodo) }}</td>
-                <td class="tabla-cm-td text-slate-600">{{ registro.control }}</td>
-                <td class="tabla-cm-td text-slate-600 tabular-nums">
-                  {{ formatoNumero(registro.bacSaOsmosis) }} / {{ formatoNumero(registro.bacAniCirculacion) }}
-                </td>
-                <td class="tabla-cm-td text-slate-600">{{ resumenEndoAgua(registro) }}</td>
-                <td class="tabla-cm-td text-slate-600 tabular-nums">
-                  {{ formatoNumero(registro.bacMaquiHemodi) }} / {{ formatoNumero(registro.bacMaquiHemodi2) }}
-                </td>
-                <td class="tabla-cm-td text-slate-600">{{ resumenEndoLiquido(registro) }}</td>
-                <td class="tabla-cm-td tabla-cm-td-acciones">
-                  <button
-                    type="button"
-                    class="tabla-cm-btn tabla-cm-btn-editar"
-                    title="Editar registro"
-                    @click="abrirModalEditar(registro)"
-                  >
-                    Editar
-                  </button>
+              <tr v-if="cargando">
+                <td colspan="7" class="tabla-cm-td text-center text-slate-500 py-8">
+                  Cargando registros…
                 </td>
               </tr>
-              <tr v-if="registrosFiltrados.length === 0">
+              <tr v-else-if="!filtroListo">
                 <td colspan="7" class="tabla-cm-td text-center text-slate-500 italic py-8">
-                  No hay registros para esta IPRESS.
+                  Seleccione periodo y clínica en el encabezado.
                 </td>
               </tr>
+              <template v-else>
+                <tr v-for="registro in registrosFiltrados" :key="registro.id" class="hover:bg-slate-50/80 transition-colors">
+                  <td class="tabla-cm-td font-medium text-slate-800">{{ formatoFechaTabla(registro.fechaRegistro || registro.periodo) }}</td>
+                  <td class="tabla-cm-td text-slate-600">{{ registro.control }}</td>
+                  <td class="tabla-cm-td text-slate-600 tabular-nums">
+                    {{ formatoNumero(registro.bacSaOsmosis) }} / {{ formatoNumero(registro.bacAniCirculacion) }}
+                  </td>
+                  <td class="tabla-cm-td text-slate-600">{{ resumenEndoAgua(registro) }}</td>
+                  <td class="tabla-cm-td text-slate-600 tabular-nums">
+                    {{ formatoNumero(registro.bacMaquiHemodi) }} / {{ formatoNumero(registro.bacMaquiHemodi2) }}
+                  </td>
+                  <td class="tabla-cm-td text-slate-600">{{ resumenEndoLiquido(registro) }}</td>
+                  <td class="tabla-cm-td tabla-cm-td-acciones">
+                    <button
+                      type="button"
+                      class="tabla-cm-btn tabla-cm-btn-editar"
+                      title="Editar registro"
+                      @click="abrirModalEditar(registro)"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+                <tr v-if="registrosFiltrados.length === 0">
+                  <td colspan="7" class="tabla-cm-td text-center text-slate-500 italic py-8">
+                    No hay registros para este periodo e IPRESS.
+                  </td>
+                </tr>
+              </template>
             </tbody>
           </table>
         </div>
@@ -240,91 +254,31 @@
 
 <script setup>
 import { ref, computed, watch, inject, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { ElMessage } from 'element-plus';
-import { getAllIpress } from '@/services/ipress/Ipress.service';
+import { useAuthStore } from '@/store/auth';
+import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
+const authStore = useAuthStore();
+const { user } = storeToRefs(authStore);
+
 const periodos = ref([]);
+const registros = ref([]);
+const cargando = ref(false);
+const guardando = ref(false);
+const idUsuarioIpress = ref(null);
 
-const listaIpress = ref([
-  { id_ipress: 1, nombre_corto: 'Centro Nacional de Salud Renal' },
-  { id_ipress: 2, nombre_corto: 'Clínica Vida' },
-  { id_ipress: 3, nombre_corto: 'Sanar' },
-]);
-const ipressSeleccionada = ref(listaIpress.value[0]?.id_ipress ?? null);
+const periodoVisibleId = computed(() => periodoGlobal.value ?? null);
+const ipressActiva = computed(() => clinicaGlobal.value ?? null);
 
-const registros = ref([
-  {
-    id: 1,
-    id_ipress: 1,
-    fechaRegistro: '2025-09-15',
-    control: 'Sí',
-    bacSaOsmosis: 10,
-    bacAniCirculacion: 10,
-    endoAguaTrata: 'Normal',
-    rtnAnilloCir: 'Normal',
-    bacMaquiHemodi: 7,
-    bacMaquiHemodi2: 11,
-    endMaquiHemodi: 'Normal',
-    endMaquiHemodi2: 'Normal',
-  },
-  {
-    id: 2,
-    id_ipress: 1,
-    fechaRegistro: '2025-08-10',
-    control: 'No',
-    bacSaOsmosis: null,
-    bacAniCirculacion: null,
-    endoAguaTrata: '',
-    rtnAnilloCir: '',
-    bacMaquiHemodi: null,
-    bacMaquiHemodi2: null,
-    endMaquiHemodi: '',
-    endMaquiHemodi2: '',
-  },
-]);
+const filtroListo = computed(() => (
+  periodoVisibleId.value != null && periodoVisibleId.value !== ''
+  && ipressActiva.value != null && ipressActiva.value !== ''
+));
 
-const ipressActiva = computed(() => clinicaGlobal.value ?? ipressSeleccionada.value);
-
-function rangoDesdeTextoPeriodo(textoPeriodo) {
-  if (!textoPeriodo) return { min: null, max: null };
-  const parts = String(textoPeriodo).trim().split('-');
-  if (parts.length < 2) return { min: null, max: null };
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  if (Number.isNaN(year) || Number.isNaN(month)) return { min: null, max: null };
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
-  return {
-    min: firstDay.toISOString().split('T')[0],
-    max: lastDay.toISOString().split('T')[0],
-  };
-}
-
-function registroPerteneceAlPeriodo(registro, idPeriodo) {
-  if (idPeriodo == null || idPeriodo === '') return false;
-  if (registro.id_periodo != null && registro.id_periodo !== '') {
-    return String(registro.id_periodo) === String(idPeriodo);
-  }
-  const fecha = registro.fechaRegistro || registro.periodo;
-  if (!fecha) return false;
-  const lista = Array.isArray(periodos.value) ? periodos.value : [];
-  const p = lista.find((per) => String(per.id_periodo) === String(idPeriodo));
-  const rango = rangoDesdeTextoPeriodo(p?.periodo);
-  if (!rango.min || !rango.max) return false;
-  return fecha >= rango.min && fecha <= rango.max;
-}
-
-const registrosFiltrados = computed(() => {
-  const idIpress = ipressActiva.value;
-  const idPeriodo = periodoVisibleId.value;
-  return registros.value.filter((r) => {
-    const matchIpress = idIpress == null || !r.id_ipress || String(r.id_ipress) === String(idIpress);
-    if (idPeriodo == null || idPeriodo === '') return matchIpress;
-    return matchIpress && registroPerteneceAlPeriodo(r, idPeriodo);
-  });
-});
+const registrosFiltrados = computed(() => registros.value);
 
 const existeRegistroEnPeriodoActual = computed(() => registrosFiltrados.value.length > 0);
 
@@ -352,8 +306,6 @@ const opcionesEndotoxina = [
   { value: 'Anormal_03', label: 'Anormal (> 0,3)' },
 ];
 
-const periodoVisibleId = computed(() => periodoGlobal.value ?? null);
-
 const periodoTexto = computed(() => {
   const idPeriodo = periodoVisibleId.value;
   if (idPeriodo == null) return '';
@@ -363,6 +315,21 @@ const periodoTexto = computed(() => {
 });
 
 const periodoDisplay = computed(() => periodoTexto.value || '—');
+
+function rangoDesdeTextoPeriodo(textoPeriodo) {
+  if (!textoPeriodo) return { min: null, max: null };
+  const parts = String(textoPeriodo).trim().split('-');
+  if (parts.length < 2) return { min: null, max: null };
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  if (Number.isNaN(year) || Number.isNaN(month)) return { min: null, max: null };
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  return {
+    min: firstDay.toISOString().split('T')[0],
+    max: lastDay.toISOString().split('T')[0],
+  };
+}
 
 const rangoFechasPeriodo = computed(() => {
   const lista = Array.isArray(periodos.value) ? periodos.value : [];
@@ -381,8 +348,13 @@ const rangoFechasPeriodoTexto = computed(() => {
   };
 });
 
-/** Solo bloquea guardar si la fecha ingresada (opcional) está fuera del periodo. */
-const puedeGuardarFormulario = computed(() => !errorFechaRegistro.value);
+const puedeGuardarFormulario = computed(() => (
+  !errorFechaRegistro.value
+  && !guardando.value
+  && filtroListo.value
+  && idUsuarioIpress.value != null
+  && (control.value === '1' || control.value === '2')
+));
 
 function formatoFechaTabla(iso) {
   if (!iso) return '—';
@@ -416,42 +388,16 @@ function validarFechaRegistro() {
 
 function bloquearRegistroDuplicadoEnPeriodo() {
   if (modoEdicion.value) return false;
-  if (periodoVisibleId.value == null || periodoVisibleId.value === '') return false;
   if (!existeRegistroEnPeriodoActual.value) return false;
   ElMessage.warning('Solo puede registrar un control por mes (periodo de reporte). Edite el registro existente.');
   return true;
 }
 
-async function fetchPeriodos() {
-  try {
-    const res = await getAllIpress('/periodos/');
-    periodos.value = Array.isArray(res) ? res : (res?.results || []);
-  } catch (e) {
-    console.error('Error al cargar periodos:', e);
-    periodos.value = [];
-  }
-}
-
 function controlDesdeRegistro(val) {
-  if (val === 'Sí') return '1';
-  if (val === 'No') return '2';
+  if (val === true || val === 'Sí' || val === 1 || val === '1') return '1';
+  if (val === false || val === 'No' || val === 0 || val === '2') return '2';
   return '';
 }
-
-function limpiarSoloMediciones() {
-  bacSaOsmosis.value = '';
-  bacAniCirculacion.value = '';
-  endoAguaTrata.value = '';
-  rtnAnilloCir.value = '';
-  bacMaquiHemodi.value = '';
-  bacMaquiHemodi2.value = '';
-  endMaquiHemodi.value = '';
-  endMaquiHemodi2.value = '';
-}
-
-watch(control, (val) => {
-  if (val !== '1') limpiarSoloMediciones();
-});
 
 function normalizarEndotoxina(val) {
   if (val === 'Anormal') return 'Anormal_03';
@@ -488,10 +434,119 @@ function resumenEndoLiquido(r) {
   return `M1: ${a} · M2: ${b}`;
 }
 
-function limpiarFormulario() {
-  fechaRegistro.value = '';
-  errorFechaRegistro.value = '';
-  control.value = '';
+function mapApiARegistro(row) {
+  const conControl = Boolean(row.control);
+  return {
+    id: row.id_calidad_microbiologica,
+    id_calidad_microbiologica: row.id_calidad_microbiologica,
+    id_usuario_ipress: row.id_usuario_ipress,
+    id_periodo: row.id_periodo,
+    id_ipress: row.id_ipress,
+    fechaRegistro: row.fecha_registro || '',
+    control: conControl ? 'Sí' : 'No',
+    bacSaOsmosis: conControl && row.salida_osmosis_ufc !== '' ? row.salida_osmosis_ufc : null,
+    bacAniCirculacion: conControl && row.anillo_circulacion_ufc !== '' ? row.anillo_circulacion_ufc : null,
+    endoAguaTrata: conControl ? (row.salida_osmosis_ue || '') : '',
+    rtnAnilloCir: conControl ? (row.anillo_circulacion_ue || '') : '',
+    bacMaquiHemodi: conControl && row.maquina_1_ufc !== '' ? row.maquina_1_ufc : null,
+    bacMaquiHemodi2: conControl && row.maquina_2_ufc !== '' ? row.maquina_2_ufc : null,
+    endMaquiHemodi: conControl ? (row.maquina_1_ue || '') : '',
+    endMaquiHemodi2: conControl ? (row.maquina_2_ue || '') : '',
+  };
+}
+
+function textoOVacio(val) {
+  if (val == null || val === '') return '';
+  return String(val);
+}
+
+function construirPayloadApi() {
+  const conMediciones = control.value === '1';
+  return {
+    id_usuario_ipress: Number(idUsuarioIpress.value),
+    id_periodo: Number(periodoVisibleId.value),
+    id_ipress: Number(ipressActiva.value),
+    fecha_registro: fechaRegistro.value || '',
+    control: conMediciones,
+    salida_osmosis_ufc: conMediciones ? textoOVacio(bacSaOsmosis.value) : '',
+    anillo_circulacion_ufc: conMediciones ? textoOVacio(bacAniCirculacion.value) : '',
+    salida_osmosis_ue: conMediciones ? textoOVacio(endoAguaTrata.value) : '',
+    anillo_circulacion_ue: conMediciones ? textoOVacio(rtnAnilloCir.value) : '',
+    maquina_1_ufc: conMediciones ? textoOVacio(bacMaquiHemodi.value) : '',
+    maquina_2_ufc: conMediciones ? textoOVacio(bacMaquiHemodi2.value) : '',
+    maquina_1_ue: conMediciones ? textoOVacio(endMaquiHemodi.value) : '',
+    maquina_2_ue: conMediciones ? textoOVacio(endMaquiHemodi2.value) : '',
+  };
+}
+
+async function fetchPeriodos() {
+  try {
+    const res = await getAllIpress('/periodos/');
+    periodos.value = Array.isArray(res) ? res : (res?.results || []);
+  } catch (e) {
+    console.error('Error al cargar periodos:', e);
+    periodos.value = [];
+  }
+}
+
+async function resolverIdUsuarioIpress() {
+  const idIpress = ipressActiva.value;
+  if (idIpress == null || idIpress === '') {
+    idUsuarioIpress.value = null;
+    return null;
+  }
+  const idUsuario = user.value?.id_usuario ?? JSON.parse(localStorage.getItem('user') || 'null')?.id_usuario;
+  if (idUsuario) {
+    try {
+      const asig = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${idUsuario}`);
+      const lista = Array.isArray(asig) ? asig : (asig?.results || []);
+      const match = lista.find((a) => String(a.id_ipress) === String(idIpress));
+      if (match?.id_usuario_ipress != null) {
+        idUsuarioIpress.value = match.id_usuario_ipress;
+        return match.id_usuario_ipress;
+      }
+    } catch (e) {
+      console.error('Error al resolver usuario IPRESS:', e);
+    }
+  }
+  try {
+    const uiList = await getAllIpress(`/usuarioIpress/?id_ipress=${idIpress}`);
+    const lista = Array.isArray(uiList) ? uiList : (uiList?.results || []);
+    const id = lista[0]?.id_usuario_ipress ?? null;
+    idUsuarioIpress.value = id;
+    return id;
+  } catch (e) {
+    console.error('Error al obtener vínculo usuario–IPRESS:', e);
+    idUsuarioIpress.value = null;
+    return null;
+  }
+}
+
+async function cargarRegistros() {
+  if (!filtroListo.value) {
+    registros.value = [];
+    return;
+  }
+  cargando.value = true;
+  try {
+    await resolverIdUsuarioIpress();
+    const params = new URLSearchParams({
+      id_periodo: String(periodoVisibleId.value),
+      id_ipress: String(ipressActiva.value),
+    });
+    const data = await getAllIpress(`/calidadMicrobiologicas/?${params.toString()}`);
+    const lista = Array.isArray(data) ? data : (data?.results || []);
+    registros.value = lista.map(mapApiARegistro);
+  } catch (e) {
+    console.error('Error al cargar calidad microbiológica:', e);
+    registros.value = [];
+    ElMessage.error('No se pudieron cargar los registros de calidad de agua.');
+  } finally {
+    cargando.value = false;
+  }
+}
+
+function limpiarSoloMediciones() {
   bacSaOsmosis.value = '';
   bacAniCirculacion.value = '';
   endoAguaTrata.value = '';
@@ -502,8 +557,19 @@ function limpiarFormulario() {
   endMaquiHemodi2.value = '';
 }
 
+watch(control, (val) => {
+  if (val !== '1') limpiarSoloMediciones();
+});
+
+function limpiarFormulario() {
+  fechaRegistro.value = '';
+  errorFechaRegistro.value = '';
+  control.value = '';
+  limpiarSoloMediciones();
+}
+
 function cargarRegistroEnFormulario(registro) {
-  fechaRegistro.value = registro.fechaRegistro || registro.periodo || '';
+  fechaRegistro.value = registro.fechaRegistro || '';
   validarFechaRegistro();
   control.value = controlDesdeRegistro(registro.control);
   if (control.value === '1') {
@@ -518,8 +584,17 @@ function cargarRegistroEnFormulario(registro) {
   }
 }
 
-function abrirModalNuevo() {
+async function abrirModalNuevo() {
+  if (!filtroListo.value) {
+    ElMessage.warning('Seleccione periodo y clínica en el encabezado.');
+    return;
+  }
   if (bloquearRegistroDuplicadoEnPeriodo()) return;
+  await resolverIdUsuarioIpress();
+  if (idUsuarioIpress.value == null) {
+    ElMessage.error('No se encontró asignación usuario–IPRESS para guardar el registro.');
+    return;
+  }
   modoEdicion.value = false;
   registroEdicionId.value = null;
   limpiarFormulario();
@@ -535,79 +610,80 @@ function abrirModalEditar(registro) {
 }
 
 function cerrarModalFormulario() {
+  if (guardando.value) return;
   mostrarModalFormulario.value = false;
   modoEdicion.value = false;
   registroEdicionId.value = null;
   limpiarFormulario();
 }
 
-function construirRegistroDesdeFormulario() {
-  const conMediciones = control.value === '1';
-  return {
-    id_periodo: periodoVisibleId.value ?? null,
-    fechaRegistro: fechaRegistro.value || '',
-    control: control.value === '1' ? 'Sí' : control.value === '2' ? 'No' : '',
-    bacSaOsmosis: conMediciones && bacSaOsmosis.value !== '' ? Number(bacSaOsmosis.value) : null,
-    bacAniCirculacion: conMediciones && bacAniCirculacion.value !== '' ? Number(bacAniCirculacion.value) : null,
-    endoAguaTrata: conMediciones ? (endoAguaTrata.value || '') : '',
-    rtnAnilloCir: conMediciones ? (rtnAnilloCir.value || '') : '',
-    bacMaquiHemodi: conMediciones && bacMaquiHemodi.value !== '' ? Number(bacMaquiHemodi.value) : null,
-    bacMaquiHemodi2: conMediciones && bacMaquiHemodi2.value !== '' ? Number(bacMaquiHemodi2.value) : null,
-    endMaquiHemodi: conMediciones ? (endMaquiHemodi.value || '') : '',
-    endMaquiHemodi2: conMediciones ? (endMaquiHemodi2.value || '') : '',
-  };
-}
-
-function guardarRegistro() {
+async function persistirRegistro({ cerrarModal = true, limpiarTrasGuardar = false } = {}) {
   if (!validarFechaRegistro()) {
     ElMessage.warning(errorFechaRegistro.value || 'Revise la fecha de registro.');
-    return;
+    return false;
   }
-  if (!puedeGuardarFormulario.value) return;
-  if (bloquearRegistroDuplicadoEnPeriodo()) return;
-  const datos = construirRegistroDesdeFormulario();
+  if (!puedeGuardarFormulario.value) {
+    if (!control.value) ElMessage.warning('Seleccione si se realizaron controles.');
+    return false;
+  }
+  if (bloquearRegistroDuplicadoEnPeriodo()) return false;
 
-  if (modoEdicion.value && registroEdicionId.value != null) {
-    const idx = registros.value.findIndex((r) => r.id === registroEdicionId.value);
-    if (idx >= 0) {
-      registros.value[idx] = {
-        ...registros.value[idx],
-        ...datos,
-      };
+  await resolverIdUsuarioIpress();
+  if (idUsuarioIpress.value == null) {
+    ElMessage.error('No se encontró asignación usuario–IPRESS para guardar el registro.');
+    return false;
+  }
+
+  guardando.value = true;
+  try {
+    const payload = construirPayloadApi();
+    if (modoEdicion.value && registroEdicionId.value != null) {
+      await patchAllIpress(`/calidadMicrobiologicas/${registroEdicionId.value}/`, payload);
+      ElMessage.success('Registro actualizado correctamente.');
+    } else {
+      await postAllIpress('/calidadMicrobiologicas/', payload);
+      ElMessage.success('Registro guardado correctamente.');
     }
-  } else {
-    registros.value.unshift({
-      id: Date.now(),
-      id_ipress: ipressActiva.value,
-      ...datos,
-    });
+    window.dispatchEvent(new CustomEvent('calidad-agua:actualizar'));
+    await cargarRegistros();
+    if (limpiarTrasGuardar) limpiarFormulario();
+    if (cerrarModal) cerrarModalFormulario();
+    return true;
+  } catch (e) {
+    console.error(e);
+    const detalle = e?.response?.data?.detail
+      || e?.response?.data?.non_field_errors?.[0]
+      || e?.detail
+      || e?.error
+      || e?.message;
+    const msg = typeof detalle === 'string' ? detalle : 'No se pudo guardar el registro.';
+    if (String(msg).toLowerCase().includes('unique') || String(msg).toLowerCase().includes('único')) {
+      ElMessage.error('Ya existe un registro para este periodo e IPRESS.');
+    } else {
+      ElMessage.error(msg);
+    }
+    return false;
+  } finally {
+    guardando.value = false;
   }
-
-  cerrarModalFormulario();
 }
 
-function guardarYVolver() {
-  if (!validarFechaRegistro()) {
-    ElMessage.warning(errorFechaRegistro.value || 'Revise la fecha de registro.');
-    return;
-  }
-  if (!puedeGuardarFormulario.value) return;
-  if (bloquearRegistroDuplicadoEnPeriodo()) return;
-  const datos = construirRegistroDesdeFormulario();
-  registros.value.unshift({
-    id: Date.now(),
-    id_ipress: ipressActiva.value,
-    ...datos,
-  });
-  limpiarFormulario();
+async function guardarRegistro() {
+  await persistirRegistro({ cerrarModal: true });
 }
 
-watch(periodoGlobal, () => {
+async function guardarYVolver() {
+  await persistirRegistro({ cerrarModal: true, limpiarTrasGuardar: true });
+}
+
+watch([periodoGlobal, clinicaGlobal], () => {
   if (fechaRegistro.value) validarFechaRegistro();
+  cargarRegistros();
 });
 
-onMounted(() => {
-  fetchPeriodos();
+onMounted(async () => {
+  await fetchPeriodos();
+  await cargarRegistros();
 });
 </script>
 

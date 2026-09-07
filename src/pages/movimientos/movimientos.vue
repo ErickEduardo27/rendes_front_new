@@ -79,8 +79,11 @@
                             <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Tipo Movimiento
                             </th>
-                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                                Condición
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider" title="Condición con la que ingresó al periodo (primera atención del mes)">
+                                Condición inicial
+                            </th>
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider" title="Condición actual a la fecha (última / activa)">
+                                Condición final
                             </th>
                             <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 Tipo Egreso
@@ -101,7 +104,7 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <tr v-if="movimientosFiltrados.length === 0">
-                            <td colspan="10" class="px-3 py-6 text-center text-gray-500">
+                            <td colspan="11" class="px-3 py-6 text-center text-gray-500">
                                 No hay pacientes con movimientos en este periodo, clínica y modalidad
                             </td>
                         </tr>
@@ -127,16 +130,13 @@
                                 </span>
                             </td>
                             <td class="px-3 py-2 text-gray-900">
-                                <span :class="[
-                                    'inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full',
-                                    movimiento.condicion === 'NUEVO' ? 'bg-purple-100 text-purple-800' : 
-                                    movimiento.condicion === 'REINGRESO' ? 'bg-yellow-100 text-yellow-800' : 
-                                    movimiento.condicion === 'CONTINUADOR' ? 'bg-blue-100 text-blue-800' :
-                                    movimiento.condicion === 'EGRESADO' ? 'bg-gray-100 text-gray-800' :
-                                    movimiento.condicion === 'CAMBIO_MODALIDAD' ? 'bg-indigo-100 text-indigo-800' :
-                                    'bg-gray-100 text-gray-600'
-                                ]">
-                                    {{ movimiento.condicion }}
+                                <span :class="claseBadgeCondicion(movimiento.condicion_inicial)">
+                                    {{ movimiento.condicion_inicial || '—' }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-2 text-gray-900">
+                                <span :class="claseBadgeCondicion(movimiento.condicion_final)">
+                                    {{ movimiento.condicion_final || '—' }}
                                 </span>
                             </td>
                             <td class="px-3 py-2 text-gray-600">
@@ -3000,6 +3000,70 @@ const egresarPaciente = async () => {
 };
 
 // Funciones de carga de datos: listar atenciones según periodo, ipress y modalidad globales
+const esAtencionHistoricaOCambio = (mov) => {
+    const estado = String(mov?.estado || '').toUpperCase();
+    const tipo = String(mov?.tipo_atencion || mov?.tipo || '').toUpperCase();
+    return tipo === 'CAMBIO_MODALIDAD' || estado === 'HISTORICO';
+};
+
+const etiquetaCondicionMovimiento = (mov) => {
+    if (!mov) return '—';
+    const tipo = String(mov.tipo_atencion || '').toUpperCase();
+    const estado = String(mov.estado || '').toUpperCase();
+    if (tipo === 'EGRESO' || estado === 'EGRESADO' || mov.tipo === 'EGRESO') return 'EGRESADO';
+    if (tipo.includes('REINGRESO')) return 'REINGRESO';
+    if (tipo === 'NUEVO' || estado === 'NUEVO') return 'NUEVO';
+    if (tipo === 'CONTINUADOR') return 'CONTINUADOR';
+    if (tipo === 'CAMBIO_MODALIDAD') return 'CAMBIO_MODALIDAD';
+    if (mov.condicion && mov.condicion !== 'N/A') return String(mov.condicion).toUpperCase();
+    return tipo || '—';
+};
+
+const condicionInicialDeGrupo = (lista) => {
+    const ordenada = (Array.isArray(lista) ? lista : [])
+        .filter((m) => !esAtencionHistoricaOCambio(m))
+        .sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+    if (!ordenada.length) return '—';
+    const primera = ordenada[0];
+    const cond = etiquetaCondicionMovimiento(primera);
+    if (cond === 'EGRESADO') {
+        const ingreso = ordenada.find((m) => {
+            const t = String(m.tipo_atencion || '').toUpperCase();
+            return t === 'NUEVO' || t.includes('REINGRESO') || t === 'CONTINUADOR';
+        });
+        return ingreso ? etiquetaCondicionMovimiento(ingreso) : cond;
+    }
+    return cond;
+};
+
+const condicionFinalDeGrupo = (lista) => {
+    const filas = Array.isArray(lista) ? lista : [];
+    const activo = filas.find((m) => (
+        String(m.estado || '').toUpperCase() === 'ACTIVO' && !esAtencionHistoricaOCambio(m)
+    ));
+    if (activo) return etiquetaCondicionMovimiento(activo);
+    const ordenada = [...filas]
+        .filter((m) => {
+            const tipo = String(m.tipo_atencion || '').toUpperCase();
+            if (tipo === 'EGRESO' || String(m.estado || '').toUpperCase() === 'EGRESADO') return true;
+            return !esAtencionHistoricaOCambio(m);
+        })
+        .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+    if (!ordenada.length) return '—';
+    return etiquetaCondicionMovimiento(ordenada[0]);
+};
+
+const claseBadgeCondicion = (condicion) => {
+    const c = String(condicion || '').toUpperCase();
+    const base = 'inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full';
+    if (c === 'NUEVO') return `${base} bg-purple-100 text-purple-800`;
+    if (c === 'REINGRESO') return `${base} bg-yellow-100 text-yellow-800`;
+    if (c === 'CONTINUADOR') return `${base} bg-blue-100 text-blue-800`;
+    if (c === 'EGRESADO') return `${base} bg-gray-100 text-gray-800`;
+    if (c === 'CAMBIO_MODALIDAD') return `${base} bg-indigo-100 text-indigo-800`;
+    return `${base} bg-gray-100 text-gray-600`;
+};
+
 const mapearAtencionAMovimiento = (mov) => {
     const tipoAtencion = String(mov.tipo_atencion || '').toUpperCase();
     const estadoAtencion = String(mov.estado || '').toUpperCase();
@@ -3027,6 +3091,8 @@ const mapearAtencionAMovimiento = (mov) => {
         condicion: tipo === 'EGRESO'
             ? 'EGRESADO'
             : (tipoAtencion === 'CAMBIO_MODALIDAD' ? 'CAMBIO_MODALIDAD' : (mov.tipo_atencion || 'N/A')),
+        condicion_inicial: null,
+        condicion_final: null,
         fecha: fechaMov,
         paciente_nombre: mov.datosPaciente?.paciente || 'N/A',
         paciente_dni: mov.datosPaciente?.documento || 'N/A',
@@ -3056,8 +3122,23 @@ const fetchMovimientos = async (filtrosOverride = null) => {
         const respuesta = await getAllIpress(url);
         const lista = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
 
-        movimientos.value = lista
-            .map(mapearAtencionAMovimiento)
+        const mapeados = lista.map(mapearAtencionAMovimiento);
+        const porPaciente = new Map();
+        for (const m of mapeados) {
+            const clave = String(m.id_paciente ?? m.paciente_dni ?? m.id);
+            if (!porPaciente.has(clave)) porPaciente.set(clave, []);
+            porPaciente.get(clave).push(m);
+        }
+
+        movimientos.value = mapeados
+            .map((m) => {
+                const grupo = porPaciente.get(String(m.id_paciente ?? m.paciente_dni ?? m.id)) || [m];
+                return {
+                    ...m,
+                    condicion_inicial: condicionInicialDeGrupo(grupo),
+                    condicion_final: condicionFinalDeGrupo(grupo),
+                };
+            })
             .sort((a, b) => {
                 const cmpFecha = String(b.fecha).localeCompare(String(a.fecha));
                 if (cmpFecha !== 0) return cmpFecha;

@@ -78,8 +78,8 @@
           <p class="text-2xl font-bold text-amber-700 tabular-nums">{{ resumenVista.atenciones_adicionales ?? '—' }}</p>
         </div>
         <div class="rounded-xl border bg-white px-4 py-3 shadow-sm">
-          <p class="text-[10px] uppercase font-bold text-violet-600">Sesiones con tiempo HD</p>
-          <p class="text-2xl font-bold text-violet-700 tabular-nums">{{ resumenVista.total_sesiones_tiempo }}</p>
+          <p class="text-[10px] uppercase font-bold text-violet-600">Atenciones totales</p>
+          <p class="text-2xl font-bold text-violet-700 tabular-nums">{{ resumenVista.atenciones_totales ?? '—' }}</p>
         </div>
       </div>
 
@@ -96,6 +96,61 @@
           Importado por {{ importacion.usuario_nombre || '—' }}
           <span v-if="importacion.creado_en"> · {{ formatearFecha(importacion.creado_en) }}</span>
         </p>
+      </div>
+
+      <div
+        v-if="filtroListo && importacion.importado"
+        class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-4"
+      >
+        <div
+          class="rounded-xl border px-4 py-3 text-sm"
+          :class="soloEnImportacion.length
+            ? 'border-amber-300 bg-amber-50 text-amber-950'
+            : 'border-emerald-200 bg-emerald-50 text-emerald-900'"
+        >
+          <p class="font-bold mb-1">
+            En importación, no en Inicio TRR
+            <span class="tabular-nums">({{ soloEnImportacion.length }})</span>
+          </p>
+          <p class="text-xs opacity-90 mb-2">
+            Pacientes del Excel que no figuran en atención / Inicio TRR del periodo, clínica y modalidad actuales.
+          </p>
+          <p v-if="cargandoInicioTrr" class="text-xs italic">Comparando con Inicio TRR…</p>
+          <template v-else-if="soloEnImportacion.length">
+            <ul class="max-h-40 overflow-y-auto space-y-1 text-xs">
+              <li v-for="p in soloEnImportacion" :key="`imp-${p.documento}`">
+                <span class="font-mono font-semibold">{{ p.documento }}</span>
+                — {{ p.nombre }}
+              </li>
+            </ul>
+          </template>
+          <p v-else class="text-xs font-medium">Todos los importados están en Inicio TRR.</p>
+        </div>
+
+        <div
+          class="rounded-xl border px-4 py-3 text-sm"
+          :class="soloEnInicioTrr.length
+            ? 'border-rose-300 bg-rose-50 text-rose-950'
+            : 'border-emerald-200 bg-emerald-50 text-emerald-900'"
+        >
+          <p class="font-bold mb-1">
+            En Inicio TRR, no en importación
+            <span class="tabular-nums">({{ soloEnInicioTrr.length }})</span>
+          </p>
+          <p class="text-xs opacity-90 mb-2">
+            Pacientes registrados en Inicio TRR que no aparecen en el Excel importado.
+          </p>
+          <p v-if="cargandoInicioTrr" class="text-xs italic">Comparando con Inicio TRR…</p>
+          <template v-else-if="soloEnInicioTrr.length">
+            <ul class="max-h-40 overflow-y-auto space-y-1 text-xs">
+              <li v-for="p in soloEnInicioTrr" :key="`trr-${p.documento}`">
+                <span class="font-mono font-semibold">{{ p.documento }}</span>
+                — {{ p.nombre }}
+              </li>
+            </ul>
+          </template>
+          <p v-else class="text-xs font-medium">Todos los de Inicio TRR están en la importación.</p>
+        </div>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -127,7 +182,7 @@
                   <th class="px-3 py-2 text-center font-semibold text-slate-600">Prog.</th>
                   <th class="px-3 py-2 text-center font-semibold text-slate-600">Ejec.</th>
                   <th class="px-3 py-2 text-center font-semibold text-slate-600">Adic.</th>
-                  <th class="px-3 py-2 text-center font-semibold text-slate-600">Sesiones c/ tiempo</th>
+                  <th class="px-3 py-2 text-center font-semibold text-slate-600">Atenciones totales</th>
                   <th class="px-3 py-2 text-center font-semibold text-slate-600">Tiempo total HD</th>
                   <th class="px-3 py-2 text-center font-semibold text-slate-600">Detalle</th>
                 </tr>
@@ -139,7 +194,7 @@
                   <td class="px-3 py-2 text-center tabular-nums">{{ row.atenciones_programadas }}</td>
                   <td class="px-3 py-2 text-center tabular-nums text-emerald-700 font-semibold">{{ row.atenciones_ejecutadas }}</td>
                   <td class="px-3 py-2 text-center tabular-nums">{{ row.atenciones_adicionales }}</td>
-                  <td class="px-3 py-2 text-center tabular-nums">{{ row.sesiones_con_tiempo }}</td>
+                  <td class="px-3 py-2 text-center tabular-nums text-violet-700 font-semibold">{{ atencionesTotalesFila(row) }}</td>
                   <td class="px-3 py-2 text-center tabular-nums">{{ row.tiempo_total_hhmm || formatMinutosAHhmm(row.tiempo_total_minutos) }}</td>
                   <td class="px-3 py-2 text-center">
                     <button
@@ -200,7 +255,11 @@
             <p>IPRESS en Excel: <strong>{{ preview.resumen.ipress_excel || '—' }}</strong></p>
             <p>Pacientes detectados: <strong>{{ preview.resumen.total_pacientes }}</strong></p>
             <p>Atenciones ejecutadas (pie de Excel): <strong>{{ preview.resumen.atenciones_ejecutadas ?? '—' }}</strong></p>
-            <p>Sesiones con tiempo HD: <strong>{{ preview.resumen.total_sesiones_tiempo }}</strong></p>
+            <p>
+              Atenciones totales:
+              <strong>{{ atencionesTotalesResumen(preview.resumen) }}</strong>
+              <span class="text-slate-500 text-xs">(ejecutadas + adicionales)</span>
+            </p>
             <div
               v-if="validacionPeriodo"
               class="mt-3 rounded-lg px-3 py-2 text-sm"
@@ -210,6 +269,55 @@
             >
               <p class="font-semibold">{{ validacionPeriodo.ok ? 'Periodo válido' : 'Periodo no coincide' }}</p>
               <p class="mt-0.5">{{ validacionPeriodo.mensaje }}</p>
+            </div>
+            <div
+              v-if="validacionPacientesPreview"
+              class="mt-3 grid grid-cols-1 gap-2 text-sm"
+            >
+              <div
+                class="rounded-lg px-3 py-2"
+                :class="validacionPacientesPreview.soloEnImportacion.length
+                  ? 'border border-amber-200 bg-amber-50 text-amber-900'
+                  : 'border border-emerald-200 bg-emerald-50 text-emerald-800'"
+              >
+                <p class="font-semibold">
+                  En Excel, no en Inicio TRR ({{ validacionPacientesPreview.soloEnImportacion.length }})
+                </p>
+                <ul
+                  v-if="validacionPacientesPreview.soloEnImportacion.length"
+                  class="mt-1 max-h-28 overflow-y-auto text-xs space-y-0.5"
+                >
+                  <li
+                    v-for="p in validacionPacientesPreview.soloEnImportacion"
+                    :key="`prev-imp-${p.documento}`"
+                  >
+                    {{ p.documento }} — {{ p.nombre }}
+                  </li>
+                </ul>
+                <p v-else class="text-xs mt-0.5">Sin diferencias en este sentido.</p>
+              </div>
+              <div
+                class="rounded-lg px-3 py-2"
+                :class="validacionPacientesPreview.soloEnInicioTrr.length
+                  ? 'border border-rose-200 bg-rose-50 text-rose-900'
+                  : 'border border-emerald-200 bg-emerald-50 text-emerald-800'"
+              >
+                <p class="font-semibold">
+                  En Inicio TRR, no en Excel ({{ validacionPacientesPreview.soloEnInicioTrr.length }})
+                </p>
+                <ul
+                  v-if="validacionPacientesPreview.soloEnInicioTrr.length"
+                  class="mt-1 max-h-28 overflow-y-auto text-xs space-y-0.5"
+                >
+                  <li
+                    v-for="p in validacionPacientesPreview.soloEnInicioTrr"
+                    :key="`prev-trr-${p.documento}`"
+                  >
+                    {{ p.documento }} — {{ p.nombre }}
+                  </li>
+                </ul>
+                <p v-else class="text-xs mt-0.5">Sin diferencias en este sentido.</p>
+              </div>
             </div>
           </div>
           <p v-if="errorArchivo" class="text-sm text-rose-600">{{ errorArchivo }}</p>
@@ -300,11 +408,68 @@ const pagina = ref(1);
 const pageSize = 20;
 const pacienteDetalle = ref(null);
 const inputArchivo = ref(null);
+const pacientesInicioTrr = ref([]);
+const cargandoInicioTrr = ref(false);
 
 const importacion = ref({
   importado: false,
   detalle: [],
 });
+
+/** Compara documentos ignorando espacios y caracteres no numéricos. */
+function normalizarDocumento(doc) {
+  return String(doc || '').replace(/\D/g, '');
+}
+
+function pacienteDesdeFilaInicioTrr(row) {
+  const documento = row?.datosPaciente?.documento || row?.documento || '';
+  const nombre = row?.datosPaciente?.paciente || row?.paciente || '—';
+  return {
+    documento: String(documento || '').trim() || '—',
+    clave: normalizarDocumento(documento),
+    nombre: String(nombre || '—').trim() || '—',
+  };
+}
+
+function pacienteDesdeFilaImportacion(row) {
+  const documento = row?.numero_documento || '';
+  const nombre = row?.apellidos_nombres || '—';
+  return {
+    documento: String(documento || '').trim() || '—',
+    clave: normalizarDocumento(documento),
+    nombre: String(nombre || '—').trim() || '—',
+  };
+}
+
+function compararImportacionVsInicioTrr(detalleImportacion, listaInicioTrr) {
+  const mapaImport = new Map();
+  (Array.isArray(detalleImportacion) ? detalleImportacion : []).forEach((row) => {
+    const p = pacienteDesdeFilaImportacion(row);
+    if (!p.clave) return;
+    if (!mapaImport.has(p.clave)) mapaImport.set(p.clave, p);
+  });
+
+  const mapaTrr = new Map();
+  (Array.isArray(listaInicioTrr) ? listaInicioTrr : []).forEach((row) => {
+    const p = pacienteDesdeFilaInicioTrr(row);
+    if (!p.clave) return;
+    if (!mapaTrr.has(p.clave)) mapaTrr.set(p.clave, p);
+  });
+
+  const soloEnImportacion = [];
+  mapaImport.forEach((p, clave) => {
+    if (!mapaTrr.has(clave)) soloEnImportacion.push(p);
+  });
+  soloEnImportacion.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  const soloEnInicioTrr = [];
+  mapaTrr.forEach((p, clave) => {
+    if (!mapaImport.has(clave)) soloEnInicioTrr.push(p);
+  });
+  soloEnInicioTrr.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  return { soloEnImportacion, soloEnInicioTrr };
+}
 
 const filtroListo = computed(() => (
   periodoGlobal.value != null && periodoGlobal.value !== ''
@@ -329,13 +494,37 @@ const etiquetaModalidad = computed(() => {
     || String(modalidadGlobal.value || '—');
 });
 
-const resumenVista = computed(() => ({
-  total_pacientes: importacion.value.total_pacientes ?? importacion.value.detalle?.length ?? 0,
-  atenciones_programadas: importacion.value.atenciones_programadas,
-  atenciones_ejecutadas: importacion.value.atenciones_ejecutadas,
-  atenciones_adicionales: importacion.value.atenciones_adicionales,
-  total_sesiones_tiempo: importacion.value.total_sesiones_tiempo ?? 0,
-}));
+const resumenVista = computed(() => {
+  const ejec = importacion.value.atenciones_ejecutadas;
+  const adic = importacion.value.atenciones_adicionales;
+  return {
+    total_pacientes: importacion.value.total_pacientes ?? importacion.value.detalle?.length ?? 0,
+    atenciones_programadas: importacion.value.atenciones_programadas,
+    atenciones_ejecutadas: ejec,
+    atenciones_adicionales: adic,
+    atenciones_totales: atencionesTotalesResumen({
+      atenciones_ejecutadas: ejec,
+      atenciones_adicionales: adic,
+      detalle: importacion.value.detalle,
+    }),
+  };
+});
+
+function atencionesTotalesFila(row) {
+  return (Number(row?.atenciones_ejecutadas) || 0) + (Number(row?.atenciones_adicionales) || 0);
+}
+
+function atencionesTotalesResumen(resumen) {
+  if (!resumen || typeof resumen !== 'object') return '—';
+  const tieneEjec = resumen.atenciones_ejecutadas != null && resumen.atenciones_ejecutadas !== '';
+  const tieneAdic = resumen.atenciones_adicionales != null && resumen.atenciones_adicionales !== '';
+  if (tieneEjec || tieneAdic) {
+    return (Number(resumen.atenciones_ejecutadas) || 0) + (Number(resumen.atenciones_adicionales) || 0);
+  }
+  const detalle = Array.isArray(resumen.detalle) ? resumen.detalle : [];
+  if (!detalle.length) return '—';
+  return detalle.reduce((acc, row) => acc + atencionesTotalesFila(row), 0);
+}
 
 const detalleFiltrado = computed(() => {
   const lista = Array.isArray(importacion.value.detalle) ? importacion.value.detalle : [];
@@ -372,8 +561,43 @@ const puedeConfirmarImportacion = computed(() => (
   && !errorArchivo.value
 ));
 
+const comparacionPacientes = computed(() => compararImportacionVsInicioTrr(
+  importacion.value?.detalle,
+  pacientesInicioTrr.value,
+));
+
+const soloEnImportacion = computed(() => comparacionPacientes.value.soloEnImportacion);
+const soloEnInicioTrr = computed(() => comparacionPacientes.value.soloEnInicioTrr);
+
+const validacionPacientesPreview = computed(() => {
+  if (!preview.value?.detalle?.length) return null;
+  return compararImportacionVsInicioTrr(preview.value.detalle, pacientesInicioTrr.value);
+});
+
 function formatearFecha(iso) {
   return formatFechaHoraDDMMAAAA(iso) || iso;
+}
+
+async function cargarPacientesInicioTrr() {
+  if (!filtroListo.value) {
+    pacientesInicioTrr.value = [];
+    return;
+  }
+  cargandoInicioTrr.value = true;
+  try {
+    const params = new URLSearchParams({
+      id_ipress: String(clinicaGlobal.value),
+      id_periodo: String(periodoGlobal.value),
+      id_modalidad: String(modalidadGlobal.value),
+    });
+    const data = await getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${params.toString()}`);
+    pacientesInicioTrr.value = Array.isArray(data) ? data : (data?.results || []);
+  } catch (e) {
+    console.warn('No se pudo cargar Inicio TRR para comparación:', e);
+    pacientesInicioTrr.value = [];
+  } finally {
+    cargandoInicioTrr.value = false;
+  }
 }
 
 async function cargarCatalogos() {
@@ -439,6 +663,7 @@ function abrirModalImportar() {
   errorArchivo.value = '';
   mostrarModal.value = true;
   if (inputArchivo.value) inputArchivo.value.value = '';
+  cargarPacientesInicioTrr();
 }
 
 function cerrarModal() {
@@ -551,6 +776,7 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   pagina.value = 1;
   busqueda.value = '';
   cargarImportacion();
+  cargarPacientesInicioTrr();
   if (preview.value) {
     const validacion = validarMesExcelVsPeriodo(
       preview.value.resumen?.mes_consulta_excel,
@@ -566,6 +792,6 @@ watch(busqueda, () => {
 
 onMounted(async () => {
   await cargarCatalogos();
-  await cargarImportacion();
+  await Promise.all([cargarImportacion(), cargarPacientesInicioTrr()]);
 });
 </script>

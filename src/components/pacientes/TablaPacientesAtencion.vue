@@ -29,7 +29,7 @@
       v-if="mostrarAprobacion && idIpress != null && idPeriodo != null"
       class="flex flex-wrap items-center justify-between gap-2 mb-3"
     >
-      <p class="text-xs text-slate-500">Editar y Aprobar solo aplican si el paciente tiene ficha de diálisis.</p>
+      <p class="text-xs text-slate-500">Editar, Eliminar y Aprobar solo aplican si el paciente tiene ficha de diálisis y el supervisor aún no aprobó el registro.</p>
       <button
         v-if="pendientesAprobacion.length"
         type="button"
@@ -126,6 +126,15 @@
                   Editar
                 </button>
                 <button
+                  type="button"
+                  class="text-xs px-2 py-0.5 rounded bg-rose-100 text-rose-900 hover:bg-rose-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                  :disabled="!puedeEliminarFila(row) || eliminandoId === (row.id_paciente_dialisis ?? row.id_paciente_atencion)"
+                  :title="tituloBotonEliminar(row)"
+                  @click="eliminarRegistro(row)"
+                >
+                  {{ eliminandoId === (row.id_paciente_dialisis ?? row.id_paciente_atencion) ? '…' : 'Eliminar' }}
+                </button>
+                <button
                   v-if="mostrarAprobacion && mostrarBotonAprobar(row)"
                   type="button"
                   class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-semibold disabled:opacity-40"
@@ -220,7 +229,7 @@
 
 <script setup>
 import { ref, computed, watch, inject, onMounted } from 'vue';
-import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
+import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import { fechaCelda } from '@/utils/fechaFormat';
@@ -277,6 +286,7 @@ const mostrarModalEdicionSupervisor = ref(false);
 const filaEdicionSupervisor = ref(null);
 const aprobandoId = ref(null);
 const aprobandoTodos = ref(false);
+const eliminandoId = ref(null);
 
 const columnasTabla = computed(() => {
   let n = 18;
@@ -389,17 +399,42 @@ function condicionPacienteTexto(row) {
   return '—';
 }
 
+function registroAprobadoPorSupervisor(row) {
+  if (row?.inicio_trr_aprobado === true) return true;
+  return String(row?.estado_aprobacion || '').trim().toUpperCase() === 'APROBADO';
+}
+
 function puedeEditarFila(row) {
+  if (registroAprobadoPorSupervisor(row)) return false;
+  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return false;
+  return true;
+}
+
+function puedeEliminarFila(row) {
+  if (registroAprobadoPorSupervisor(row)) return false;
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return false;
   return true;
 }
 
 function tituloBotonEditar(row) {
+  if (registroAprobadoPorSupervisor(row)) {
+    return 'Registro aprobado por el supervisor: no se puede editar (bloqueo permanente)';
+  }
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
     return 'Sin ficha de diálisis: complete el registro antes de editar';
   }
   if (esPacienteEgresadoEnListado(row)) return 'Paciente egresado: solo edición de lo ya registrado';
   return 'Editar datos del paciente y ficha de diálisis';
+}
+
+function tituloBotonEliminar(row) {
+  if (registroAprobadoPorSupervisor(row)) {
+    return 'Registro aprobado por el supervisor: no se puede eliminar (bloqueo permanente)';
+  }
+  if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
+    return 'Sin ficha de diálisis para eliminar';
+  }
+  return 'Eliminar ficha de diálisis (Inicio TRR)';
 }
 
 function esAtencionHistoricaOCambio(a) {
@@ -482,6 +517,9 @@ function enriquecerFilasConAtencion(filas, atenciones) {
         && (['CERRADO', 'CERRADA', 'EGRESADO'].includes(String(at.estado || '').toUpperCase())
           || String(at.tipo_atencion || '').toUpperCase() === 'EGRESO'));
     if (!at && !esEgresado && !tipoInicial) return row;
+    const aprobadoPermanente = row.inicio_trr_aprobado === true
+      || String(row.estado_aprobacion || '').toUpperCase() === 'APROBADO'
+      || String(at?.estado_aprobacion || '').toUpperCase() === 'APROBADO';
     return {
       ...row,
       id_paciente_atencion: row.id_paciente_atencion ?? at?.id_paciente_atencion,
@@ -489,7 +527,10 @@ function enriquecerFilasConAtencion(filas, atenciones) {
       tipo_atencion_inicial: tipoInicial,
       condicion_inicial: tipoInicial,
       estado_atencion: esEgresado ? 'EGRESADO' : (row.estado_atencion ?? at?.estado),
-      estado_aprobacion: row.estado_aprobacion ?? at?.estado_aprobacion ?? 'PENDIENTE',
+      inicio_trr_aprobado: aprobadoPermanente,
+      estado_aprobacion: aprobadoPermanente
+        ? 'APROBADO'
+        : (row.estado_aprobacion ?? at?.estado_aprobacion ?? 'PENDIENTE'),
       datosPacienteAtencion: row.datosPacienteAtencion ?? at,
       es_egresado: esEgresado || row.es_egresado === true,
     };
@@ -498,6 +539,7 @@ function enriquecerFilasConAtencion(filas, atenciones) {
 
 function textoEstadoAprobacion(row) {
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return 'SIN REGISTRO';
+  if (registroAprobadoPorSupervisor(row)) return 'APROBADO';
   const estado = String(row?.estado_aprobacion ?? 'PENDIENTE').trim().toUpperCase();
   return estado || 'PENDIENTE';
 }
@@ -513,7 +555,34 @@ function mostrarBotonAprobar(row) {
   if (esPacienteEgresadoEnListado(row)) return false;
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return false;
   if (!row?.id_paciente_atencion) return false;
-  return textoEstadoAprobacion(row) !== 'APROBADO';
+  return !registroAprobadoPorSupervisor(row);
+}
+
+async function eliminarRegistro(row) {
+  if (!puedeEliminarFila(row)) return;
+  const idDialisis = row?.id_paciente_dialisis;
+  if (!idDialisis) return;
+  const nombre = row?.datosPaciente?.paciente || 'este paciente';
+  try {
+    await ElMessageBox.confirm(
+      `¿Eliminar la ficha de Inicio TRR de ${nombre}? Esta acción no se puede deshacer.`,
+      'Eliminar registro',
+      { type: 'warning', confirmButtonText: 'Eliminar', cancelButtonText: 'Cancelar' },
+    );
+  } catch {
+    return;
+  }
+  eliminandoId.value = idDialisis;
+  try {
+    await deleteAllIpress(`/pacientesDialisis/${idDialisis}/`);
+    ElMessage.success('Registro eliminado correctamente.');
+    await fetchPacientes();
+  } catch (e) {
+    const msg = e?.detail || e?.error || e?.response?.data?.detail || e?.message || 'No se pudo eliminar el registro.';
+    ElMessage.error(typeof msg === 'string' ? msg : 'No se pudo eliminar el registro.');
+  } finally {
+    eliminandoId.value = null;
+  }
 }
 
 async function aprobarPaciente(row) {

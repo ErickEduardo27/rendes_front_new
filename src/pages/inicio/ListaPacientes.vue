@@ -19,10 +19,10 @@
             type="button"
             class="bg-emerald-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-emerald-700 transition disabled:opacity-50"
             :disabled="exportandoConstanciaPdf || !filtroListoConstancia"
-            title="Descargar constancia de cumplimiento del reporte (PDF)"
+            title="Descargar constancia PDF y Excel con tablas de registros (Inicio TRR, acceso vascular, eventos, morbilidad, resultados, serología y calidad de agua)"
             @click="exportarConstanciaCumplimiento"
           >
-            {{ exportandoConstanciaPdf ? 'Generando PDF…' : 'Exportar constancia PDF' }}
+            {{ exportandoConstanciaPdf ? 'Generando…' : 'Exportar constancia' }}
           </button>
           <button
             type="button"
@@ -421,10 +421,16 @@ import BandejaNotificaciones from '@/components/notificaciones/BandejaNotificaci
 import {
   contarUnidadesAccesoEnPeriodo,
   rangoFechasDesdePeriodoTexto,
+  fechaCreacionAccesoEnPeriodo,
+  esCambioAccesoVascular,
 } from '@/utils/accesoVascularValidacion';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat';
 import { exportConstanciaCumplimientoPdf } from '@/utils/exportConstanciaCumplimientoPdf';
+import {
+  asList,
+  exportConstanciaCumplimientoExcel,
+} from '@/utils/exportConstanciaCumplimientoExcel';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 
@@ -503,6 +509,60 @@ async function cargarEstadoConformidad() {
   }
 }
 
+async function cargarTablasRegistrosConstancia() {
+  const idPeriodo = periodoGlobal.value;
+  const idIpress = clinicaGlobal.value;
+  const idModalidad = modalidadGlobal.value;
+  const params = new URLSearchParams();
+  if (idPeriodo != null && idPeriodo !== '') params.set('id_periodo', String(idPeriodo));
+  if (idIpress != null && idIpress !== '') params.set('id_ipress', String(idIpress));
+  if (idModalidad != null && idModalidad !== '') params.set('id_modalidad', String(idModalidad));
+  const qs = params.toString();
+
+  const paramsUnidades = new URLSearchParams();
+  if (idIpress != null && idIpress !== '') paramsUnidades.set('id_ipress', String(idIpress));
+  if (idModalidad != null && idModalidad !== '') paramsUnidades.set('id_modalidad', String(idModalidad));
+
+  const [
+    resInicioTrr,
+    resUnidades,
+    resEventos,
+    resMorb,
+    resResultados,
+    resVacunas,
+    resCalidad,
+  ] = await Promise.all([
+    getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${qs}`).catch(() => []),
+    getAllIpress(`/unidadesActuales/?${paramsUnidades.toString()}`).catch(() => []),
+    getAllIpress(`/eventosAccesosVasculares/?${qs}`).catch(() => []),
+    getAllIpress(`/morbilidadesHospitalarias/?${qs}`).catch(() => []),
+    getAllIpress(`/resultadosClinicos/?${qs}`).catch(() => []),
+    getAllIpress(`/vacunaciones/?${qs}`).catch(() => []),
+    getAllIpress(`/calidadMicrobiologicas/?${new URLSearchParams({
+      id_periodo: String(idPeriodo),
+      id_ipress: String(idIpress),
+    }).toString()}`).catch((e) => {
+      console.error('Error al cargar calidad de agua para constancia:', e);
+      return [];
+    }),
+  ]);
+
+  const rango = rangoFechasPeriodo.value;
+  const accesoVascular = asList(resUnidades).filter(
+    (r) => fechaCreacionAccesoEnPeriodo(r, rango) && esCambioAccesoVascular(r),
+  );
+
+  return {
+    inicioTrr: asList(resInicioTrr),
+    accesoVascular,
+    eventosInfecciosos: asList(resEventos),
+    morbilidad: asList(resMorb),
+    resultadosClinicos: asList(resResultados),
+    serologia: asList(resVacunas),
+    calidadAgua: asList(resCalidad),
+  };
+}
+
 async function exportarConstanciaCumplimiento() {
   if (!periodoConforme.value) {
     ElMessage.warning('La constancia solo está disponible cuando el supervisor dio conformidad.');
@@ -514,7 +574,12 @@ async function exportarConstanciaCumplimiento() {
   }
   exportandoConstanciaPdf.value = true;
   try {
-    await Promise.all([fetchEstadisticasAtencion(), fetchEstadisticasRegistros(), cargarEstadoConformidad()]);
+    const [, , , hojasRegistros] = await Promise.all([
+      fetchEstadisticasAtencion(),
+      fetchEstadisticasRegistros(),
+      cargarEstadoConformidad(),
+      cargarTablasRegistrosConstancia(),
+    ]);
     let clinica = ipress.value.find((i) => String(i.id_ipress) === String(clinicaGlobal.value));
     if (!clinica?.datosUbigeo) {
       try {
@@ -529,7 +594,7 @@ async function exportarConstanciaCumplimiento() {
       || '—';
     const tel = clinica?.responsable_lic1_telefono || '';
     const tel2 = clinica?.responsable_lic2_telefono || '';
-    exportConstanciaCumplimientoPdf({
+    const datosConstancia = {
       codigoDocumento: idPeriodoIpress.value || clinicaGlobal.value,
       modalidad: modalidadNombre,
       periodoTexto: periodoItem?.periodo || String(periodoGlobal.value),
@@ -548,11 +613,13 @@ async function exportarConstanciaCumplimiento() {
       registros: estadisticasRegistros.value,
       validadoPor: estadoConformidad.value.conformidad_usuario_nombre || '—',
       conformidadEn: estadoConformidad.value.conformidad_en,
-    });
-    ElMessage.success('Constancia exportada en PDF.');
+    };
+    exportConstanciaCumplimientoPdf(datosConstancia);
+    exportConstanciaCumplimientoExcel(datosConstancia, hojasRegistros);
+    ElMessage.success('Constancia exportada (PDF + Excel con tablas de registros).');
   } catch (e) {
     console.error(e);
-    ElMessage.error('No se pudo generar la constancia PDF.');
+    ElMessage.error('No se pudo generar la constancia.');
   } finally {
     exportandoConstanciaPdf.value = false;
   }
@@ -879,7 +946,7 @@ const fetchEstadisticasRegistros = async () => {
     return;
   }
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, idUsuarioIpress] = await Promise.all([
+    const [resUnidades, resEventos, resMorb, resResultados, resCalidad] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${new URLSearchParams({
         ...(idIpress != null && idIpress !== '' ? { id_ipress: idIpress } : {}),
         ...(idModalidad != null && idModalidad !== '' ? { id_modalidad: idModalidad } : {}),
@@ -887,22 +954,14 @@ const fetchEstadisticasRegistros = async () => {
       getAllIpress(`/eventosAccesosVasculares/?${qs}`),
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
-      resolverIdUsuarioIpress(idIpress),
-    ]);
-
-    let calidadAgua = 0;
-    const idPi = idPeriodoIpress.value;
-    if (idPi != null && idUsuarioIpress != null) {
-      try {
-        const resCal = await postAllIpress('/reporte_calidad_microbiologicas/', {
-          id_usuario_ipress: Number(idUsuarioIpress),
-          id_periodo_ipress: Number(idPi),
-        });
-        calidadAgua = countFromResponse(resCal);
-      } catch (e) {
+      getAllIpress(`/calidadMicrobiologicas/?${new URLSearchParams({
+        ...(idPeriodo != null && idPeriodo !== '' ? { id_periodo: String(idPeriodo) } : {}),
+        ...(idIpress != null && idIpress !== '' ? { id_ipress: String(idIpress) } : {}),
+      }).toString()}`).catch((e) => {
         console.error('Error al contar calidad de agua:', e);
-      }
-    }
+        return [];
+      }),
+    ]);
 
     estadisticasRegistros.value = {
       cambioAccesoVascular: contarUnidadesAccesoEnPeriodo(
@@ -912,7 +971,7 @@ const fetchEstadisticasRegistros = async () => {
       eventosInfecciosos: countFromResponse(resEventos),
       morbilidadHospitalaria: countFromResponse(resMorb),
       resultadosClinicos: countFromResponse(resResultados),
-      calidadAgua,
+      calidadAgua: countFromResponse(resCalidad),
     };
   } catch (e) {
     console.error('Error al obtener estadísticas de registros:', e);
@@ -1334,11 +1393,13 @@ onMounted(async () => {
   await cargarEstadoConformidad();
   window.addEventListener('notificacion-revision:actualizar', cargarEstadoConformidad);
   window.addEventListener('notificaciones:actualizar', cargarEstadoConformidad);
+  window.addEventListener('calidad-agua:actualizar', fetchEstadisticasRegistros);
 });
 
 onUnmounted(() => {
   window.removeEventListener('notificacion-revision:actualizar', cargarEstadoConformidad);
   window.removeEventListener('notificaciones:actualizar', cargarEstadoConformidad);
+  window.removeEventListener('calidad-agua:actualizar', fetchEstadisticasRegistros);
 });
 </script>
 

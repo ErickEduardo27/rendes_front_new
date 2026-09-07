@@ -29,6 +29,17 @@
         <div class="flex items-center gap-2">
           <button
             type="button"
+            class="header-accion-btn header-accion-btn-secundario"
+            title="Ver historial de resultados clínicos en gráficos"
+            @click="abrirSelectorHistorialGraficos"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Historial gráficos
+          </button>
+          <button
+            type="button"
             class="header-accion-btn header-accion-btn-cyan"
             @click="descargarFormatoExcel"
           >
@@ -46,18 +57,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
             Importar
-          </button>
-          <button
-            type="button"
-            class="header-accion-btn header-accion-btn-secundario"
-            :disabled="!puedeExportarResultadosClinicosExcel || exportandoExcel"
-            :title="puedeExportarResultadosClinicosExcel ? 'Exporta la vista actual (Solo con registros o Todos los pacientes)' : (vistaActiva === 'cargas' ? 'Cambie a la pestaña de registros o pacientes para exportar' : 'No hay datos para exportar con los filtros actuales')"
-            @click="exportarDatosResultadosClinicosExcel"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {{ exportandoExcel ? 'Exportando…' : 'Exportar Excel' }}
           </button>
           <button
             v-if="mostrarBotonNuevo"
@@ -157,6 +156,14 @@
                     <div class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
+                        class="tabla-rc-btn tabla-rc-btn-grafico"
+                        title="Ver historial en gráficos"
+                        @click="abrirDashboardPaciente(r)"
+                      >
+                        Gráficos
+                      </button>
+                      <button
+                        type="button"
                         class="tabla-rc-btn tabla-rc-btn-editar"
                         :disabled="!puedeEditarFila(r)"
                         :title="tituloEdicionFila(r)"
@@ -243,27 +250,36 @@
                   </td>
                   <td class="tabla-rc-td tabla-rc-col-comentario text-slate-600" :title="fila.comentario_evaluacion || ''">{{ fila.comentario_evaluacion?.trim() || '—' }}</td>
                   <td class="tabla-rc-td tabla-rc-td-acciones">
-                    <div v-if="fila.tieneRegistro" class="inline-flex items-center gap-1.5">
+                    <div class="inline-flex items-center gap-1.5">
                       <button
                         type="button"
-                        class="tabla-rc-btn tabla-rc-btn-editar"
-                        :disabled="!puedeEditarFila(fila.registro)"
-                        :title="tituloEdicionFila(fila.registro)"
-                        @click="abrirModalEditar(fila.registro)"
+                        class="tabla-rc-btn tabla-rc-btn-grafico"
+                        title="Ver historial en gráficos"
+                        @click="abrirDashboardPaciente(fila)"
                       >
-                        Editar
+                        Gráficos
                       </button>
-                      <button
-                        type="button"
-                        class="tabla-rc-btn tabla-rc-btn-eliminar"
-                        :disabled="!formularioAbierto || eliminandoId === fila.id_resultado_clinico"
-                        :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
-                        @click="eliminarRegistro(fila.registro)"
-                      >
-                        {{ eliminandoId === fila.id_resultado_clinico ? '…' : 'Eliminar' }}
-                      </button>
+                      <template v-if="fila.tieneRegistro">
+                        <button
+                          type="button"
+                          class="tabla-rc-btn tabla-rc-btn-editar"
+                          :disabled="!puedeEditarFila(fila.registro)"
+                          :title="tituloEdicionFila(fila.registro)"
+                          @click="abrirModalEditar(fila.registro)"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          class="tabla-rc-btn tabla-rc-btn-eliminar"
+                          :disabled="!formularioAbierto || eliminandoId === fila.id_resultado_clinico"
+                          :title="formularioAbierto ? 'Eliminar registro' : motivoFormularioNoEditable"
+                          @click="eliminarRegistro(fila.registro)"
+                        >
+                          {{ eliminandoId === fila.id_resultado_clinico ? '…' : 'Eliminar' }}
+                        </button>
+                      </template>
                     </div>
-                    <span v-else class="text-slate-400">—</span>
                   </td>
                 </tr>
               </tbody>
@@ -589,6 +605,54 @@
         </div>
       </div>
     </div>
+
+    <!-- Selector de paciente para historial en gráficos -->
+    <div
+      v-if="mostrarSelectorGraficos"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      @click.self="cerrarSelectorHistorialGraficos"
+    >
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-slate-800">Historial en gráficos</h3>
+            <p class="text-sm text-slate-500 mt-0.5">Seleccione un paciente para ver la tendencia de resultados clínicos.</p>
+          </div>
+          <button type="button" class="text-slate-400 hover:text-slate-700 text-xl leading-none" aria-label="Cerrar" @click="cerrarSelectorHistorialGraficos">×</button>
+        </div>
+        <div class="p-4 border-b border-slate-100">
+          <input
+            v-model="busquedaSelectorGraficos"
+            type="search"
+            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500"
+            placeholder="Buscar por nombre o DNI…"
+          />
+        </div>
+        <div class="overflow-y-auto flex-1 p-2">
+          <button
+            v-for="p in pacientesSelectorGraficosFiltrados"
+            :key="p.id_paciente"
+            type="button"
+            class="w-full text-left px-3 py-2.5 rounded-lg hover:bg-cyan-50 transition-colors"
+            @click="abrirDashboardDesdeSelector(p)"
+          >
+            <div class="text-sm font-semibold text-slate-800">{{ p.paciente }}</div>
+            <div class="text-xs text-slate-500">DNI {{ p.documento }}</div>
+          </button>
+          <p v-if="pacientesSelectorGraficosFiltrados.length === 0" class="py-8 text-center text-sm text-slate-400 italic">
+            No hay pacientes que coincidan con la búsqueda.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <DashboardResultadosClinicosPaciente
+      v-model:visible="dashboardVisible"
+      :id-paciente="dashboardPaciente.id"
+      :nombre="dashboardPaciente.nombre"
+      :documento="dashboardPaciente.documento"
+      :id-ipress="clinicaGlobal"
+    />
   </div>
 </template>
 
@@ -606,6 +670,7 @@ import {
 } from '@/utils/tiempoDialisis';
 import Form5 from '@/components/forms/Form5.vue';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
+import DashboardResultadosClinicosPaciente from '@/components/registros/DashboardResultadosClinicosPaciente.vue';
 
 const HISTORIAL_CARGAS_KEY = 'resultados_clinicos_historial_cargas';
 
@@ -640,6 +705,10 @@ const mostrarDetalleCarga = ref(false);
 const cargaSeleccionada = ref(null);
 const estadoFormulario = ref('CERRADO');
 const cargandoEstadoFormulario = ref(false);
+const dashboardVisible = ref(false);
+const dashboardPaciente = ref({ id: null, nombre: '', documento: '' });
+const mostrarSelectorGraficos = ref(false);
+const busquedaSelectorGraficos = ref('');
 
 const PAGE_SIZE_TABLAS = 10;
 const pageSizeTablas = ref(PAGE_SIZE_TABLAS);
@@ -746,10 +815,64 @@ const modalidadActualTexto = computed(() => {
 });
 
 function nombrePaciente(r) {
-  return r.datosPacienteAtencion?.datosPaciente?.paciente || r.datosPaciente?.paciente || '—';
+  return r.datosPacienteAtencion?.datosPaciente?.paciente || r.datosPaciente?.paciente || r.paciente || '—';
 }
 function documentoPaciente(r) {
-  return r.datosPacienteAtencion?.datosPaciente?.documento || r.datosPaciente?.documento || '—';
+  return r.datosPacienteAtencion?.datosPaciente?.documento || r.datosPaciente?.documento || r.documento || '—';
+}
+
+function idPacienteDesdeFila(fila) {
+  if (fila?.id_paciente != null && fila.id_paciente !== '') return fila.id_paciente;
+  return (
+    fila?.datosPacienteAtencion?.datosPaciente?.id_paciente
+    ?? fila?.datosPaciente?.id_paciente
+    ?? fila?.datosPacienteAtencion?.id_paciente
+    ?? fila?.registro?.datosPacienteAtencion?.datosPaciente?.id_paciente
+    ?? fila?.registro?.datosPaciente?.id_paciente
+    ?? null
+  );
+}
+
+function abrirDashboardPaciente(fila) {
+  const id = idPacienteDesdeFila(fila);
+  if (id == null) {
+    ElMessage.warning('No se pudo identificar al paciente para el gráfico.');
+    return;
+  }
+  dashboardPaciente.value = {
+    id,
+    nombre: fila.paciente || nombrePaciente(fila) || 'Paciente',
+    documento: fila.documento || documentoPaciente(fila) || '',
+  };
+  dashboardVisible.value = true;
+}
+
+function abrirSelectorHistorialGraficos() {
+  busquedaSelectorGraficos.value = '';
+  if (!pacientesSelectorGraficos.value.length) {
+    ElMessage.warning('No hay pacientes en el listado del periodo actual.');
+    return;
+  }
+  mostrarSelectorGraficos.value = true;
+}
+
+function cerrarSelectorHistorialGraficos() {
+  mostrarSelectorGraficos.value = false;
+  busquedaSelectorGraficos.value = '';
+}
+
+function abrirDashboardDesdeSelector(p) {
+  if (!p?.id_paciente) {
+    ElMessage.warning('No se pudo identificar al paciente para el gráfico.');
+    return;
+  }
+  dashboardPaciente.value = {
+    id: p.id_paciente,
+    nombre: p.paciente || 'Paciente',
+    documento: p.documento || '',
+  };
+  mostrarSelectorGraficos.value = false;
+  dashboardVisible.value = true;
 }
 function siNo(val) {
   if (val === true || val === 1) return 'Sí';
@@ -931,10 +1054,16 @@ const todosPacientesLista = computed(() => {
     const r = registroParaAtencionActiva(a, porAtencion, porPaciente);
     const paciente = a.datosPaciente?.paciente ?? '—';
     const documento = a.datosPaciente?.documento ?? '—';
+    const idPaciente = a.datosPaciente?.id_paciente
+      ?? a.id_paciente
+      ?? r?.datosPacienteAtencion?.datosPaciente?.id_paciente
+      ?? r?.datosPaciente?.id_paciente
+      ?? null;
     const esEgresado = esPacienteEgresadoEnListado(a);
     if (r) {
       return {
         id_paciente_atencion: id,
+        id_paciente: idPaciente,
         id_resultado_clinico: r.id_resultado_clinico,
         tieneRegistro: true,
         registro: r,
@@ -959,6 +1088,7 @@ const todosPacientesLista = computed(() => {
     }
     return {
       id_paciente_atencion: id,
+      id_paciente: idPaciente,
       tieneRegistro: false,
       paciente,
       documento,
@@ -990,6 +1120,32 @@ const todosPacientesPaginados = computed(() => {
   const all = todosPacientesLista.value;
   const start = (paginaTodos.value - 1) * PAGE_SIZE_TABLAS;
   return all.slice(start, start + PAGE_SIZE_TABLAS);
+});
+
+const pacientesSelectorGraficos = computed(() => {
+  const mapa = new Map();
+  for (const fila of todosPacientesLista.value) {
+    const id = fila.id_paciente ?? idPacienteDesdeFila(fila);
+    if (id == null || id === '') continue;
+    const key = String(id);
+    if (mapa.has(key)) continue;
+    mapa.set(key, {
+      id_paciente: id,
+      paciente: fila.paciente || 'Paciente',
+      documento: fila.documento || '—',
+    });
+  }
+  return Array.from(mapa.values()).sort((a, b) => String(a.paciente).localeCompare(String(b.paciente), 'es'));
+});
+
+const pacientesSelectorGraficosFiltrados = computed(() => {
+  const q = String(busquedaSelectorGraficos.value || '').trim().toLowerCase();
+  if (!q) return pacientesSelectorGraficos.value;
+  return pacientesSelectorGraficos.value.filter((p) => {
+    const nombre = String(p.paciente || '').toLowerCase();
+    const doc = String(p.documento || '').toLowerCase();
+    return nombre.includes(q) || doc.includes(q);
+  });
 });
 function cargaCoincideFiltroActual(carga, idPeriodo, idIpress, idModalidad) {
   if (!carga) return false;
@@ -1736,6 +1892,16 @@ onMounted(() => {
 .tabla-rc-btn:disabled {
   opacity: 0.45;
   pointer-events: none;
+}
+
+.tabla-rc-btn-grafico {
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+  background: transparent;
+}
+
+.tabla-rc-btn-grafico:hover:not(:disabled) {
+  background: #eef2ff;
 }
 
 .tabla-rc-btn-editar {

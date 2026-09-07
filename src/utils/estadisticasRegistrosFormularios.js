@@ -183,7 +183,7 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     return { ...vacio };
   }
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, resEstadisticasAtencion, resInicioTrr, idPeriodoIpress, idUsuarioIpress, resPeriodos] = await Promise.all([
+    const [resUnidades, resEventos, resMorb, resResultados, resEstadisticasAtencion, resInicioTrr, resPeriodos] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${new URLSearchParams({
         ...(idIpress != null && idIpress !== '' ? { id_ipress: String(idIpress) } : {}),
         ...(idModalidad != null && idModalidad !== '' ? { id_modalidad: String(idModalidad) } : {}),
@@ -193,8 +193,6 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       getAllIpress(`/resultadosClinicos/?${qs}`),
       getAllIpress(`/pacienteAtencion/estadisticas/?${qs}`),
       getAllIpress(`/consulta_inicio_trr_periodo/?${qs}`),
-      resolverIdPeriodoIpress(idPeriodo, idIpress),
-      resolverIdUsuarioIpress(idIpress),
       getAllIpress('/periodos/'),
     ]);
 
@@ -219,16 +217,14 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     const totalResultadosCompletos = contarResultadosClinicosCompletos(resResultados);
 
     let totalCalidadAgua = 0;
-    if (idPeriodoIpress != null && idUsuarioIpress != null) {
-      try {
-        const resCal = await postAllIpress('/reporte_calidad_microbiologicas/', {
-          id_usuario_ipress: Number(idUsuarioIpress),
-          id_periodo_ipress: Number(idPeriodoIpress),
-        });
-        totalCalidadAgua = countFromResponse(resCal);
-      } catch (e) {
-        console.error('Error al contar calidad de agua:', e);
-      }
+    try {
+      const paramsCal = new URLSearchParams();
+      if (idPeriodo != null && idPeriodo !== '') paramsCal.set('id_periodo', String(idPeriodo));
+      if (idIpress != null && idIpress !== '') paramsCal.set('id_ipress', String(idIpress));
+      const resCal = await getAllIpress(`/calidadMicrobiologicas/?${paramsCal.toString()}`);
+      totalCalidadAgua = countFromResponse(resCal);
+    } catch (e) {
+      console.error('Error al contar calidad de agua:', e);
     }
 
     return {
