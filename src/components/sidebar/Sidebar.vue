@@ -37,7 +37,7 @@
         <SidebarItem
             v-if="['Admin','Clinicas','Hospitales'].includes(perfil)"
             :icon="ArrowUpTrayIcon"
-            label="Importación tiempo de diálisis"
+            label="Importación de Planilla de Producción HD"
             to="/importacion-tiempo-dialisis"
         />
         <SidebarItem v-if="['Supervisor', 'Admin'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Evaluación" to="/evaluacion"/>

@@ -5,7 +5,7 @@
         <div>
           <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <span class="w-1.5 h-8 bg-cyan-500 rounded-full"></span>
-            Importación de tiempo de diálisis
+            Importación de Planilla de Producción HD
           </h1>
           <p class="text-slate-500 mt-1 text-sm">
             Carga el reporte de producción mensual (RptProdAtenHDA) y visualiza sesiones y tiempos por paciente.
@@ -382,6 +382,8 @@ import {
   guardarImportacionLocal,
   leerImportacionLocal,
   esErrorEndpointNoDisponible,
+  atencionesTotalesFila,
+  atencionesTotalesResumen,
 } from '@/utils/importacionProduccionHdStorage';
 import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat';
 
@@ -509,22 +511,6 @@ const resumenVista = computed(() => {
     }),
   };
 });
-
-function atencionesTotalesFila(row) {
-  return (Number(row?.atenciones_ejecutadas) || 0) + (Number(row?.atenciones_adicionales) || 0);
-}
-
-function atencionesTotalesResumen(resumen) {
-  if (!resumen || typeof resumen !== 'object') return '—';
-  const tieneEjec = resumen.atenciones_ejecutadas != null && resumen.atenciones_ejecutadas !== '';
-  const tieneAdic = resumen.atenciones_adicionales != null && resumen.atenciones_adicionales !== '';
-  if (tieneEjec || tieneAdic) {
-    return (Number(resumen.atenciones_ejecutadas) || 0) + (Number(resumen.atenciones_adicionales) || 0);
-  }
-  const detalle = Array.isArray(resumen.detalle) ? resumen.detalle : [];
-  if (!detalle.length) return '—';
-  return detalle.reduce((acc, row) => acc + atencionesTotalesFila(row), 0);
-}
 
 const detalleFiltrado = computed(() => {
   const lista = Array.isArray(importacion.value.detalle) ? importacion.value.detalle : [];

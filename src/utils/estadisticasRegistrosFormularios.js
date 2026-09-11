@@ -1,6 +1,7 @@
 import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service';
 import { contarResultadosClinicosCompletos, listaDesdeResponse, tieneNumeroAtencionesRegistrado, totalPacientesEnAtencionDesdeEstadisticas, ultimosResultadosPorAtencion } from '@/utils/resultadosClinicosNotificacion';
 import { contarUnidadesAccesoEnPeriodo, rangoFechasDesdePeriodoTexto } from '@/utils/accesoVascularValidacion';
+import { obtenerAtencionesTotalesImportacion } from '@/utils/importacionProduccionHdStorage';
 
 export function countFromResponse(res) {
   return listaDesdeResponse(res).length;
@@ -183,7 +184,7 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     return { ...vacio };
   }
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, resEstadisticasAtencion, resInicioTrr, resPeriodos] = await Promise.all([
+    const [resUnidades, resEventos, resMorb, resResultados, resEstadisticasAtencion, numeroAtencionesImportacion, resPeriodos] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${new URLSearchParams({
         ...(idIpress != null && idIpress !== '' ? { id_ipress: String(idIpress) } : {}),
         ...(idModalidad != null && idModalidad !== '' ? { id_modalidad: String(idModalidad) } : {}),
@@ -192,7 +193,7 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       getAllIpress(`/morbilidadesHospitalarias/?${qs}`),
       getAllIpress(`/resultadosClinicos/?${qs}`),
       getAllIpress(`/pacienteAtencion/estadisticas/?${qs}`),
-      getAllIpress(`/consulta_inicio_trr_periodo/?${qs}`),
+      obtenerAtencionesTotalesImportacion(getAllIpress, idPeriodo, idIpress, idModalidad),
       getAllIpress('/periodos/'),
     ]);
 
@@ -209,8 +210,8 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     const egresados = Number(final.egresados || 0);
     const totalPacientesAtendidos = totalPacientesEnAtencionDesdeEstadisticas(final);
     const numeroAtenciones =
-      resInicioTrr?.numero_atenciones != null && resInicioTrr?.numero_atenciones !== ''
-        ? Number(resInicioTrr.numero_atenciones)
+      numeroAtencionesImportacion != null && numeroAtencionesImportacion !== ''
+        ? Number(numeroAtencionesImportacion)
         : null;
     const listaResultados = listaDesdeResponse(resResultados);
     const totalResultadosRegistrados = ultimosResultadosPorAtencion(listaResultados).length;

@@ -112,7 +112,7 @@
                 v-if="esPerfilClinicaUsuario && !tieneNumeroAtenciones"
                 class="text-[11px] text-rose-700"
               >
-                Registre el N° de sesiones del mes a notificar.
+                Importe el reporte de producción HD (Atenciones totales) para notificar.
               </div>
 
               <p class="font-semibold text-slate-500 uppercase tracking-wide text-[10px] pt-1">Pacientes atendidos — condición inicial</p>

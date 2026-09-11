@@ -75,4 +75,4 @@ export function tieneNumeroAtencionesRegistrado(numeroAtenciones) {
 }
 
 export const MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES =
-  'No puede notificar: debe registrar el N° de Sesiones del mes para el periodo, clínica y modalidad seleccionados.';
+  'No puede notificar: debe importar el reporte de producción HD (Atenciones totales) para el periodo, clínica y modalidad seleccionados.';
