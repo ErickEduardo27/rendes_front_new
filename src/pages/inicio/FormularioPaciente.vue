@@ -492,6 +492,15 @@ const props = defineProps({
     type: String,
     default: ''
   },
+  /**
+   * Si true → Formulario 1 completo (hospital).
+   * Si false → registro simplificado (clínica).
+   * Si no se envía → se infiere por el nombre de la IPRESS.
+   */
+  forzarFormularioCompleto: {
+    type: Boolean,
+    default: undefined,
+  },
   /** Precarga número de documento (p. ej. tras “no encontrado” en lista de pacientes). */
   numeroDocumentoInicial: {
     type: String,
@@ -552,15 +561,19 @@ const ipressSeleccionadaActual = computed(() => {
   const list = Array.isArray(ipress.value) ? ipress.value : [];
   const found = list.find((x) => String(x.id_ipress) === String(id));
   if (found) return found;
-  const nombre = props.nombreClinicaInicial || clinicaSeleccionada.value || '';
-  if (nombre) return { ipress: nombre, nombre_corto: nombre };
+  // Fallback: preferir nombre completo del padre (no solo nombre_corto)
+  const nombre = String(props.nombreClinicaInicial || clinicaSeleccionada.value || '').trim();
+  if (nombre) return { id_ipress: id, ipress: nombre, nombre_corto: nombre };
   return null;
 });
 
 /** Sin «hospital» / «H.» en el nombre → solo datos personales + fecha 1er ingreso + condición. */
-const esRegistroSimplificado = computed(() => (
-  !modoEdicionSupervisor.value && !esNombreIpressHospital(ipressSeleccionadaActual.value)
-));
+const esRegistroSimplificado = computed(() => {
+  if (modoEdicionSupervisor.value) return false;
+  if (props.forzarFormularioCompleto === true) return false;
+  if (props.forzarFormularioCompleto === false) return true;
+  return !esNombreIpressHospital(ipressSeleccionadaActual.value);
+});
 
 const puedeCargarListadoEdicion = computed(() => (
   idIpressListado.value != null && !Number.isNaN(idIpressListado.value)
@@ -2559,16 +2572,36 @@ const fetchIpress = async (url = null) => {
     }
     // Obtener asignaciones del usuario
     const asignaciones = await getAllIpress(`/asignaciones/?usuario=${usuario.id_usuario}`);
-    const idsAsignados = asignaciones.map(a => a.ipress);
+    const idsAsignados = new Set(
+      (Array.isArray(asignaciones) ? asignaciones : []).map((a) => String(a.ipress)),
+    );
 
-    // Obtener solo las IPRESS asignadas
+    // Obtener solo las IPRESS asignadas (comparar como string: evita fallos number vs string)
     const todasIpress = await getAllIpress(url ?? "/ipress/");
-    ipress.value = todasIpress.filter(i => idsAsignados.includes(i.id_ipress));
+    const todas = Array.isArray(todasIpress) ? todasIpress : (todasIpress?.results || []);
+    ipress.value = todas.filter((i) => idsAsignados.has(String(i.id_ipress)));
+    await asegurarIpressSeleccionadaEnLista();
   } catch (error) {
     console.error('Error al obtener IPRESS:', error);
     ipress.value = [];
   }
 };
+
+/** Si la clínica del NavBar no está en la lista filtrada, cargarla por id para detectar hospital. */
+async function asegurarIpressSeleccionadaEnLista() {
+  const id = idIpressListado.value;
+  if (id == null || id === '' || Number.isNaN(Number(id))) return;
+  const list = Array.isArray(ipress.value) ? ipress.value : [];
+  if (list.some((x) => String(x.id_ipress) === String(id))) return;
+  try {
+    const una = await getAllIpress(`/ipress/${id}/`);
+    if (una && una.id_ipress != null) {
+      ipress.value = [...list, una];
+    }
+  } catch (e) {
+    console.warn('No se pudo cargar la IPRESS seleccionada:', e);
+  }
+}
 
 // Watchers para actualizar cuando cambien los props
 watch(() => props.periodoInicial, (newVal) => {
@@ -2587,11 +2620,16 @@ watch(() => props.idPeriodoIpressInicial, (newVal) => {
 
 watch(() => props.idClinicaInicial, (newVal) => {
   if (newVal) idClinicaSeleccionada.value = newVal;
+  asegurarIpressSeleccionadaEnLista();
 }, { immediate: true });
 
 watch(() => props.nombreClinicaInicial, (newVal) => {
   if (newVal) clinicaSeleccionada.value = newVal;
 }, { immediate: true });
+
+watch(idIpressListado, () => {
+  asegurarIpressSeleccionadaEnLista();
+});
 
 watch(() => props.numeroDocumentoInicial, (v) => {
   if (modoEdicionSupervisor.value) return;

@@ -618,6 +618,7 @@
           <p class="text-xs text-slate-500 mb-3">
             Todos los cambios de acceso registrados para este paciente (cualquier periodo).
             Una fístula sin fecha de canulación aparece aquí, pero no se toma como acceso actual hasta completar la canulación.
+            Puede <strong>editar</strong> cualquier registro del historial mientras el periodo no tenga conformidad.
           </p>
           <div v-if="historialPacienteLista.length === 0" class="py-10 text-center text-slate-500 italic border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
             No hay cambios de acceso vascular registrados para este paciente.
@@ -634,6 +635,7 @@
                     <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">F. inicio canulación</th>
                     <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Motivo cambio</th>
                     <th class="px-3 py-2.5 text-left text-[10px] font-bold text-slate-600 uppercase tracking-wider">Estado</th>
+                    <th class="px-3 py-2.5 text-center text-[10px] font-bold text-slate-600 uppercase tracking-wider">Acción</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -650,11 +652,27 @@
                     <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ textoCanulacionRegistro(r) }}</td>
                     <td class="px-3 py-2.5 text-slate-700">{{ r.motivo_cambio || '—' }}</td>
                     <td class="px-3 py-2.5">
-                      <span
-                        v-if="!esAccesoUsableComoActual(r)"
-                        class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 whitespace-nowrap"
-                      >Pendiente canulación</span>
-                      <span v-else class="text-slate-400">—</span>
+                      <div class="flex flex-col gap-1">
+                        <span
+                          v-if="!esAccesoUsableComoActual(r)"
+                          class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 whitespace-nowrap"
+                        >Pendiente canulación</span>
+                        <span
+                          class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap w-fit"
+                          :class="estadoAprobacionClase(r.estado_aprobacion)"
+                        >{{ r.estado_aprobacion || 'PENDIENTE' }}</span>
+                      </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-center whitespace-nowrap">
+                      <button
+                        type="button"
+                        class="tabla-av-btn tabla-av-btn-editar"
+                        :disabled="!puedeEditarHistorial(r)"
+                        :title="tituloEdicionHistorial(r)"
+                        @click="abrirModalEditarDesdeHistorial(r)"
+                      >
+                        Editar
+                      </button>
                     </td>
                   </tr>
                 </tbody>
@@ -783,7 +801,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, inject } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, inject } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
@@ -847,6 +865,7 @@ const historialCargas = ref([]);
 const mostrarDetalleCarga = ref(false);
 const cargaSeleccionada = ref(null);
 const estadoFormulario = ref('CERRADO');
+const periodoConforme = ref(false);
 const cargandoEstadoFormulario = ref(false);
 
 const filtroRegistrosNombre = ref('');
@@ -907,7 +926,9 @@ const modalidadActualTexto = computed(() => {
 });
 
 const mostrarBotonNuevo = computed(() => {
-  return formularioAbierto.value && !(registros.value || []).some((r) => registroEstaObservado(r));
+  return formularioAbierto.value
+    && !periodoConforme.value
+    && !(registros.value || []).some((r) => registroEstaObservado(r));
 });
 
 const tituloModalFormulario = computed(() => (
@@ -917,6 +938,7 @@ const tituloModalFormulario = computed(() => (
 const formularioAbierto = computed(() => estadoFormulario.value === 'ABIERTO' && !bloqueadoPorNotificacion.value);
 
 function puedeEditarFila(registro) {
+  if (periodoConforme.value) return false;
   return puedeEditarRegistroClinica(registro, {
     formularioAbierto: formularioAbierto.value,
     bloqueadoPorNotificacion: bloqueadoPorNotificacion.value,
@@ -924,12 +946,29 @@ function puedeEditarFila(registro) {
   });
 }
 function tituloEdicionFila(registro) {
+  if (periodoConforme.value) {
+    return 'Ya se dio conformidad para este periodo; no se pueden editar registros.';
+  }
   return tituloEdicionRegistroClinica(registro, {
     formularioAbierto: formularioAbierto.value,
     bloqueadoPorNotificacion: bloqueadoPorNotificacion.value,
     hayObservados: (registros.value || []).some((r) => registroEstaObservado(r)),
     motivoCerrado: motivoFormularioNoEditable.value,
   });
+}
+
+/** Historial: se puede editar siempre que el periodo no tenga conformidad. */
+function puedeEditarHistorial(registro) {
+  if (!registro?.id_unidad_actual) return false;
+  return !periodoConforme.value;
+}
+
+function tituloEdicionHistorial(registro) {
+  if (periodoConforme.value) {
+    return 'Ya se dio conformidad; no se pueden editar registros del historial.';
+  }
+  if (!registro?.id_unidad_actual) return 'Registro no editable';
+  return 'Editar registro del historial';
 }
 
 const estadoFormularioTexto = computed(() => {
@@ -1659,6 +1698,27 @@ async function fetchEstadoFormulario() {
   }
 }
 
+async function fetchEstadoConformidad() {
+  const idPeriodo = periodoGlobal.value;
+  const idIpress = clinicaGlobal.value;
+  const idModalidad = modalidadGlobal.value;
+  if (idPeriodo == null || idIpress == null || idModalidad == null || idModalidad === '') {
+    periodoConforme.value = false;
+    return;
+  }
+  try {
+    const params = new URLSearchParams({
+      id_periodo: String(idPeriodo),
+      id_ipress: String(idIpress),
+      id_modalidad: String(idModalidad),
+    });
+    const r = await getAllIpress(`/consulta_notificacion_envio_revision/?${params.toString()}`);
+    periodoConforme.value = Boolean(r?.ya_dio_conformidad);
+  } catch (e) {
+    console.error('Error al consultar conformidad:', e);
+  }
+}
+
 function abrirModalHistorialPaciente(fila) {
   if (!fila) return;
   pacienteHistorial.value = {
@@ -1743,6 +1803,16 @@ function abrirModalNuevo() {
 
 function abrirModalEditar(registro) {
   if (!puedeEditarFila(registro) || !registro) return;
+  abrirFormularioEdicion(registro);
+}
+
+function abrirModalEditarDesdeHistorial(registro) {
+  if (!puedeEditarHistorial(registro) || !registro) return;
+  cerrarModalHistorialPaciente();
+  abrirFormularioEdicion(registro);
+}
+
+function abrirFormularioEdicion(registro) {
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
   if (!paciente || idAtencion == null) {
@@ -2144,6 +2214,7 @@ async function fetchPeriodos() {
 watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   fetchRegistros();
   fetchEstadoFormulario();
+  fetchEstadoConformidad();
 }, { deep: true });
 
 watch(
@@ -2153,11 +2224,23 @@ watch(
   },
 );
 
+function onRevisionEstadoEvent() {
+  fetchEstadoConformidad();
+  fetchEstadoFormulario();
+}
+
 onMounted(async () => {
   cargarHistorialCargas();
   fetchPeriodos();
-  await Promise.all([fetchRegistros(), fetchEstadoFormulario()]);
+  await Promise.all([fetchRegistros(), fetchEstadoFormulario(), fetchEstadoConformidad()]);
   await procesarQueryCaptacionAccesoVascular();
+  window.addEventListener('notificacion-revision:actualizar', onRevisionEstadoEvent);
+  window.addEventListener('notificaciones:actualizar', onRevisionEstadoEvent);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('notificacion-revision:actualizar', onRevisionEstadoEvent);
+  window.removeEventListener('notificaciones:actualizar', onRevisionEstadoEvent);
 });
 </script>
 

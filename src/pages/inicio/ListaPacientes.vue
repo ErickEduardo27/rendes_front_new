@@ -400,6 +400,7 @@
           :id-periodo-ipress-inicial="idPeriodoIpress"
           :id-clinica-inicial="idClinicaSeleccionada"
           :nombre-clinica-inicial="clinicaSeleccionada"
+          :forzar-formulario-completo="esUnidadHospitalSeleccionada"
           :mostrar-tabla-edicion="false"
           :numero-documento-inicial="documentoPrefillRegistro"
           @cancelar="cerrarModalFormularioPaciente"
@@ -417,6 +418,7 @@ import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress } from "@/services/ipress/Ipress.service";
 import FormularioPaciente from './FormularioPaciente.vue';
+import { esNombreIpressHospital } from '@/utils/condicionIngresoPorFecha';
 import BandejaNotificaciones from '@/components/notificaciones/BandejaNotificaciones.vue';
 import {
   contarUnidadesAccesoEnPeriodo,
@@ -1097,6 +1099,14 @@ const clinicaSeleccionada = ref('')
 const idClinicaSeleccionada = ref(null) 
 const periodoSeleccionado = ref(null) 
 
+const esUnidadHospitalSeleccionada = computed(() => {
+  const id = idClinicaSeleccionada.value ?? clinicaGlobal.value;
+  const item = (Array.isArray(ipress.value) ? ipress.value : []).find(
+    (x) => String(x.id_ipress) === String(id),
+  );
+  return esNombreIpressHospital(item || { ipress: clinicaSeleccionada.value, nombre_corto: clinicaSeleccionada.value });
+});
+
 const idPeriodoIpress = ref(null)
 const mostrarFormulario = ref(false)
 const componenteFormulario = ref(null)
@@ -1162,7 +1172,10 @@ async function searchPeriodoIpress() {
   modalidadSeleccionada.value = modalidadGlobal.value ?? null
 
   const clinicaActual = ipress.value.find((item) => String(item.id_ipress) === String(idClinicaSeleccionada.value))
-  clinicaSeleccionada.value = clinicaActual?.nombre_corto || clinicaActual?.ipress || ''
+  clinicaSeleccionada.value = [
+    clinicaActual?.ipress,
+    clinicaActual?.nombre_corto,
+  ].filter(Boolean).join(' · ') || ''
 
   if (idPerido.value != null && idIpress.value != null) {
     try {

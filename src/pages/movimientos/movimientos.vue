@@ -550,6 +550,7 @@
                     :id-periodo-ipress-inicial="idPeriodoIpress"
                     :id-clinica-inicial="idClinicaSeleccionada"
                     :nombre-clinica-inicial="clinicaSeleccionada"
+                    :forzar-formulario-completo="esUnidadHospitalSeleccionada"
                     :mostrar-tabla-edicion="false"
                     :numero-documento-inicial="documentoPrefillRegistro"
                     @cancelar="onCerrarFormularioPacienteMovimientos"
@@ -614,14 +615,14 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Condición del Paciente en la Unidad</label>
                         <div
                             class="w-full border rounded p-3"
-                            :class="condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'NUEVO_SIN_EGRESO'
+                            :class="condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'NUEVO_SIN_EGRESO' || condicionAutomatica === 'FALLECIDO'
                                 ? 'bg-amber-50 border-amber-300'
                                 : 'bg-gray-50'"
                         >
                             <div class="font-semibold text-gray-800">{{ condicionAutomatica || '—' }}</div>
                             <p
                                 class="text-xs mt-1"
-                                :class="condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'NUEVO_SIN_EGRESO'
+                                :class="condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'NUEVO_SIN_EGRESO' || condicionAutomatica === 'FALLECIDO'
                                     ? 'text-amber-800 font-medium'
                                     : 'text-gray-600'"
                             >{{ mensajeCondicion }}</p>
@@ -728,7 +729,7 @@
                     <button
                         type="button"
                         class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        :disabled="!movimientoEnEdicion && (condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'NUEVO_SIN_EGRESO')"
+                        :disabled="!movimientoEnEdicion && (condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'NUEVO_SIN_EGRESO' || condicionAutomatica === 'FALLECIDO')"
                         @click="captarPaciente"
                     >
                         {{ movimientoEnEdicion ? 'Guardar cambios' : 'Captar Paciente' }}
@@ -1915,7 +1916,10 @@ const syncPeriodoIpressParaFormulario = async () => {
     const clinicaActual = (Array.isArray(ipress.value) ? ipress.value : []).find(
         (item) => String(item.id_ipress) === String(idClinicaSeleccionada.value)
     );
-    clinicaSeleccionada.value = clinicaActual?.nombre_corto || clinicaActual?.ipress || '';
+    clinicaSeleccionada.value = [
+        clinicaActual?.ipress,
+        clinicaActual?.nombre_corto,
+    ].filter(Boolean).join(' · ') || '';
     idPeriodoIpress.value = null;
     if (periodoSeleccionado.value != null && idClinicaSeleccionada.value != null) {
         try {
@@ -2282,6 +2286,30 @@ const determinarCondicionPaciente = async (pacienteId) => {
         } catch (e) {
             console.warn('No se pudo cargar historial global del paciente:', e);
         }
+
+        // Paciente egresado por fallecimiento: no se puede volver a captar.
+        const egresoFallecimiento = historialGlobal.find((m) => {
+            const tipo = String(m.tipo_atencion || m.tipo || '').toUpperCase();
+            const est = String(m.estado || '').toUpperCase();
+            if (tipo !== 'EGRESO' && est !== 'EGRESADO') return false;
+            const texto = `${m.tipo_egreso || ''} ${m.observaciones || ''}`;
+            return esEgresoPorFallecimiento(texto);
+        });
+        if (egresoFallecimiento) {
+            ultimoEgreso.value = {
+                tipo_egreso: egresoFallecimiento.tipo_egreso
+                    || extraerTipoEgresoDesdeObs(egresoFallecimiento.observaciones)
+                    || 'Fallecimiento',
+                fecha: egresoFallecimiento.fecha,
+                fechaIso: egresoFallecimiento.fecha,
+            };
+            condicionAutomatica.value = 'FALLECIDO';
+            const fechaTxt = formatFechaDDMMAAAA(egresoFallecimiento.fecha) || egresoFallecimiento.fecha || '—';
+            mensajeCondicion.value = `El paciente egresó por fallecimiento (${fechaTxt}). No puede volver a captarse.`;
+            formCaptar.condicion = '';
+            return;
+        }
+
         const nuevoSinEgreso = tieneNuevoSinEgresoPosterior(historialGlobal);
 
         // Primer ingreso a esta IPRESS → NUEVO, salvo si ya está ACTIVO en otra clínica del mismo periodo.
@@ -2373,6 +2401,7 @@ const determinarCondicionPaciente = async (pacienteId) => {
             condicionAutomatica.value !== 'YA_ACTIVO'
             && condicionAutomatica.value !== 'ACTIVO_OTRA_CLINICA'
             && condicionAutomatica.value !== 'NUEVO_SIN_EGRESO'
+            && condicionAutomatica.value !== 'FALLECIDO'
         ) {
             ultimoEgreso.value = await obtenerUltimoEgresoPaciente(pacienteId);
             limpiarFechaCapturaSiInvalida();
@@ -2450,6 +2479,16 @@ const captarPaciente = async () => {
             message: 'El paciente ya tiene atención activa en este periodo. Use egreso si corresponde.',
             type: 'warning',
             plain: true,
+        });
+        return;
+    }
+
+    if (condicionAutomatica.value === 'FALLECIDO' && !movimientoEnEdicion.value) {
+        ElMessage({
+            message: mensajeCondicion.value || 'El paciente egresó por fallecimiento y no puede volver a captarse.',
+            type: 'error',
+            plain: true,
+            duration: 7000,
         });
         return;
     }
@@ -3810,6 +3849,10 @@ function extraerTipoEgresoDesdeObs(observaciones) {
     if (!obs) return null;
     const match = obs.match(/^Egreso:\s*([^.]+)/i);
     return match ? match[1].trim() : obs;
+}
+
+function esEgresoPorFallecimiento(tipoOTexto) {
+    return String(tipoOTexto || '').toLowerCase().includes('fallec');
 }
 
 async function actualizarPacienteRegistroEgreso({ pacienteId, periodoId, fecha, tipoEgreso, observaciones }) {

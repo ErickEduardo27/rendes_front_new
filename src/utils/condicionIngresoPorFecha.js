@@ -27,16 +27,19 @@ export function tipoCondicionPorFechaYPeriodo(fechaIso, periodoLabel) {
 }
 
 /**
- * Hospital si el nombre contiene «hospital»/«hosp.» o empieza/abrevia con «H.» / «H » (p. ej. H. ALMENARA).
+ * Hospital si el nombre contiene «hospital»/«hosp» o abrevia con «H.» / «H » (p. ej. H. ALMENARA).
  * El resto de IPRESS se trata como clínica (registro simplificado).
  */
 export function esNombreIpressHospital(ipressItem) {
+  if (!ipressItem) return false;
   const nombre = String(ipressItem?.ipress || '').trim();
   const corto = String(ipressItem?.nombre_corto || '').trim();
   const t = `${nombre} ${corto}`.toLowerCase();
   if (!t.trim()) return false;
-  if (t.includes('hospital') || t.includes('hosp.')) return true;
-  if (/^h[\.\s]/i.test(nombre) || /^h[\.\s]/i.test(corto)) return true;
-  if (/\bh\.\s*\S/i.test(t)) return true;
+  if (t.includes('hospital') || t.includes('hosp.') || /\bhosp\b/.test(t)) return true;
+  // H. ALMENARA, H ALMENARA, H-ALMENARA (inicio de nombre o corto)
+  if (/^h[\.\s\-]/i.test(nombre) || /^h[\.\s\-]/i.test(corto)) return true;
+  // Abreviatura «H.» / «H » en cualquier parte del texto combinado
+  if (/\bh[\.\s\-]+\S/i.test(t)) return true;
   return false;
 }

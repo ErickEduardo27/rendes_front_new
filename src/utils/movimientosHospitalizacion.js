@@ -65,16 +65,19 @@ export async function generarEgresoPorHospitalizacion({
   periodoId,
   modalidadId,
   fechaEgreso,
+  tipoEgreso = 'Hospitalización',
   observacionesExtra = '',
 }) {
   if (!idPacienteAtencion || !pacienteId || !periodoId || !fechaEgreso) {
     throw new Error('Faltan datos para generar el egreso por hospitalización.');
   }
 
+  const tipo = String(tipoEgreso || 'Hospitalización').trim() || 'Hospitalización';
+  const esFallecimiento = /fallec/i.test(tipo);
   const obsEgreso = truncarObservaciones(
     observacionesExtra
-      ? `Egreso: Hospitalización. ${observacionesExtra}`
-      : 'Egreso: Hospitalización',
+      ? `Egreso: ${tipo}. ${observacionesExtra}`
+      : `Egreso: ${tipo}`,
   );
   const now = nowSql();
 
@@ -103,7 +106,7 @@ export async function generarEgresoPorHospitalizacion({
       periodo: periodoId,
       ipress: ipressId,
       condicion: 'EGRESADO',
-      tipo_egreso: 'Hospitalización',
+      tipo_egreso: tipo,
       fecha_egreso: fechaEgreso,
       observaciones: observacionesExtra || 'Generado automáticamente desde hospitalización',
     });
@@ -111,7 +114,7 @@ export async function generarEgresoPorHospitalizacion({
     console.warn('PacienteRegistro (auditoría egreso hosp.):', e);
   }
 
-  await patchPacienteEstado(pacienteId, 'EGRESADO');
+  await patchPacienteEstado(pacienteId, esFallecimiento ? 'FALLECIDO' : 'EGRESADO');
 
   return { idAtencionCerrada: Number(idPacienteAtencion) };
 }
@@ -190,6 +193,7 @@ export async function aplicarEfectoMovimientoHospitalizacion({
   const periodoId = atencion?.id_periodo ?? atencion?.datosPeriodo?.id_periodo;
   const modalidadId = atencion?.id_modalidad ?? atencion?.datosModalidad?.id_modalidad;
 
+  const esFallecimiento = Boolean(fechaFallecimiento);
   const fechaEgreso = fechaFallecimiento || fechaHospitalizacion;
   if (!fechaEgreso) {
     throw new Error('No hay fecha de hospitalización (ni de fallecimiento) para el egreso.');
@@ -202,10 +206,13 @@ export async function aplicarEfectoMovimientoHospitalizacion({
     periodoId,
     modalidadId,
     fechaEgreso,
-    observacionesExtra: 'Generado automáticamente desde morbilidad hospitalaria',
+    tipoEgreso: esFallecimiento ? 'Fallecimiento' : 'Hospitalización',
+    observacionesExtra: esFallecimiento
+      ? 'Generado automáticamente desde morbilidad hospitalaria (fallecimiento)'
+      : 'Generado automáticamente desde morbilidad hospitalaria',
   });
 
-  if (efectoNorm === EFECTO_HOSP.EGRESO) {
+  if (efectoNorm === EFECTO_HOSP.EGRESO || esFallecimiento) {
     return { movimientosGenerados: true, efecto: EFECTO_HOSP.EGRESO };
   }
 

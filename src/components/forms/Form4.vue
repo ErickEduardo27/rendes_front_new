@@ -343,6 +343,8 @@ const opcionesEfectoDisponibles = computed(() => {
     const esFallecimiento = form.value.desenlace === 'Fallecimiento';
     const tieneAlta = Boolean(form.value.fAltHos);
     return OPCIONES_EFECTO_HOSPITALIZACION.filter((op) => {
+        // Fallecimiento siempre genera egreso definitivo (sin reingreso ni “sin egreso”).
+        if (esFallecimiento && op.value !== EFECTO_HOSP.EGRESO) return false;
         if (op.requiereAlta && (esFallecimiento || !tieneAlta)) return false;
         return true;
     });
@@ -1542,13 +1544,30 @@ const validarAntesDeGuardar = async () => {
 
 const solicitarRegistro = async () => {
     if (!(await validarAntesDeGuardar())) return;
+    const esFallecimiento = form.value.desenlace === 'Fallecimiento';
+    // Fallecimiento: egreso obligatorio; el paciente no podrá volver a captarse.
+    if (esFallecimiento && debeConfirmarEfectoMovimiento.value) {
+        const ok = await Swal.fire({
+            icon: 'warning',
+            title: 'Egreso por fallecimiento',
+            html: 'Al registrar <strong>Fallecimiento</strong> se generará el <strong>egreso</strong> del paciente '
+                + 'y <strong>no podrá volver a captarse</strong>. ¿Desea continuar?',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, generar egreso',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#0e7490',
+        });
+        if (!ok.isConfirmed) return;
+        await postForm({ efectoMovimiento: EFECTO_HOSP.EGRESO });
+        return;
+    }
     if (debeConfirmarEfectoMovimiento.value) {
         efectoMovimientoSeleccionado.value = efectoMovimientoPrevio.value || '';
         errorEfectoMovimiento.value = '';
         mostrarModalEfectoMovimiento.value = true;
         return;
     }
-    await postForm();
+    await postForm(esFallecimiento ? { efectoMovimiento: EFECTO_HOSP.EGRESO } : undefined);
 };
 
 const cancelarModalEfecto = () => {
