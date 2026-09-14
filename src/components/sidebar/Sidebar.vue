@@ -18,6 +18,13 @@
         <SidebarItem :icon="HomeIcon" label="Inicio" to="/" />
        <!--  <SidebarItem :icon="BellAlertIcon" label="Notificaciones" to="/notificaciones" /> -->
 
+        <SidebarItem
+            v-if="esSupervisorSidebar"
+            :icon="MagnifyingGlassIcon"
+            label="Buscador"
+            to="/buscador"
+        />
+
         <SidebarItem 
             v-if="['Admin','Clinicas','Hospitales'].includes(perfil)"
             :icon="DocumentMagnifyingGlassIcon" 
@@ -33,7 +40,7 @@
             ]"
         />
 
-        <SidebarItem v-if="['Supervisor', 'Admin','Clinicas','Hospitales'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
+        <SidebarItem v-if="['Admin','Clinicas','Hospitales'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
         <SidebarItem
             v-if="['Admin','Clinicas','Hospitales'].includes(perfil)"
             :icon="ArrowUpTrayIcon"
@@ -41,6 +48,7 @@
             to="/importacion-tiempo-dialisis"
         />
         <SidebarItem v-if="['Supervisor', 'Admin'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Evaluación" to="/evaluacion"/>
+        <SidebarItem v-if="['Supervisor', 'Admin'].includes(perfil)" :icon="BellAlertIcon" label="Notificación clínicas" to="/notificacion-clinicas"/>
         <SidebarItem v-if="['Supervisor', 'Admin'].includes(perfil)" :icon="ChartBarIcon" label="Reporte" to="/reporte-supervisor"/>
 
         <SidebarItem
@@ -88,12 +96,18 @@ import SidebarItem from './SidebarItem.vue';
 import { useAuthStore } from "@/store/auth";
 import { 
   HomeIcon, UserIcon, DocumentMagnifyingGlassIcon, 
-  ChartBarIcon, ArrowsRightLeftIcon, BellAlertIcon, ArrowDownTrayIcon, ArrowUpTrayIcon
+  ChartBarIcon, ArrowsRightLeftIcon, BellAlertIcon, ArrowDownTrayIcon, ArrowUpTrayIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/vue/24/outline';
 
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 const perfil = localStorage.getItem('perfil');
+
+const esSupervisorSidebar = computed(() => {
+  const p = String(user.value?.datosPerfil?.perfil ?? localStorage.getItem('perfil') ?? '').trim();
+  return p.toLowerCase().includes('supervisor');
+});
 
 const esAnalista = computed(() => {
   const p = String(user.value?.datosPerfil?.perfil ?? localStorage.getItem('perfil') ?? '').trim();

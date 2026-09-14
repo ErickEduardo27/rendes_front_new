@@ -22,6 +22,18 @@ export function esPerfilClinica() {
   return p.includes('clínica') || p.includes('clinica') || p.includes('hospital');
 }
 
+/** Perfil Hospitales (unidad hospitalaria). */
+export function esPerfilHospital() {
+  return obtenerNombrePerfil().toLowerCase().includes('hospital');
+}
+
+/** Perfil Clínicas (sin hospital). */
+export function esPerfilClinicas() {
+  const p = obtenerNombrePerfil().toLowerCase();
+  if (esPerfilHospital()) return false;
+  return p.includes('clínica') || p.includes('clinica');
+}
+
 export function esEvaluador() {
   return esSupervisor() || esAdmin();
 }

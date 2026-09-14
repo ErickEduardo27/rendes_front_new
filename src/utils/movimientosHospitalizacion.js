@@ -117,7 +117,8 @@ export async function generarEgresoPorHospitalizacion({
 }
 
 /**
- * Reactiva la atención cerrada como REINGRESO (misma atención / registros clínicos).
+ * Reactiva al paciente como REINGRESO creando una atención NUEVA.
+ * No sobrescribe la atención cerrada (conserva el NUEVO/CONTINUADOR histórico).
  */
 export async function generarReingresoPorHospitalizacion({
   idAtencionCerrada,
@@ -128,12 +129,28 @@ export async function generarReingresoPorHospitalizacion({
   fechaReingreso,
   observacionesExtra = '',
 }) {
-  if (!idAtencionCerrada || !pacienteId || !periodoId || !fechaReingreso) {
+  if (!pacienteId || !periodoId || !fechaReingreso) {
     throw new Error('Faltan datos para generar el reingreso por hospitalización.');
   }
 
+  // Asegura que la atención de origen quede cerrada sin cambiar su tipo_atencion
+  // (así el historial conserva NUEVO / CONTINUADOR / REINGRESO previo).
+  if (idAtencionCerrada) {
+    try {
+      const origen = await getAllIpress(`/pacienteAtencion/${Number(idAtencionCerrada)}/`);
+      const tipoOrigen = origen?.tipo_atencion;
+      await patchAllIpress(`/pacienteAtencion/${Number(idAtencionCerrada)}/`, {
+        estado: 'CERRADO',
+        fecha_fin: origen?.fecha_fin || fechaReingreso,
+        ...(tipoOrigen ? { tipo_atencion: tipoOrigen } : {}),
+      });
+    } catch (e) {
+      console.warn('No se pudo asegurar cierre de atención origen en reingreso hosp.:', e);
+    }
+  }
+
   const now = nowSql();
-  const payload = {
+  await postAllIpress('/pacienteAtencion/', {
     id_paciente: pacienteId,
     id_ipress: ipressId,
     id_periodo: periodoId,
@@ -146,9 +163,8 @@ export async function generarReingresoPorHospitalizacion({
     observaciones: observacionesExtra
       || 'Reingreso automático tras hospitalización',
     created_at: now,
-  };
+  });
 
-  await patchAllIpress(`/pacienteAtencion/${idAtencionCerrada}/`, payload);
   await patchPacienteEstado(pacienteId, 'REINGRESO');
   await actualizarPeriodoIpressPaciente(pacienteId, periodoId, ipressId);
 }

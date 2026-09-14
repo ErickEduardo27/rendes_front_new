@@ -71,6 +71,12 @@ const routes = [
         component: () => import('@/pages/movimientos/movimientos.vue'),
       },
       {
+        path: 'buscador',
+        name: 'BuscadorMovimientos',
+        component: () => import('@/pages/buscador/BuscadorMovimientos.vue'),
+        meta: { requiresAuth: true, requiresSupervisor: true },
+      },
+      {
         path: 'inicio-trr',
         name: 'InicioTRR',
         component: () => import('@/pages/registros/inicioTrr/index.vue'),
@@ -86,6 +92,12 @@ const routes = [
         path: 'evaluacion',
         name: 'Evaluacion',
         component: () => import('@/pages/evaluacion/EvaluacionRegistros.vue'),
+        meta: { requiresAuth: true, requiresEvaluador: true },
+      },
+      {
+        path: 'notificacion-clinicas',
+        name: 'NotificacionClinicas',
+        component: () => import('@/pages/evaluacion/NotificacionClinicas.vue'),
         meta: { requiresAuth: true, requiresEvaluador: true },
       },
       {
@@ -180,6 +192,10 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.requiresEvaluador && !perfilEsEvaluador(authStore.user)) {
+    return next({ name: 'Inicio' })
+  }
+
+  if (to.meta.requiresSupervisor && !perfilEsSupervisor(authStore.user)) {
     return next({ name: 'Inicio' })
   }
 

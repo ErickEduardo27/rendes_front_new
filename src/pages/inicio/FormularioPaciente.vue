@@ -6,13 +6,15 @@
       >
         <div class="min-w-0 flex-1 pr-2">
           <h2 class="text-2xl font-bold text-slate-800">
-            {{ modoEdicionSupervisor ? 'Edición de paciente en diálisis' : 'Registro de Nuevo Paciente en Diálisis' }}
+            {{ modoEdicionSupervisor ? 'Edición de paciente en diálisis' : (esRegistroSimplificado ? 'Registro de paciente (clínica)' : 'Registro de Nuevo Paciente en Diálisis') }}
           </h2>
           <p class="text-sm text-slate-500 mt-1">
             {{
               modoEdicionSupervisor
                 ? 'Modifique los datos de la ficha y guarde los cambios.'
-                : 'Complete los datos del paciente para la creación del expediente médico.'
+                : esRegistroSimplificado
+                  ? 'Complete los datos personales y la fecha de primer ingreso a la unidad. La condición (NUEVO / REINGRESO / CONTINUADOR) se define según esa fecha y el periodo actual.'
+                  : 'Complete los datos del paciente para la creación del expediente médico.'
             }}
           </p>
         </div>
@@ -217,7 +219,60 @@
           </div>
         </div>
 
-        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <!-- Clínica (no hospital): solo fecha 1er ingreso + condición -->
+        <div
+          v-if="esRegistroSimplificado"
+          class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+        >
+          <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Ingreso a la unidad</h3>
+          <div class="form-grid grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5">
+            <el-form-item label="Fecha de Primer Ingreso a Unidad" required :error="erroresFecha.fechaPrimerIngreso">
+              <FechaInput
+                v-model="form.fechaPrimerIngreso"
+                value-format="display"
+                placeholder="dd/mm/aaaa"
+                input-class="w-full"
+                :has-error="!!erroresFecha.fechaPrimerIngreso"
+                @change="onCambioFechaPrimerIngreso"
+                @blur="actualizarErroresFechas"
+              />
+              <p class="text-xs text-slate-500 mt-1">Periodo actual: {{ labelPeriodoActual || '—' }}</p>
+            </el-form-item>
+            <el-form-item
+              label="Condición del paciente"
+              :required="tipoCondicionFecha === 'SELECCIONAR'"
+            >
+              <div
+                v-if="tipoCondicionFecha === 'NUEVO'"
+                class="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+              >
+                <strong>NUEVO</strong>
+                <span class="block text-xs mt-0.5 text-emerald-800/90">
+                  La fecha de ingreso coincide con el periodo actual.
+                </span>
+              </div>
+              <template v-else-if="tipoCondicionFecha === 'SELECCIONAR'">
+                <el-select
+                  v-model="form.condicionAtencion"
+                  placeholder="Seleccione CONTINUADOR o REINGRESO"
+                  class="w-full"
+                  clearable
+                >
+                  <el-option label="CONTINUADOR" value="CONTINUADOR" />
+                  <el-option label="REINGRESO" value="REINGRESO" />
+                </el-select>
+                <p class="text-xs text-amber-700 mt-1">
+                  La fecha no pertenece al periodo actual; indique si es continuador o reingreso.
+                </p>
+              </template>
+              <p v-else class="text-xs text-slate-500">
+                Indique la fecha de primer ingreso para determinar la condición.
+              </p>
+            </el-form-item>
+          </div>
+        </div>
+
+        <div v-if="!esRegistroSimplificado" class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Etiología</h3>
           <div class="form-grid grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-5">
             <el-form-item label="Etiología general" :required="esCampoRequerido('etiologiaGeneral')">
@@ -233,7 +288,7 @@
           </div>
         </div>
 
-        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" :key="form.etiologiaGeneral">
+        <div v-if="!esRegistroSimplificado" class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" :key="form.etiologiaGeneral">
           <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Comorbilidad</h3>
           <el-checkbox-group v-model="form.comorbilidades">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-4">
@@ -263,7 +318,7 @@
           </div>
         </div>
 
-        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div v-if="!esRegistroSimplificado" class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 class="text-base font-semibold text-slate-700 mb-5 pb-3 border-b border-slate-200">Datos de TRR y Acceso</h3>
           <!-- <p
             v-if="requiereDatosCompletosTRR"
@@ -337,9 +392,41 @@
                 placeholder="dd/mm/aaaa"
                 input-class="w-full"
                 :has-error="!!erroresFecha.fechaPrimerIngreso"
-                @change="actualizarErroresFechas"
+                @change="onCambioFechaPrimerIngreso"
                 @blur="actualizarErroresFechas"
               />
+            </el-form-item>
+            <el-form-item
+              v-if="!modoEdicionSupervisor"
+              label="Condición del paciente"
+              :required="tipoCondicionFecha === 'SELECCIONAR'"
+            >
+              <div
+                v-if="tipoCondicionFecha === 'NUEVO'"
+                class="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+              >
+                <strong>NUEVO</strong>
+                <span class="block text-xs mt-0.5 text-emerald-800/90">
+                  La fecha de ingreso coincide con el periodo actual ({{ labelPeriodoActual || '—' }}).
+                </span>
+              </div>
+              <template v-else-if="tipoCondicionFecha === 'SELECCIONAR'">
+                <el-select
+                  v-model="form.condicionAtencion"
+                  placeholder="Seleccione CONTINUADOR o REINGRESO"
+                  class="w-full"
+                  clearable
+                >
+                  <el-option label="CONTINUADOR" value="CONTINUADOR" />
+                  <el-option label="REINGRESO" value="REINGRESO" />
+                </el-select>
+                <p class="text-xs text-amber-700 mt-1">
+                  La fecha de ingreso no pertenece al periodo actual; indique si es continuador o reingreso.
+                </p>
+              </template>
+              <p v-else class="text-xs text-slate-500">
+                Indique la fecha de primer ingreso para determinar la condición.
+              </p>
             </el-form-item>
             <el-form-item label="Hospital Procedencia TRR en EsSalud" :required="esCampoRequerido('hospitalProcedencia')" class="sm:col-span-2 xl:col-span-2">
               <el-autocomplete
@@ -378,6 +465,8 @@ import { ElMessage, ElConfigProvider, ElForm, ElFormItem, ElInput, ElSelect, ElO
 import es from 'element-plus/dist/locale/es.mjs';
 import Swal from 'sweetalert2';
 import { elegirAtencionEditable, esPacienteEgresadoEnListado } from '@/composables/useAtencionesRegistro';
+import { tipoCondicionPorFechaYPeriodo, esNombreIpressHospital } from '@/utils/condicionIngresoPorFecha';
+import FechaInput from '@/components/FechaInput.vue';
 
 const periodoSeleccionado = ref(null);
 const clinicaSeleccionada = ref('');
@@ -458,6 +547,21 @@ const idIpressListado = computed(() => {
   return idClinicaSeleccionada.value != null ? Number(idClinicaSeleccionada.value) : null;
 })
 
+const ipressSeleccionadaActual = computed(() => {
+  const id = idIpressListado.value;
+  const list = Array.isArray(ipress.value) ? ipress.value : [];
+  const found = list.find((x) => String(x.id_ipress) === String(id));
+  if (found) return found;
+  const nombre = props.nombreClinicaInicial || clinicaSeleccionada.value || '';
+  if (nombre) return { ipress: nombre, nombre_corto: nombre };
+  return null;
+});
+
+/** Sin «hospital» / «H.» en el nombre → solo datos personales + fecha 1er ingreso + condición. */
+const esRegistroSimplificado = computed(() => (
+  !modoEdicionSupervisor.value && !esNombreIpressHospital(ipressSeleccionadaActual.value)
+));
+
 const puedeCargarListadoEdicion = computed(() => (
   idIpressListado.value != null && !Number.isNaN(idIpressListado.value)
   && idPeriodoListado.value != null && !Number.isNaN(idPeriodoListado.value)
@@ -512,6 +616,7 @@ function aplicarModalidadGlobalAlFormulario() {
   if (texto) form.modalidadTRR = texto;
 }
 
+
 const pacientesListadoEdicionFiltrados = computed(() => {
   const nombre = filtroListadoNombre.value.trim().toLowerCase();
   const documento = filtroListadoDocumento.value.trim().toLowerCase();
@@ -549,6 +654,7 @@ const form = reactive({
   tipoAccesoInicio: '',
   fechaCreacionAcceso: '',
   fechaPrimerIngreso: '',
+  condicionAtencion: '',
   localizacionAcceso: '',
   hospitalProcedencia: '',
   departamento: '', // <-- AGREGADO
@@ -741,6 +847,12 @@ const requiereDatosCompletosTRR = computed(() => {
 });
 
 function esCampoRequerido(campo) {
+  if (esRegistroSimplificado.value) {
+    return [
+      ...CAMPOS_OBLIGATORIOS_MINIMOS,
+      'fechaPrimerIngreso',
+    ].includes(campo);
+  }
   if (CAMPOS_OBLIGATORIOS_MINIMOS.includes(campo)) return true;
   if (!requiereDatosCompletosTRR.value) return false;
   if ((campo === 'tipoAccesoInicio' || campo === 'localizacionAcceso') && form.modalidadTRR === 'Trasplante') {
@@ -751,6 +863,9 @@ function esCampoRequerido(campo) {
 }
 
 function camposObligatoriosActuales() {
+  if (esRegistroSimplificado.value) {
+    return [...CAMPOS_OBLIGATORIOS_MINIMOS, 'fechaPrimerIngreso'];
+  }
   const campos = [...CAMPOS_OBLIGATORIOS_MINIMOS];
   if (requiereDatosCompletosTRR.value) {
     campos.push(...CAMPOS_OBLIGATORIOS_TRR_COMPLETO);
@@ -1016,6 +1131,44 @@ const actualizarErroresFechas = () => {
     validarCampoFecha(campo.key, campo.label);
   }
 };
+
+const labelPeriodoActual = computed(() => {
+  const id = getIdPeriodoParaAtencion();
+  if (id == null) return '';
+  const p = (Array.isArray(periodos.value) ? periodos.value : []).find(
+    (x) => String(x.id_periodo) === String(id),
+  );
+  return p?.periodo || '';
+});
+
+const tipoCondicionFecha = computed(() => (
+  tipoCondicionPorFechaYPeriodo(
+    fechaFormularioParaApi(form.fechaPrimerIngreso),
+    labelPeriodoActual.value,
+  )
+));
+
+const condicionAtencionResuelta = computed(() => {
+  if (tipoCondicionFecha.value === 'NUEVO') return 'NUEVO';
+  if (tipoCondicionFecha.value === 'SELECCIONAR') {
+    const c = String(form.condicionAtencion || '').toUpperCase();
+    return (c === 'CONTINUADOR' || c === 'REINGRESO') ? c : '';
+  }
+  return '';
+});
+
+function onCambioFechaPrimerIngreso() {
+  actualizarErroresFechas();
+  if (tipoCondicionFecha.value === 'NUEVO') {
+    form.condicionAtencion = 'NUEVO';
+  } else if (form.condicionAtencion === 'NUEVO') {
+    form.condicionAtencion = '';
+  }
+}
+
+watch(tipoCondicionFecha, (tipo) => {
+  if (tipo === 'NUEVO') form.condicionAtencion = 'NUEVO';
+});
 
 const validarFechasFormulario = () => {
   actualizarErroresFechas();
@@ -2088,7 +2241,18 @@ const registrarPaciente = async () => {
     return;
   }
   if (!(await validarFormulario())) return;
-  if (!(await confirmarSinComorbilidades())) return;
+  if (!esRegistroSimplificado.value && !(await confirmarSinComorbilidades())) return;
+  if (tipoCondicionFecha.value === 'SELECCIONAR' && !condicionAtencionResuelta.value) {
+    await alertaCampoObligatorio(
+      'La fecha de primer ingreso no coincide con el periodo actual. Seleccione CONTINUADOR o REINGRESO.',
+      { title: 'Condición requerida' },
+    );
+    return;
+  }
+  if (esRegistroSimplificado.value && !form.fechaPrimerIngreso) {
+    await alertaCampoObligatorio('Indique la fecha de primer ingreso a la unidad.');
+    return;
+  }
   calcularEdadInicioTRR();
   const idPeriodo = getIdPeriodoParaAtencion();
   if (idPeriodo == null) {
@@ -2117,6 +2281,11 @@ const registrarPaciente = async () => {
     return;
   }
 
+  // En clínica simplificada la modalidad viene del selector global.
+  if (esRegistroSimplificado.value && !form.modalidadTRR) {
+    aplicarModalidadGlobalAlFormulario();
+  }
+
   const payloadPaciente = {
     documento: form.numeroDocumento,
     tipo_documento: form.tipoDocumento,
@@ -2124,8 +2293,11 @@ const registrarPaciente = async () => {
     paciente: form.nombreCompleto,
     fecha_nacimiento: fechaFormularioParaApi(form.fechaNacimiento),
     genero: form.sexo,
-    grado_instruccion: form.gradoInstruccion,
-    id_modalidad: form.modalidadTRR == 'Hemodiálisis' ? 1 : form.modalidadTRR == 'Diálisis Peritoneal' ? 2 : 3,
+    grado_instruccion: form.gradoInstruccion || (esRegistroSimplificado.value ? 'NO ESPECIFICADO' : form.gradoInstruccion),
+    id_modalidad: form.modalidadTRR == 'Hemodiálisis' ? 1
+      : form.modalidadTRR == 'Diálisis Peritoneal' ? 2
+        : form.modalidadTRR == 'Trasplante' ? 3
+          : Number(idModalidadAtencion) || null,
   };
 
   const estadoRegistro = {
@@ -2147,9 +2319,31 @@ const registrarPaciente = async () => {
     estadoRegistro.idPacienteAtencion = idsAtencion.idPacienteAtencion;
     estadoRegistro.idUnidadActual = idsAtencion.idUnidadActual;
 
-    const { idEtiologia, payload: payloadDialisis } = construirPayloadPacienteDialisis(estadoRegistro.idPaciente);
-    if (idEtiologia == null || Number.isNaN(idEtiologia)) {
-      throw { error: 'Seleccione una etiología específica de la lista.' };
+    let payloadDialisis;
+    if (esRegistroSimplificado.value) {
+      const idEtiologia = await resolverEtiologiaPorDefectoSimplificado();
+      if (idEtiologia == null) {
+        throw { error: 'No se pudo obtener una etiología por defecto para el registro simplificado.' };
+      }
+      const fechaCaptacion = fechaFormularioParaApi(form.fechaPrimerIngreso);
+      payloadDialisis = {
+        id_paciente: estadoRegistro.idPaciente,
+        id_etiologia: idEtiologia,
+        modalidad_inicio_trr: form.modalidadTRR
+          || modalidadTextoDesdeId(idModalidadAtencion)
+          || 'Hemodiálisis',
+        fecha_inicio_trr: fechaCaptacion,
+        subsistema_salud: 'Minsa',
+        tipo_acceso: 'NO HABIDO',
+        fecha_creacion_acceso: fechaCaptacion,
+        fecha_primer_ingreso: fechaCaptacion,
+      };
+    } else {
+      const built = construirPayloadPacienteDialisis(estadoRegistro.idPaciente);
+      if (built.idEtiologia == null || Number.isNaN(built.idEtiologia)) {
+        throw { error: 'Seleccione una etiología específica de la lista.' };
+      }
+      payloadDialisis = built.payload;
     }
 
     const resDialisis = await postAllIpress('/pacientesDialisis/', payloadDialisis);
@@ -2195,13 +2389,18 @@ const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
     throw { error: 'Indique la fecha de primer ingreso a la unidad.' };
   }
 
+  const tipoAtencion = condicionAtencionResuelta.value || 'NUEVO';
+  if (tipoCondicionFecha.value === 'SELECCIONAR' && !condicionAtencionResuelta.value) {
+    throw { error: 'Seleccione CONTINUADOR o REINGRESO (la fecha no coincide con el periodo actual).' };
+  }
+
   const payloadAtencion = {
     id_paciente: idPaciente,
     id_ipress: idIpress,
     id_periodo: idPeriodo,
     id_modalidad: idModalidad,
     fecha_atencion: fechaCaptacion,
-    tipo_atencion: 'NUEVO',
+    tipo_atencion: tipoAtencion,
     estado: 'ACTIVO',
     fecha_inicio: fechaCaptacion,
   };
@@ -2248,11 +2447,12 @@ async function actualizarPeriodoIpressPaciente(pacienteId, periodoId, ipressId) 
 }
 
 async function finalizarCaptacionPaciente({ idPaciente, idPeriodo, idIpress }) {
-  await patchPacienteEstado(idPaciente, 'NUEVO');
+  const estadoPaciente = condicionAtencionResuelta.value || 'NUEVO';
+  await patchPacienteEstado(idPaciente, estadoPaciente);
   await actualizarPeriodoIpressPaciente(idPaciente, idPeriodo, idIpress);
 
   ElMessage({
-    message: 'Paciente registrado y captado exitosamente.',
+    message: `Paciente registrado y captado como ${estadoPaciente}.`,
     type: 'success',
     plain: true,
   });

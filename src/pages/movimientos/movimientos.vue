@@ -1,9 +1,14 @@
 <template>
-    <div class="p-6 space-y-6">
+    <div :class="modoEvaluacion ? 'p-4 space-y-4' : 'p-6 space-y-6'">
         <!-- Encabezado -->
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
             <div>
-                <h1 class="text-2xl font-bold text-gray-800">Gestión de Movimientos de Pacientes</h1>
+                <h1
+                    class="font-bold text-gray-800"
+                    :class="modoEvaluacion ? 'text-lg' : 'text-2xl'"
+                >
+                    {{ modoEvaluacion ? 'Movimientos del periodo' : 'Gestión de Movimientos de Pacientes' }}
+                </h1>
                 <p class="text-sm text-gray-600 mt-1">Último movimiento por paciente del periodo, IPRESS y modalidad seleccionados. Use «Historial» para ver todos los movimientos del paciente.</p>
                 <p
                     v-if="bloqueadoPorNotificacion"
@@ -11,13 +16,25 @@
                 >
                     {{ mensajeBloqueoNotificacion }}
                 </p>
+                <p
+                    v-else-if="periodoConforme"
+                    class="mt-2 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 max-w-2xl"
+                >
+                    Periodo con <strong>conformidad</strong>. No se puede captar, egresar, editar ni eliminar movimientos.
+                </p>
+                <p
+                    v-else-if="movimientosCerrados"
+                    class="mt-2 text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 max-w-2xl"
+                >
+                    Los movimientos de este periodo están <strong>sincerados/cerrados</strong>. No se puede captar, egresar, editar ni eliminar hasta que el supervisor los abra de nuevo.
+                </p>
             </div>
             <div class="flex gap-2">
                 <button
                     type="button"
                     class="bg-sky-500 text-white px-3 py-1.5 rounded text-xs font-semibold shadow hover:bg-sky-600 transition flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                    :disabled="bloqueadoPorNotificacion"
-                    :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : 'Captar paciente'"
+                    :disabled="accionesMovimientoBloqueadas"
+                    :title="tituloBloqueoAcciones"
                     @click="abrirModalConsultaDocumento"
                 >
                     <span>➕</span>
@@ -26,14 +43,56 @@
                 <button
                     type="button"
                     class="bg-red-500 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-red-600 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                    :disabled="bloqueadoPorNotificacion"
-                    :title="bloqueadoPorNotificacion ? mensajeBloqueoNotificacion : 'Egresar paciente'"
+                    :disabled="accionesMovimientoBloqueadas"
+                    :title="tituloBloqueoAcciones"
                     @click="abrirModalEgresar"
                 >
                     <span>➖</span>
                     <span>Egresar Paciente</span>
                 </button>
             </div>
+        </div>
+
+        <div
+            v-if="modoEvaluacion && filtroListo && periodoConforme"
+            class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+        >
+            <p class="text-sm text-slate-800">
+                Ya se dio <strong>conformidad</strong> para este periodo, clínica y modalidad.
+                No se pueden editar, eliminar, captar ni egresar movimientos.
+            </p>
+        </div>
+        <div
+            v-else-if="modoEvaluacion && filtroListo && movimientosAbiertos === false"
+            class="rounded-xl border border-amber-100 bg-amber-50/90 px-4 py-3 flex flex-wrap items-center justify-between gap-3"
+        >
+            <p class="text-sm text-amber-950">
+                Los movimientos están <strong>sincerados/cerrados</strong>. No se puede captar, egresar, editar ni eliminar hasta que se abran de nuevo.
+            </p>
+            <button
+                type="button"
+                class="shrink-0 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+                :disabled="abriendoMovimientos"
+                @click="confirmarAbrirMovimientos"
+            >
+                {{ abriendoMovimientos ? 'Abriendo…' : 'Abrir movimientos' }}
+            </button>
+        </div>
+        <div
+            v-else-if="modoEvaluacion && filtroListo && movimientosAbiertos === true"
+            class="rounded-xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 flex flex-wrap items-center justify-between gap-3"
+        >
+            <p class="text-sm text-emerald-900">
+                Puede <strong>sincerar (cerrar)</strong> los movimientos del periodo actual para bloquear captar, egresar y editar.
+            </p>
+            <button
+                type="button"
+                class="shrink-0 rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50"
+                :disabled="cerrandoMovimientos"
+                @click="confirmarSincerarMovimientos"
+            >
+                {{ cerrandoMovimientos ? 'Sincerando…' : 'Sincerar movimientos' }}
+            </button>
         </div>
 
         <!-- Filtros -->
@@ -161,18 +220,29 @@
                                         Historial
                                     </button>
                                     <button
+                                        v-if="puedeEditarEliminarMovimientos"
                                         type="button"
                                         class="font-semibold text-[11px] px-2 py-1 rounded transition"
-                                        :class="(movimiento.tipo === 'CAMBIO_MODALIDAD' || bloqueadoPorNotificacion)
+                                        :class="(movimiento.tipo === 'CAMBIO_MODALIDAD' || accionesMovimientoBloqueadas)
                                             ? 'text-gray-400 cursor-not-allowed'
                                             : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'"
-                                        :disabled="movimiento.tipo === 'CAMBIO_MODALIDAD' || bloqueadoPorNotificacion"
-                                        :title="bloqueadoPorNotificacion
-                                            ? mensajeBloqueoNotificacion
+                                        :disabled="movimiento.tipo === 'CAMBIO_MODALIDAD' || accionesMovimientoBloqueadas"
+                                        :title="accionesMovimientoBloqueadas
+                                            ? tituloBloqueoAcciones
                                             : (movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'Los cambios de modalidad no se editan desde aquí' : 'Editar movimiento')"
                                         @click="editarMovimiento(movimiento)"
                                     >
                                         Editar
+                                    </button>
+                                    <button
+                                        v-if="puedeEditarEliminarMovimientos"
+                                        type="button"
+                                        class="font-semibold text-[11px] px-2 py-1 rounded transition text-rose-600 hover:text-rose-800 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                        :disabled="eliminandoMovimientoId === movimiento.id || accionesMovimientoBloqueadas"
+                                        :title="accionesMovimientoBloqueadas ? tituloBloqueoAcciones : 'Eliminar movimiento'"
+                                        @click="eliminarMovimiento(movimiento)"
+                                    >
+                                        {{ eliminandoMovimientoId === movimiento.id ? '…' : 'Eliminar' }}
                                     </button>
                                 </div>
                             </td>
@@ -256,6 +326,13 @@
                                 {{ historialOrdenDesc ? '↑ Orden: reciente → antiguo' : '↓ Orden: antiguo → reciente' }}
                             </button>
                         </div>
+                        <p
+                            v-if="historialInconsistenteNuevos"
+                            class="mb-3 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
+                        >
+                            Inconsistencia: hay más de un movimiento <strong>NUEVO</strong> sin un <strong>EGRESO</strong> entre ellos.
+                            Tras un NUEVO debe egresar antes de registrar otro NUEVO.
+                        </p>
                         <div class="overflow-x-auto border border-slate-200 rounded-lg">
                         <table class="w-full text-xs">
                             <thead class="bg-slate-50 border-b">
@@ -267,6 +344,10 @@
                                     <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Periodo</th>
                                     <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Clínica</th>
                                     <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase">Modalidad</th>
+                                    <th
+                                        v-if="puedeEditarEliminarMovimientos"
+                                        class="px-3 py-2 text-center text-[11px] font-medium text-gray-500 uppercase"
+                                    >Acción</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
@@ -289,6 +370,30 @@
                                     <td class="px-3 py-2">{{ nombreClinicaParaVista(h) }}</td>
                                     <td class="px-3 py-2 max-w-[200px] truncate" :title="h.detalle_modalidad || h.modalidad || ''">
                                         {{ h.detalle_modalidad || h.modalidad || '—' }}
+                                    </td>
+                                    <td v-if="puedeEditarEliminarMovimientos" class="px-3 py-2 whitespace-nowrap text-center">
+                                        <div class="inline-flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                class="font-semibold text-[11px] px-2 py-1 rounded text-blue-600 hover:bg-blue-50 disabled:opacity-40"
+                                                :disabled="h.tipo === 'CAMBIO_MODALIDAD' || accionesMovimientoBloqueadas"
+                                                :title="accionesMovimientoBloqueadas
+                                                    ? tituloBloqueoAcciones
+                                                    : (h.tipo === 'CAMBIO_MODALIDAD' ? 'Los cambios de modalidad no se editan desde aquí' : 'Editar movimiento')"
+                                                @click="editarMovimiento(h)"
+                                            >
+                                                Editar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="font-semibold text-[11px] px-2 py-1 rounded text-rose-600 hover:bg-rose-50 disabled:opacity-40"
+                                                :disabled="eliminandoMovimientoId === h.id || accionesMovimientoBloqueadas"
+                                                :title="accionesMovimientoBloqueadas ? tituloBloqueoAcciones : 'Eliminar movimiento'"
+                                                @click="eliminarMovimiento(h)"
+                                            >
+                                                {{ eliminandoMovimientoId === h.id ? '…' : 'Eliminar' }}
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -411,7 +516,11 @@
                         class="mt-5 rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm"
                     >
                         <p class="text-amber-900 font-medium">No hay ningún paciente registrado con ese documento.</p>
-                        <p class="text-amber-800/90 text-xs mt-1">Puede cerrar o registrar un paciente nuevo con el formulario completo.</p>
+                        <p class="text-amber-800/90 text-xs mt-1">
+                          {{ esUnidadHospitalSeleccionada
+                            ? 'Debe registrar al paciente con el formulario completo (Formulario 1).'
+                            : 'Registre la fecha de primer ingreso a la unidad (registro simplificado).' }}
+                        </p>
                         <div class="flex flex-col sm:flex-row gap-2 mt-4">
                             <button
                                 type="button"
@@ -425,7 +534,7 @@
                                 class="flex-1 py-2 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700"
                                 @click="abrirFormularioRegistroNuevo"
                             >
-                                Registrar nuevo paciente
+                                {{ esUnidadHospitalSeleccionada ? 'Registrar con formulario completo' : 'Registrar fecha de ingreso' }}
                             </button>
                         </div>
                     </div>
@@ -433,7 +542,7 @@
             </div>
         </div>
 
-        <!-- Modal: formulario completo de registro (tras no encontrado) -->
+        <!-- Modal: formulario completo de registro (hospital / Form 1) -->
         <div v-if="mostrarModalNuevo" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4">
                 <FormularioPaciente
@@ -444,7 +553,93 @@
                     :mostrar-tabla-edicion="false"
                     :numero-documento-inicial="documentoPrefillRegistro"
                     @cancelar="onCerrarFormularioPacienteMovimientos"
+                    @guardado="onCerrarFormularioPacienteMovimientos"
                 />
+            </div>
+        </div>
+
+        <!-- Modal: registro simplificado clínica (solo fecha 1er ingreso + condición) -->
+        <div v-if="mostrarModalRegistroClinica" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 relative">
+                <button type="button" class="absolute top-3 right-3 text-gray-500 hover:text-black text-2xl" @click="cerrarModalRegistroClinica">&times;</button>
+                <h3 class="text-lg font-bold text-slate-800 mb-1">Registro simplificado</h3>
+                <p class="text-xs text-slate-500 mb-4">
+                    Clínica: solo se solicita la fecha de primer ingreso a la unidad. Si coincide con el periodo actual será <strong>NUEVO</strong>; si no, elija CONTINUADOR o REINGRESO.
+                </p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Documento</label>
+                        <input v-model="formRegistroClinica.documento" type="text" class="w-full border rounded-lg px-3 py-2 text-sm bg-slate-50" readonly />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Apellidos y nombres*</label>
+                        <input v-model="formRegistroClinica.paciente" type="text" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="APELLIDOS NOMBRES" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo doc.*</label>
+                            <select v-model="formRegistroClinica.tipo_documento" class="w-full border rounded-lg px-3 py-2 text-sm">
+                                <option value="DNI">DNI</option>
+                                <option value="CE">CE</option>
+                                <option value="PASAPORTE">PASAPORTE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Género*</label>
+                            <select v-model="formRegistroClinica.genero" class="w-full border rounded-lg px-3 py-2 text-sm">
+                                <option value="">Seleccione</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Femenino</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de nacimiento*</label>
+                        <FechaInput v-model="formRegistroClinica.fecha_nacimiento" input-class="w-full border rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de primer ingreso a la unidad*</label>
+                        <FechaInput
+                            v-model="formRegistroClinica.fecha_primer_ingreso"
+                            input-class="w-full border rounded-lg px-3 py-2 text-sm"
+                            :min="rangoFechaEgreso.min"
+                            :max="rangoFechaEgreso.max"
+                            @update:model-value="onCambioFechaRegistroClinica"
+                        />
+                        <p class="text-[11px] text-slate-500 mt-1">Periodo actual: {{ nombrePeriodoGlobal || '—' }}</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Condición del paciente*</label>
+                        <div
+                            v-if="tipoCondicionRegistroClinica === 'NUEVO'"
+                            class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+                        >
+                            <strong>NUEVO</strong>
+                            <span class="block text-xs mt-0.5">La fecha coincide con el periodo actual.</span>
+                        </div>
+                        <template v-else-if="tipoCondicionRegistroClinica === 'SELECCIONAR'">
+                            <select v-model="formRegistroClinica.condicion" class="w-full border rounded-lg px-3 py-2 text-sm">
+                                <option value="">Seleccione…</option>
+                                <option value="CONTINUADOR">CONTINUADOR</option>
+                                <option value="REINGRESO">REINGRESO</option>
+                            </select>
+                            <p class="text-[11px] text-amber-700 mt-1">La fecha no coincide con el periodo; elija continuador o reingreso.</p>
+                        </template>
+                        <p v-else class="text-xs text-slate-500">Indique la fecha de primer ingreso.</p>
+                    </div>
+                    <p v-if="errorRegistroClinica" class="text-xs text-rose-700">{{ errorRegistroClinica }}</p>
+                </div>
+                <div class="flex justify-end gap-2 mt-5 pt-4 border-t">
+                    <button type="button" class="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 text-sm" @click="cerrarModalRegistroClinica">Cancelar</button>
+                    <button
+                        type="button"
+                        class="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold disabled:opacity-50"
+                        :disabled="guardandoRegistroClinica"
+                        @click="guardarRegistroClinicaSimplificado"
+                    >
+                        {{ guardandoRegistroClinica ? 'Guardando…' : 'Registrar y captar' }}
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -502,9 +697,19 @@
                     <!-- Condición del Paciente -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Condición del Paciente en la Unidad</label>
-                        <div class="w-full border rounded p-3 bg-gray-50">
-                            <div class="font-semibold text-gray-800">{{ condicionAutomatica }}</div>
-                            <p class="text-xs text-gray-600 mt-1">{{ mensajeCondicion }}</p>
+                        <div
+                            class="w-full border rounded p-3"
+                            :class="condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'NUEVO_SIN_EGRESO'
+                                ? 'bg-amber-50 border-amber-300'
+                                : 'bg-gray-50'"
+                        >
+                            <div class="font-semibold text-gray-800">{{ condicionAutomatica || '—' }}</div>
+                            <p
+                                class="text-xs mt-1"
+                                :class="condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'NUEVO_SIN_EGRESO'
+                                    ? 'text-amber-800 font-medium'
+                                    : 'text-gray-600'"
+                            >{{ mensajeCondicion }}</p>
                         </div>
                     </div>
 
@@ -605,7 +810,12 @@
                     <button @click="cerrarModalCaptar" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
                         Cancelar
                     </button>
-                    <button @click="captarPaciente" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    <button
+                        type="button"
+                        class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        :disabled="!movimientoEnEdicion && (condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'NUEVO_SIN_EGRESO')"
+                        @click="captarPaciente"
+                    >
                         {{ movimientoEnEdicion ? 'Guardar cambios' : 'Captar Paciente' }}
                     </button>
                 </div>
@@ -855,18 +1065,28 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive, inject, watch } from 'vue';
-import { getAllIpress, postAllIpress, patchAllIpress } from "@/services/ipress/Ipress.service";
+import { ref, computed, onMounted, onUnmounted, reactive, inject, watch } from 'vue';
+import { getAllIpress, postAllIpress, patchAllIpress, deleteAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
-import { debeLimitarClinicasAlUsuario } from '@/utils/perfil';
+import { debeLimitarClinicasAlUsuario, esSupervisor, esPerfilHospital } from '@/utils/perfil';
 import { fechaCelda, formatFechaDDMMAAAA, parseFechaAISO } from '@/utils/fechaFormat';
+import { tipoCondicionPorFechaYPeriodo, esNombreIpressHospital } from '@/utils/condicionIngresoPorFecha';
 import { useAuthStore } from '@/store/auth';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import FormularioPaciente from '../inicio/FormularioPaciente.vue';
 import Form4 from '@/components/forms/Form4.vue';
+import FechaInput from '@/components/FechaInput.vue';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
+import { prepararPayloadUnidadesActuales } from '@/utils/unidadesActualesPayload';
+
+defineProps({
+  modoEvaluacion: { type: Boolean, default: false },
+});
+
+/** Formulario 6 = movimientos (abrir/cerrar / sincerar periodo). */
+const NUMERO_FORMULARIO_MOVIMIENTOS = 6;
 
 // Estados globales del sistema (NavBar: periodo, clínica, modalidad)
 const periodoGlobal = inject('periodoGlobal', ref(null));
@@ -876,6 +1096,179 @@ const { bloqueadoPorNotificacion, mensajeBloqueoNotificacion } = useBloqueoNotif
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+
+const eliminandoMovimientoId = ref(null);
+
+const movimientosAbiertos = ref(null);
+const cargandoEstadoMovimientos = ref(false);
+const cerrandoMovimientos = ref(false);
+const abriendoMovimientos = ref(false);
+/** Conformidad OECIS del periodo/IPRESS/modalidad (bloqueo definitivo de edición). */
+const periodoConforme = ref(false);
+
+const filtroListo = computed(() => (
+  periodoGlobal.value != null && periodoGlobal.value !== ''
+  && clinicaGlobal.value != null && clinicaGlobal.value !== ''
+  && modalidadGlobal.value != null && modalidadGlobal.value !== ''
+));
+
+const movimientosCerrados = computed(() => movimientosAbiertos.value === false);
+
+/**
+ * Solo supervisor puede editar/eliminar, y únicamente mientras el formulario
+ * esté abierto y no exista conformidad del periodo.
+ */
+const puedeEditarEliminarMovimientos = computed(() => (
+  esSupervisor() && !movimientosCerrados.value && !periodoConforme.value
+));
+
+const accionesMovimientoBloqueadas = computed(() => (
+  bloqueadoPorNotificacion.value || movimientosCerrados.value || periodoConforme.value
+));
+
+const tituloBloqueoAcciones = computed(() => {
+  if (periodoConforme.value) {
+    return 'Ya se dio conformidad. No se pueden editar ni eliminar movimientos.';
+  }
+  if (bloqueadoPorNotificacion.value) return mensajeBloqueoNotificacion;
+  if (movimientosCerrados.value) {
+    return 'Los movimientos de este periodo están sincerados/cerrados. No se pueden editar ni eliminar.';
+  }
+  return '';
+});
+
+async function fetchEstadoConformidad() {
+  if (!filtroListo.value) {
+    periodoConforme.value = false;
+    return;
+  }
+  try {
+    const params = new URLSearchParams({
+      id_periodo: String(periodoGlobal.value),
+      id_ipress: String(clinicaGlobal.value),
+      id_modalidad: String(modalidadGlobal.value),
+    });
+    const r = await getAllIpress(`/consulta_notificacion_envio_revision/?${params.toString()}`);
+    periodoConforme.value = Boolean(r?.ya_dio_conformidad);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function fetchEstadoMovimientos() {
+  if (!filtroListo.value) {
+    movimientosAbiertos.value = null;
+    return;
+  }
+  cargandoEstadoMovimientos.value = true;
+  try {
+    const res = await postAllIpress('/consulta_estado_formulario_moderno/', {
+      id_periodo: Number(periodoGlobal.value),
+      id_ipress: Number(clinicaGlobal.value),
+      id_modalidad: Number(modalidadGlobal.value),
+      numero_formulario: NUMERO_FORMULARIO_MOVIMIENTOS,
+    });
+    movimientosAbiertos.value = res?.abierto !== false;
+  } catch (e) {
+    console.error(e);
+    movimientosAbiertos.value = true;
+  } finally {
+    cargandoEstadoMovimientos.value = false;
+  }
+}
+
+async function confirmarSincerarMovimientos() {
+  if (!filtroListo.value) return;
+  try {
+    await ElMessageBox.confirm(
+      '¿Sincerar (cerrar) los movimientos de este periodo, clínica y modalidad? No se podrá captar, egresar, editar ni eliminar hasta que se abran de nuevo.',
+      'Sincerar movimientos',
+      {
+        type: 'warning',
+        confirmButtonText: 'Sí, sincerar',
+        cancelButtonText: 'Cancelar',
+      },
+    );
+  } catch {
+    return;
+  }
+  if (periodoConforme.value) {
+    ElMessage.warning('Ya se dio conformidad; no se pueden cambiar los movimientos.');
+    return;
+  }
+  cerrandoMovimientos.value = true;
+  try {
+    await postAllIpress('/cerrar_mes/', {
+      id_periodo: Number(periodoGlobal.value),
+      id_ipress: Number(clinicaGlobal.value),
+      id_modalidad: Number(modalidadGlobal.value),
+      id_formulario: NUMERO_FORMULARIO_MOVIMIENTOS,
+      estado: 2,
+    });
+    movimientosAbiertos.value = false;
+    ElMessage.success('Movimientos sincerados. Ya no se pueden editar ni eliminar.');
+    await fetchEstadoMovimientos();
+  } catch (e) {
+    console.error(e);
+    ElMessage.error(e?.error || e?.message || 'No se pudo sincerar los movimientos.');
+  } finally {
+    cerrandoMovimientos.value = false;
+  }
+}
+
+async function confirmarAbrirMovimientos() {
+  if (!filtroListo.value) return;
+  if (periodoConforme.value) {
+    ElMessage.warning('Ya se dio conformidad; no se pueden reabrir los movimientos.');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      '¿Abrir de nuevo los movimientos para este periodo, clínica y modalidad? Se podrá volver a editar.',
+      'Abrir movimientos',
+      {
+        type: 'info',
+        confirmButtonText: 'Sí, abrir',
+        cancelButtonText: 'Cancelar',
+      },
+    );
+  } catch {
+    return;
+  }
+  abriendoMovimientos.value = true;
+  try {
+    await postAllIpress('/cerrar_mes/', {
+      id_periodo: Number(periodoGlobal.value),
+      id_ipress: Number(clinicaGlobal.value),
+      id_modalidad: Number(modalidadGlobal.value),
+      id_formulario: NUMERO_FORMULARIO_MOVIMIENTOS,
+      estado: 1,
+    });
+    ElMessage.success('Movimientos abiertos nuevamente.');
+    await fetchEstadoMovimientos();
+  } catch (e) {
+    console.error(e);
+    ElMessage.error(e?.error || e?.message || 'No se pudo abrir los movimientos.');
+  } finally {
+    abriendoMovimientos.value = false;
+  }
+}
+
+function asegurarAccionesMovimientoPermitidas() {
+  if (periodoConforme.value) {
+    ElMessage.warning('Ya se dio conformidad. No se pueden editar ni eliminar movimientos.');
+    return false;
+  }
+  if (bloqueadoPorNotificacion.value) {
+    ElMessage.warning(mensajeBloqueoNotificacion);
+    return false;
+  }
+  if (movimientosCerrados.value) {
+    ElMessage.warning('Los movimientos están sincerados/cerrados. No se pueden editar ni eliminar.');
+    return false;
+  }
+  return true;
+}
 
 const nombrePeriodoGlobal = computed(() => {
   const id = periodoGlobal.value;
@@ -1080,6 +1473,7 @@ const itemsPorPaginaHistorial = 10;
 /** Misma consulta por documento + formulario que Lista de pacientes */
 const mostrarModalConsultaDocumento = ref(false);
 const mostrarModalNuevo = ref(false);
+const mostrarModalRegistroClinica = ref(false);
 const documentoPrefillRegistro = ref('');
 const docConsulta = ref('');
 const consultandoPaciente = ref(false);
@@ -1091,6 +1485,35 @@ const idPeriodoIpress = ref(null);
 const idClinicaSeleccionada = ref(null);
 const clinicaSeleccionada = ref('');
 const periodoSeleccionado = ref(null);
+const guardandoRegistroClinica = ref(false);
+const errorRegistroClinica = ref('');
+const formRegistroClinica = reactive({
+  documento: '',
+  paciente: '',
+  tipo_documento: 'DNI',
+  genero: '',
+  fecha_nacimiento: '',
+  fecha_primer_ingreso: '',
+  condicion: '',
+});
+
+/** Hospital = perfil Hospitales o IPRESS cuyo nombre contiene «hospital». */
+const esUnidadHospitalSeleccionada = computed(() => {
+  if (esPerfilHospital()) return true;
+  const id = clinicaGlobal.value;
+  const item = (Array.isArray(ipress.value) ? ipress.value : []).find(
+    (x) => String(x.id_ipress) === String(id),
+  );
+  return esNombreIpressHospital(item);
+});
+
+const tipoCondicionRegistroClinica = computed(() => (
+  tipoCondicionPorFechaYPeriodo(
+    parseFechaAISO(formRegistroClinica.fecha_primer_ingreso) || formRegistroClinica.fecha_primer_ingreso,
+    nombrePeriodoGlobal.value,
+  )
+));
+
 const pacienteSeleccionado = ref(null);
 const pacienteSeleccionadoEgresar = ref(null);
 const condicionAutomatica = ref('');
@@ -1210,17 +1633,79 @@ const movimientosPaginados = computed(() => {
     return movimientosFiltrados.value.slice(inicio, inicio + itemsPorPagina);
 });
 
+function prioridadTipoMovimiento(tipo) {
+    const t = String(tipo || '').toUpperCase();
+    if (t === 'INGRESO') return 1;
+    if (t === 'CAMBIO_MODALIDAD') return 2;
+    if (t === 'EGRESO') return 3;
+    return 4;
+}
+
 function compararMovimientosPorFecha(a, b, desc = true) {
-    const cmpFecha = String(b.fecha).localeCompare(String(a.fecha));
-    const cmpId = (Number(b.id) || 0) - (Number(a.id) || 0);
+    const fa = String(a?.fecha || '');
+    const fb = String(b?.fecha || '');
+    const cmpFecha = fb.localeCompare(fa);
     if (cmpFecha !== 0) return desc ? cmpFecha : -cmpFecha;
-    return desc ? cmpId : -cmpId;
+
+    // Misma fecha: preferir created_at / id (orden real de creación).
+    const ca = String(a?.created_at || '');
+    const cb = String(b?.created_at || '');
+    if (ca && cb && ca !== cb) {
+        const cmpCreated = cb.localeCompare(ca);
+        return desc ? cmpCreated : -cmpCreated;
+    }
+
+    const cmpId = (Number(b?.id) || 0) - (Number(a?.id) || 0);
+    if (cmpId !== 0) return desc ? cmpId : -cmpId;
+
+    // Empate total: ingreso antes que egreso en cronología ascendente.
+    const pri = prioridadTipoMovimiento(a?.tipo) - prioridadTipoMovimiento(b?.tipo);
+    return desc ? -pri : pri;
+}
+
+function tieneNuevoSinEgresoPosterior(movimientos) {
+    const lista = (Array.isArray(movimientos) ? movimientos : [])
+        .filter((m) => {
+            const tipo = String(m.tipo || '').toUpperCase();
+            return tipo === 'INGRESO' || tipo === 'EGRESO';
+        })
+        .sort((a, b) => compararMovimientosPorFecha(a, b, false));
+
+    let nuevoPendienteDeEgreso = false;
+    for (const m of lista) {
+        const tipo = String(m.tipo || '').toUpperCase();
+        const condicion = String(m.condicion || m.tipo_atencion || '').toUpperCase();
+        if (tipo === 'INGRESO' && condicion === 'NUEVO') {
+            nuevoPendienteDeEgreso = true;
+        } else if (tipo === 'EGRESO') {
+            nuevoPendienteDeEgreso = false;
+        }
+    }
+    return nuevoPendienteDeEgreso;
 }
 
 const historialMovimientosOrdenados = computed(() => {
     const lista = [...historialMovimientos.value];
     lista.sort((a, b) => compararMovimientosPorFecha(a, b, historialOrdenDesc.value));
     return lista;
+});
+
+const historialInconsistenteNuevos = computed(() => {
+    const lista = historialMovimientos.value;
+    if (!lista.length) return false;
+    const crono = [...lista].sort((a, b) => compararMovimientosPorFecha(a, b, false));
+    let vioNuevo = false;
+    for (const m of crono) {
+        const tipo = String(m.tipo || '').toUpperCase();
+        const condicion = String(m.condicion || '').toUpperCase();
+        if (tipo === 'INGRESO' && condicion === 'NUEVO') {
+            if (vioNuevo) return true;
+            vioNuevo = true;
+        } else if (tipo === 'EGRESO') {
+            vioNuevo = false;
+        }
+    }
+    return false;
 });
 
 const totalPaginasHistorial = computed(() =>
@@ -1281,6 +1766,55 @@ function cerrarModalHistorial() {
     historialMovimientos.value = [];
     historialOrdenDesc.value = true;
     paginaHistorial.value = 1;
+}
+
+async function recargarHistorialSiAbierto() {
+    if (!mostrarModalHistorial.value || !historialPaciente.value?.id_paciente) return;
+    try {
+        const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(historialPaciente.value.id_paciente)}`);
+        const lista = Array.isArray(res) ? res : (res?.results || []);
+        historialMovimientos.value = lista.map(mapearAtencionAMovimiento);
+    } catch (e) {
+        console.warn('No se pudo refrescar el historial:', e);
+    }
+}
+
+async function eliminarMovimiento(mov) {
+    if (!puedeEditarEliminarMovimientos.value) {
+        ElMessage.warning('Solo el perfil supervisor puede eliminar movimientos.');
+        return;
+    }
+    if (!asegurarAccionesMovimientoPermitidas()) return;
+    const id = mov?.id;
+    if (id == null) {
+        ElMessage.warning('No se pudo identificar el movimiento.');
+        return;
+    }
+    try {
+        await ElMessageBox.confirm(
+            `¿Eliminar el movimiento ${mov.tipo || ''} del ${fechaCelda(mov.fecha)} (${nombreClinicaParaVista(mov)})? Esta acción no se puede deshacer.`,
+            'Eliminar movimiento',
+            {
+                type: 'warning',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+            },
+        );
+    } catch {
+        return;
+    }
+    eliminandoMovimientoId.value = id;
+    try {
+        await deleteAllIpress(`/pacienteAtencion/${id}/`);
+        ElMessage.success('Movimiento eliminado.');
+        await fetchMovimientos();
+        await recargarHistorialSiAbierto();
+    } catch (e) {
+        console.error('Error al eliminar movimiento:', e);
+        ElMessage.error(e?.error || e?.message || 'No se pudo eliminar el movimiento.');
+    } finally {
+        eliminandoMovimientoId.value = null;
+    }
 }
 
 watch(historialMovimientosOrdenados, (lista) => {
@@ -1519,10 +2053,7 @@ const cerrarModalConsultaDocumento = () => {
 };
 
 const abrirModalConsultaDocumento = () => {
-    if (bloqueadoPorNotificacion.value) {
-        ElMessage.warning(mensajeBloqueoNotificacion);
-        return;
-    }
+    if (!asegurarAccionesMovimientoPermitidas()) return;
     docConsulta.value = '';
     errorConsultaDoc.value = '';
     pacienteConsultaResultado.value = null;
@@ -1620,8 +2151,184 @@ const abrirFormularioRegistroNuevo = async () => {
     pacienteConsultaResultado.value = null;
     busquedaDocumentoEjecutada.value = false;
     await syncPeriodoIpressParaFormulario();
-    mostrarModalNuevo.value = true;
+
+    if (esUnidadHospitalSeleccionada.value) {
+      mostrarModalNuevo.value = true;
+      return;
+    }
+
+    formRegistroClinica.documento = documentoPrefillRegistro.value;
+    formRegistroClinica.paciente = '';
+    formRegistroClinica.tipo_documento = 'DNI';
+    formRegistroClinica.genero = '';
+    formRegistroClinica.fecha_nacimiento = '';
+    formRegistroClinica.fecha_primer_ingreso = rangoFechaEgreso.value.min || '';
+    formRegistroClinica.condicion = '';
+    errorRegistroClinica.value = '';
+    onCambioFechaRegistroClinica();
+    mostrarModalRegistroClinica.value = true;
 };
+
+function onCambioFechaRegistroClinica() {
+  const tipo = tipoCondicionRegistroClinica.value;
+  if (tipo === 'NUEVO') formRegistroClinica.condicion = 'NUEVO';
+  else if (formRegistroClinica.condicion === 'NUEVO') formRegistroClinica.condicion = '';
+}
+
+function cerrarModalRegistroClinica() {
+  mostrarModalRegistroClinica.value = false;
+  errorRegistroClinica.value = '';
+  guardandoRegistroClinica.value = false;
+}
+
+async function resolverEtiologiaPorDefecto() {
+  try {
+    const res = await getAllIpress('/etiologia/');
+    const lista = Array.isArray(res) ? res : (res?.results || []);
+    if (!lista.length) return null;
+    const noDet = lista.find((e) => {
+      const t = `${e.especifica || ''} ${e.general || ''} ${e.codigo || ''}`.toLowerCase();
+      return t.includes('no especif') || t.includes('desconoc') || t.includes('indeterm');
+    });
+    return (noDet || lista[0])?.id_etiologia ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function guardarRegistroClinicaSimplificado() {
+  errorRegistroClinica.value = '';
+  const idPeriodo = periodoGlobal.value;
+  const idIpress = clinicaGlobal.value;
+  const idModalidad = modalidadGlobal.value;
+  const fechaIngreso = parseFechaAISO(formRegistroClinica.fecha_primer_ingreso)
+    || formRegistroClinica.fecha_primer_ingreso;
+  const fechaNac = parseFechaAISO(formRegistroClinica.fecha_nacimiento)
+    || formRegistroClinica.fecha_nacimiento;
+  const tipo = tipoCondicionRegistroClinica.value;
+  const condicion = tipo === 'NUEVO'
+    ? 'NUEVO'
+    : String(formRegistroClinica.condicion || '').toUpperCase();
+
+  if (!formRegistroClinica.documento?.trim()) {
+    errorRegistroClinica.value = 'Falta el documento.';
+    return;
+  }
+  if (!formRegistroClinica.paciente?.trim()) {
+    errorRegistroClinica.value = 'Ingrese apellidos y nombres.';
+    return;
+  }
+  if (!formRegistroClinica.genero) {
+    errorRegistroClinica.value = 'Seleccione el género.';
+    return;
+  }
+  if (!fechaNac) {
+    errorRegistroClinica.value = 'Indique la fecha de nacimiento.';
+    return;
+  }
+  if (!fechaIngreso) {
+    errorRegistroClinica.value = 'Indique la fecha de primer ingreso a la unidad.';
+    return;
+  }
+  if (tipo === 'SELECCIONAR' && condicion !== 'CONTINUADOR' && condicion !== 'REINGRESO') {
+    errorRegistroClinica.value = 'Seleccione CONTINUADOR o REINGRESO.';
+    return;
+  }
+  if (idPeriodo == null || idIpress == null || idModalidad == null) {
+    errorRegistroClinica.value = 'Seleccione periodo, clínica y modalidad en la barra superior.';
+    return;
+  }
+
+  const idEtiologia = await resolverEtiologiaPorDefecto();
+  if (idEtiologia == null) {
+    errorRegistroClinica.value = 'No se pudo obtener una etiología por defecto. Contacte al administrador.';
+    return;
+  }
+
+  guardandoRegistroClinica.value = true;
+  const estado = { idPaciente: null, idAtencion: null, idDialisis: null, idUnidad: null };
+  try {
+    const resPac = await postAllIpress('/pacientes/', {
+      documento: formRegistroClinica.documento.trim(),
+      tipo_documento: formRegistroClinica.tipo_documento || 'DNI',
+      autogenerado: 'ASD',
+      paciente: formRegistroClinica.paciente.trim().toUpperCase(),
+      fecha_nacimiento: fechaNac,
+      genero: formRegistroClinica.genero,
+      grado_instruccion: 'NO ESPECIFICADO',
+      id_modalidad: Number(idModalidad),
+    });
+    estado.idPaciente = resPac?.id_paciente ?? resPac?.id;
+    if (!estado.idPaciente) throw { error: 'No se obtuvo el id del paciente.' };
+
+    const resAt = await postAllIpress('/pacienteAtencion/', {
+      id_paciente: estado.idPaciente,
+      id_ipress: Number(idIpress),
+      id_periodo: Number(idPeriodo),
+      id_modalidad: Number(idModalidad),
+      fecha_atencion: fechaIngreso,
+      tipo_atencion: condicion || 'NUEVO',
+      estado: 'ACTIVO',
+      fecha_inicio: fechaIngreso,
+    });
+    estado.idAtencion = resAt?.id_paciente_atencion ?? resAt?.id;
+    if (!estado.idAtencion) throw { error: 'No se pudo crear la atención.' };
+
+    const payloadUnidad = prepararPayloadUnidadesActuales({
+      id_paciente_atencion: estado.idAtencion,
+      fecha_creacion_acceso: fechaIngreso,
+      tipo_acceso: 'NO HABIDO',
+      localizacion_acceso: '',
+    });
+    const resUnidad = await postAllIpress('/unidadesActuales/', payloadUnidad);
+    estado.idUnidad = resUnidad?.id_unidad_actual ?? resUnidad?.id ?? null;
+
+    const resDial = await postAllIpress('/pacientesDialisis/', {
+      id_paciente: estado.idPaciente,
+      id_etiologia: idEtiologia,
+      modalidad_inicio_trr: Number(idModalidad) === 2
+        ? 'Diálisis Peritoneal'
+        : Number(idModalidad) === 3 ? 'Trasplante' : 'Hemodiálisis',
+      fecha_inicio_trr: fechaIngreso,
+      subsistema_salud: 'Minsa',
+      tipo_acceso: 'NO HABIDO',
+      fecha_creacion_acceso: fechaIngreso,
+      fecha_primer_ingreso: fechaIngreso,
+    });
+    estado.idDialisis = resDial?.id_paciente_dialisis ?? resDial?.id;
+
+    const idPi = await resolverIdPeriodoIpress(idPeriodo, idIpress);
+    if (estado.idDialisis && idPi != null) {
+      await patchAllIpress(`/pacientesDialisis/${estado.idDialisis}/`, {
+        id_periodo_ipress: idPi,
+      });
+    }
+
+    await patchAllIpress(`/pacientes/${estado.idPaciente}/`, { estado: condicion || 'NUEVO' });
+
+    ElMessage.success(`Paciente registrado y captado como ${condicion || 'NUEVO'}.`);
+    cerrarModalRegistroClinica();
+    fetchMovimientos();
+    fetchPacientes();
+  } catch (e) {
+    console.error(e);
+    if (estado.idUnidad) {
+      try { await deleteAllIpress(`/unidadesActuales/${estado.idUnidad}/`); } catch { /* ignore */ }
+    }
+    if (estado.idDialisis) {
+      try { await deleteAllIpress(`/pacientesDialisis/${estado.idDialisis}/`); } catch { /* ignore */ }
+    }
+    if (estado.idAtencion) {
+      try { await deleteAllIpress(`/pacienteAtencion/${estado.idAtencion}/`); } catch { /* ignore */ }
+    }
+    if (estado.idPaciente) {
+      try { await deleteAllIpress(`/pacientes/${estado.idPaciente}/`); } catch { /* ignore */ }
+    }
+    errorRegistroClinica.value = e?.error || e?.message || 'No se pudo registrar el paciente.';
+  } finally {
+    guardandoRegistroClinica.value = false;
+  }
+}
 
 const onCerrarFormularioPacienteMovimientos = () => {
     cerrarModalNuevo();
@@ -1765,10 +2472,11 @@ const abrirModalEgresarEdicion = async (mov) => {
 };
 
 const editarMovimiento = async (mov) => {
-    if (bloqueadoPorNotificacion.value) {
-        ElMessage.warning(mensajeBloqueoNotificacion);
+    if (!puedeEditarEliminarMovimientos.value) {
+        ElMessage.warning('Solo el perfil supervisor puede editar movimientos.');
         return;
     }
+    if (!asegurarAccionesMovimientoPermitidas()) return;
     if (mov.tipo === 'CAMBIO_MODALIDAD') {
         ElMessage({
             message: 'Los cambios de modalidad no se editan desde esta pantalla.',
@@ -1847,9 +2555,52 @@ const determinarCondicionPaciente = async (pacienteId) => {
         const idIpress = clinicaGlobal.value;
         const idModalidad = modalidadGlobal.value;
 
-        // Primer ingreso a esta IPRESS → siempre NUEVO (aunque exista en otra clínica).
+        // Historial global del paciente (todas las clínicas) para validar ciclo NUEVO → EGRESO.
+        let historialGlobal = [];
+        try {
+            const resGlobal = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(pacienteId)}`);
+            const listaGlobal = Array.isArray(resGlobal) ? resGlobal : (resGlobal?.results || []);
+            historialGlobal = listaGlobal.map(mapearAtencionAMovimiento);
+        } catch (e) {
+            console.warn('No se pudo cargar historial global del paciente:', e);
+        }
+        const nuevoSinEgreso = tieneNuevoSinEgresoPosterior(historialGlobal);
+
+        // Primer ingreso a esta IPRESS → NUEVO, salvo si ya está ACTIVO en otra clínica del mismo periodo.
         const { tieneHistorial, tuvoEgreso } = await pacienteTieneHistorialEnIpress(pacienteId, idIpress);
+
+        if (idPeriodo != null && idModalidad != null) {
+            const paramsAt = new URLSearchParams({
+                id_paciente: String(pacienteId),
+                id_periodo: String(idPeriodo),
+                id_modalidad: String(idModalidad),
+            });
+            const atRes = await getAllIpress(`/pacienteAtencion/?${paramsAt}`);
+            const atList = Array.isArray(atRes) ? atRes : (atRes?.results || []);
+            const activaOtraClinica = atList.find((a) => (
+                String(a.estado || '').toUpperCase() === 'ACTIVO'
+                && a.id_ipress != null
+                && String(a.id_ipress) !== String(idIpress)
+            ));
+            if (activaOtraClinica) {
+                const nombreOtra = activaOtraClinica.datosIpress?.nombre_corto
+                    || activaOtraClinica.datosIpress?.ipress
+                    || 'otra IPRESS';
+                condicionAutomatica.value = 'ACTIVO_OTRA_CLINICA';
+                mensajeCondicion.value = `El paciente tiene atención activa en «${nombreOtra}». Debe egresar allí antes de captar en esta clínica.`;
+                formCaptar.condicion = '';
+                return;
+            }
+        }
+
         if (!tieneHistorial) {
+            // No puede ser NUEVO otra vez si ya existe un NUEVO sin EGRESO posterior (en cualquier clínica).
+            if (nuevoSinEgreso) {
+                condicionAutomatica.value = 'NUEVO_SIN_EGRESO';
+                mensajeCondicion.value = 'El paciente ya tiene un movimiento NUEVO y aún no fue egresado. Debe egresar antes de captar como NUEVO en otra clínica.';
+                formCaptar.condicion = '';
+                return;
+            }
             condicionAutomatica.value = 'NUEVO';
             mensajeCondicion.value = 'Primer ingreso del paciente a esta IPRESS. Se registrará como NUEVO.';
             formCaptar.condicion = 'NUEVO';
@@ -1900,7 +2651,11 @@ const determinarCondicionPaciente = async (pacienteId) => {
             formCaptar.condicion = 'CONTINUADOR';
         }
 
-        if (condicionAutomatica.value !== 'YA_ACTIVO') {
+        if (
+            condicionAutomatica.value !== 'YA_ACTIVO'
+            && condicionAutomatica.value !== 'ACTIVO_OTRA_CLINICA'
+            && condicionAutomatica.value !== 'NUEVO_SIN_EGRESO'
+        ) {
             ultimoEgreso.value = await obtenerUltimoEgresoPaciente(pacienteId);
             limpiarFechaCapturaSiInvalida();
         }
@@ -1981,6 +2736,26 @@ const captarPaciente = async () => {
         return;
     }
 
+    if (condicionAutomatica.value === 'ACTIVO_OTRA_CLINICA' && !movimientoEnEdicion.value) {
+        ElMessage({
+            message: mensajeCondicion.value || 'El paciente tiene atención activa en otra clínica. Debe egresar allí antes de captar aquí.',
+            type: 'warning',
+            plain: true,
+            duration: 7000,
+        });
+        return;
+    }
+
+    if (condicionAutomatica.value === 'NUEVO_SIN_EGRESO' && !movimientoEnEdicion.value) {
+        ElMessage({
+            message: mensajeCondicion.value || 'El paciente ya fue NUEVO y aún no tiene egreso. Debe egresar antes de registrar otro NUEVO.',
+            type: 'warning',
+            plain: true,
+            duration: 7000,
+        });
+        return;
+    }
+
     if (condicionAutomatica.value === 'REINGRESO' && !ultimoEgreso.value && !movimientoEnEdicion.value) {
         ElMessage({
             message: 'No se puede registrar un reingreso sin un egreso previo',
@@ -2043,6 +2818,23 @@ const captarPaciente = async () => {
         }
 
         const tipoAtencion = condicionAutomatica.value === 'REINGRESO' ? 'REINGRESO' : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR');
+        if (tipoAtencion === 'NUEVO' && !movimientoEnEdicion.value) {
+            try {
+                const resGlobal = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(formCaptar.paciente)}`);
+                const listaGlobal = Array.isArray(resGlobal) ? resGlobal : (resGlobal?.results || []);
+                if (tieneNuevoSinEgresoPosterior(listaGlobal.map(mapearAtencionAMovimiento))) {
+                    ElMessage({
+                        message: 'No se puede registrar otro NUEVO: el paciente ya tiene un NUEVO sin EGRESO posterior.',
+                        type: 'error',
+                        plain: true,
+                        duration: 7000,
+                    });
+                    return;
+                }
+            } catch (e) {
+                console.warn('Validación NUEVO (historial global):', e);
+            }
+        }
         const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
         const paramsAtencion = new URLSearchParams({
             id_paciente: String(formCaptar.paciente),
@@ -2113,10 +2905,7 @@ const captarPaciente = async () => {
 
 // Funciones de Modal Egresar (clínica y periodo se toman del estado global)
 const abrirModalEgresar = async () => {
-    if (bloqueadoPorNotificacion.value) {
-        ElMessage.warning(mensajeBloqueoNotificacion);
-        return;
-    }
+    if (!asegurarAccionesMovimientoPermitidas()) return;
     if (periodoGlobal.value == null || periodoGlobal.value === '') {
         ElMessage({
             message: 'Seleccione el periodo en la barra superior antes de egresar un paciente.',
@@ -3477,14 +4266,30 @@ const actualizarPeriodoIpressPaciente = async (pacienteId, periodoId, ipressId) 
 // Recargar movimientos al cambiar periodo, clínica o modalidad
 watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
     fetchMovimientos();
+    fetchEstadoMovimientos();
+    fetchEstadoConformidad();
 }, { deep: true });
+
+function onRevisionEstadoEvent() {
+  fetchEstadoConformidad();
+  fetchEstadoMovimientos();
+}
 
 // Inicialización
 onMounted(() => {
     fetchMovimientos();
+    fetchEstadoMovimientos();
+    fetchEstadoConformidad();
     fetchPeriodos();
     fetchIpress();
     procesarCaptacionDesdeRuta();
+    window.addEventListener('notificacion-revision:actualizar', onRevisionEstadoEvent);
+    window.addEventListener('notificaciones:actualizar', onRevisionEstadoEvent);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('notificacion-revision:actualizar', onRevisionEstadoEvent);
+    window.removeEventListener('notificaciones:actualizar', onRevisionEstadoEvent);
 });
 
 watch(() => route.query?.captarDni, () => {
