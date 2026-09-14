@@ -2413,11 +2413,15 @@ const crearPacienteAtencionYUnidadesActuales = async (idPaciente) => {
 
   const payloadUnidades = prepararPayloadUnidadesActuales({
     id_paciente_atencion: idPacienteAtencion,
-    fecha_creacion_acceso: fechaFormularioParaApi(form.fechaCreacionAcceso) || '',
-    tipo_acceso: form.modalidadTRR === 'Trasplante'
+    fecha_creacion_acceso: fechaFormularioParaApi(
+      esRegistroSimplificado.value ? form.fechaPrimerIngreso : form.fechaCreacionAcceso,
+    ) || fechaCaptacion,
+    tipo_acceso: (esRegistroSimplificado.value || form.modalidadTRR === 'Trasplante')
       ? 'NO HABIDO'
       : resolverTipoAccesoTexto(form.tipoAccesoInicio),
-    localizacion_acceso: resolverLocalizacionAccesoTexto(form.localizacionAcceso) || '',
+    localizacion_acceso: esRegistroSimplificado.value
+      ? ''
+      : (resolverLocalizacionAccesoTexto(form.localizacionAcceso) || ''),
   });
 
   const resUnidad = await postAllIpress('/unidadesActuales/', payloadUnidades);
@@ -2457,6 +2461,26 @@ async function finalizarCaptacionPaciente({ idPaciente, idPeriodo, idIpress }) {
     plain: true,
   });
   emit('guardado');
+}
+
+async function resolverEtiologiaPorDefectoSimplificado() {
+  const lista = Array.isArray(listaEtiologias.value) ? listaEtiologias.value : [];
+  let pool = lista;
+  if (!pool.length) {
+    try {
+      const respuesta = await getAllIpress('/etiologia/');
+      pool = Array.isArray(respuesta) ? respuesta : (respuesta?.results || []);
+      listaEtiologias.value = pool;
+    } catch {
+      return null;
+    }
+  }
+  if (!pool.length) return null;
+  const noDet = pool.find((e) => {
+    const t = `${e.especifica || ''} ${e.general || ''} ${e.codigo || ''}`.toLowerCase();
+    return t.includes('no especif') || t.includes('desconoc') || t.includes('indeterm');
+  });
+  return (noDet || pool[0])?.id_etiologia ?? null;
 }
 
 const fetchPeriodo = async (url = null) => {

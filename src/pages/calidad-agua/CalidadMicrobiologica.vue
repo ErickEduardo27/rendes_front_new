@@ -258,6 +258,7 @@ import { storeToRefs } from 'pinia';
 import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
+import { rangoFechasDesdePeriodoTexto } from '@/utils/accesoVascularValidacion';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
@@ -316,27 +317,12 @@ const periodoTexto = computed(() => {
 
 const periodoDisplay = computed(() => periodoTexto.value || '—');
 
-function rangoDesdeTextoPeriodo(textoPeriodo) {
-  if (!textoPeriodo) return { min: null, max: null };
-  const parts = String(textoPeriodo).trim().split('-');
-  if (parts.length < 2) return { min: null, max: null };
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10);
-  if (Number.isNaN(year) || Number.isNaN(month)) return { min: null, max: null };
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
-  return {
-    min: firstDay.toISOString().split('T')[0],
-    max: lastDay.toISOString().split('T')[0],
-  };
-}
-
 const rangoFechasPeriodo = computed(() => {
   const lista = Array.isArray(periodos.value) ? periodos.value : [];
   const idPeriodo = periodoVisibleId.value;
   if (idPeriodo == null || idPeriodo === '') return { min: null, max: null };
   const p = lista.find((per) => String(per.id_periodo) === String(idPeriodo));
-  return rangoDesdeTextoPeriodo(p?.periodo);
+  return rangoFechasDesdePeriodoTexto(p?.periodo);
 });
 
 const rangoFechasPeriodoTexto = computed(() => {
@@ -609,8 +595,8 @@ function abrirModalEditar(registro) {
   mostrarModalFormulario.value = true;
 }
 
-function cerrarModalFormulario() {
-  if (guardando.value) return;
+function cerrarModalFormulario({ forzar = false } = {}) {
+  if (guardando.value && !forzar) return;
   mostrarModalFormulario.value = false;
   modoEdicion.value = false;
   registroEdicionId.value = null;
@@ -635,6 +621,7 @@ async function persistirRegistro({ cerrarModal = true, limpiarTrasGuardar = fals
   }
 
   guardando.value = true;
+  let ok = false;
   try {
     const payload = construirPayloadApi();
     if (modoEdicion.value && registroEdicionId.value != null) {
@@ -646,25 +633,31 @@ async function persistirRegistro({ cerrarModal = true, limpiarTrasGuardar = fals
     }
     window.dispatchEvent(new CustomEvent('calidad-agua:actualizar'));
     await cargarRegistros();
-    if (limpiarTrasGuardar) limpiarFormulario();
-    if (cerrarModal) cerrarModalFormulario();
+    ok = true;
     return true;
   } catch (e) {
     console.error(e);
-    const detalle = e?.response?.data?.detail
+    const detalle = e?.error
+      || e?.data?.detail
+      || e?.data?.non_field_errors?.[0]
+      || e?.response?.data?.detail
       || e?.response?.data?.non_field_errors?.[0]
       || e?.detail
-      || e?.error
       || e?.message;
     const msg = typeof detalle === 'string' ? detalle : 'No se pudo guardar el registro.';
-    if (String(msg).toLowerCase().includes('unique') || String(msg).toLowerCase().includes('único')) {
-      ElMessage.error('Ya existe un registro para este periodo e IPRESS.');
+    const lower = String(msg).toLowerCase();
+    if (lower.includes('unique') || lower.includes('único') || lower.includes('ya existe')) {
+      ElMessage.error('Ya existe un registro para este periodo e IPRESS. Edite el existente.');
     } else {
       ElMessage.error(msg);
     }
     return false;
   } finally {
     guardando.value = false;
+    if (ok) {
+      if (limpiarTrasGuardar) limpiarFormulario();
+      if (cerrarModal) cerrarModalFormulario({ forzar: true });
+    }
   }
 }
 

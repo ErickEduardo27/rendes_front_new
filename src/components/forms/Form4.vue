@@ -190,7 +190,9 @@
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
                 <div class="bg-cyan-700 px-5 py-4">
                     <h3 class="text-white font-bold text-base">Confirmación de hospitalización</h3>
-                    <p class="text-cyan-100 text-xs mt-1">Seleccione una opción obligatoria antes de registrar.</p>
+                    <p class="text-cyan-100 text-xs mt-1">
+                        Seleccione una opción obligatoria antes de {{ idMorbilidadEdicion != null ? 'guardar los cambios' : 'registrar' }}.
+                    </p>
                 </div>
                 <div class="p-5 space-y-3">
                     <label
@@ -330,6 +332,7 @@ const ultimoRegistroHospitalizacion = ref(null);
 const modoCompletarAlta = ref(false);
 const idMorbilidadCompletar = ref(null);
 const idMorbilidadEdicion = ref(null);
+const efectoMovimientoPrevio = ref('');
 
 const mostrarModalEfectoMovimiento = ref(false);
 const efectoMovimientoSeleccionado = ref('');
@@ -345,11 +348,10 @@ const opcionesEfectoDisponibles = computed(() => {
     });
 });
 
-/** Pide confirmación de efecto (movimientos) solo en registro nuevo o completar alta.
+/** Pide confirmación de efecto (movimientos) en registro nuevo, completar alta y edición.
  *  No aplica si viene del flujo de egreso (Movimientos), donde el egreso lo genera el padre. */
 const debeConfirmarEfectoMovimiento = computed(() => {
     if (props.desdeEgresoMovimiento) return false;
-    if (idMorbilidadEdicion.value != null) return false;
     if (idPacienteAtencion == null || idPacienteAtencion === '') return false;
     return true;
 });
@@ -368,6 +370,7 @@ function registroTieneAlta(registro) {
 function limpiarFormularioNuevo() {
     modoCompletarAlta.value = false;
     idMorbilidadCompletar.value = null;
+    efectoMovimientoPrevio.value = '';
     form.value.fIniHos = '';
     form.value.fAltHos = '';
     form.value.desenlace = '';
@@ -418,6 +421,7 @@ function cargarRegistroEdicion(registro) {
     form.value.filtroDescripcion = '';
     form.value.filtroCodigoCausa = '';
     form.value.filtroDescripcionCausa = '';
+    efectoMovimientoPrevio.value = String(registro.efecto_movimiento_hospitalizacion || '');
 }
 
 const items = ref([
@@ -1539,7 +1543,7 @@ const validarAntesDeGuardar = async () => {
 const solicitarRegistro = async () => {
     if (!(await validarAntesDeGuardar())) return;
     if (debeConfirmarEfectoMovimiento.value) {
-        efectoMovimientoSeleccionado.value = '';
+        efectoMovimientoSeleccionado.value = efectoMovimientoPrevio.value || '';
         errorEfectoMovimiento.value = '';
         mostrarModalEfectoMovimiento.value = true;
         return;
@@ -1655,7 +1659,23 @@ const postForm = async (opts = {}) => {
                 } else {
                     await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadEdicion.value}/`, payload);
                 }
-                emit('guardado', payloadGuardadoEmit(null));
+                let errorMovimientos = null;
+                if (efectoMovimiento && !props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+                    try {
+                        await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento);
+                    } catch (e) {
+                        errorMovimientos = e;
+                        console.error(e);
+                    }
+                }
+                mostrarModalEfectoMovimiento.value = false;
+                if (errorMovimientos) {
+                    await alertaSwal(
+                        'La hospitalización se actualizó, pero no se pudieron generar los movimientos automáticamente. Revise en Movimientos.',
+                        { title: 'Atención', icon: 'warning' },
+                    );
+                }
+                emit('guardado', payloadGuardadoEmit(efectoMovimiento || EFECTO_HOSP.SIN_EGRESO));
                 return;
             }
         } else {

@@ -518,8 +518,8 @@
                         <p class="text-amber-900 font-medium">No hay ningún paciente registrado con ese documento.</p>
                         <p class="text-amber-800/90 text-xs mt-1">
                           {{ esUnidadHospitalSeleccionada
-                            ? 'Debe registrar al paciente con el formulario completo (Formulario 1).'
-                            : 'Registre la fecha de primer ingreso a la unidad (registro simplificado).' }}
+                            ? 'Registre al paciente con el formulario completo (hospital).'
+                            : 'Registre datos personales y la fecha de primer ingreso a la unidad.' }}
                         </p>
                         <div class="flex flex-col sm:flex-row gap-2 mt-4">
                             <button
@@ -534,7 +534,7 @@
                                 class="flex-1 py-2 rounded-lg bg-sky-600 text-white font-semibold hover:bg-sky-700"
                                 @click="abrirFormularioRegistroNuevo"
                             >
-                                {{ esUnidadHospitalSeleccionada ? 'Registrar con formulario completo' : 'Registrar fecha de ingreso' }}
+                                Registrar nuevo paciente
                             </button>
                         </div>
                     </div>
@@ -542,7 +542,7 @@
             </div>
         </div>
 
-        <!-- Modal: formulario completo de registro (hospital / Form 1) -->
+        <!-- Modal: FormularioPaciente (completo si hospital; simplificado si clínica) -->
         <div v-if="mostrarModalNuevo" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto p-4">
                 <FormularioPaciente
@@ -555,91 +555,6 @@
                     @cancelar="onCerrarFormularioPacienteMovimientos"
                     @guardado="onCerrarFormularioPacienteMovimientos"
                 />
-            </div>
-        </div>
-
-        <!-- Modal: registro simplificado clínica (solo fecha 1er ingreso + condición) -->
-        <div v-if="mostrarModalRegistroClinica" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 relative">
-                <button type="button" class="absolute top-3 right-3 text-gray-500 hover:text-black text-2xl" @click="cerrarModalRegistroClinica">&times;</button>
-                <h3 class="text-lg font-bold text-slate-800 mb-1">Registro simplificado</h3>
-                <p class="text-xs text-slate-500 mb-4">
-                    Clínica: solo se solicita la fecha de primer ingreso a la unidad. Si coincide con el periodo actual será <strong>NUEVO</strong>; si no, elija CONTINUADOR o REINGRESO.
-                </p>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Documento</label>
-                        <input v-model="formRegistroClinica.documento" type="text" class="w-full border rounded-lg px-3 py-2 text-sm bg-slate-50" readonly />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Apellidos y nombres*</label>
-                        <input v-model="formRegistroClinica.paciente" type="text" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="APELLIDOS NOMBRES" />
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo doc.*</label>
-                            <select v-model="formRegistroClinica.tipo_documento" class="w-full border rounded-lg px-3 py-2 text-sm">
-                                <option value="DNI">DNI</option>
-                                <option value="CE">CE</option>
-                                <option value="PASAPORTE">PASAPORTE</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">Género*</label>
-                            <select v-model="formRegistroClinica.genero" class="w-full border rounded-lg px-3 py-2 text-sm">
-                                <option value="">Seleccione</option>
-                                <option value="M">Masculino</option>
-                                <option value="F">Femenino</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de nacimiento*</label>
-                        <FechaInput v-model="formRegistroClinica.fecha_nacimiento" input-class="w-full border rounded-lg px-3 py-2 text-sm" />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de primer ingreso a la unidad*</label>
-                        <FechaInput
-                            v-model="formRegistroClinica.fecha_primer_ingreso"
-                            input-class="w-full border rounded-lg px-3 py-2 text-sm"
-                            :min="rangoFechaEgreso.min"
-                            :max="rangoFechaEgreso.max"
-                            @update:model-value="onCambioFechaRegistroClinica"
-                        />
-                        <p class="text-[11px] text-slate-500 mt-1">Periodo actual: {{ nombrePeriodoGlobal || '—' }}</p>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Condición del paciente*</label>
-                        <div
-                            v-if="tipoCondicionRegistroClinica === 'NUEVO'"
-                            class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
-                        >
-                            <strong>NUEVO</strong>
-                            <span class="block text-xs mt-0.5">La fecha coincide con el periodo actual.</span>
-                        </div>
-                        <template v-else-if="tipoCondicionRegistroClinica === 'SELECCIONAR'">
-                            <select v-model="formRegistroClinica.condicion" class="w-full border rounded-lg px-3 py-2 text-sm">
-                                <option value="">Seleccione…</option>
-                                <option value="CONTINUADOR">CONTINUADOR</option>
-                                <option value="REINGRESO">REINGRESO</option>
-                            </select>
-                            <p class="text-[11px] text-amber-700 mt-1">La fecha no coincide con el periodo; elija continuador o reingreso.</p>
-                        </template>
-                        <p v-else class="text-xs text-slate-500">Indique la fecha de primer ingreso.</p>
-                    </div>
-                    <p v-if="errorRegistroClinica" class="text-xs text-rose-700">{{ errorRegistroClinica }}</p>
-                </div>
-                <div class="flex justify-end gap-2 mt-5 pt-4 border-t">
-                    <button type="button" class="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 text-sm" @click="cerrarModalRegistroClinica">Cancelar</button>
-                    <button
-                        type="button"
-                        class="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-semibold disabled:opacity-50"
-                        :disabled="guardandoRegistroClinica"
-                        @click="guardarRegistroClinicaSimplificado"
-                    >
-                        {{ guardandoRegistroClinica ? 'Guardando…' : 'Registrar y captar' }}
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -1068,9 +983,9 @@
 import { ref, computed, onMounted, onUnmounted, reactive, inject, watch } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress, deleteAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
-import { debeLimitarClinicasAlUsuario, esSupervisor, esPerfilHospital } from '@/utils/perfil';
+import { debeLimitarClinicasAlUsuario, esSupervisor } from '@/utils/perfil';
 import { fechaCelda, formatFechaDDMMAAAA, parseFechaAISO } from '@/utils/fechaFormat';
-import { tipoCondicionPorFechaYPeriodo, esNombreIpressHospital } from '@/utils/condicionIngresoPorFecha';
+import { esNombreIpressHospital } from '@/utils/condicionIngresoPorFecha';
 import { useAuthStore } from '@/store/auth';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
@@ -1079,7 +994,6 @@ import FormularioPaciente from '../inicio/FormularioPaciente.vue';
 import Form4 from '@/components/forms/Form4.vue';
 import FechaInput from '@/components/FechaInput.vue';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
-import { prepararPayloadUnidadesActuales } from '@/utils/unidadesActualesPayload';
 
 defineProps({
   modoEvaluacion: { type: Boolean, default: false },
@@ -1473,7 +1387,6 @@ const itemsPorPaginaHistorial = 10;
 /** Misma consulta por documento + formulario que Lista de pacientes */
 const mostrarModalConsultaDocumento = ref(false);
 const mostrarModalNuevo = ref(false);
-const mostrarModalRegistroClinica = ref(false);
 const documentoPrefillRegistro = ref('');
 const docConsulta = ref('');
 const consultandoPaciente = ref(false);
@@ -1485,34 +1398,15 @@ const idPeriodoIpress = ref(null);
 const idClinicaSeleccionada = ref(null);
 const clinicaSeleccionada = ref('');
 const periodoSeleccionado = ref(null);
-const guardandoRegistroClinica = ref(false);
-const errorRegistroClinica = ref('');
-const formRegistroClinica = reactive({
-  documento: '',
-  paciente: '',
-  tipo_documento: 'DNI',
-  genero: '',
-  fecha_nacimiento: '',
-  fecha_primer_ingreso: '',
-  condicion: '',
-});
 
-/** Hospital = perfil Hospitales o IPRESS cuyo nombre contiene «hospital». */
+/** Hospital = IPRESS cuyo nombre contiene «hospital» / «H.» */
 const esUnidadHospitalSeleccionada = computed(() => {
-  if (esPerfilHospital()) return true;
   const id = clinicaGlobal.value;
   const item = (Array.isArray(ipress.value) ? ipress.value : []).find(
     (x) => String(x.id_ipress) === String(id),
   );
   return esNombreIpressHospital(item);
 });
-
-const tipoCondicionRegistroClinica = computed(() => (
-  tipoCondicionPorFechaYPeriodo(
-    parseFechaAISO(formRegistroClinica.fecha_primer_ingreso) || formRegistroClinica.fecha_primer_ingreso,
-    nombrePeriodoGlobal.value,
-  )
-));
 
 const pacienteSeleccionado = ref(null);
 const pacienteSeleccionadoEgresar = ref(null);
@@ -2151,184 +2045,8 @@ const abrirFormularioRegistroNuevo = async () => {
     pacienteConsultaResultado.value = null;
     busquedaDocumentoEjecutada.value = false;
     await syncPeriodoIpressParaFormulario();
-
-    if (esUnidadHospitalSeleccionada.value) {
-      mostrarModalNuevo.value = true;
-      return;
-    }
-
-    formRegistroClinica.documento = documentoPrefillRegistro.value;
-    formRegistroClinica.paciente = '';
-    formRegistroClinica.tipo_documento = 'DNI';
-    formRegistroClinica.genero = '';
-    formRegistroClinica.fecha_nacimiento = '';
-    formRegistroClinica.fecha_primer_ingreso = rangoFechaEgreso.value.min || '';
-    formRegistroClinica.condicion = '';
-    errorRegistroClinica.value = '';
-    onCambioFechaRegistroClinica();
-    mostrarModalRegistroClinica.value = true;
+    mostrarModalNuevo.value = true;
 };
-
-function onCambioFechaRegistroClinica() {
-  const tipo = tipoCondicionRegistroClinica.value;
-  if (tipo === 'NUEVO') formRegistroClinica.condicion = 'NUEVO';
-  else if (formRegistroClinica.condicion === 'NUEVO') formRegistroClinica.condicion = '';
-}
-
-function cerrarModalRegistroClinica() {
-  mostrarModalRegistroClinica.value = false;
-  errorRegistroClinica.value = '';
-  guardandoRegistroClinica.value = false;
-}
-
-async function resolverEtiologiaPorDefecto() {
-  try {
-    const res = await getAllIpress('/etiologia/');
-    const lista = Array.isArray(res) ? res : (res?.results || []);
-    if (!lista.length) return null;
-    const noDet = lista.find((e) => {
-      const t = `${e.especifica || ''} ${e.general || ''} ${e.codigo || ''}`.toLowerCase();
-      return t.includes('no especif') || t.includes('desconoc') || t.includes('indeterm');
-    });
-    return (noDet || lista[0])?.id_etiologia ?? null;
-  } catch {
-    return null;
-  }
-}
-
-async function guardarRegistroClinicaSimplificado() {
-  errorRegistroClinica.value = '';
-  const idPeriodo = periodoGlobal.value;
-  const idIpress = clinicaGlobal.value;
-  const idModalidad = modalidadGlobal.value;
-  const fechaIngreso = parseFechaAISO(formRegistroClinica.fecha_primer_ingreso)
-    || formRegistroClinica.fecha_primer_ingreso;
-  const fechaNac = parseFechaAISO(formRegistroClinica.fecha_nacimiento)
-    || formRegistroClinica.fecha_nacimiento;
-  const tipo = tipoCondicionRegistroClinica.value;
-  const condicion = tipo === 'NUEVO'
-    ? 'NUEVO'
-    : String(formRegistroClinica.condicion || '').toUpperCase();
-
-  if (!formRegistroClinica.documento?.trim()) {
-    errorRegistroClinica.value = 'Falta el documento.';
-    return;
-  }
-  if (!formRegistroClinica.paciente?.trim()) {
-    errorRegistroClinica.value = 'Ingrese apellidos y nombres.';
-    return;
-  }
-  if (!formRegistroClinica.genero) {
-    errorRegistroClinica.value = 'Seleccione el género.';
-    return;
-  }
-  if (!fechaNac) {
-    errorRegistroClinica.value = 'Indique la fecha de nacimiento.';
-    return;
-  }
-  if (!fechaIngreso) {
-    errorRegistroClinica.value = 'Indique la fecha de primer ingreso a la unidad.';
-    return;
-  }
-  if (tipo === 'SELECCIONAR' && condicion !== 'CONTINUADOR' && condicion !== 'REINGRESO') {
-    errorRegistroClinica.value = 'Seleccione CONTINUADOR o REINGRESO.';
-    return;
-  }
-  if (idPeriodo == null || idIpress == null || idModalidad == null) {
-    errorRegistroClinica.value = 'Seleccione periodo, clínica y modalidad en la barra superior.';
-    return;
-  }
-
-  const idEtiologia = await resolverEtiologiaPorDefecto();
-  if (idEtiologia == null) {
-    errorRegistroClinica.value = 'No se pudo obtener una etiología por defecto. Contacte al administrador.';
-    return;
-  }
-
-  guardandoRegistroClinica.value = true;
-  const estado = { idPaciente: null, idAtencion: null, idDialisis: null, idUnidad: null };
-  try {
-    const resPac = await postAllIpress('/pacientes/', {
-      documento: formRegistroClinica.documento.trim(),
-      tipo_documento: formRegistroClinica.tipo_documento || 'DNI',
-      autogenerado: 'ASD',
-      paciente: formRegistroClinica.paciente.trim().toUpperCase(),
-      fecha_nacimiento: fechaNac,
-      genero: formRegistroClinica.genero,
-      grado_instruccion: 'NO ESPECIFICADO',
-      id_modalidad: Number(idModalidad),
-    });
-    estado.idPaciente = resPac?.id_paciente ?? resPac?.id;
-    if (!estado.idPaciente) throw { error: 'No se obtuvo el id del paciente.' };
-
-    const resAt = await postAllIpress('/pacienteAtencion/', {
-      id_paciente: estado.idPaciente,
-      id_ipress: Number(idIpress),
-      id_periodo: Number(idPeriodo),
-      id_modalidad: Number(idModalidad),
-      fecha_atencion: fechaIngreso,
-      tipo_atencion: condicion || 'NUEVO',
-      estado: 'ACTIVO',
-      fecha_inicio: fechaIngreso,
-    });
-    estado.idAtencion = resAt?.id_paciente_atencion ?? resAt?.id;
-    if (!estado.idAtencion) throw { error: 'No se pudo crear la atención.' };
-
-    const payloadUnidad = prepararPayloadUnidadesActuales({
-      id_paciente_atencion: estado.idAtencion,
-      fecha_creacion_acceso: fechaIngreso,
-      tipo_acceso: 'NO HABIDO',
-      localizacion_acceso: '',
-    });
-    const resUnidad = await postAllIpress('/unidadesActuales/', payloadUnidad);
-    estado.idUnidad = resUnidad?.id_unidad_actual ?? resUnidad?.id ?? null;
-
-    const resDial = await postAllIpress('/pacientesDialisis/', {
-      id_paciente: estado.idPaciente,
-      id_etiologia: idEtiologia,
-      modalidad_inicio_trr: Number(idModalidad) === 2
-        ? 'Diálisis Peritoneal'
-        : Number(idModalidad) === 3 ? 'Trasplante' : 'Hemodiálisis',
-      fecha_inicio_trr: fechaIngreso,
-      subsistema_salud: 'Minsa',
-      tipo_acceso: 'NO HABIDO',
-      fecha_creacion_acceso: fechaIngreso,
-      fecha_primer_ingreso: fechaIngreso,
-    });
-    estado.idDialisis = resDial?.id_paciente_dialisis ?? resDial?.id;
-
-    const idPi = await resolverIdPeriodoIpress(idPeriodo, idIpress);
-    if (estado.idDialisis && idPi != null) {
-      await patchAllIpress(`/pacientesDialisis/${estado.idDialisis}/`, {
-        id_periodo_ipress: idPi,
-      });
-    }
-
-    await patchAllIpress(`/pacientes/${estado.idPaciente}/`, { estado: condicion || 'NUEVO' });
-
-    ElMessage.success(`Paciente registrado y captado como ${condicion || 'NUEVO'}.`);
-    cerrarModalRegistroClinica();
-    fetchMovimientos();
-    fetchPacientes();
-  } catch (e) {
-    console.error(e);
-    if (estado.idUnidad) {
-      try { await deleteAllIpress(`/unidadesActuales/${estado.idUnidad}/`); } catch { /* ignore */ }
-    }
-    if (estado.idDialisis) {
-      try { await deleteAllIpress(`/pacientesDialisis/${estado.idDialisis}/`); } catch { /* ignore */ }
-    }
-    if (estado.idAtencion) {
-      try { await deleteAllIpress(`/pacienteAtencion/${estado.idAtencion}/`); } catch { /* ignore */ }
-    }
-    if (estado.idPaciente) {
-      try { await deleteAllIpress(`/pacientes/${estado.idPaciente}/`); } catch { /* ignore */ }
-    }
-    errorRegistroClinica.value = e?.error || e?.message || 'No se pudo registrar el paciente.';
-  } finally {
-    guardandoRegistroClinica.value = false;
-  }
-}
 
 const onCerrarFormularioPacienteMovimientos = () => {
     cerrarModalNuevo();
