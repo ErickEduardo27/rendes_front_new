@@ -20,16 +20,16 @@
           <button
             type="button"
             class="header-accion-btn header-accion-btn-primario"
-            :disabled="!filtroListo || existeRegistroEnPeriodoActual || cargando"
+            :disabled="!filtroListo || cargando"
             :title="!filtroListo
               ? 'Seleccione periodo y clínica'
-              : (existeRegistroEnPeriodoActual ? 'Ya hay un registro para este periodo. Edítelo desde la tabla.' : undefined)"
-            @click="abrirModalNuevo"
+              : (existeRegistroEnPeriodoActual ? 'Ya hay un registro: se abrirá para editarlo' : undefined)"
+            @click="existeRegistroEnPeriodoActual ? abrirEditarRegistroActual() : abrirModalNuevo()"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="header-accion-btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
-            Nuevo
+            {{ existeRegistroEnPeriodoActual ? 'Editar registro' : 'Nuevo' }}
           </button>
         </div>
       </header>
@@ -575,7 +575,10 @@ async function abrirModalNuevo() {
     ElMessage.warning('Seleccione periodo y clínica en el encabezado.');
     return;
   }
-  if (bloquearRegistroDuplicadoEnPeriodo()) return;
+  if (bloquearRegistroDuplicadoEnPeriodo()) {
+    abrirEditarRegistroActual();
+    return;
+  }
   await resolverIdUsuarioIpress();
   if (idUsuarioIpress.value == null) {
     ElMessage.error('No se encontró asignación usuario–IPRESS para guardar el registro.');
@@ -585,6 +588,15 @@ async function abrirModalNuevo() {
   registroEdicionId.value = null;
   limpiarFormulario();
   mostrarModalFormulario.value = true;
+}
+
+function abrirEditarRegistroActual() {
+  const registro = registrosFiltrados.value[0];
+  if (!registro) {
+    ElMessage.warning('No hay un registro visible para editar en este periodo e IPRESS.');
+    return;
+  }
+  abrirModalEditar(registro);
 }
 
 function abrirModalEditar(registro) {
@@ -637,17 +649,33 @@ async function persistirRegistro({ cerrarModal = true, limpiarTrasGuardar = fals
     return true;
   } catch (e) {
     console.error(e);
+    const dataErr = e?.data || e?.response?.data || {};
     const detalle = e?.error
-      || e?.data?.detail
-      || e?.data?.non_field_errors?.[0]
-      || e?.response?.data?.detail
-      || e?.response?.data?.non_field_errors?.[0]
+      || dataErr?.detail
+      || dataErr?.non_field_errors?.[0]
       || e?.detail
       || e?.message;
     const msg = typeof detalle === 'string' ? detalle : 'No se pudo guardar el registro.';
+    const code = dataErr?.code || '';
     const lower = String(msg).toLowerCase();
-    if (lower.includes('unique') || lower.includes('único') || lower.includes('ya existe')) {
-      ElMessage.error('Ya existe un registro para este periodo e IPRESS. Edite el existente.');
+    const esDuplicado = code === 'duplicado_periodo_ipress'
+      || lower.includes('unique')
+      || lower.includes('único')
+      || lower.includes('ya existe');
+
+    if (esDuplicado) {
+      const registroApi = dataErr?.registro;
+      await cargarRegistros();
+      if (registroApi?.id_calidad_microbiologica) {
+        const mapped = mapApiARegistro(registroApi);
+        abrirModalEditar(mapped);
+        ElMessage.warning('Ya existía un registro para este periodo e IPRESS. Se abrió para editarlo.');
+      } else if (registrosFiltrados.value[0]) {
+        abrirEditarRegistroActual();
+        ElMessage.warning('Ya existía un registro para este periodo e IPRESS. Se abrió para editarlo.');
+      } else {
+        ElMessage.error('Ya existe un registro para este periodo e IPRESS, pero no se pudo cargar para editar. Recargue la página.');
+      }
     } else {
       ElMessage.error(msg);
     }
