@@ -27,19 +27,21 @@ export function tipoCondicionPorFechaYPeriodo(fechaIso, periodoLabel) {
 }
 
 /**
- * Hospital si el nombre contiene «hospital»/«hosp» o abrevia con «H.» / «H » (p. ej. H. ALMENARA).
+ * Hospital si el nombre contiene «hospital»/«hosp» o abrevia con «H.» / «H » / «H-»
+ * (p. ej. H. ALMENARA, H REATEGUI, H-REBAGLIATI).
  * El resto de IPRESS se trata como clínica (registro simplificado).
  */
 export function esNombreIpressHospital(ipressItem) {
   if (!ipressItem) return false;
   const nombre = String(ipressItem?.ipress || '').trim();
   const corto = String(ipressItem?.nombre_corto || '').trim();
-  const t = `${nombre} ${corto}`.toLowerCase();
+  const t = `${nombre} ${corto}`.toLowerCase().replace(/\s+/g, ' ');
   if (!t.trim()) return false;
   if (t.includes('hospital') || t.includes('hosp.') || /\bhosp\b/.test(t)) return true;
-  // H. ALMENARA, H ALMENARA, H-ALMENARA (inicio de nombre o corto)
-  if (/^h[\.\s\-]/i.test(nombre) || /^h[\.\s\-]/i.test(corto)) return true;
+  // H. ALMENARA, H ALMENARA, H-ALMENARA, H_REATEGUI (inicio de nombre o corto)
+  const rePrefijoH = /^h([\.\s\-_]+|\b)/i;
+  if (rePrefijoH.test(nombre) || rePrefijoH.test(corto)) return true;
   // Abreviatura «H.» / «H » en cualquier parte del texto combinado
-  if (/\bh[\.\s\-]+\S/i.test(t)) return true;
+  if (/\bh([\.\s\-_]+)\S/i.test(t)) return true;
   return false;
 }

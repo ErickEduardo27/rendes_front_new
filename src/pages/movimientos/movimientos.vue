@@ -550,7 +550,7 @@
                     :id-periodo-ipress-inicial="idPeriodoIpress"
                     :id-clinica-inicial="idClinicaSeleccionada"
                     :nombre-clinica-inicial="clinicaSeleccionada"
-                    :forzar-formulario-completo="esUnidadHospitalSeleccionada"
+                    :forzar-formulario-completo="esUnidadHospitalSeleccionada || undefined"
                     :mostrar-tabla-edicion="false"
                     :numero-documento-inicial="documentoPrefillRegistro"
                     @cancelar="onCerrarFormularioPacienteMovimientos"

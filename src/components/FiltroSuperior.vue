@@ -22,11 +22,13 @@
         </div>
   
         <div class="flex items-center gap-2">
-          <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide">Clínica:</h2>
+          <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide">
+            {{ esHospitalSeleccionado ? 'Hospital' : 'Clínica' }}:
+          </h2>
           
           <el-select 
             v-model="clinicaSeleccionada"
-            placeholder="Todas las clínicas"
+            :placeholder="esHospitalSeleccionado ? 'Todos los hospitales' : 'Todas las clínicas'"
             filterable
             clearable
             style="width: 300px" 
@@ -69,9 +71,10 @@
   </template>
   
   <script setup>
-  import { ref, watch, onMounted } from 'vue';
+  import { ref, computed, watch, onMounted } from 'vue';
   import { getAllIpress } from "@/services/ipress/Ipress.service";
   import { ElConfigProvider, ElMessage } from 'element-plus';
+  import { esNombreIpressHospital } from '@/utils/condicionIngresoPorFecha';
   
   // --- CONFIGURACIÓN DE IDIOMA ---
   import es from 'element-plus/dist/locale/es.mjs'; 
@@ -94,6 +97,13 @@
   const clinicaSeleccionada = ref(null);
   const listaModalidades = ref([]);
   const modalidadSeleccionada = ref(null);
+
+  const esHospitalSeleccionado = computed(() => {
+    const id = clinicaSeleccionada.value ?? props.clinica;
+    if (id == null || id === '') return false;
+    const item = (listaClinicas.value || []).find((c) => String(c.id_ipress) === String(id));
+    return esNombreIpressHospital(item);
+  });
   
   // ==========================================
   // 1. LÓGICA DE PERIODO

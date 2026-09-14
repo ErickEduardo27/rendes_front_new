@@ -19,10 +19,12 @@
     </div>
 
     <div class="flex items-center gap-2 flex-1 min-w-0">
-      <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide shrink-0">Clínica:</h2>
+      <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide shrink-0">
+        {{ etiquetaUnidadSeleccionada }}:
+      </h2>
       <el-select
         v-model="clinicaSeleccionada"
-        placeholder="Seleccione una Clínica"
+        :placeholder="esHospitalSeleccionado ? 'Seleccione un Hospital' : 'Seleccione una Clínica'"
         filterable
         clearable
         class="w-full max-w-xs"
@@ -44,7 +46,7 @@
       <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wide shrink-0">Modalidad:</h2>
       <el-select
         v-model="modalidadSeleccionada"
-        :placeholder="clinicaSeleccionada ? 'Modalidad de la IPRESS' : 'Seleccione una clínica'"
+        :placeholder="clinicaSeleccionada ? 'Modalidad de la IPRESS' : 'Seleccione una unidad'"
         :disabled="!clinicaSeleccionada"
         style="width: 180px"
         @change="procesarCambioModalidad"
@@ -65,6 +67,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { getAllIpress } from "@/services/ipress/Ipress.service";
 import { ElMessage, ElConfigProvider } from 'element-plus';
 import { useAuthStore } from '@/store/auth';
+import { esNombreIpressHospital } from '@/utils/condicionIngresoPorFecha';
 
 // --- CONFIGURACIÓN DE IDIOMA ---
 import es from 'element-plus/dist/locale/es.mjs'; 
@@ -86,10 +89,22 @@ const listaClinicas = ref([]);
 const clinicaSeleccionada = ref(null);
 const modalidadSeleccionada = ref(null);
 
+const ipressSeleccionada = computed(() => {
+  const id = clinicaSeleccionada.value ?? props.clinica;
+  if (id == null || id === '') return null;
+  return (listaClinicas.value || []).find((c) => String(c.id_ipress) === String(id)) || null;
+});
+
+const esHospitalSeleccionado = computed(() => esNombreIpressHospital(ipressSeleccionada.value));
+
+const etiquetaUnidadSeleccionada = computed(() => (
+  esHospitalSeleccionado.value ? 'Hospital' : 'Clínica'
+));
+
 // Solo la modalidad de la IPRESS seleccionada (cada ipress tiene id_modalidad según el modelo)
 const modalidadDeLaIpress = computed(() => {
   if (!clinicaSeleccionada.value) return [];
-  const ipress = listaClinicas.value.find((c) => c.id_ipress === clinicaSeleccionada.value);
+  const ipress = listaClinicas.value.find((c) => String(c.id_ipress) === String(clinicaSeleccionada.value));
   if (!ipress) return [];
   const idModalidad = ipress.id_modalidad ?? ipress.datosModalidad?.id_modalidad;
   const nombreModalidad = ipress.datosModalidad?.modalidad ?? 'Modalidad';
@@ -191,8 +206,13 @@ const fetchClinicas = async () => {
     if (debeLimitarClinicasAlUsuario() && authStore.user?.id_usuario) {
       const asignaciones = await getAllIpress(`/usuarioIpressFilter/?id_usuario=${authStore.user.id_usuario}`);
       const listaAsig = Array.isArray(asignaciones) ? asignaciones : (asignaciones?.results || []);
-      const idsAsignados = new Set(listaAsig.map((a) => a.id_ipress).filter(Boolean));
-      lista = lista.filter((ip) => idsAsignados.has(ip.id_ipress));
+      const idsAsignados = new Set(
+        listaAsig
+          .map((a) => a.id_ipress ?? a.ipress)
+          .filter((id) => id != null && id !== '')
+          .map((id) => String(id)),
+      );
+      lista = lista.filter((ip) => idsAsignados.has(String(ip.id_ipress)));
     }
 
     listaClinicas.value = lista;
@@ -217,7 +237,7 @@ const sincronizarModalidadDesdeClinica = (idIpress) => {
     emit('update:modalidad', null);
     return;
   }
-  const ipress = listaClinicas.value.find((c) => c.id_ipress === idIpress);
+  const ipress = listaClinicas.value.find((c) => String(c.id_ipress) === String(idIpress));
   const idModalidad = ipress?.id_modalidad ?? ipress?.datosModalidad?.id_modalidad;
   if (idModalidad != null) {
     modalidadSeleccionada.value = idModalidad;
