@@ -288,6 +288,14 @@ const props = defineProps({
         type: Object,
         default: null
     },
+    /**
+     * true = flujo explícito de «completar fecha de alta» (p. ej. egreso / pendiente).
+     * false = edición normal: si el registro no tenía alta, no se exige cargarla.
+     */
+    forzarCompletarAlta: {
+        type: Boolean,
+        default: false,
+    },
     modoSupervisor: { type: Boolean, default: false },
     /** Abierto desde egreso en Movimientos: no pedir efecto ni generar movimientos (el egreso lo hace el padre). */
     desdeEgresoMovimiento: { type: Boolean, default: false },
@@ -403,7 +411,9 @@ function diagnosticosDesdeRegistro(registro) {
 function cargarRegistroEdicion(registro) {
     if (!registro) return;
     const sinAlta = !registroTieneAlta(registro);
-    if (sinAlta) {
+    // Solo forzar «completar alta» cuando el padre lo pide (egreso / pendiente).
+    // En edición normal se puede cambiar la fecha de hospitalización sin exigir alta.
+    if (sinAlta && props.forzarCompletarAlta) {
         modoCompletarAlta.value = true;
         idMorbilidadCompletar.value = registro.id_morbilidad_hospitalaria;
         idMorbilidadEdicion.value = null;
@@ -1520,6 +1530,15 @@ const validarAntesDeGuardar = async () => {
         return false;
     }
     if (!(await validarDatosFallecimiento())) return false;
+    // Solo exigir fecha de alta en el flujo explícito de «completar alta».
+    if (
+        modoCompletarAlta.value
+        && !esFallecimiento
+        && !form.value.fAltHos
+    ) {
+        await alertaSwal('Indique la fecha de alta de hospitalización.');
+        return false;
+    }
     if (!esFallecimiento && form.value.fIniHos && form.value.fAltHos && form.value.fAltHos < form.value.fIniHos) {
         await alertaSwal('La fecha de alta debe ser mayor o igual a la fecha de inicio de hospitalización.');
         return false;

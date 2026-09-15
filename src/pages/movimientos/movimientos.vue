@@ -970,6 +970,7 @@
                         :periodo="Number(formEgresar.periodo || periodoGlobal)"
                         :id-paciente-atencion="idPacienteAtencionForm4"
                         :registro-edicion="registroEdicionForm4"
+                        :forzar-completar-alta="!!registroEdicionForm4"
                         :desde-egreso-movimiento="form4DesdeEgreso"
                         @cancelar="onCancelarForm4Hospitalizacion"
                         @guardado="onGuardadoForm4Hospitalizacion"

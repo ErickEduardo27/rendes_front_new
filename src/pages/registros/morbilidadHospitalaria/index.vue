@@ -323,6 +323,7 @@
               :periodo="periodoNumero"
               :id-paciente-atencion="idPacienteAtencionParaForm"
               :registro-edicion="registroEdicion"
+              :forzar-completar-alta="forzarCompletarAltaForm"
               :fecha-maxima-registro="fechaMaximaRegistroForm"
               @cancelar="cerrarModalNuevo"
               @guardado="onGuardado"
@@ -512,6 +513,7 @@ const busquedaPaciente = ref('');
 const pacienteParaFormulario = ref(null);
 const idPacienteAtencionParaForm = ref(null);
 const registroEdicion = ref(null);
+const forzarCompletarAltaForm = ref(false);
 const form4ModalKey = ref(0);
 const eliminandoId = ref(null);
 const mostrarModalForm3 = ref(false);
@@ -783,11 +785,9 @@ function registroPendienteAltaPorAtencion(idAtencion) {
 }
 
 const tituloModalFormulario = computed(() => {
+  if (forzarCompletarAltaForm.value) return 'Completar hospitalización sin fecha de alta';
   if (registroEdicion.value) return 'Editar registro de Morbilidad Hospitalaria';
   if (pacienteParaFormulario.value && idPacienteAtencionParaForm.value != null) {
-    if (registroPendienteAltaPorAtencion(idPacienteAtencionParaForm.value)) {
-      return 'Completar hospitalización sin fecha de alta';
-    }
     return 'Nuevo registro de Morbilidad Hospitalaria';
   }
   return 'Nuevo registro de Morbilidad Hospitalaria';
@@ -1001,6 +1001,7 @@ function idAtencionDesdeRegistro(registro) {
 function abrirModalNuevo() {
   if (!formularioAbierto.value) return;
   registroEdicion.value = null;
+  forzarCompletarAltaForm.value = false;
   pacienteParaFormulario.value = null;
   idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
@@ -1010,7 +1011,7 @@ function abrirModalNuevo() {
   mostrarModalNuevo.value = true;
 }
 
-function abrirModalEditar(registro) {
+function abrirModalEditar(registro, { completarAlta = false } = {}) {
   if (!puedeEditarFila(registro) || !registro) return;
   const paciente = pacienteDesdeRegistro(registro);
   const idAtencion = idAtencionDesdeRegistro(registro);
@@ -1019,6 +1020,7 @@ function abrirModalEditar(registro) {
     return;
   }
   registroEdicion.value = registro;
+  forzarCompletarAltaForm.value = !!completarAlta;
   pacienteParaFormulario.value = paciente;
   idPacienteAtencionParaForm.value = idAtencion;
   idPacienteSeleccionado.value = '';
@@ -1058,6 +1060,7 @@ function confirmarPacienteYMostrarFormulario() {
 function cerrarModalNuevo() {
   mostrarModalNuevo.value = false;
   registroEdicion.value = null;
+  forzarCompletarAltaForm.value = false;
   pacienteParaFormulario.value = null;
   idPacienteAtencionParaForm.value = null;
   idPacienteSeleccionado.value = '';
@@ -1130,7 +1133,7 @@ async function abrirFormularioDesdeEgreso(idPacienteAtencion) {
 
     const pendiente = registroPendienteAltaPorAtencion(idPacienteAtencion);
     if (pendiente) {
-      abrirModalEditar(pendiente);
+      abrirModalEditar(pendiente, { completarAlta: true });
       return;
     }
 
@@ -1142,6 +1145,7 @@ async function abrirFormularioDesdeEgreso(idPacienteAtencion) {
     }
 
     registroEdicion.value = null;
+    forzarCompletarAltaForm.value = false;
     pacienteParaFormulario.value = paciente;
     idPacienteAtencionParaForm.value = Number(idPacienteAtencion);
     idPacienteSeleccionado.value = '';
