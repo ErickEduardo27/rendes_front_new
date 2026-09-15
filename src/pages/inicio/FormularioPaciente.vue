@@ -2760,6 +2760,9 @@ async function guardarEdicionSupervisor() {
       enf_hipertension: form.comorbilidades.includes('Hipertensión') ? 'Sí' : 'NO',
       enf_tuberculosis: form.comorbilidades.includes('Tuberculosis') ? 'Sí' : 'NO',
       enf_otra: valorEnfOtraParaApi(),
+      etiologia_otra: mostrarEtiologiaOtra.value
+        ? String(form.etiologiaOtra || '').trim()
+        : '',
     };
     await patchAllIpress(`/pacientesDialisis/${idPacienteDialisisEdicionInterno.value}/`, payloadDialisis);
     await sincronizarUnidadActualEnEdicion();
@@ -2909,6 +2912,8 @@ async function cargarDatosPacienteParaEdicion(idP, idDial) {
       }
       await nextTick();
       form.etiologiaEspecifica = idEt;
+      await nextTick();
+      form.etiologiaOtra = dia.etiologia_otra || '';
     }
 
     await nextTick();
