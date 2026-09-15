@@ -240,10 +240,22 @@
             </el-form-item>
             <el-form-item
               label="Condición del paciente"
-              :required="tipoCondicionFecha === 'SELECCIONAR'"
+              :required="modoEdicionSupervisor || tipoCondicionFecha === 'SELECCIONAR'"
             >
+              <template v-if="modoEdicionSupervisor">
+                <el-select
+                  v-model="form.condicionAtencion"
+                  placeholder="Seleccione condición"
+                  class="w-full"
+                  clearable
+                >
+                  <el-option label="NUEVO" value="NUEVO" />
+                  <el-option label="CONTINUADOR" value="CONTINUADOR" />
+                  <el-option label="REINGRESO" value="REINGRESO" />
+                </el-select>
+              </template>
               <div
-                v-if="tipoCondicionFecha === 'NUEVO'"
+                v-else-if="tipoCondicionFecha === 'NUEVO'"
                 class="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
               >
                 <strong>NUEVO</strong>
@@ -412,12 +424,23 @@
               />
             </el-form-item>
             <el-form-item
-              v-if="!modoEdicionSupervisor"
               label="Condición del paciente"
-              :required="tipoCondicionFecha === 'SELECCIONAR'"
+              :required="modoEdicionSupervisor || tipoCondicionFecha === 'SELECCIONAR'"
             >
+              <template v-if="modoEdicionSupervisor">
+                <el-select
+                  v-model="form.condicionAtencion"
+                  placeholder="Seleccione condición"
+                  class="w-full"
+                  clearable
+                >
+                  <el-option label="NUEVO" value="NUEVO" />
+                  <el-option label="CONTINUADOR" value="CONTINUADOR" />
+                  <el-option label="REINGRESO" value="REINGRESO" />
+                </el-select>
+              </template>
               <div
-                v-if="tipoCondicionFecha === 'NUEVO'"
+                v-else-if="tipoCondicionFecha === 'NUEVO'"
                 class="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
               >
                 <strong>NUEVO</strong>
@@ -584,7 +607,6 @@ const ipressSeleccionadaActual = computed(() => {
 
 /** Sin «hospital» / «H.» en el nombre → solo datos personales + fecha 1er ingreso + condición. */
 const esRegistroSimplificado = computed(() => {
-  if (modoEdicionSupervisor.value) return false;
   if (props.forzarFormularioCompleto === true) return false;
   if (props.forzarFormularioCompleto === false) return true;
   return !esNombreIpressHospital(ipressSeleccionadaActual.value);
@@ -976,14 +998,16 @@ const validarFormulario = async () => {
     return false;
   }
 
-  if (form.comorbilidades.includes('Otra') && !String(form.comorbilidadOtra || '').trim()) {
-    await alertaCampoObligatorio('Indique la comorbilidad en el campo «Otra».');
-    return false;
-  }
+  if (!esRegistroSimplificado.value) {
+    if (form.comorbilidades.includes('Otra') && !String(form.comorbilidadOtra || '').trim()) {
+      await alertaCampoObligatorio('Indique la comorbilidad en el campo «Otra».');
+      return false;
+    }
 
-  if (mostrarEtiologiaOtra.value && !String(form.etiologiaOtra || '').trim()) {
-    await alertaCampoObligatorio('Indique la etiología en el campo de especificación.');
-    return false;
+    if (mostrarEtiologiaOtra.value && !String(form.etiologiaOtra || '').trim()) {
+      await alertaCampoObligatorio('Indique la etiología en el campo de especificación.');
+      return false;
+    }
   }
 
   return true;
@@ -1161,7 +1185,16 @@ const validarCampoFecha = (key, label) => {
 };
 
 const actualizarErroresFechas = () => {
-  for (const campo of CAMPOS_FECHA_VALIDACION) {
+  if (esRegistroSimplificado.value) {
+    erroresFecha.fechaCreacionAcceso = '';
+    erroresFecha.fechaInicioTRR = '';
+  }
+  const campos = esRegistroSimplificado.value
+    ? CAMPOS_FECHA_VALIDACION.filter(
+      (c) => c.key === 'fechaNacimiento' || c.key === 'fechaPrimerIngreso',
+    )
+    : CAMPOS_FECHA_VALIDACION;
+  for (const campo of campos) {
     validarCampoFecha(campo.key, campo.label);
   }
 };
@@ -1183,9 +1216,12 @@ const tipoCondicionFecha = computed(() => (
 ));
 
 const condicionAtencionResuelta = computed(() => {
+  const c = String(form.condicionAtencion || '').toUpperCase();
+  if (modoEdicionSupervisor.value) {
+    return (c === 'NUEVO' || c === 'CONTINUADOR' || c === 'REINGRESO') ? c : '';
+  }
   if (tipoCondicionFecha.value === 'NUEVO') return 'NUEVO';
   if (tipoCondicionFecha.value === 'SELECCIONAR') {
-    const c = String(form.condicionAtencion || '').toUpperCase();
     return (c === 'CONTINUADOR' || c === 'REINGRESO') ? c : '';
   }
   return '';
@@ -1193,6 +1229,7 @@ const condicionAtencionResuelta = computed(() => {
 
 function onCambioFechaPrimerIngreso() {
   actualizarErroresFechas();
+  if (modoEdicionSupervisor.value) return;
   if (tipoCondicionFecha.value === 'NUEVO') {
     form.condicionAtencion = 'NUEVO';
   } else if (form.condicionAtencion === 'NUEVO') {
@@ -1201,6 +1238,7 @@ function onCambioFechaPrimerIngreso() {
 }
 
 watch(tipoCondicionFecha, (tipo) => {
+  if (modoEdicionSupervisor.value) return;
   if (tipo === 'NUEVO') form.condicionAtencion = 'NUEVO';
 });
 
@@ -2709,63 +2747,106 @@ async function guardarEdicionSupervisor() {
     return;
   }
   if (!(await validarFormulario())) return;
-  if (!(await confirmarSinComorbilidades())) return;
+  if (!condicionAtencionResuelta.value) {
+    await alertaCampoObligatorio(
+      'Seleccione la condición del paciente (NUEVO, CONTINUADOR o REINGRESO).',
+      { title: 'Condición requerida' },
+    );
+    return;
+  }
+  if (!esRegistroSimplificado.value && !(await confirmarSinComorbilidades())) return;
   calcularEdadInicioTRR();
-  const idPeriodo = getIdPeriodoParaPayload();
+
+  const idPeriodo = esRegistroSimplificado.value
+    ? getIdPeriodoParaAtencion()
+    : getIdPeriodoParaPayload();
   if (idPeriodo == null) {
     await alertaCampoObligatorio(
-      'Indique la Fecha de Inicio de TRR (periodo válido) o seleccione un periodo registrado en el sistema.',
+      esRegistroSimplificado.value
+        ? 'Seleccione el periodo en la barra superior antes de guardar.'
+        : 'Indique la Fecha de Inicio de TRR (periodo válido) o seleccione un periodo registrado en el sistema.',
       { title: 'Atención' },
     );
     return;
   }
-  const idEtiologia =
-    form.etiologiaEspecifica != null && form.etiologiaEspecifica !== ''
-      ? Number(form.etiologiaEspecifica) || parseInt(form.etiologiaEspecifica, 10)
-      : null;
-  if (idEtiologia == null || Number.isNaN(idEtiologia)) {
-    await alertaCampoObligatorio('Seleccione una etiología específica de la lista.');
-    return;
+
+  let idEtiologia = null;
+  if (!esRegistroSimplificado.value) {
+    idEtiologia =
+      form.etiologiaEspecifica != null && form.etiologiaEspecifica !== ''
+        ? Number(form.etiologiaEspecifica) || parseInt(form.etiologiaEspecifica, 10)
+        : null;
+    if (idEtiologia == null || Number.isNaN(idEtiologia)) {
+      await alertaCampoObligatorio('Seleccione una etiología específica de la lista.');
+      return;
+    }
   }
 
   cargandoEdicionSupervisor.value = true;
   try {
+    const idModalidad =
+      form.modalidadTRR === 'Hemodiálisis' ? 1
+        : form.modalidadTRR === 'Diálisis Peritoneal' ? 2
+          : form.modalidadTRR === 'Trasplante' ? 3
+            : getIdModalidadParaAtencion();
+
     const payloadPaciente = {
       documento: form.numeroDocumento,
       tipo_documento: form.tipoDocumento,
       autogenerado: 'ASD',
       fecha_nacimiento: fechaFormularioParaApi(form.fechaNacimiento),
       genero: form.sexo,
-      grado_instruccion: form.gradoInstruccion,
-      id_modalidad: form.modalidadTRR === 'Hemodiálisis' ? 1 : form.modalidadTRR === 'Diálisis Peritoneal' ? 2 : 3,
+      grado_instruccion: form.gradoInstruccion
+        || (esRegistroSimplificado.value ? 'NO ESPECIFICADO' : form.gradoInstruccion),
+      id_modalidad: idModalidad,
     };
     await patchAllIpress(`/pacientes/${idPacienteEdicionInterno.value}/`, payloadPaciente);
 
-    const payloadDialisis = {
-      id_paciente: idPacienteEdicionInterno.value,
-      id_etiologia: idEtiologia,
-      modalidad_inicio_trr: form.modalidadTRR,
-      fecha_inicio_trr: fechaFormularioParaApi(form.fechaInicioTRR),
-      subsistema_salud: form.subsistemaSalud,
-      tipo_acceso: form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : resolverTipoAccesoTexto(form.tipoAccesoInicio),
-      fecha_creacion_acceso: fechaFormularioParaApi(form.fechaCreacionAcceso),
-      fecha_primer_ingreso: fechaFormularioParaApi(form.fechaPrimerIngreso),
-      ...camposDialisisAccesoTrr(),
-      enf_ateroesclerotica_cardiaca: form.comorbilidades.includes('Aterosclerosis') ? 'Sí' : 'NO',
-      enf_insuficiencia_cardiaca_congestiva: form.comorbilidades.includes('Insuficiencia cardiaca') ? 'Sí' : 'NO',
-      enf_vascular_periferica: form.comorbilidades.includes('Vascular periférica') ? 'Sí' : 'NO',
-      enf_cerebro_vascular: form.comorbilidades.includes('ACV') ? 'Sí' : 'NO',
-      enf_cancer: form.comorbilidades.includes('Cáncer') ? 'Sí' : 'NO',
-      enf_diabetes: form.comorbilidades.includes('Diabetes') ? 'Sí' : 'NO',
-      enf_hipertension: form.comorbilidades.includes('Hipertensión') ? 'Sí' : 'NO',
-      enf_tuberculosis: form.comorbilidades.includes('Tuberculosis') ? 'Sí' : 'NO',
-      enf_otra: valorEnfOtraParaApi(),
-      etiologia_otra: mostrarEtiologiaOtra.value
-        ? String(form.etiologiaOtra || '').trim()
-        : '',
+    if (esRegistroSimplificado.value) {
+      const fechaCaptacion = fechaFormularioParaApi(form.fechaPrimerIngreso);
+      await patchAllIpress(`/pacientesDialisis/${idPacienteDialisisEdicionInterno.value}/`, {
+        id_paciente: idPacienteEdicionInterno.value,
+        fecha_primer_ingreso: fechaCaptacion,
+      });
+    } else {
+      const payloadDialisis = {
+        id_paciente: idPacienteEdicionInterno.value,
+        id_etiologia: idEtiologia,
+        modalidad_inicio_trr: form.modalidadTRR,
+        fecha_inicio_trr: fechaFormularioParaApi(form.fechaInicioTRR),
+        subsistema_salud: form.subsistemaSalud,
+        tipo_acceso: form.modalidadTRR === 'Trasplante' ? 'NO HABIDO' : resolverTipoAccesoTexto(form.tipoAccesoInicio),
+        fecha_creacion_acceso: fechaFormularioParaApi(form.fechaCreacionAcceso),
+        fecha_primer_ingreso: fechaFormularioParaApi(form.fechaPrimerIngreso),
+        ...camposDialisisAccesoTrr(),
+        enf_ateroesclerotica_cardiaca: form.comorbilidades.includes('Aterosclerosis') ? 'Sí' : 'NO',
+        enf_insuficiencia_cardiaca_congestiva: form.comorbilidades.includes('Insuficiencia cardiaca') ? 'Sí' : 'NO',
+        enf_vascular_periferica: form.comorbilidades.includes('Vascular periférica') ? 'Sí' : 'NO',
+        enf_cerebro_vascular: form.comorbilidades.includes('ACV') ? 'Sí' : 'NO',
+        enf_cancer: form.comorbilidades.includes('Cáncer') ? 'Sí' : 'NO',
+        enf_diabetes: form.comorbilidades.includes('Diabetes') ? 'Sí' : 'NO',
+        enf_hipertension: form.comorbilidades.includes('Hipertensión') ? 'Sí' : 'NO',
+        enf_tuberculosis: form.comorbilidades.includes('Tuberculosis') ? 'Sí' : 'NO',
+        enf_otra: valorEnfOtraParaApi(),
+        etiologia_otra: mostrarEtiologiaOtra.value
+          ? String(form.etiologiaOtra || '').trim()
+          : '',
+      };
+      await patchAllIpress(`/pacientesDialisis/${idPacienteDialisisEdicionInterno.value}/`, payloadDialisis);
+      await sincronizarUnidadActualEnEdicion();
+    }
+
+    const payloadAtencion = {
+      tipo_atencion: condicionAtencionResuelta.value,
     };
-    await patchAllIpress(`/pacientesDialisis/${idPacienteDialisisEdicionInterno.value}/`, payloadDialisis);
-    await sincronizarUnidadActualEnEdicion();
+    if (esRegistroSimplificado.value) {
+      const fechaCaptacion = fechaFormularioParaApi(form.fechaPrimerIngreso);
+      if (fechaCaptacion) {
+        payloadAtencion.fecha_atencion = fechaCaptacion;
+        payloadAtencion.fecha_inicio = fechaCaptacion;
+      }
+    }
+    await patchAllIpress(`/pacienteAtencion/${idAtencion}/`, payloadAtencion);
 
     ElMessage({ message: 'Cambios guardados correctamente.', type: 'success', plain: true });
     if (props.mostrarTablaEdicion) {
@@ -2895,6 +2976,19 @@ async function cargarDatosPacienteParaEdicion(idP, idDial) {
     form.hospitalProcedencia = dia.hospital_procedencia_trr || '';
     form.comorbilidades = mapComorbilidadesDesdeDialisis(dia);
     form.comorbilidadOtra = textoComorbilidadOtraDesdeDialisis(dia);
+
+    try {
+      const atencion = await getAllIpress(`/pacienteAtencion/${idAtencion}/`);
+      const tipo = String(atencion?.tipo_atencion || '').trim().toUpperCase();
+      if (tipo === 'NUEVO' || tipo === 'CONTINUADOR' || tipo === 'REINGRESO') {
+        form.condicionAtencion = tipo;
+      } else {
+        form.condicionAtencion = '';
+      }
+    } catch (eAt) {
+      console.warn('No se pudo cargar la condición de atención:', eAt);
+      form.condicionAtencion = '';
+    }
 
     const unidadActual = await cargarUnidadActualParaEdicion(idP);
     aplicarAccesoInicioEnFormulario(dia, unidadActual);

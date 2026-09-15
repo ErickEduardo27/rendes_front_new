@@ -303,8 +303,8 @@ const endMaquiHemodi2 = ref('');
 const opcionesEndotoxina = [
   { value: 'Normal', label: 'Normal (≤ 0,25)' },
   { value: 'Alto', label: 'Alto (> 0,25)' },
-  { value: 'Normal_03', label: 'Normal (≤ 0,3)' },
-  { value: 'Anormal_03', label: 'Anormal (> 0,3)' },
+  { value: 'Normal_03', label: 'Normal (≤ 0,03)' },
+  { value: 'Anormal_03', label: 'Anormal (> 0,03)' },
 ];
 
 const periodoTexto = computed(() => {
@@ -394,9 +394,9 @@ function textoEndotoxina(val) {
   const etiquetas = {
     Normal: '≤ 0,25',
     Alto: '> 0,25',
-    Normal_03: '≤ 0,3',
-    Anormal_03: '> 0,3',
-    Anormal: '> 0,3',
+    Normal_03: '≤ 0,03',
+    Anormal_03: '> 0,03',
+    Anormal: '> 0,03',
   };
   return etiquetas[val] || '—';
 }

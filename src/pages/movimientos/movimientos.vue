@@ -985,7 +985,7 @@
 import { ref, computed, onMounted, onUnmounted, reactive, inject, watch } from 'vue';
 import { getAllIpress, postAllIpress, patchAllIpress, deleteAllIpress } from "@/services/ipress/Ipress.service";
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
-import { debeLimitarClinicasAlUsuario, esSupervisor } from '@/utils/perfil';
+import { debeLimitarClinicasAlUsuario } from '@/utils/perfil';
 import { fechaCelda, formatFechaDDMMAAAA, parseFechaAISO } from '@/utils/fechaFormat';
 import { esNombreIpressHospital } from '@/utils/condicionIngresoPorFecha';
 import { useAuthStore } from '@/store/auth';
@@ -1031,11 +1031,11 @@ const filtroListo = computed(() => (
 const movimientosCerrados = computed(() => movimientosAbiertos.value === false);
 
 /**
- * Solo supervisor puede editar/eliminar, y únicamente mientras el formulario
- * esté abierto y no exista conformidad del periodo.
+ * Clínica/hospital y supervisor pueden editar/eliminar mientras el formulario
+ * esté abierto y el periodo no tenga conformidad (aprobación del supervisor).
  */
 const puedeEditarEliminarMovimientos = computed(() => (
-  esSupervisor() && !movimientosCerrados.value && !periodoConforme.value
+  !movimientosCerrados.value && !periodoConforme.value
 ));
 
 const accionesMovimientoBloqueadas = computed(() => (
@@ -1677,7 +1677,11 @@ async function recargarHistorialSiAbierto() {
 
 async function eliminarMovimiento(mov) {
     if (!puedeEditarEliminarMovimientos.value) {
-        ElMessage.warning('Solo el perfil supervisor puede eliminar movimientos.');
+        ElMessage.warning(
+            periodoConforme.value
+                ? 'El periodo ya tiene conformidad. No se pueden eliminar movimientos.'
+                : 'Los movimientos están sincerados/cerrados. No se pueden eliminar.',
+        );
         return;
     }
     if (!asegurarAccionesMovimientoPermitidas()) return;
@@ -2196,7 +2200,11 @@ const abrirModalEgresarEdicion = async (mov) => {
 
 const editarMovimiento = async (mov) => {
     if (!puedeEditarEliminarMovimientos.value) {
-        ElMessage.warning('Solo el perfil supervisor puede editar movimientos.');
+        ElMessage.warning(
+            periodoConforme.value
+                ? 'El periodo ya tiene conformidad. No se pueden editar movimientos.'
+                : 'Los movimientos están sincerados/cerrados. No se pueden editar.',
+        );
         return;
     }
     if (!asegurarAccionesMovimientoPermitidas()) return;
