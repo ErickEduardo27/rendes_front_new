@@ -34,6 +34,16 @@
                         </label>
                     </div>
                 </div>
+                <div v-if="mostrarEtiologiaOtra" class="space-y-2 mt-2">
+                    <span class="block font-semibold text-sm text-gray-700">Especifique la etiología</span>
+                    <input
+                        v-model="etiologiaOtraTexto"
+                        type="text"
+                        maxlength="200"
+                        class="w-full border border-gray-300 rounded p-2 text-sm focus:ring-cyan-500 focus:border-cyan-500"
+                        placeholder="Escriba la etiología…"
+                    />
+                </div>
             </div>
         </div>
         <hr />
@@ -235,6 +245,13 @@ const toggleComorbilidad = (index) => {
 const etologiaGeneral = ref('')
 const seleccionadas = ref([])
 const dropdownAbierto = ref(false)
+const etiologiaOtraTexto = ref('')
+
+const ETILOGIA_OTRA_LABEL = 'Otras no especificadas (mencionar)'
+
+const mostrarEtiologiaOtra = computed(() =>
+    seleccionadas.value.some((item) => String(item).includes('Otras no especificadas')),
+)
 
 const toggleDropdown = () => {
     dropdownAbierto.value = !dropdownAbierto.value
@@ -257,6 +274,7 @@ const {
 watch(etologiaGeneral, (newValue) => {
     seleccionadas.value = []
     dropdownAbierto.value = false
+    etiologiaOtraTexto.value = ''
 
     if (newValue === '1') {
         if (estadoComorbilidades.value[diabetesComorbilidadIndex]) {
@@ -267,6 +285,11 @@ watch(etologiaGeneral, (newValue) => {
             estadoComorbilidades.value[hipertensionComorbilidadIndex] = false;
         }
     }
+});
+
+watch(seleccionadas, (lista) => {
+    const tieneOtra = lista.some((item) => String(item).includes('Otras no especificadas'));
+    if (!tieneOtra) etiologiaOtraTexto.value = '';
 });
 
 const onClickOutside = (e) => {
@@ -316,6 +339,14 @@ const generarFormData = () => {
         return null;
     }
 
+    if (
+        seleccionadas.value.includes(ETILOGIA_OTRA_LABEL)
+        && String(etiologiaOtraTexto.value || '').trim() === ''
+    ) {
+        toast.error('Indique la etiología en el campo de especificación.');
+        return null;
+    }
+
     const finalComorbilidades = comorbilidadesLabels.map((label, index) => {
         let presente = estadoComorbilidades.value[index];
 
@@ -341,6 +372,9 @@ const generarFormData = () => {
 
         etologiaGeneral: etologiaGeneral.value || null,
         etologiasEspecificasSeleccionadas: seleccionadas.value.length > 0 ? seleccionadas.value : null,
+        etiologiaOtraTexto: mostrarEtiologiaOtra.value && etiologiaOtraTexto.value.trim() !== ''
+            ? etiologiaOtraTexto.value.trim()
+            : null,
 
         modalidadTRR: trr.value || null,
         fechaInicioTRR: fechaDiagnostico.value || null,

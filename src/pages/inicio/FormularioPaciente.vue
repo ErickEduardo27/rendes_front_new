@@ -285,6 +285,21 @@
                 <el-option v-for="e in opcionesEtiologiaEspecificaFromApi" :key="e.id_etiologia" :label="e.especifica || e.codigo || e.id_etiologia" :value="e.id_etiologia" />
               </el-select>
             </el-form-item>
+            <el-form-item
+              v-if="mostrarEtiologiaOtra"
+              label="Especifique la etiología"
+              required
+              class="sm:col-span-2"
+            >
+              <el-input
+                v-model="form.etiologiaOtra"
+                type="text"
+                maxlength="200"
+                show-word-limit
+                clearable
+                placeholder="Escriba la etiología…"
+              />
+            </el-form-item>
           </div>
         </div>
 
@@ -658,6 +673,7 @@ const form = reactive({
   gradoInstruccion: '',
   etiologiaGeneral: '',
   etiologiaEspecifica: '',
+  etiologiaOtra: '',
   comorbilidades: [],
   comorbilidadOtra: '',
   modalidadTRR: '',
@@ -962,6 +978,11 @@ const validarFormulario = async () => {
 
   if (form.comorbilidades.includes('Otra') && !String(form.comorbilidadOtra || '').trim()) {
     await alertaCampoObligatorio('Indique la comorbilidad en el campo «Otra».');
+    return false;
+  }
+
+  if (mostrarEtiologiaOtra.value && !String(form.etiologiaOtra || '').trim()) {
+    await alertaCampoObligatorio('Indique la etiología en el campo de especificación.');
     return false;
   }
 
@@ -1285,6 +1306,24 @@ const etiologiaGeneralEsHipertension = computed(() => {
   const g = normalizarGeneralEtiologia(form.etiologiaGeneral);
   return g.includes('HIPERTENSION') && g.includes('VASOS GRANDES');
 });
+
+function esEtiologiaEspecificaOtra(texto) {
+  const t = String(texto || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  return t.includes('otras no especificadas') || (t.includes('mencionar') && t.includes('otras'));
+}
+
+const etiologiaEspecificaSeleccionada = computed(() => {
+  const id = form.etiologiaEspecifica;
+  if (id == null || id === '') return null;
+  return (listaEtiologias.value || []).find((e) => String(e.id_etiologia) === String(id)) || null;
+});
+
+const mostrarEtiologiaOtra = computed(() =>
+  esEtiologiaEspecificaOtra(etiologiaEspecificaSeleccionada.value?.especifica),
+);
 
 // --- LÓGICA DEL SELECTOR DE PERIODO (NUEVO) ---
 
@@ -2157,6 +2196,7 @@ watch(() => form.tipoAccesoInicio, (nuevoTipoAcceso) => {
 // Watcher: Limpia las comorbilidades si coinciden con la etiología y resetea etiología específica
 watch(() => form.etiologiaGeneral, (nuevoValor) => {
   form.etiologiaEspecifica = '';
+  form.etiologiaOtra = '';
 
   const g = normalizarGeneralEtiologia(nuevoValor);
   if (g === 'DIABETES') {
@@ -2165,6 +2205,13 @@ watch(() => form.etiologiaGeneral, (nuevoValor) => {
     form.comorbilidades = form.comorbilidades.filter((c) => c !== 'Hipertensión');
   }
 });
+
+watch(
+  () => form.etiologiaEspecifica,
+  () => {
+    if (!mostrarEtiologiaOtra.value) form.etiologiaOtra = '';
+  },
+);
 
 watch(
   () => form.comorbilidades.includes('Otra'),
@@ -2213,6 +2260,9 @@ function construirPayloadPacienteDialisis(idPaciente) {
       enf_hipertension: form.comorbilidades.includes('Hipertensión') ? 'Sí' : 'NO',
       enf_tuberculosis: form.comorbilidades.includes('Tuberculosis') ? 'Sí' : 'NO',
       enf_otra: valorEnfOtraParaApi(),
+      etiologia_otra: mostrarEtiologiaOtra.value
+        ? String(form.etiologiaOtra || '').trim()
+        : '',
     },
   };
 }
