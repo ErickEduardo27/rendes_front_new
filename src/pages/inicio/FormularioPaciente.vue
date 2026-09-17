@@ -2904,12 +2904,21 @@ async function editarPacienteDesdeTabla(row) {
   await cargarDatosPacienteParaEdicion(Number(idP), Number(idDial));
 }
 
+function registroInicioTrrBloqueado(row) {
+  if (row?.inicio_trr_aprobado === true) return true;
+  return String(row?.estado_aprobacion || '').trim().toUpperCase() === 'APROBADO';
+}
+
 function puedeEditarPacienteListado(row) {
   if (!row || row.sin_registro_dialisis || !row.id_paciente_dialisis) return false;
+  if (registroInicioTrrBloqueado(row)) return false;
   return true;
 }
 
 function tituloBotonEditarListado(row) {
+  if (registroInicioTrrBloqueado(row)) {
+    return 'Ya tiene conformidad/aprobación: no se puede editar (ni en otro mes)';
+  }
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
     return 'Complete primero el registro de diálisis';
   }

@@ -7,7 +7,7 @@
           Inicio de TRR
         </h1>
         <p class="text-slate-500 mt-1 text-sm">
-          Pacientes en atención por periodo, IPRESS y modalidad. Use los filtros del encabezado para cargar la lista.
+          Pacientes en atención por periodo, IPRESS y modalidad. La conformidad se da una sola vez: después el Inicio TRR no se puede editar, aunque se pase a otro mes.
         </p>
       </div>
 

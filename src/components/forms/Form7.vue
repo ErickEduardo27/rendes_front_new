@@ -25,13 +25,20 @@
       <div class="border-l-4 border-[#008f9c] pl-3">
         <h2 class="text-base font-bold text-gray-800">Serología y vacunación</h2>
         <p class="text-xs text-gray-500">Si selecciona Positivo o Negativo en serología, la fecha de examen es obligatoria. Si selecciona una dosis de Hepatitis B o Covid-19, la fecha de esa vacuna es obligatoria.</p>
+        <p
+          v-if="serologiaObligatoriaPorNuevo"
+          class="mt-2 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"
+        >
+          Paciente <strong>NUEVO</strong>: la serología es obligatoria (VHB, Anti-HBc, VHC y VIH).
+          Si no cuenta con resultado, registre <strong>Desconocido</strong>.
+        </p>
       </div>
 
       <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
         <h3 class="form7-section-title">Condición serológica actual</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div class="form7-field">
-            <label class="form7-label">VHB</label>
+            <label class="form7-label">VHB <span v-if="serologiaObligatoriaPorNuevo" class="text-red-500">*</span></label>
             <select class="form7-control" v-model="form.vhbEstado" @change="onCambioEstadoSerologico('vhbEstado', 'vhbFecha')">
               <option :value="null">Seleccione</option>
               <option>Positivo</option>
@@ -51,7 +58,7 @@
             </template>
           </div>
           <div class="form7-field">
-            <label class="form7-label">Anti-HBc total</label>
+            <label class="form7-label">Anti-HBc total <span v-if="serologiaObligatoriaPorNuevo" class="text-red-500">*</span></label>
             <select class="form7-control" v-model="form.antiHbcEstado" @change="onCambioEstadoSerologico('antiHbcEstado', 'antiHbcFecha')">
               <option :value="null">Seleccione</option>
               <option>Positivo</option>
@@ -71,7 +78,7 @@
             </template>
           </div>
           <div class="form7-field">
-            <label class="form7-label">VHC</label>
+            <label class="form7-label">VHC <span v-if="serologiaObligatoriaPorNuevo" class="text-red-500">*</span></label>
             <select class="form7-control" v-model="form.vhcEstado" @change="onCambioEstadoSerologico('vhcEstado', 'vhcFecha')">
               <option :value="null">Seleccione</option>
               <option>Positivo</option>
@@ -91,7 +98,7 @@
             </template>
           </div>
           <div class="form7-field">
-            <label class="form7-label">VIH</label>
+            <label class="form7-label">VIH <span v-if="serologiaObligatoriaPorNuevo" class="text-red-500">*</span></label>
             <select class="form7-control" v-model="form.vihEstado" @change="onCambioEstadoSerologico('vihEstado', 'vihFecha')">
               <option :value="null">Seleccione</option>
               <option>Positivo</option>
@@ -327,6 +334,53 @@ const modalidadGlobal = inject('modalidadGlobal', ref(null))
 const idVacunacionEdicion = ref(null)
 const clinicasLista = ref([])
 const periodos = ref([])
+/** Atención del paciente es NUEVO → serología obligatoria (mínimo Desconocido). */
+const esPacienteNuevo = ref(false)
+
+const serologiaObligatoriaPorNuevo = computed(() => esPacienteNuevo.value)
+
+const CAMPOS_SEROLOGIA_OBLIGATORIA_NUEVO = [
+  { key: 'vhbEstado', label: 'VHB' },
+  { key: 'antiHbcEstado', label: 'Anti-HBc total' },
+  { key: 'vhcEstado', label: 'VHC' },
+  { key: 'vihEstado', label: 'VIH' },
+]
+
+function aplicarSerologiaDesconocidaPorDefecto() {
+  if (!serologiaObligatoriaPorNuevo.value) return
+  for (const { key } of CAMPOS_SEROLOGIA_OBLIGATORIA_NUEVO) {
+    if (form[key] == null || form[key] === '') {
+      form[key] = 'Desconocido'
+    }
+  }
+  if (!form.estadoAcHBs) form.estadoAcHBs = 'Desconocido'
+  if (esEstadoDesconocido(form.vhbEstado)) form.vhbFecha = null
+  if (esEstadoDesconocido(form.antiHbcEstado)) form.antiHbcFecha = null
+  if (esEstadoDesconocido(form.vhcEstado)) form.vhcFecha = null
+  if (esEstadoDesconocido(form.vihEstado)) form.vihFecha = null
+}
+
+function validarSerologiaObligatoriaNuevo() {
+  if (!serologiaObligatoriaPorNuevo.value) return null
+  for (const { key, label } of CAMPOS_SEROLOGIA_OBLIGATORIA_NUEVO) {
+    if (form[key] == null || String(form[key]).trim() === '') {
+      return `Paciente NUEVO: complete «${label}» en serología. Si no tiene resultado, seleccione Desconocido.`
+    }
+  }
+  return null
+}
+
+async function cargarContextoPacienteNuevoYSerologia() {
+  esPacienteNuevo.value = false
+  const idAtencion = props.idPacienteAtencion
+  if (idAtencion == null || idAtencion === '') return
+  try {
+    const at = await getAllIpress(`/pacienteAtencion/${idAtencion}/`)
+    esPacienteNuevo.value = String(at?.tipo_atencion || '').trim().toUpperCase() === 'NUEVO'
+  } catch (e) {
+    console.warn('No se pudo cargar tipo de atención para serología:', e)
+  }
+}
 
 function valorTexto(v) {
   if (v === null || v === undefined || v === '') return null
@@ -1085,6 +1139,17 @@ const postForm = async () => {
   if (tituloAcHbsRequiereRevaluacion()) {
     await alertaRevaluarVacunacion()
   }
+  const errorSerologiaNuevo = validarSerologiaObligatoriaNuevo()
+  if (errorSerologiaNuevo) {
+    await Swal.fire({
+      title: 'Serología obligatoria',
+      text: errorSerologiaNuevo,
+      icon: 'warning',
+      confirmButtonText: 'Entendido',
+      confirmButtonColor: '#008f9c',
+    })
+    return
+  }
   const errorSerologiaFecha = validarFechasSerologiaObligatorias()
   if (errorSerologiaFecha) {
     alert(errorSerologiaFecha)
@@ -1181,7 +1246,17 @@ onMounted(async () => {
     cargarRegistroEdicion(props.registroEdicion)
   }
   await cargarDosisPreviasPaciente()
+  await cargarContextoPacienteNuevoYSerologia()
+  aplicarSerologiaDesconocidaPorDefecto()
 })
+
+watch(
+  () => [props.idPacienteAtencion, props.paciente?.id_paciente, props.registroEdicion?.id_vacunacion],
+  async () => {
+    await cargarContextoPacienteNuevoYSerologia()
+    aplicarSerologiaDesconocidaPorDefecto()
+  },
+)
 
 
 const mes = ref('JULIO')

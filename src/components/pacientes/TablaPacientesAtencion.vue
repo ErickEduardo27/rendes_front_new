@@ -29,7 +29,7 @@
       v-if="mostrarAprobacion && idIpress != null && idPeriodo != null"
       class="flex flex-wrap items-center justify-between gap-2 mb-3"
     >
-      <p class="text-xs text-slate-500">Editar, Eliminar y Aprobar solo aplican si el paciente tiene ficha de diálisis y el supervisor aún no aprobó el registro.</p>
+      <p class="text-xs text-slate-500">Editar, Eliminar y Aprobar solo si hay ficha de diálisis y aún no hay conformidad/aprobación. Una vez conforme, el bloqueo es permanente (también en meses siguientes).</p>
       <button
         v-if="pendientesAprobacion.length"
         type="button"
@@ -418,7 +418,7 @@ function puedeEliminarFila(row) {
 
 function tituloBotonEditar(row) {
   if (registroAprobadoPorSupervisor(row)) {
-    return 'Registro aprobado por el supervisor: no se puede editar (bloqueo permanente)';
+    return 'Ya tiene conformidad/aprobación: no se puede editar (bloqueo permanente, también en otro mes)';
   }
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
     return 'Sin ficha de diálisis: complete el registro antes de editar';
@@ -429,7 +429,7 @@ function tituloBotonEditar(row) {
 
 function tituloBotonEliminar(row) {
   if (registroAprobadoPorSupervisor(row)) {
-    return 'Registro aprobado por el supervisor: no se puede eliminar (bloqueo permanente)';
+    return 'Ya tiene conformidad/aprobación: no se puede eliminar (bloqueo permanente)';
   }
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
     return 'Sin ficha de diálisis para eliminar';

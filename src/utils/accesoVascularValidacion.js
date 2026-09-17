@@ -260,3 +260,27 @@ export function esCanulacionMenorUnMesDesdeCreacion(fechaCreacion, fechaCanulaci
   unMesDespues.setMonth(unMesDespues.getMonth() + 1);
   return canulacion < unMesDespues;
 }
+
+export function esTipoAccesoCateterPeritoneal(tipo) {
+  return /cat[eé]ter\s*peritoneal/i.test(String(tipo || '').trim());
+}
+
+/**
+ * Acceso vs modalidad del selector:
+ * - Catéter peritoneal + Hemodiálisis (1) → alerta
+ * - Acceso no peritoneal + Diálisis Peritoneal (2) → alerta
+ * @returns {string} mensaje vacío si no hay incompatibilidad
+ */
+export function mensajeIncompatibilidadAccesoModalidad(tipoAcceso, idModalidad) {
+  const tipo = String(tipoAcceso || '').trim();
+  const mod = Number(idModalidad);
+  if (!tipo || Number.isNaN(mod)) return '';
+  const esPeritoneal = esTipoAccesoCateterPeritoneal(tipo);
+  if (esPeritoneal && mod === 1) {
+    return 'El acceso del paciente es Catéter peritoneal, pero la modalidad seleccionada es Hemodiálisis. Verifique si corresponde.';
+  }
+  if (!esPeritoneal && mod === 2) {
+    return `El acceso del paciente es «${tipo}», pero la modalidad seleccionada es Diálisis Peritoneal. Verifique si corresponde.`;
+  }
+  return '';
+}

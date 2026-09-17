@@ -19,7 +19,9 @@
             type="button"
             class="bg-emerald-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-emerald-700 transition disabled:opacity-50"
             :disabled="exportandoConstanciaPdf || !filtroListoConstancia"
-            title="Descargar constancia PDF y Excel con tablas de registros (Inicio TRR, acceso vascular, eventos, morbilidad, resultados, serología y calidad de agua)"
+            :title="esSupervisor
+              ? 'Descargar constancia PDF y Excel con tablas de registros'
+              : 'Descargar constancia en PDF'"
             @click="exportarConstanciaCumplimiento"
           >
             {{ exportandoConstanciaPdf ? 'Generando…' : 'Exportar constancia' }}
@@ -576,11 +578,12 @@ async function exportarConstanciaCumplimiento() {
   }
   exportandoConstanciaPdf.value = true;
   try {
+    const incluirExcel = esSupervisor.value;
     const [, , , hojasRegistros] = await Promise.all([
       fetchEstadisticasAtencion(),
       fetchEstadisticasRegistros(),
       cargarEstadoConformidad(),
-      cargarTablasRegistrosConstancia(),
+      incluirExcel ? cargarTablasRegistrosConstancia() : Promise.resolve({}),
     ]);
     let clinica = ipress.value.find((i) => String(i.id_ipress) === String(clinicaGlobal.value));
     if (!clinica?.datosUbigeo) {
@@ -617,8 +620,12 @@ async function exportarConstanciaCumplimiento() {
       conformidadEn: estadoConformidad.value.conformidad_en,
     };
     exportConstanciaCumplimientoPdf(datosConstancia);
-    exportConstanciaCumplimientoExcel(datosConstancia, hojasRegistros);
-    ElMessage.success('Constancia exportada (PDF + Excel con tablas de registros).');
+    if (incluirExcel) {
+      exportConstanciaCumplimientoExcel(datosConstancia, hojasRegistros);
+      ElMessage.success('Constancia exportada (PDF + Excel con tablas de registros).');
+    } else {
+      ElMessage.success('Constancia exportada en PDF.');
+    }
   } catch (e) {
     console.error(e);
     ElMessage.error('No se pudo generar la constancia.');

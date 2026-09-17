@@ -135,11 +135,11 @@
                             <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
                                 DNI
                             </th>
-                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                                Tipo Movimiento
-                            </th>
                             <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider" title="Condición con la que ingresó al periodo (primera atención del mes)">
                                 Condición inicial
+                            </th>
+                            <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                                Tipo Movimiento
                             </th>
                             <th class="px-3 py-2 text-left text-[11px] font-medium text-gray-500 uppercase tracking-wider" title="Condición actual a la fecha (última / activa)">
                                 Condición final
@@ -177,6 +177,11 @@
                             <td class="px-3 py-2 text-gray-600 whitespace-nowrap">
                                 {{ movimiento.paciente_dni }}
                             </td>
+                            <td class="px-3 py-2 text-gray-900">
+                                <span :class="claseBadgeCondicion(movimiento.condicion_inicial)">
+                                    {{ movimiento.condicion_inicial || '—' }}
+                                </span>
+                            </td>
                             <td class="px-3 py-2">
                                 <span :class="[
                                     'inline-flex px-1.5 py-0.5 text-[10px] font-semibold rounded-full',
@@ -186,11 +191,6 @@
                                     'bg-blue-100 text-blue-800'
                                 ]">
                                     {{ movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'CAMBIO MOD.' : movimiento.tipo }}
-                                </span>
-                            </td>
-                            <td class="px-3 py-2 text-gray-900">
-                                <span :class="claseBadgeCondicion(movimiento.condicion_inicial)">
-                                    {{ movimiento.condicion_inicial || '—' }}
                                 </span>
                             </td>
                             <td class="px-3 py-2 text-gray-900">
@@ -2659,6 +2659,22 @@ const captarPaciente = async () => {
 
         cerrarModalCaptar();
         await fetchMovimientos();
+
+        if (tipoAtencion === 'NUEVO') {
+            const irSerologia = await Swal.fire({
+                icon: 'info',
+                title: 'Registrar serología',
+                html: 'El paciente es <strong>NUEVO</strong> y debe tener serología registrada '
+                    + '(VHB, Anti-HBc, VHC y VIH). Si no cuenta con resultado, registre <strong>Desconocido</strong>.',
+                showCancelButton: true,
+                confirmButtonText: 'Ir a Vacunación / Serología',
+                cancelButtonText: 'Más tarde',
+                confirmButtonColor: '#008f9c',
+            });
+            if (irSerologia.isConfirmed) {
+                await router.push({ name: 'Vacunacion' });
+            }
+        }
     } catch (error) {
         console.error('Error al captar paciente:', error);
         ElMessage({

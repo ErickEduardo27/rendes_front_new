@@ -558,11 +558,12 @@ import {
     elegirAccesoActual,
     existeCambioAccesoMismoDia,
     esCanulacionMenorUnMesDesdeCreacion,
+    mensajeIncompatibilidadAccesoModalidad,
     MENSAJE_CAMBIO_ACCESO_MISMO_DIA,
     MENSAJE_CANULACION_MENOR_UN_MES,
 } from '@/utils/accesoVascularValidacion';
 import { MENSAJE_FECHA_POSTERIOR_EGRESO } from '@/composables/useAtencionesRegistro';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import ComentarioSupervisorEvaluacion from '@/components/evaluacion/ComentarioSupervisorEvaluacion.vue';
 import { useEdicionSupervisor } from '@/composables/useEdicionSupervisor';
 
@@ -689,10 +690,26 @@ const listaLocalizacionesNuevo = [
     { value: 'Catéter peritoneal', label: 'Catéter peritoneal', tipo: 'Catéter peritoneal' }
 ];
 
-/** En Form2 (hemodiálisis) el tipo nuevo siempre lista accesos de HD, aunque el actual sea peritoneal. */
-const tiposAccesoNuevoFiltrados = computed(() =>
-    listaTiposNuevo.filter(t => t.value !== 'Catéter peritoneal')
-);
+/** HD: sin catéter peritoneal. DP: incluye catéter peritoneal. */
+const tiposAccesoNuevoFiltrados = computed(() => {
+    const mod = Number(modalidadGlobal.value);
+    if (mod === 2) return listaTiposNuevo;
+    return listaTiposNuevo.filter((t) => t.value !== 'Catéter peritoneal');
+});
+
+async function alertarSiAccesoIncompatibleConModalidad(tipoAcceso) {
+    const msg = mensajeIncompatibilidadAccesoModalidad(tipoAcceso, modalidadGlobal.value);
+    if (!msg) return;
+    try {
+        await ElMessageBox.alert(msg, 'Incompatibilidad acceso / modalidad', {
+            type: 'warning',
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#0e7490',
+        });
+    } catch {
+        /* cerrado */
+    }
+}
 
 /** Requiere id de atención para el POST a /unidadesActuales/ */
 const puedeRegistrarAcceso = computed(() => {
@@ -1026,6 +1043,7 @@ function cargarRegistroEdicion(registro) {
     silenciandoWatchTipoAcceso.value = false;
     form.fecha_inicio_canulacion = registro.fecha_inicio_canulacion || null;
     form.motivo_cambio = motivoDesdeRegistro(registro.motivo_cambio);
+    alertarSiAccesoIncompatibleConModalidad(form.tipo_acceso_nuevo);
 }
 
 const esAccesoInicioRegistro = (motivo) => motivo == null || String(motivo).trim() === '';
@@ -1052,6 +1070,7 @@ async function sincronizarPacienteDialisisAccesoInicio() {
 
 const guardarRegistro = async () => {
     if (!validarFormulario()) return;
+    await alertarSiAccesoIncompatibleConModalidad(form.tipo_acceso_nuevo);
     const idAtencion = idPacienteAtencion != null && idPacienteAtencion !== '' ? idPacienteAtencion : null;
     if (!idAtencion) {
         ElMessage({ message: 'Falta identificar la atención del paciente. Vuelva a abrir el formulario desde Acceso Vascular.', type: 'warning', plain: true });
@@ -1210,6 +1229,7 @@ const fetchUnidadesActualesPaciente = async () => {
             form.tipo_acceso_actual = normalizarTipoAcceso(actual.tipo_acceso || actual.tipo_acceso_actual) || null;
             const locApi = actual.localizacion_acceso || actual.localizacion_acceso_actual;
             form.localizacion_acceso_actual = normalizarLocalizacion(locApi) ?? null;
+            await alertarSiAccesoIncompatibleConModalidad(form.tipo_acceso_actual);
         } else {
             form.fecha_creacion_acceso_actual = null;
             form.tipo_acceso_actual = null;

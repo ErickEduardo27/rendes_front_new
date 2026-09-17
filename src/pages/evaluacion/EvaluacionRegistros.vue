@@ -10,10 +10,10 @@
           Revise los registros cargados por las clínicas: puede <strong>editar</strong> datos y dejar un comentario visible para la clínica; luego <strong>aprobar</strong>. Use el mismo periodo, IPRESS y modalidad de la barra superior.
         </p>
         <p class="text-xs text-slate-500 mt-2">
-          <strong>Editar</strong> guarda correcciones y comentario del supervisor; <strong>Aprobar</strong> marca el registro como revisado favorablemente. Si aprueba todos los registros del módulo, el formulario se cierra solo. <strong>Observar</strong> deja un comentario y habilita únicamente ese registro para que la clínica lo corrija.
+          <strong>Editar</strong> guarda correcciones y comentario del supervisor; <strong>Aprobar</strong> marca el registro como revisado favorablemente. Si aprueba todos los registros del módulo, el formulario se cierra solo. <strong>Observar</strong> deja un comentario y habilita únicamente ese registro para que la clínica lo corrija (también puede usarse tras una aprobación si hubo confusión).
         </p>
         <p class="text-xs text-slate-500 mt-1">
-          En los formularios se listan <strong>todos los pacientes en atención</strong> del periodo, clínica y modalidad; si no hay registro en ese módulo, la fila aparece como <strong>SIN REGISTRO</strong>.
+          En los formularios se listan <strong>todos los pacientes en atención</strong> del periodo, clínica y modalidad; si no hay registro en ese módulo, la fila aparece como <strong>SIN REGISTRO</strong> y puede <strong>Registrar</strong> los datos desde aquí.
         </p>
       </div>
 
@@ -201,15 +201,15 @@
                         <button
                           type="button"
                           class="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-                          :disabled="r.sin_registro_modulo"
-                          :title="r.sin_registro_modulo ? 'La clínica aún no registró datos en este formulario' : ''"
+                          :title="r.sin_registro_modulo ? 'Registrar datos del paciente en este formulario' : 'Editar registro'"
                           @click="abrirModalEditar(modulo, r)"
-                        >Editar</button>
+                        >{{ r.sin_registro_modulo ? 'Registrar' : 'Editar' }}</button>
                         <button
                           v-if="mostrarBotonAprobar(r.estado_aprobacion, r)"
                           type="button"
                           class="text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-semibold disabled:opacity-40"
                           :disabled="evaluando === claveFila(modulo, idFilaRegistro(r))"
+                          :title="r.sin_registro_modulo ? 'Primero debe existir un registro en el módulo' : ''"
                           @click="evaluar(modulo, r, 'APROBADO')"
                         >Aprobar</button>
                         <button
@@ -217,6 +217,7 @@
                           type="button"
                           class="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-900 hover:bg-amber-200 font-semibold disabled:opacity-40"
                           :disabled="evaluando === claveFila(modulo, idFilaRegistro(r))"
+                          :title="tituloBotonObservar(r)"
                           @click="observarRegistro(modulo, r)"
                         >Observar</button>
                       </div>
@@ -313,6 +314,7 @@
 
 <script setup>
 import { ref, computed, watch, inject, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import TablaPaginacion from '@/components/TablaPaginacion.vue';
@@ -335,6 +337,7 @@ import { formatFechaHoraDDMMAAAA, fechaCelda } from '@/utils/fechaFormat';
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
 const modalidadGlobal = inject('modalidadGlobal', ref(null));
+const router = useRouter();
 
 const tabs = [
   { key: 'pacientes', label: 'Pacientes' },
@@ -483,8 +486,16 @@ async function abrirModalEditar(mod, row) {
     ElMessage.error('No se pudo cargar el paciente del registro.');
     return;
   }
+
+  // Sin registro en el módulo: abrir formulario vacío para que el supervisor lo cree.
   if (row?.sin_registro_modulo) {
-    ElMessage.warning('La clínica aún no registró datos en este formulario.');
+    moduloFormulario.value = mod;
+    registroEdicion.value = null;
+    pacienteParaFormulario.value = paciente;
+    idPacienteAtencionParaForm.value = idAtencion;
+    formModalKey.value += 1;
+    await resolverIdPeriodoIpressForm();
+    mostrarModalFormulario.value = true;
     return;
   }
 
@@ -880,13 +891,24 @@ const mostrarBannerAbrir = computed(() => {
 });
 
 function mostrarBotonAprobar(estado, row) {
-  if (row?.sin_registro_modulo) return false;
+  // Vacío: se muestra (al clic se indica que debe registrar primero).
+  if (row?.sin_registro_modulo) return true;
   return String(estado || '').toUpperCase() !== 'APROBADO';
 }
 
 function mostrarBotonObservar(row) {
-  if (row?.sin_registro_modulo) return false;
-  return String(row?.estado_aprobacion || '').toUpperCase() !== 'APROBADO';
+  // Siempre disponible, incluso si ya está APROBADO (por si hubo confusión).
+  return true;
+}
+
+function tituloBotonObservar(row) {
+  if (row?.sin_registro_modulo) {
+    return 'Primero debe existir un registro en el módulo';
+  }
+  if (String(row?.estado_aprobacion || '').toUpperCase() === 'APROBADO') {
+    return 'Volver a observar (reabre el registro para la clínica)';
+  }
+  return 'Observar registro';
 }
 
 async function fetchEstadoFormularioActual() {
@@ -967,6 +989,7 @@ async function confirmarCerrarFormulario() {
     ElMessage.success('Formulario cerrado correctamente.');
     await fetchEstadoFormularioActual();
     await cargarModuloActual();
+    await redirigirANotificacionSiListoParaConformidad();
   } catch (e) {
     console.error(e);
     const msg = e?.error || e?.response?.data?.error || e?.response?.data?.detail || e?.detail || e?.message || 'No se pudo cerrar el formulario.';
@@ -1012,9 +1035,16 @@ async function cargarModuloActual() {
 }
 
 async function evaluar(mod, row, estadoAprobacion) {
+  if (row?.sin_registro_modulo) {
+    ElMessage.warning('Este paciente aún no tiene registro en el módulo. Use «Registrar» para crearlo y luego apruebe.');
+    return;
+  }
   const cfg = ENDPOINTS[mod];
   const id = row?.[cfg.idKey];
-  if (id == null) return;
+  if (id == null) {
+    ElMessage.warning('No se encontró el identificador del registro.');
+    return;
+  }
   const key = claveFila(mod, id);
   evaluando.value = key;
   try {
@@ -1031,14 +1061,24 @@ async function evaluar(mod, row, estadoAprobacion) {
 }
 
 async function observarRegistro(mod, row) {
+  if (row?.sin_registro_modulo) {
+    ElMessage.warning('Este paciente aún no tiene registro en el módulo. Use «Registrar» para crearlo y luego observe.');
+    return;
+  }
   const cfg = ENDPOINTS[mod];
   const id = row?.[cfg.idKey];
-  if (id == null) return;
+  if (id == null) {
+    ElMessage.warning('No se encontró el identificador del registro.');
+    return;
+  }
+  const yaAprobado = String(row?.estado_aprobacion || '').toUpperCase() === 'APROBADO';
   let comentario = '';
   try {
     const { value } = await ElMessageBox.prompt(
-      `Indique la observación para «${nombrePaciente(row)}». Solo este registro quedará habilitado para que la clínica lo corrija.`,
-      'Observar registro',
+      yaAprobado
+        ? `El registro de «${nombrePaciente(row)}» ya estaba aprobado. Indique la observación; quedará habilitado nuevamente para que la clínica lo corrija.`
+        : `Indique la observación para «${nombrePaciente(row)}». Solo este registro quedará habilitado para que la clínica lo corrija.`,
+      yaAprobado ? 'Volver a observar registro' : 'Observar registro',
       {
         type: 'warning',
         confirmButtonText: 'Enviar observación',
@@ -1059,7 +1099,7 @@ async function observarRegistro(mod, row) {
   }
   const key = claveFila(mod, id);
   evaluando.value = key;
-    try {
+  try {
     await postAllIpress(`/${cfg.path}/${id}/evaluar/`, {
       estado_aprobacion: 'OBSERVADO',
       comentario_evaluacion: comentario,
@@ -1075,13 +1115,50 @@ async function observarRegistro(mod, row) {
         comentario_evaluacion: comentario,
       });
     });
-    ElMessage.success('Observación enviada. La clínica solo podrá editar este registro.');
+    ElMessage.success(
+      yaAprobado
+        ? 'Observación enviada. El registro vuelve a quedar habilitado para la clínica.'
+        : 'Observación enviada. La clínica solo podrá editar este registro.',
+    );
     await cargarModuloActual();
   } catch (e) {
     console.error(e);
     ElMessage.error(e?.detail || e?.error || 'No se pudo registrar la observación.');
   } finally {
     evaluando.value = null;
+  }
+}
+
+/**
+ * Si ya no quedan formularios con datos abiertos para la clínica/periodo/modalidad,
+ * redirige a Notificación clínicas para dar la conformidad.
+ */
+async function redirigirANotificacionSiListoParaConformidad() {
+  if (
+    periodoGlobal.value == null || periodoGlobal.value === ''
+    || clinicaGlobal.value == null || clinicaGlobal.value === ''
+    || modalidadGlobal.value == null || modalidadGlobal.value === ''
+  ) {
+    return;
+  }
+  try {
+    const params = new URLSearchParams({
+      id_periodo: String(periodoGlobal.value),
+      id_modalidad: String(modalidadGlobal.value),
+    });
+    const res = await getAllIpress(`/consulta_estado_pasar_pacientes_periodo/?${params.toString()}`);
+    const info = res?.por_ipress?.[String(clinicaGlobal.value)];
+    if (!info || typeof info !== 'object') return;
+    if (info.ya_dio_conformidad) return;
+    const abiertos = Array.isArray(info.formularios_con_datos_abiertos)
+      ? info.formularios_con_datos_abiertos
+      : [];
+    if (abiertos.length > 0) return;
+
+    ElMessage.success('Todos los formularios con datos están cerrados. Continúe con la conformidad.');
+    await router.push({ name: 'NotificacionClinicas' });
+  } catch (e) {
+    console.warn('No se pudo verificar el estado para conformidad:', e);
   }
 }
 
@@ -1104,6 +1181,7 @@ async function cerrarFormularioAutomaticoSiTodoAprobado() {
     });
     ElMessage.success('Todos los registros están aprobados. El formulario se cerró automáticamente.');
     await fetchEstadoFormularioActual();
+    await redirigirANotificacionSiListoParaConformidad();
   } catch (e) {
     console.error(e);
   }

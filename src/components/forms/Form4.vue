@@ -65,7 +65,10 @@
                             <div v-if="errorFechaAlta" class="text-red-500 text-xs mt-1.5 font-medium">{{ errorFechaAlta }}</div>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Desenlace</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                                Desenlace
+                                <span v-if="requiereDesenlaceYFuentePorAlta" class="text-red-500">*</span>
+                            </label>
                             <select v-model="form.desenlace" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
                                 <option value="">Seleccione</option>
                                 <option value="Alta">Alta</option>
@@ -73,7 +76,10 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Fuente</label>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
+                                Fuente
+                                <span v-if="requiereDesenlaceYFuentePorAlta" class="text-red-500">*</span>
+                            </label>
                             <select v-model="form.fuente" class="w-full border border-gray-300 rounded-md p-2.5 text-sm focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 outline-none bg-white">
                                 <option value="">Seleccione</option>
                                 <option value="Epicrisis">Epicrisis</option>
@@ -357,6 +363,12 @@ const opcionesEfectoDisponibles = computed(() => {
         return true;
     });
 });
+
+/** Con fecha de alta (nueva o ya cargada en edición) → desenlace y fuente obligatorios. */
+const requiereDesenlaceYFuentePorAlta = computed(() => (
+    form.value.desenlace !== 'Fallecimiento'
+    && Boolean(String(form.value.fAltHos || '').trim())
+));
 
 /** Pide confirmación de efecto (movimientos) en registro nuevo, completar alta y edición.
  *  No aplica si viene del flujo de egreso (Movimientos), donde el egreso lo genera el padre. */
@@ -1546,6 +1558,16 @@ const validarAntesDeGuardar = async () => {
     if (!esFallecimiento && fechaAltaAnterior.value && form.value.fAltHos && form.value.fAltHos <= fechaAltaAnterior.value) {
         await alertaSwal('La fecha de alta debe ser mayor a la fecha de alta anterior.');
         return false;
+    }
+    if (requiereDesenlaceYFuentePorAlta.value) {
+        if (!String(form.value.desenlace || '').trim()) {
+            await alertaSwal('Indique el desenlace (obligatorio cuando hay fecha de alta).');
+            return false;
+        }
+        if (!String(form.value.fuente || '').trim()) {
+            await alertaSwal('Indique la fuente (obligatorio cuando hay fecha de alta).');
+            return false;
+        }
     }
     const rango = rangoFechasPeriodo.value;
     if (rango.min && rango.max) {
