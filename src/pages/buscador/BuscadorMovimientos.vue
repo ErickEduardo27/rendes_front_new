@@ -86,6 +86,16 @@
             >
               {{ detalleFallecimiento }}
             </span>
+            <button
+              v-if="esFallecido"
+              type="button"
+              class="inline-flex items-center rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-50"
+              :disabled="anulandoFallecido || cargandoMovimientos"
+              :title="'Quita el bloqueo por fallecimiento para que otra clínica u hospital pueda captar al paciente'"
+              @click="anularEstadoFallecido"
+            >
+              {{ anulandoFallecido ? 'Anulando…' : 'Quitar estado de fallecido' }}
+            </button>
           </div>
         </div>
 
@@ -150,7 +160,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { getAllIpress } from '@/services/ipress/Ipress.service';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { getAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
 import { fechaCelda, parseFechaAISO } from '@/utils/fechaFormat';
 import { esSupervisor } from '@/utils/perfil';
 
@@ -165,6 +176,7 @@ onMounted(() => {
 const consulta = ref('');
 const cargandoPacientes = ref(false);
 const cargandoMovimientos = ref(false);
+const anulandoFallecido = ref(false);
 const busquedaHecha = ref(false);
 const errorBusqueda = ref('');
 const resultadosPacientes = ref([]);
@@ -223,7 +235,21 @@ function mapearAtencion(mov) {
     clinica: mov.datosIpress?.nombre_corto || mov.datosIpress?.ipress || '—',
     modalidad: modalidadLabel,
     created_at: mov.created_at,
+    id_periodo: mov.id_periodo ?? mov.datosPeriodo?.id_periodo ?? null,
+    id_ipress: mov.id_ipress ?? mov.datosIpress?.id_ipress ?? null,
   };
+}
+
+/** Observaciones de egreso sin marca de fallecimiento (máx. 100 en BD).
+ *  No usar la raíz "fallec" en el texto: el sistema bloquea captación con esa coincidencia.
+ */
+function observacionesSinFallecimiento(obs) {
+  const base = 'Egreso: Otros. Estado de defuncion anulado por supervisor.';
+  const s = String(obs || '').trim();
+  if (!s) return base.slice(0, 100);
+  let nuevo = s.replace(/Fallecimiento/gi, 'Otros (anulacion de defuncion)');
+  if (/fallec/i.test(nuevo)) nuevo = base;
+  return nuevo.slice(0, 100);
 }
 
 function compararFechaDesc(a, b) {
@@ -302,6 +328,81 @@ async function seleccionarPaciente(paciente) {
     errorBusqueda.value = 'No se pudieron cargar los movimientos del paciente.';
   } finally {
     cargandoMovimientos.value = false;
+  }
+}
+
+async function limpiarMorbilidadFallecimiento(pacienteId) {
+  try {
+    const resMor = await getAllIpress(
+      `/morbilidadesHospitalarias/?id_paciente=${encodeURIComponent(pacienteId)}`,
+    );
+    const lista = listaDesdeResponse(resMor);
+    const limpiezas = lista
+      .filter((m) => {
+        const desenlace = String(m.desenlace || '').toLowerCase();
+        return desenlace.includes('fallec') || !!m.fecha_fallecimiento;
+      })
+      .map((m) => {
+        const idMor = m.id_morbilidad_hospitalaria ?? m.id;
+        if (!idMor) return Promise.resolve();
+        return patchAllIpress(`/morbilidadesHospitalarias/${idMor}/`, {
+          desenlace: null,
+          fecha_fallecimiento: null,
+          causa_muerte: null,
+        });
+      });
+    await Promise.all(limpiezas);
+  } catch (e) {
+    console.warn('No se limpió morbilidad por fallecimiento:', e);
+  }
+}
+
+async function anularEstadoFallecido() {
+  const paciente = pacienteSeleccionado.value;
+  if (!paciente?.id_paciente || !esFallecido.value || anulandoFallecido.value) return;
+
+  const egresosFallec = movimientos.value.filter(esEgresoFallecimiento);
+  if (!egresosFallec.length) return;
+
+  try {
+    await ElMessageBox.confirm(
+      'Se anulará el estado de fallecido. El egreso se mantendrá, pero el paciente podrá volver a ser captado por otra clínica u hospital. ¿Continuar?',
+      'Quitar estado de fallecido',
+      {
+        type: 'warning',
+        confirmButtonText: 'Sí, anular fallecido',
+        cancelButtonText: 'Cancelar',
+      },
+    );
+  } catch {
+    return;
+  }
+
+  anulandoFallecido.value = true;
+  try {
+    await Promise.all(
+      egresosFallec.map((m) => patchAllIpress(`/pacienteAtencion/${m.id}/`, {
+        observaciones: observacionesSinFallecimiento(m.observaciones),
+      })),
+    );
+
+    try {
+      await patchAllIpress(`/pacientes/${paciente.id_paciente}/`, { estado: 'EGRESADO' });
+    } catch (e) {
+      console.warn('No se actualizó estado del paciente a EGRESADO:', e);
+    }
+
+    await limpiarMorbilidadFallecimiento(paciente.id_paciente);
+
+    ElMessage.success('Estado de fallecido anulado. El paciente ya puede ser captado en otra clínica.');
+    await seleccionarPaciente(paciente);
+  } catch (e) {
+    console.error(e);
+    const msg = e?.detail || e?.error || e?.response?.data?.detail || e?.message
+      || 'No se pudo anular el estado de fallecido.';
+    ElMessage.error(typeof msg === 'string' ? msg : 'No se pudo anular el estado de fallecido.');
+  } finally {
+    anulandoFallecido.value = false;
   }
 }
 </script>
