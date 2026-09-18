@@ -53,7 +53,7 @@
       <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b border-slate-100 bg-slate-800 text-white">
           <h2 class="text-sm font-bold uppercase tracking-wide text-center">
-            Cobertura de reportes RENDES macrorregión Norte y Lima — {{ anio }}
+            Cobertura de reportes RENDES — {{ anio }}
           </h2>
         </div>
         <div class="overflow-x-auto">
