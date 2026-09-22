@@ -2619,45 +2619,44 @@ const captarPaciente = async () => {
 
     guardandoCaptar.value = true;
     try {
-    if (esEdicion) {
-        const tipoOriginal = String(
-            movimientoEnEdicion.value?.tipo_atencion
-            || movimientoEnEdicion.value?.condicion
-            || '',
-        ).toUpperCase();
-        const tipoEdicion = ['NUEVO', 'CONTINUADOR', 'REINGRESO'].includes(tipoOriginal)
-            ? tipoOriginal
-            : (condicionAutomatica.value === 'REINGRESO'
-                ? 'REINGRESO'
-                : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR'));
+        if (esEdicion) {
+            const tipoOriginal = String(
+                movimientoEnEdicion.value?.tipo_atencion
+                || movimientoEnEdicion.value?.condicion
+                || '',
+            ).toUpperCase();
+            const tipoEdicion = ['NUEVO', 'CONTINUADOR', 'REINGRESO'].includes(tipoOriginal)
+                ? tipoOriginal
+                : (condicionAutomatica.value === 'REINGRESO'
+                    ? 'REINGRESO'
+                    : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR'));
 
-        await patchAllIpress(`/pacienteAtencion/${idEdicion}/`, {
-            fecha_atencion: formCaptar.fecha,
-            fecha_inicio: formCaptar.fecha,
-            observaciones: formCaptar.observaciones || '',
-            tipo_atencion: tipoEdicion,
-        });
-        ElMessage({
-            message: 'Movimiento actualizado correctamente',
-            type: 'success',
-            plain: true,
-        });
-        cerrarModalCaptar();
-        await fetchMovimientos();
-        return;
-    }
+            await patchAllIpress(`/pacienteAtencion/${idEdicion}/`, {
+                fecha_atencion: formCaptar.fecha,
+                fecha_inicio: formCaptar.fecha,
+                observaciones: formCaptar.observaciones || '',
+                tipo_atencion: tipoEdicion,
+            });
+            ElMessage({
+                message: 'Movimiento actualizado correctamente',
+                type: 'success',
+                plain: true,
+            });
+            cerrarModalCaptar();
+            await fetchMovimientos();
+            return;
+        }
 
-    const validacionCierre = await validarCierreMesAnterior(formCaptar.paciente, idPeriodo);
-    if (validacionCierre.mensaje) {
-        ElMessage({
-            message: validacionCierre.mensaje,
-            type: validacionCierre.valido ? 'info' : 'warning',
-            plain: true,
-            duration: 5000
-        });
-    }
+        const validacionCierre = await validarCierreMesAnterior(formCaptar.paciente, idPeriodo);
+        if (validacionCierre.mensaje) {
+            ElMessage({
+                message: validacionCierre.mensaje,
+                type: validacionCierre.valido ? 'info' : 'warning',
+                plain: true,
+                duration: 5000
+            });
+        }
 
-    try {
         const modalidadAnterior = await obtenerModalidadActualPaciente(formCaptar.paciente);
         // Reingreso / ingreso / continuador: no registrar "Cambio de modalidad".
         // Solo sincronizar la modalidad del paciente si difiere (p. ej. tras egreso por Trasplante).
