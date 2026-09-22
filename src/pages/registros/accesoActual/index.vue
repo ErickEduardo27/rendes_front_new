@@ -1014,7 +1014,6 @@ function estadoAprobacionClase(estado) {
   if (valor === 'OBSERVADO') return 'bg-amber-100 text-amber-800';
   if (valor === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
   if (valor === 'SIN REGISTRO') return 'bg-slate-100 text-slate-500';
-  if (valor === 'DESDE FICHA') return 'bg-sky-100 text-sky-800';
   return 'bg-amber-100 text-amber-700';
 }
 
@@ -1135,7 +1134,7 @@ function filaDesdeFichaDialisis(a, dialisis) {
     paciente: a.datosPaciente?.paciente ?? '—',
     documento: a.datosPaciente?.documento ?? '—',
     ...campos,
-    estado_aprobacion: 'DESDE FICHA',
+    estado_aprobacion: 'SIN REGISTRO',
     supervisor_edito_registro: false,
     comentario_evaluacion: '',
   };

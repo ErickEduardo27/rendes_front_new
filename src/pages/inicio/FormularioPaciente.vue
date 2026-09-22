@@ -573,6 +573,8 @@ const idPacienteEdicionInterno = ref(null)
 const idPacienteDialisisEdicionInterno = ref(null)
 const idUnidadActualEdicionInterno = ref(null)
 const idPacienteAtencionEdicionInterno = ref(null)
+/** ISO YYYY-MM-DD de fecha_primer_ingreso al abrir edición (para sync con 1.er movimiento). */
+const fechaPrimerIngresoOriginalEdicion = ref('')
 const pacientesListadoEdicion = ref([])
 const cargandoListadoEdicion = ref(false)
 const filtroListadoNombre = ref('')
@@ -2729,6 +2731,62 @@ watch(() => props.numeroDocumentoInicial, (v) => {
   }
 }, { immediate: true });
 
+/**
+ * Si F. 1er ingreso coincidía con el primer movimiento, al cambiarla también
+ * actualiza fecha_atencion / fecha_inicio de ese primer registro.
+ */
+async function sincronizarPrimerMovimientoConFechaIngreso(idPaciente, fechaAnteriorIso, fechaNuevaIso) {
+  if (idPaciente == null || !fechaNuevaIso) return;
+  if (!fechaAnteriorIso || fechaAnteriorIso === fechaNuevaIso) return;
+
+  let lista = [];
+  try {
+    const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(idPaciente)}`);
+    lista = Array.isArray(res) ? res : (res?.results || []);
+  } catch (e) {
+    console.warn('No se pudo cargar movimientos para sync de fecha 1er ingreso:', e);
+    return;
+  }
+
+  const utiles = lista
+    .filter((a) => {
+      const estado = String(a?.estado || '').toUpperCase();
+      const tipo = String(a?.tipo_atencion || '').toUpperCase();
+      return tipo !== 'CAMBIO_MODALIDAD' && estado !== 'HISTORICO';
+    })
+    .sort((a, b) => {
+      const fa = fechaFormularioParaApi(a.fecha_atencion)
+        || fechaFormularioParaApi(a.fecha_inicio)
+        || normalizarFechaApi(a.fecha_atencion)
+        || '';
+      const fb = fechaFormularioParaApi(b.fecha_atencion)
+        || fechaFormularioParaApi(b.fecha_inicio)
+        || normalizarFechaApi(b.fecha_atencion)
+        || '';
+      if (fa !== fb) return fa.localeCompare(fb);
+      return (Number(a.id_paciente_atencion) || 0) - (Number(b.id_paciente_atencion) || 0);
+    });
+
+  const primera = utiles[0];
+  const idPrimera = primera?.id_paciente_atencion;
+  if (idPrimera == null) return;
+
+  const fechaMov = fechaFormularioParaApi(primera.fecha_atencion)
+    || fechaFormularioParaApi(primera.fecha_inicio)
+    || normalizarFechaApi(primera.fecha_atencion)
+    || '';
+  if (!fechaMov || fechaMov !== fechaAnteriorIso) return;
+
+  const payload = { fecha_atencion: fechaNuevaIso };
+  const fechaInicio = fechaFormularioParaApi(primera.fecha_inicio)
+    || normalizarFechaApi(primera.fecha_inicio)
+    || '';
+  if (!fechaInicio || fechaInicio === fechaAnteriorIso || fechaInicio === fechaMov) {
+    payload.fecha_inicio = fechaNuevaIso;
+  }
+  await patchAllIpress(`/pacienteAtencion/${idPrimera}/`, payload);
+}
+
 async function guardarEdicionSupervisor() {
   if (
     !modoEdicionSupervisor.value ||
@@ -2839,14 +2897,15 @@ async function guardarEdicionSupervisor() {
     const payloadAtencion = {
       tipo_atencion: condicionAtencionResuelta.value,
     };
-    if (esRegistroSimplificado.value) {
-      const fechaCaptacion = fechaFormularioParaApi(form.fechaPrimerIngreso);
-      if (fechaCaptacion) {
-        payloadAtencion.fecha_atencion = fechaCaptacion;
-        payloadAtencion.fecha_inicio = fechaCaptacion;
-      }
-    }
     await patchAllIpress(`/pacienteAtencion/${idAtencion}/`, payloadAtencion);
+
+    const fechaNuevaIngreso = fechaFormularioParaApi(form.fechaPrimerIngreso);
+    await sincronizarPrimerMovimientoConFechaIngreso(
+      idPacienteEdicionInterno.value,
+      fechaPrimerIngresoOriginalEdicion.value,
+      fechaNuevaIngreso,
+    );
+    fechaPrimerIngresoOriginalEdicion.value = fechaNuevaIngreso || '';
 
     ElMessage({ message: 'Cambios guardados correctamente.', type: 'success', plain: true });
     if (props.mostrarTablaEdicion) {
@@ -2909,15 +2968,29 @@ function registroInicioTrrBloqueado(row) {
   return String(row?.estado_aprobacion || '').trim().toUpperCase() === 'APROBADO';
 }
 
+function esRegistroDeClinicaActualListado(row) {
+  const idActual = idIpressListado.value;
+  const idReg = row?.id_ipress_registro
+    ?? row?.id_ipress
+    ?? row?.datosPacienteAtencion?.id_ipress
+    ?? null;
+  if (idActual == null || idActual === '' || idReg == null || idReg === '') return false;
+  return String(idReg) === String(idActual);
+}
+
 function puedeEditarPacienteListado(row) {
   if (!row || row.sin_registro_dialisis || !row.id_paciente_dialisis) return false;
   if (registroInicioTrrBloqueado(row)) return false;
+  if (!esRegistroDeClinicaActualListado(row)) return false;
   return true;
 }
 
 function tituloBotonEditarListado(row) {
   if (registroInicioTrrBloqueado(row)) {
     return 'Ya tiene conformidad/aprobación: no se puede editar (ni en otro mes)';
+  }
+  if (!esRegistroDeClinicaActualListado(row)) {
+    return 'Solo la clínica que registró este Inicio TRR puede editarlo';
   }
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
     return 'Complete primero el registro de diálisis';
@@ -2934,6 +3007,7 @@ function cancelarEdicionPaciente() {
   idPacienteDialisisEdicionInterno.value = null;
   idUnidadActualEdicionInterno.value = null;
   idPacienteAtencionEdicionInterno.value = null;
+  fechaPrimerIngresoOriginalEdicion.value = '';
   errorDNI.value = '';
   if (props.mostrarTablaEdicion) {
     fetchPacientesParaEdicion();
@@ -2982,6 +3056,10 @@ async function cargarDatosPacienteParaEdicion(idP, idDial) {
     form.fechaInicioTRR = fechaIsoADDisplay(dia.fecha_inicio_trr);
     form.subsistemaSalud = dia.subsistema_salud || '';
     form.fechaPrimerIngreso = fechaIsoADDisplay(dia.fecha_primer_ingreso);
+    fechaPrimerIngresoOriginalEdicion.value =
+      fechaFormularioParaApi(form.fechaPrimerIngreso)
+      || normalizarFechaApi(dia.fecha_primer_ingreso)
+      || '';
     form.hospitalProcedencia = dia.hospital_procedencia_trr || '';
     form.comorbilidades = mapComorbilidadesDesdeDialisis(dia);
     form.comorbilidadOtra = textoComorbilidadOtraDesdeDialisis(dia);
@@ -3029,6 +3107,7 @@ async function cargarDatosPacienteParaEdicion(idP, idDial) {
     idPacienteDialisisEdicionInterno.value = null;
     idUnidadActualEdicionInterno.value = null;
     idPacienteAtencionEdicionInterno.value = null;
+    fechaPrimerIngresoOriginalEdicion.value = '';
   } finally {
     silenciarWatchsAccesoModalidad.value = false;
     cargandoEdicionSupervisor.value = false;

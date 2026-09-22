@@ -29,7 +29,7 @@
       v-if="mostrarAprobacion && idIpress != null && idPeriodo != null"
       class="flex flex-wrap items-center justify-between gap-2 mb-3"
     >
-      <p class="text-xs text-slate-500">Editar, Eliminar y Aprobar solo si hay ficha de diálisis y aún no hay conformidad/aprobación. Una vez conforme, el bloqueo es permanente (también en meses siguientes).</p>
+      <p class="text-xs text-slate-500">Editar y Eliminar solo la clínica que registró el Inicio TRR, y solo si aún no hay conformidad/aprobación. Una vez conforme, el bloqueo es permanente (también en meses siguientes).</p>
       <button
         v-if="pendientesAprobacion.length"
         type="button"
@@ -368,6 +368,8 @@ function etiologiaGeneralTexto(row) {
 }
 
 function etiologiaEspecificaTexto(row) {
+  const otra = String(row?.etiologia_otra || '').trim();
+  if (otra) return otra;
   const e = row?.datosEti;
   if (!e) return '—';
   return celda(e.especifica || e.codigo);
@@ -404,14 +406,27 @@ function registroAprobadoPorSupervisor(row) {
   return String(row?.estado_aprobacion || '').trim().toUpperCase() === 'APROBADO';
 }
 
+/** Solo la clínica que registró el Inicio TRR (primera atención NUEVO) puede editar. */
+function esRegistroDeClinicaActual(row) {
+  const idActual = clinicaGlobal.value ?? idIpress.value;
+  const idReg = row?.id_ipress_registro
+    ?? row?.id_ipress
+    ?? row?.datosPacienteAtencion?.id_ipress
+    ?? null;
+  if (idActual == null || idActual === '' || idReg == null || idReg === '') return false;
+  return String(idReg) === String(idActual);
+}
+
 function puedeEditarFila(row) {
   if (registroAprobadoPorSupervisor(row)) return false;
+  if (!esRegistroDeClinicaActual(row)) return false;
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return false;
   return true;
 }
 
 function puedeEliminarFila(row) {
   if (registroAprobadoPorSupervisor(row)) return false;
+  if (!esRegistroDeClinicaActual(row)) return false;
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) return false;
   return true;
 }
@@ -419,6 +434,9 @@ function puedeEliminarFila(row) {
 function tituloBotonEditar(row) {
   if (registroAprobadoPorSupervisor(row)) {
     return 'Ya tiene conformidad/aprobación: no se puede editar (bloqueo permanente, también en otro mes)';
+  }
+  if (!esRegistroDeClinicaActual(row)) {
+    return 'Solo la clínica que registró este Inicio TRR puede editarlo';
   }
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
     return 'Sin ficha de diálisis: complete el registro antes de editar';
@@ -430,6 +448,9 @@ function tituloBotonEditar(row) {
 function tituloBotonEliminar(row) {
   if (registroAprobadoPorSupervisor(row)) {
     return 'Ya tiene conformidad/aprobación: no se puede eliminar (bloqueo permanente)';
+  }
+  if (!esRegistroDeClinicaActual(row)) {
+    return 'Solo la clínica que registró este Inicio TRR puede eliminarlo';
   }
   if (row?.sin_registro_dialisis || !row?.id_paciente_dialisis) {
     return 'Sin ficha de diálisis para eliminar';
@@ -523,6 +544,8 @@ function enriquecerFilasConAtencion(filas, atenciones) {
     return {
       ...row,
       id_paciente_atencion: row.id_paciente_atencion ?? at?.id_paciente_atencion,
+      id_ipress: row.id_ipress ?? at?.id_ipress ?? null,
+      id_ipress_registro: row.id_ipress_registro ?? at?.id_ipress ?? null,
       tipo_atencion: esEgresado ? 'EGRESO' : (row.tipo_atencion ?? at?.tipo_atencion),
       tipo_atencion_inicial: tipoInicial,
       condicion_inicial: tipoInicial,

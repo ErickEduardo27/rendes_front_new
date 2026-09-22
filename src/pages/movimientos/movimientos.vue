@@ -9,7 +9,11 @@
                 >
                     {{ modoEvaluacion ? 'Movimientos del periodo' : 'Gestión de Movimientos de Pacientes' }}
                 </h1>
-                <p class="text-sm text-gray-600 mt-1">Último movimiento por paciente del periodo, IPRESS y modalidad seleccionados. Use «Historial» para ver todos los movimientos del paciente.</p>
+                <p class="text-sm text-gray-600 mt-1">
+                    Último movimiento por paciente del periodo, IPRESS y modalidad seleccionados.
+                    Solo la clínica que registró el movimiento puede editarlo o eliminarlo.
+                    Use «Historial» para ver todos los movimientos del paciente.
+                </p>
                 <p
                     v-if="bloqueadoPorNotificacion"
                     class="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 max-w-2xl"
@@ -223,13 +227,11 @@
                                         v-if="puedeEditarEliminarMovimientos"
                                         type="button"
                                         class="font-semibold text-[11px] px-2 py-1 rounded transition"
-                                        :class="(movimiento.tipo === 'CAMBIO_MODALIDAD' || accionesMovimientoBloqueadas)
+                                        :class="!puedeEditarEsteMovimiento(movimiento)
                                             ? 'text-gray-400 cursor-not-allowed'
                                             : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'"
-                                        :disabled="movimiento.tipo === 'CAMBIO_MODALIDAD' || accionesMovimientoBloqueadas"
-                                        :title="accionesMovimientoBloqueadas
-                                            ? tituloBloqueoAcciones
-                                            : (movimiento.tipo === 'CAMBIO_MODALIDAD' ? 'Los cambios de modalidad no se editan desde aquí' : 'Editar movimiento')"
+                                        :disabled="!puedeEditarEsteMovimiento(movimiento)"
+                                        :title="tituloBotonEditarMovimiento(movimiento)"
                                         @click="editarMovimiento(movimiento)"
                                     >
                                         Editar
@@ -238,8 +240,8 @@
                                         v-if="puedeEditarEliminarMovimientos"
                                         type="button"
                                         class="font-semibold text-[11px] px-2 py-1 rounded transition text-rose-600 hover:text-rose-800 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                                        :disabled="eliminandoMovimientoId === movimiento.id || accionesMovimientoBloqueadas"
-                                        :title="accionesMovimientoBloqueadas ? tituloBloqueoAcciones : 'Eliminar movimiento'"
+                                        :disabled="eliminandoMovimientoId === movimiento.id || !puedeEditarEsteMovimiento(movimiento)"
+                                        :title="tituloBotonEliminarMovimiento(movimiento)"
                                         @click="eliminarMovimiento(movimiento)"
                                     >
                                         {{ eliminandoMovimientoId === movimiento.id ? '…' : 'Eliminar' }}
@@ -375,20 +377,18 @@
                                         <div class="inline-flex items-center gap-1">
                                             <button
                                                 type="button"
-                                                class="font-semibold text-[11px] px-2 py-1 rounded text-blue-600 hover:bg-blue-50 disabled:opacity-40"
-                                                :disabled="h.tipo === 'CAMBIO_MODALIDAD' || accionesMovimientoBloqueadas"
-                                                :title="accionesMovimientoBloqueadas
-                                                    ? tituloBloqueoAcciones
-                                                    : (h.tipo === 'CAMBIO_MODALIDAD' ? 'Los cambios de modalidad no se editan desde aquí' : 'Editar movimiento')"
+                                                class="font-semibold text-[11px] px-2 py-1 rounded text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                :disabled="!puedeEditarEsteMovimiento(h)"
+                                                :title="tituloBotonEditarMovimiento(h)"
                                                 @click="editarMovimiento(h)"
                                             >
                                                 Editar
                                             </button>
                                             <button
                                                 type="button"
-                                                class="font-semibold text-[11px] px-2 py-1 rounded text-rose-600 hover:bg-rose-50 disabled:opacity-40"
-                                                :disabled="eliminandoMovimientoId === h.id || accionesMovimientoBloqueadas"
-                                                :title="accionesMovimientoBloqueadas ? tituloBloqueoAcciones : 'Eliminar movimiento'"
+                                                class="font-semibold text-[11px] px-2 py-1 rounded text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                :disabled="eliminandoMovimientoId === h.id || !puedeEditarEsteMovimiento(h)"
+                                                :title="tituloBotonEliminarMovimiento(h)"
                                                 @click="eliminarMovimiento(h)"
                                             >
                                                 {{ eliminandoMovimientoId === h.id ? '…' : 'Eliminar' }}
@@ -560,7 +560,7 @@
         </div>
 
         <!-- Modal para Captar Paciente (ingreso / reingreso en periodo) -->
-        <div v-if="mostrarModalCaptar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div v-if="mostrarModalCaptar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[70]">
             <div class="bg-white rounded-lg shadow-xl p-6 w-[700px] max-h-[90vh] overflow-y-auto relative">
                 <button class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl" @click="cerrarModalCaptar">&times;</button>
                 <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
@@ -702,14 +702,20 @@
                         <FechaInput
                             v-model="formCaptar.fecha"
                             input-class="w-full border rounded p-2 text-sm"
-                            :min="rangoFechaCapturaPaciente.min"
+                            :min="minFechaCapturaInput"
                             :max="rangoFechaCapturaPaciente.max"
                         />
                         <p class="text-xs text-gray-500 mt-1">
                             Debe estar en el mes del periodo seleccionado en la barra superior (incluido el día 1).
                             <span v-if="rangoFechaCapturaPaciente.placeholder" class="block text-amber-700 mt-0.5">{{ rangoFechaCapturaPaciente.placeholder }}</span>
-                            <span v-if="rangoFechaCapturaPaciente.fechaUltimoEgreso" class="block mt-0.5">
+                            <span
+                                v-if="!movimientoEnEdicion && rangoFechaCapturaPaciente.fechaUltimoEgreso"
+                                class="block mt-0.5"
+                            >
                                 No anterior al último egreso del paciente ({{ fechaCelda(rangoFechaCapturaPaciente.fechaUltimoEgreso) }}).
+                            </span>
+                            <span v-else-if="movimientoEnEdicion" class="block mt-0.5 text-cyan-700">
+                                Edición: puede corregir la fecha del movimiento dentro del periodo (sin restricción por egresos posteriores).
                             </span>
                         </p>
                     </div>
@@ -729,17 +735,17 @@
                     <button
                         type="button"
                         class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        :disabled="!movimientoEnEdicion && (condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'NUEVO_SIN_EGRESO' || condicionAutomatica === 'FALLECIDO')"
+                        :disabled="guardandoCaptar || (!movimientoEnEdicion && (condicionAutomatica === 'YA_ACTIVO' || condicionAutomatica === 'ACTIVO_OTRA_CLINICA' || condicionAutomatica === 'NUEVO_SIN_EGRESO' || condicionAutomatica === 'FALLECIDO'))"
                         @click="captarPaciente"
                     >
-                        {{ movimientoEnEdicion ? 'Guardar cambios' : 'Captar Paciente' }}
+                        {{ guardandoCaptar ? 'Guardando…' : (movimientoEnEdicion ? 'Guardar cambios' : 'Captar Paciente') }}
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Modal para Egresar Paciente -->
-        <div v-if="mostrarModalEgresar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div v-if="mostrarModalEgresar" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[70]">
             <div class="bg-white rounded-lg shadow-xl p-6 w-[700px] max-h-[90vh] overflow-y-auto relative">
                 <button class="absolute top-4 right-4 text-gray-500 hover:text-black text-2xl" @click="cerrarModalEgresar">&times;</button>
                 <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
@@ -930,8 +936,13 @@
                     <button @click="cerrarModalEgresar" class="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">
                         Cancelar
                     </button>
-                    <button @click="egresarPaciente" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-                        {{ movimientoEnEdicion ? 'Guardar cambios' : 'Egresar Paciente' }}
+                    <button
+                        type="button"
+                        class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        :disabled="guardandoEgresar"
+                        @click="egresarPaciente"
+                    >
+                        {{ guardandoEgresar ? 'Guardando…' : (movimientoEnEdicion ? 'Guardar cambios' : 'Egresar Paciente') }}
                     </button>
                 </div>
             </div>
@@ -1052,6 +1063,37 @@ const tituloBloqueoAcciones = computed(() => {
   }
   return '';
 });
+
+/** Solo la clínica que registró el movimiento puede editarlo/eliminarlo. */
+function esMovimientoDeClinicaActual(mov) {
+  const idActual = clinicaGlobal.value;
+  const idMov = mov?.id_ipress;
+  if (idActual == null || idActual === '' || idMov == null || idMov === '') return false;
+  return String(idMov) === String(idActual);
+}
+
+function puedeEditarEsteMovimiento(mov) {
+  if (!puedeEditarEliminarMovimientos.value || accionesMovimientoBloqueadas.value) return false;
+  if (mov?.tipo === 'CAMBIO_MODALIDAD') return false;
+  return esMovimientoDeClinicaActual(mov);
+}
+
+function tituloBotonEditarMovimiento(mov) {
+  if (accionesMovimientoBloqueadas.value) return tituloBloqueoAcciones.value;
+  if (mov?.tipo === 'CAMBIO_MODALIDAD') return 'Los cambios de modalidad no se editan desde aquí';
+  if (!esMovimientoDeClinicaActual(mov)) {
+    return 'Solo la clínica que registró este movimiento puede editarlo.';
+  }
+  return 'Editar movimiento';
+}
+
+function tituloBotonEliminarMovimiento(mov) {
+  if (accionesMovimientoBloqueadas.value) return tituloBloqueoAcciones.value;
+  if (!esMovimientoDeClinicaActual(mov)) {
+    return 'Solo la clínica que registró este movimiento puede eliminarlo.';
+  }
+  return 'Eliminar movimiento';
+}
 
 async function fetchEstadoConformidad() {
   if (!filtroListo.value) {
@@ -1356,9 +1398,18 @@ const minFechaEgresoInput = computed(() => {
 });
 
 const ultimoEgreso = ref(null);
+const movimientoEnEdicion = ref(null);
 
 const rangoFechaCapturaPaciente = computed(() => {
   const base = rangoFechaEgreso.value;
+  // En edición no se exige “posterior al último egreso” (permite corregir movimientos pasados).
+  if (movimientoEnEdicion.value) {
+    return {
+      ...base,
+      min: base.min,
+      fechaUltimoEgreso: null,
+    };
+  }
   const fechaUltimoEgreso = ultimoEgreso.value?.fechaIso || null;
   const minCalculada = maxIso(base.min, fechaUltimoEgreso)
     || base.min
@@ -1424,7 +1475,8 @@ const form4DesdeEgreso = ref(true);
 const form4ModalKey = ref(0);
 const hospitalizacionConfirmadaEgreso = ref(false);
 const hospitalizacionPendienteAlta = ref(null);
-const movimientoEnEdicion = ref(null);
+const guardandoCaptar = ref(false);
+const guardandoEgresar = ref(false);
 
 const TIPOS_EGRESO_PREDEFINIDOS = [
     'Hospitalización',
@@ -1456,6 +1508,17 @@ const formCaptar = reactive({
     fecha: '',
     condicion: '',
     observaciones: ''
+});
+
+/** En edición, permitir la fecha guardada aunque sea anterior al mínimo habitual. */
+const minFechaCapturaInput = computed(() => {
+  const min = rangoFechaCapturaPaciente.value.min;
+  if (!movimientoEnEdicion.value) return min;
+  const fechaActual = formCaptar.fecha || movimientoEnEdicion.value.fecha;
+  if (fechaActual && fechaActual !== 'N/A' && min && String(fechaActual) < String(min)) {
+    return fechaActual;
+  }
+  return min;
 });
 
 const formEgresar = reactive({
@@ -1685,6 +1748,10 @@ async function eliminarMovimiento(mov) {
         return;
     }
     if (!asegurarAccionesMovimientoPermitidas()) return;
+    if (!esMovimientoDeClinicaActual(mov)) {
+        ElMessage.warning('Solo la clínica que registró este movimiento puede eliminarlo.');
+        return;
+    }
     const id = mov?.id;
     if (id == null) {
         ElMessage.warning('No se pudo identificar el movimiento.');
@@ -2149,6 +2216,10 @@ const extraerObservacionesEgreso = (observaciones) => {
 };
 
 const abrirModalCaptarEdicion = async (mov) => {
+    if (mov?.id == null || mov.id === '') {
+        ElMessage.error('No se pudo identificar el movimiento a editar.');
+        return;
+    }
     await fetchPacientes();
     const pacienteItem = {
         id_paciente: mov.id_paciente,
@@ -2162,13 +2233,17 @@ const abrirModalCaptarEdicion = async (mov) => {
     formCaptar.observaciones = mov.observaciones || '';
     pacienteSeleccionado.value = pacienteItem;
     condicionAutomatica.value = mov.tipo_atencion || mov.condicion || 'CONTINUADOR';
-    mensajeCondicion.value = 'Editando movimiento existente.';
+    mensajeCondicion.value = 'Editando movimiento existente. Los cambios actualizan el mismo registro (no se crea uno nuevo).';
     ultimoEgreso.value = await obtenerUltimoEgresoPaciente(mov.id_paciente);
     movimientoEnEdicion.value = mov;
     mostrarModalCaptar.value = true;
 };
 
 const abrirModalEgresarEdicion = async (mov) => {
+    if (mov?.id == null || mov.id === '') {
+        ElMessage.error('No se pudo identificar el egreso a editar.');
+        return;
+    }
     const { tipo_egreso, motivo_especifico } = parseTipoEgresoParaForm(mov.tipo_egreso);
     const fechaEdicion = mov.fecha !== 'N/A' ? mov.fecha : '';
     const pacienteItem = {
@@ -2208,6 +2283,10 @@ const editarMovimiento = async (mov) => {
         return;
     }
     if (!asegurarAccionesMovimientoPermitidas()) return;
+    if (!esMovimientoDeClinicaActual(mov)) {
+        ElMessage.warning('Solo la clínica que registró este movimiento puede editarlo.');
+        return;
+    }
     if (mov.tipo === 'CAMBIO_MODALIDAD') {
         ElMessage({
             message: 'Los cambios de modalidad no se editan desde esta pantalla.',
@@ -2424,6 +2503,11 @@ const determinarCondicionPaciente = async (pacienteId) => {
 };
 
 const captarPaciente = async () => {
+    if (guardandoCaptar.value) return;
+    // Id de edición fijado al inicio: al editar nunca se crea un registro nuevo.
+    const idEdicion = movimientoEnEdicion.value?.id ?? null;
+    const esEdicion = idEdicion != null && idEdicion !== '';
+
     const idPeriodo = periodoGlobal.value;
     const idIpress = clinicaGlobal.value;
     const idModalidad = modalidadGlobal.value;
@@ -2473,7 +2557,9 @@ const captarPaciente = async () => {
 
     const fechaUltimoEgreso = ultimoEgreso.value?.fechaIso
         || (await obtenerUltimoEgresoPaciente(formCaptar.paciente))?.fechaIso;
-    if (fechaUltimoEgreso && String(formCaptar.fecha) < String(fechaUltimoEgreso)) {
+    // Solo al captar nuevo: la fecha no puede ser anterior al último egreso.
+    // En edición se permite corregir fechas de movimientos pasados.
+    if (!esEdicion && fechaUltimoEgreso && String(formCaptar.fecha) < String(fechaUltimoEgreso)) {
         ElMessage({
             message: `La fecha de ingreso/reingreso no puede ser anterior al último egreso del paciente (${formatFechaDDMMAAAA(fechaUltimoEgreso) || fechaUltimoEgreso}).`,
             type: 'error',
@@ -2483,7 +2569,7 @@ const captarPaciente = async () => {
         return;
     }
 
-    if (condicionAutomatica.value === 'YA_ACTIVO' && !movimientoEnEdicion.value) {
+    if (condicionAutomatica.value === 'YA_ACTIVO' && !esEdicion) {
         ElMessage({
             message: 'El paciente ya tiene atención activa en este periodo. Use egreso si corresponde.',
             type: 'warning',
@@ -2492,7 +2578,7 @@ const captarPaciente = async () => {
         return;
     }
 
-    if (condicionAutomatica.value === 'FALLECIDO' && !movimientoEnEdicion.value) {
+    if (condicionAutomatica.value === 'FALLECIDO' && !esEdicion) {
         ElMessage({
             message: mensajeCondicion.value || 'El paciente egresó por fallecimiento y no puede volver a captarse.',
             type: 'error',
@@ -2502,7 +2588,7 @@ const captarPaciente = async () => {
         return;
     }
 
-    if (condicionAutomatica.value === 'ACTIVO_OTRA_CLINICA' && !movimientoEnEdicion.value) {
+    if (condicionAutomatica.value === 'ACTIVO_OTRA_CLINICA' && !esEdicion) {
         ElMessage({
             message: mensajeCondicion.value || 'El paciente tiene atención activa en otra clínica. Debe egresar allí antes de captar aquí.',
             type: 'warning',
@@ -2512,7 +2598,7 @@ const captarPaciente = async () => {
         return;
     }
 
-    if (condicionAutomatica.value === 'NUEVO_SIN_EGRESO' && !movimientoEnEdicion.value) {
+    if (condicionAutomatica.value === 'NUEVO_SIN_EGRESO' && !esEdicion) {
         ElMessage({
             message: mensajeCondicion.value || 'El paciente ya fue NUEVO y aún no tiene egreso. Debe egresar antes de registrar otro NUEVO.',
             type: 'warning',
@@ -2522,7 +2608,7 @@ const captarPaciente = async () => {
         return;
     }
 
-    if (condicionAutomatica.value === 'REINGRESO' && !ultimoEgreso.value && !movimientoEnEdicion.value) {
+    if (condicionAutomatica.value === 'REINGRESO' && !ultimoEgreso.value && !esEdicion) {
         ElMessage({
             message: 'No se puede registrar un reingreso sin un egreso previo',
             type: 'error',
@@ -2531,29 +2617,33 @@ const captarPaciente = async () => {
         return;
     }
 
-    if (movimientoEnEdicion.value) {
-        try {
-            await patchAllIpress(`/pacienteAtencion/${movimientoEnEdicion.value.id}/`, {
-                fecha_atencion: formCaptar.fecha,
-                fecha_inicio: formCaptar.fecha,
-                observaciones: formCaptar.observaciones || '',
-                tipo_atencion: movimientoEnEdicion.value.tipo_atencion || condicionAutomatica.value,
-            });
-            ElMessage({
-                message: 'Movimiento actualizado correctamente',
-                type: 'success',
-                plain: true,
-            });
-            cerrarModalCaptar();
-            await fetchMovimientos();
-        } catch (error) {
-            console.error('Error al editar movimiento:', error);
-            ElMessage({
-                message: error?.error || 'Error al actualizar el movimiento. Intente nuevamente.',
-                type: 'error',
-                plain: true,
-            });
-        }
+    guardandoCaptar.value = true;
+    try {
+    if (esEdicion) {
+        const tipoOriginal = String(
+            movimientoEnEdicion.value?.tipo_atencion
+            || movimientoEnEdicion.value?.condicion
+            || '',
+        ).toUpperCase();
+        const tipoEdicion = ['NUEVO', 'CONTINUADOR', 'REINGRESO'].includes(tipoOriginal)
+            ? tipoOriginal
+            : (condicionAutomatica.value === 'REINGRESO'
+                ? 'REINGRESO'
+                : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR'));
+
+        await patchAllIpress(`/pacienteAtencion/${idEdicion}/`, {
+            fecha_atencion: formCaptar.fecha,
+            fecha_inicio: formCaptar.fecha,
+            observaciones: formCaptar.observaciones || '',
+            tipo_atencion: tipoEdicion,
+        });
+        ElMessage({
+            message: 'Movimiento actualizado correctamente',
+            type: 'success',
+            plain: true,
+        });
+        cerrarModalCaptar();
+        await fetchMovimientos();
         return;
     }
 
@@ -2584,7 +2674,7 @@ const captarPaciente = async () => {
         }
 
         const tipoAtencion = condicionAutomatica.value === 'REINGRESO' ? 'REINGRESO' : (condicionAutomatica.value === 'NUEVO' ? 'NUEVO' : 'CONTINUADOR');
-        if (tipoAtencion === 'NUEVO' && !movimientoEnEdicion.value) {
+        if (tipoAtencion === 'NUEVO') {
             try {
                 const resGlobal = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(formCaptar.paciente)}`);
                 const listaGlobal = Array.isArray(resGlobal) ? resGlobal : (resGlobal?.results || []);
@@ -2682,6 +2772,8 @@ const captarPaciente = async () => {
             type: 'error',
             plain: true,
         });
+    } finally {
+        guardandoCaptar.value = false;
     }
 };
 
@@ -2991,6 +3083,7 @@ async function obtenerFechaUltimoIngresoOReingreso(pacienteId) {
 }
 
 function limpiarFechaCapturaSiInvalida() {
+    if (movimientoEnEdicion.value) return;
     const minFecha = rangoFechaCapturaPaciente.value.min;
     if (formCaptar.fecha && minFecha && String(formCaptar.fecha) < String(minFecha)) {
         formCaptar.fecha = '';
@@ -3279,6 +3372,10 @@ async function resolverIdPacienteAtencionEgreso(modalidadActual) {
 }
 
 const egresarPaciente = async () => {
+    if (guardandoEgresar.value) return;
+    const idEdicion = movimientoEnEdicion.value?.id ?? null;
+    const esEdicion = idEdicion != null && idEdicion !== '';
+
     if (!formEgresar.paciente || !formEgresar.periodo || !formEgresar.fecha || !formEgresar.tipo_egreso || !formEgresar.clinica) {
         ElMessage({
             message: 'Por favor complete todos los campos obligatorios',
@@ -3327,8 +3424,8 @@ const egresarPaciente = async () => {
         rango: rangoFechaEgreso.value,
     });
 
-    const esFechaOriginalEdicion = movimientoEnEdicion.value
-        && formEgresar.fecha === movimientoEnEdicion.value.fecha;
+    const esFechaOriginalEdicion = esEdicion
+        && formEgresar.fecha === movimientoEnEdicion.value?.fecha;
 
     const validacionFechaMinima = validarFechaMinimaEgresoPaciente(formEgresar.fecha, {
         fechaPrimerIngreso,
@@ -3348,7 +3445,7 @@ const egresarPaciente = async () => {
     const validacionCierre = await validarCierreMesAnterior(formEgresar.paciente, formEgresar.periodo);
 
     // Egreso por hospitalización: exigir registro de morbilidad del mismo periodo/IPRESS (vía atención)
-    if (!movimientoEnEdicion.value && formEgresar.tipo_egreso === 'Hospitalización') {
+    if (!esEdicion && formEgresar.tipo_egreso === 'Hospitalización') {
         if (!idPacienteAtencionValidacion) {
             ElMessage({
                 message: 'No se encontró una atención activa del paciente en la clínica y periodo indicados.',
@@ -3383,7 +3480,8 @@ const egresarPaciente = async () => {
         }
     }
 
-    if (movimientoEnEdicion.value) {
+    if (esEdicion) {
+        guardandoEgresar.value = true;
         try {
             const tipoEgresoTexto = formEgresar.tipo_egreso === 'Otros'
                 ? formEgresar.motivo_especifico
@@ -3394,7 +3492,7 @@ const egresarPaciente = async () => {
                     : `Egreso: ${tipoEgresoTexto}`
             );
 
-            await patchAllIpress(`/pacienteAtencion/${movimientoEnEdicion.value.id}/`, {
+            await patchAllIpress(`/pacienteAtencion/${idEdicion}/`, {
                 estado: 'EGRESADO',
                 tipo_atencion: 'EGRESO',
                 fecha_fin: formEgresar.fecha,
@@ -3429,6 +3527,8 @@ const egresarPaciente = async () => {
                 type: 'error',
                 plain: true,
             });
+        } finally {
+            guardandoEgresar.value = false;
         }
         return;
     }
@@ -3442,6 +3542,7 @@ const egresarPaciente = async () => {
         });
     }
 
+    guardandoEgresar.value = true;
     try {
         const tipoEgresoTexto = formEgresar.tipo_egreso === 'Otros' ? formEgresar.motivo_especifico : formEgresar.tipo_egreso;
         const modalidadActual = pacienteSeleccionadoEgresar.value?.id_modalidad
@@ -3567,6 +3668,8 @@ const egresarPaciente = async () => {
             type: 'error',
             plain: true,
         });
+    } finally {
+        guardandoEgresar.value = false;
     }
 };
 
