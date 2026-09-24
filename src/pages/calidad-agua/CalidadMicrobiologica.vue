@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-slate-50/80 p-4 sm:p-6">
+  <div :class="modoEvaluacion ? 'p-4' : 'min-h-screen bg-slate-50/80 p-4 sm:p-6'">
     <div class="max-w-[100rem] mx-auto space-y-4">
-      <header class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+      <header v-if="!modoEvaluacion" class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
             <span class="w-1.5 h-7 bg-cyan-500 rounded-full shrink-0" aria-hidden="true"></span>
@@ -34,6 +34,24 @@
         </div>
       </header>
 
+      <div v-else class="flex flex-wrap items-center justify-between gap-3 mb-1">
+        <div>
+          <h3 class="text-sm font-semibold text-slate-800">Calidad de agua y LD</h3>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Un registro por periodo e IPRESS. Puede editar, aprobar u observar.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-xs px-3 py-1.5 rounded-lg border border-cyan-300 bg-cyan-50 text-cyan-900 hover:bg-cyan-100 font-semibold disabled:opacity-50"
+          :disabled="!filtroListo || cargando || existeRegistroEnPeriodoActual"
+          :title="existeRegistroEnPeriodoActual ? 'Ya existe un registro para este periodo e IPRESS' : 'Nuevo registro'"
+          @click="abrirModalNuevo()"
+        >
+          Nuevo
+        </button>
+      </div>
+
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="tabla-cm divide-y divide-slate-200">
@@ -45,17 +63,20 @@
                 <th class="tabla-cm-th">Endo. agua</th>
                 <th class="tabla-cm-th">Bac. líquido (M1 / M2)</th>
                 <th class="tabla-cm-th">Endo. líquido</th>
+                <th v-if="modoEvaluacion" class="tabla-cm-th">Estado</th>
+                <th v-if="modoEvaluacion" class="tabla-cm-th">Evaluado por</th>
+                <th v-if="modoEvaluacion" class="tabla-cm-th">Comentario</th>
                 <th class="tabla-cm-th tabla-cm-th-acciones">Acciones</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-if="cargando">
-                <td colspan="7" class="tabla-cm-td text-center text-slate-500 py-8">
+                <td :colspan="colspanTabla" class="tabla-cm-td text-center text-slate-500 py-8">
                   Cargando registros…
                 </td>
               </tr>
               <tr v-else-if="!filtroListo">
-                <td colspan="7" class="tabla-cm-td text-center text-slate-500 italic py-8">
+                <td :colspan="colspanTabla" class="tabla-cm-td text-center text-slate-500 italic py-8">
                   Seleccione periodo y clínica en el encabezado.
                 </td>
               </tr>
@@ -71,20 +92,55 @@
                     {{ formatoNumero(registro.bacMaquiHemodi) }} / {{ formatoNumero(registro.bacMaquiHemodi2) }}
                   </td>
                   <td class="tabla-cm-td text-slate-600">{{ resumenEndoLiquido(registro) }}</td>
+                  <td v-if="modoEvaluacion" class="tabla-cm-td">
+                    <span
+                      class="rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                      :class="claseEstadoAprobacion(registro.estado_aprobacion)"
+                    >{{ registro.estado_aprobacion || 'PENDIENTE' }}</span>
+                  </td>
+                  <td v-if="modoEvaluacion" class="tabla-cm-td text-slate-600 whitespace-nowrap">
+                    {{ registro.datosEvaluadoPor?.nombre || '—' }}
+                  </td>
+                  <td v-if="modoEvaluacion" class="tabla-cm-td text-slate-600 max-w-[120px] truncate" :title="registro.comentario_evaluacion || ''">
+                    {{ registro.comentario_evaluacion?.trim() || '—' }}
+                  </td>
                   <td class="tabla-cm-td tabla-cm-td-acciones">
-                    <button
-                      type="button"
-                      class="tabla-cm-btn tabla-cm-btn-editar"
-                      title="Editar registro"
-                      @click="abrirModalEditar(registro)"
-                    >
-                      Editar
-                    </button>
+                    <div class="inline-flex flex-wrap items-center gap-1">
+                      <button
+                        type="button"
+                        class="tabla-cm-btn tabla-cm-btn-editar"
+                        title="Editar registro"
+                        @click="abrirModalEditar(registro)"
+                      >
+                        Editar
+                      </button>
+                      <template v-if="modoEvaluacion">
+                        <button
+                          v-if="String(registro.estado_aprobacion || '').toUpperCase() !== 'APROBADO'"
+                          type="button"
+                          class="text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-semibold disabled:opacity-40"
+                          :disabled="evaluandoId === registro.id"
+                          @click="evaluarCalidad(registro, 'APROBADO')"
+                        >Aprobar</button>
+                        <button
+                          type="button"
+                          class="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-900 hover:bg-amber-200 font-semibold disabled:opacity-40"
+                          :disabled="evaluandoId === registro.id"
+                          @click="observarCalidad(registro)"
+                        >Observar</button>
+                      </template>
+                    </div>
                   </td>
                 </tr>
                 <tr v-if="registrosFiltrados.length === 0">
-                  <td colspan="7" class="tabla-cm-td text-center text-slate-500 italic py-8">
+                  <td :colspan="colspanTabla" class="tabla-cm-td text-center text-slate-500 italic py-8">
                     No hay registros para este periodo e IPRESS.
+                    <button
+                      v-if="modoEvaluacion && filtroListo"
+                      type="button"
+                      class="ml-2 text-cyan-700 font-semibold hover:underline"
+                      @click="abrirModalNuevo()"
+                    >Crear nuevo</button>
                   </td>
                 </tr>
               </template>
@@ -255,13 +311,19 @@
 <script setup>
 import { ref, computed, watch, inject, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { useAuthStore } from '@/store/auth';
 import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
 import { rangoFechasDesdePeriodoTexto } from '@/utils/accesoVascularValidacion';
+import FechaInput from '@/components/FechaInput.vue';
+
+const props = defineProps({
+  modoEvaluacion: { type: Boolean, default: false },
+});
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
+const modalidadGlobal = inject('modalidadGlobal', ref(null));
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 
@@ -269,7 +331,10 @@ const periodos = ref([]);
 const registros = ref([]);
 const cargando = ref(false);
 const guardando = ref(false);
+const evaluandoId = ref(null);
 const idUsuarioIpress = ref(null);
+
+const colspanTabla = computed(() => (props.modoEvaluacion ? 10 : 7));
 
 const periodoVisibleId = computed(() => periodoGlobal.value ?? null);
 const ipressActiva = computed(() => clinicaGlobal.value ?? null);
@@ -438,7 +503,78 @@ function mapApiARegistro(row) {
     bacMaquiHemodi2: conControl && row.maquina_2_ufc !== '' ? row.maquina_2_ufc : null,
     endMaquiHemodi: conControl ? (row.maquina_1_ue || '') : '',
     endMaquiHemodi2: conControl ? (row.maquina_2_ue || '') : '',
+    estado_aprobacion: row.estado_aprobacion || 'PENDIENTE',
+    comentario_evaluacion: row.comentario_evaluacion || '',
+    supervisor_edito_registro: !!row.supervisor_edito_registro,
+    datosEvaluadoPor: row.datosEvaluadoPor || null,
   };
+}
+
+function claseEstadoAprobacion(estado) {
+  const v = String(estado || '').toUpperCase();
+  if (v === 'APROBADO') return 'bg-emerald-100 text-emerald-700';
+  if (v === 'OBSERVADO') return 'bg-amber-100 text-amber-800';
+  if (v === 'DESAPROBADO') return 'bg-rose-100 text-rose-700';
+  return 'bg-amber-100 text-amber-700';
+}
+
+async function evaluarCalidad(registro, estadoAprobacion) {
+  const id = registro?.id ?? registro?.id_calidad_microbiologica;
+  if (id == null) return;
+  evaluandoId.value = id;
+  try {
+    await postAllIpress(`/calidadMicrobiologicas/${id}/evaluar/`, {
+      estado_aprobacion: estadoAprobacion,
+      id_modalidad: modalidadGlobal.value ?? null,
+    });
+    ElMessage.success('Registro aprobado.');
+    await cargarRegistros();
+  } catch (e) {
+    console.error(e);
+    ElMessage.error(e?.detail || e?.error || 'No se pudo aprobar el registro.');
+  } finally {
+    evaluandoId.value = null;
+  }
+}
+
+async function observarCalidad(registro) {
+  const id = registro?.id ?? registro?.id_calidad_microbiologica;
+  if (id == null) return;
+  const yaAprobado = String(registro?.estado_aprobacion || '').toUpperCase() === 'APROBADO';
+  let comentario = '';
+  try {
+    const { value } = await ElMessageBox.prompt(
+      yaAprobado
+        ? 'El registro ya estaba aprobado. Indique la observación; quedará habilitado para que la clínica lo corrija.'
+        : 'Indique la observación para calidad de agua.',
+      yaAprobado ? 'Volver a observar registro' : 'Observar registro',
+      {
+        confirmButtonText: 'Observar',
+        cancelButtonText: 'Cancelar',
+        inputType: 'textarea',
+        inputPlaceholder: 'Comentario (mín. 5 caracteres)',
+        inputValidator: (v) => (String(v || '').trim().length >= 5 ? true : 'Mínimo 5 caracteres'),
+      },
+    );
+    comentario = String(value || '').trim();
+  } catch {
+    return;
+  }
+  evaluandoId.value = id;
+  try {
+    await postAllIpress(`/calidadMicrobiologicas/${id}/evaluar/`, {
+      estado_aprobacion: 'OBSERVADO',
+      comentario_evaluacion: comentario,
+      id_modalidad: modalidadGlobal.value ?? null,
+    });
+    ElMessage.success('Registro observado.');
+    await cargarRegistros();
+  } catch (e) {
+    console.error(e);
+    ElMessage.error(e?.detail || e?.error || 'No se pudo observar el registro.');
+  } finally {
+    evaluandoId.value = null;
+  }
 }
 
 function textoOVacio(val) {

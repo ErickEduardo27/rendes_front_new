@@ -61,7 +61,11 @@
           <MovimientosPage modo-evaluacion />
         </div>
 
-        <template v-else-if="esModuloRegistros">
+        <div v-else-if="modulo === 'calidad'" class="p-0">
+          <CalidadMicrobiologica modo-evaluacion />
+        </div>
+
+        <template v-else-if="esModuloPorPaciente">
         <div
           v-if="mostrarBannerAbrir"
           class="px-4 py-3 border-b border-amber-100 bg-amber-50/90 flex flex-wrap items-center justify-between gap-3"
@@ -105,7 +109,7 @@
           <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
               <h3 class="text-sm font-semibold text-slate-800">Registros de pacientes — {{ etiquetaModuloActual }}</h3>
-              <p class="text-xs text-slate-500 mt-0.5">Todos los pacientes en atención; último registro por paciente cuando existe. Editar y Aprobar solo aplican si hay registro.</p>
+              <p class="text-xs text-slate-500 mt-0.5">Todos los pacientes en atención; último registro por paciente cuando existe. Use <strong>Nuevo</strong> para crear otro registro del mismo paciente. Editar y Aprobar solo aplican si hay registro.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <button
@@ -198,6 +202,12 @@
                     <td class="px-2 py-1.5 text-slate-600 max-w-[120px] truncate" :title="r.comentario_evaluacion || ''">{{ comentarioCorto(r.comentario_evaluacion, 40) }}</td>
                     <td class="px-2 py-1.5 whitespace-nowrap">
                       <div class="flex flex-wrap gap-1">
+                        <button
+                          type="button"
+                          class="text-[10px] px-2 py-0.5 rounded bg-cyan-100 text-cyan-900 hover:bg-cyan-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Crear un nuevo registro para este paciente"
+                          @click="abrirModalNuevoRegistro(modulo, r)"
+                        >Nuevo</button>
                         <button
                           type="button"
                           class="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
@@ -325,6 +335,7 @@ import Form4 from '@/components/forms/Form4.vue';
 import Form5 from '@/components/forms/Form5.vue';
 import Form7 from '@/components/forms/Form7.vue';
 import MovimientosPage from '@/pages/movimientos/movimientos.vue';
+import CalidadMicrobiologica from '@/pages/calidad-agua/CalidadMicrobiologica.vue';
 import {
   claseFilaAccesoAntiguo,
   esAccesoVascularAntiguo,
@@ -346,6 +357,7 @@ const tabs = [
   { key: 'morbilidad', label: 'Morbilidad Hospitalaria' },
   { key: 'resultados', label: 'Resultados Clínicos' },
   { key: 'vacunacion', label: 'Vacunación' },
+  { key: 'calidad', label: 'Calidad de agua' },
   { key: 'movimientos', label: 'Movimientos' },
 ];
 
@@ -364,6 +376,7 @@ const listaEventos = ref([]);
 const listaMorbilidad = ref([]);
 const listaResultados = ref([]);
 const listaVacunacion = ref([]);
+const listaCalidad = ref([]);
 const listaPacientesAtencion = ref([]);
 
 const paginaRegistros = ref(1);
@@ -445,6 +458,7 @@ const tituloModalFormulario = computed(() => {
     morbilidad: 'Editar morbilidad hospitalaria',
     resultados: 'Editar resultados clínicos',
     vacunacion: 'Editar vacunación',
+    calidad: 'Editar calidad de agua',
   };
   return labels[moduloFormulario.value] || 'Editar registro';
 });
@@ -519,6 +533,23 @@ async function abrirModalEditar(mod, row) {
   mostrarModalFormulario.value = true;
 }
 
+/** Crea un registro nuevo para el paciente (aunque ya tenga uno previo en el módulo). */
+async function abrirModalNuevoRegistro(mod, row) {
+  const paciente = pacienteDesdeRegistro(row);
+  const idAtencion = idAtencionDesdeRegistro(row);
+  if (!paciente || idAtencion == null) {
+    ElMessage.error('No se pudo cargar el paciente del registro.');
+    return;
+  }
+  moduloFormulario.value = mod;
+  registroEdicion.value = null;
+  pacienteParaFormulario.value = paciente;
+  idPacienteAtencionParaForm.value = idAtencion;
+  formModalKey.value += 1;
+  await resolverIdPeriodoIpressForm();
+  mostrarModalFormulario.value = true;
+}
+
 function cerrarModalFormulario() {
   mostrarModalFormulario.value = false;
   registroEdicion.value = null;
@@ -588,11 +619,26 @@ const CAMPOS_EDICION = {
     { key: 'fecha_influenza', label: 'Fecha influenza' },
     { key: 'fecha_neumococo', label: 'Fecha neumococo' },
   ],
+  calidad: [
+    { key: 'fecha_registro', label: 'F. registro', type: 'date' },
+    { key: 'control', label: 'Control', type: 'bool' },
+    { key: 'salida_osmosis_ufc', label: 'Bac. ósmosis' },
+    { key: 'anillo_circulacion_ufc', label: 'Bac. anillo' },
+    { key: 'salida_osmosis_ue', label: 'Endo. ósmosis' },
+    { key: 'anillo_circulacion_ue', label: 'Endo. anillo' },
+    { key: 'maquina_1_ufc', label: 'Bac. M1' },
+    { key: 'maquina_2_ufc', label: 'Bac. M2' },
+    { key: 'maquina_1_ue', label: 'Endo. M1' },
+    { key: 'maquina_2_ue', label: 'Endo. M2' },
+  ],
 };
 
-const MODULOS_REGISTROS = ['acceso', 'eventos', 'morbilidad', 'resultados', 'vacunacion'];
+const MODULOS_REGISTROS = ['acceso', 'eventos', 'morbilidad', 'resultados', 'vacunacion', 'calidad'];
+const MODULOS_POR_PACIENTE = ['acceso', 'eventos', 'morbilidad', 'resultados', 'vacunacion'];
 
 const esModuloRegistros = computed(() => MODULOS_REGISTROS.includes(modulo.value));
+const esModuloPorPaciente = computed(() => MODULOS_POR_PACIENTE.includes(modulo.value));
+const esModuloCalidad = computed(() => modulo.value === 'calidad');
 
 const columnasDatosActuales = computed(() => CAMPOS_EDICION[modulo.value] || []);
 
@@ -688,7 +734,7 @@ const filtroListo = computed(() => {
 const filtroContenidoListo = computed(() => filtroListo.value);
 
 const cargandoVistaActual = computed(() => {
-  if (modulo.value === 'pacientes' || modulo.value === 'movimientos') return false;
+  if (modulo.value === 'pacientes' || modulo.value === 'movimientos' || modulo.value === 'calidad') return false;
   return cargando.value;
 });
 
@@ -748,6 +794,7 @@ const ENDPOINTS = {
   morbilidad: { path: 'morbilidadesHospitalarias', idKey: 'id_morbilidad_hospitalaria', idFormulario: 3 },
   resultados: { path: 'resultadosClinicos', idKey: 'id_resultado_clinico', idFormulario: 4 },
   vacunacion: { path: 'vacunaciones', idKey: 'id_vacunacion', idFormulario: 5 },
+  calidad: { path: 'calidadMicrobiologicas', idKey: 'id_calidad_microbiologica', idFormulario: null },
 };
 
 function idPacienteAtencionDe(r) {
@@ -912,7 +959,7 @@ function tituloBotonObservar(row) {
 }
 
 async function fetchEstadoFormularioActual() {
-  if (!filtroListo.value || !esModuloRegistros.value) {
+  if (!filtroListo.value || !esModuloPorPaciente.value) {
     formularioEstaAbierto.value = null;
     return;
   }
@@ -1000,12 +1047,13 @@ async function confirmarCerrarFormulario() {
 }
 
 async function cargarModuloActual() {
-  if (!filtroListo.value || !esModuloRegistros.value) {
+  if (!filtroListo.value || !esModuloPorPaciente.value) {
     listaAcceso.value = [];
     listaEventos.value = [];
     listaMorbilidad.value = [];
     listaResultados.value = [];
     listaVacunacion.value = [];
+    listaCalidad.value = [];
     listaPacientesAtencion.value = [];
     return;
   }
@@ -1163,7 +1211,7 @@ async function redirigirANotificacionSiListoParaConformidad() {
 }
 
 async function cerrarFormularioAutomaticoSiTodoAprobado() {
-  if (!filtroListo.value || !esModuloRegistros.value) return;
+  if (!filtroListo.value || !esModuloPorPaciente.value) return;
   await fetchEstadoFormularioActual();
   if (formularioEstaAbierto.value !== true) return;
   const rows = listaMostrada.value.filter(registroConDatos);
@@ -1189,7 +1237,7 @@ async function cerrarFormularioAutomaticoSiTodoAprobado() {
 
 watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
   paginaRegistros.value = 1;
-  if (modulo.value !== 'pacientes' && modulo.value !== 'movimientos') {
+  if (modulo.value !== 'pacientes' && modulo.value !== 'movimientos' && modulo.value !== 'calidad') {
     cargarModuloActual();
     fetchEstadoFormularioActual();
   }
@@ -1199,14 +1247,14 @@ watch(modulo, () => {
   filtroListadoNombre.value = '';
   filtroListadoDocumento.value = '';
   paginaRegistros.value = 1;
-  if (modulo.value !== 'pacientes' && modulo.value !== 'movimientos') {
+  if (modulo.value !== 'pacientes' && modulo.value !== 'movimientos' && modulo.value !== 'calidad') {
     cargarModuloActual();
     fetchEstadoFormularioActual();
   }
 });
 
 onMounted(() => {
-  if (esModuloRegistros.value) {
+  if (esModuloPorPaciente.value) {
     cargarModuloActual();
     fetchEstadoFormularioActual();
   }

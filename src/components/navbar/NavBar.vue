@@ -153,6 +153,20 @@
                 >
                   Debe haber un registro de resultados clínicos por cada paciente atendido, incluidos egresos ({{ statsModal.totalPacientesAtendidos }} paciente(s) / {{ statsModal.totalResultadosRegistrados }} registro(s)).
                 </div>
+                <div class="flex justify-between">
+                  <span>Serología / Vacunación</span>
+                  <span
+                    class="font-semibold"
+                    :class="serologiaNuevosOk ? 'text-slate-800' : 'text-rose-700'"
+                  >{{ statsModal.totalVacunaciones ?? 0 }}</span>
+                </div>
+                <div
+                  v-if="esPerfilClinicaUsuario && !serologiaNuevosOk"
+                  class="text-[11px] text-rose-700"
+                >
+                  Pacientes NUEVO deben tener serología (VHB, Anti-HBc, VHC y VIH; puede ser Desconocido):
+                  {{ statsModal.nuevosConSerologia ?? 0 }}/{{ statsModal.totalNuevosSerologia ?? 0 }}.
+                </div>
                 <div class="flex justify-between"><span>Calidad de agua</span><span class="font-semibold text-slate-800">{{ statsModal.totalCalidadAgua }}</span></div>
               </div>
             </div>
@@ -271,6 +285,7 @@ import { getAllIpress, postAllIpress } from '@/services/ipress/Ipress.service'
 import { obtenerEstadisticasRegistrosFormularios } from '@/utils/estadisticasRegistrosFormularios'
 import {
   mensajeBloqueoNotificacionClinica,
+  mensajeBloqueoSerologiaNuevos,
   tieneNumeroAtencionesRegistrado,
   MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES,
 } from '@/utils/resultadosClinicosNotificacion'
@@ -347,6 +362,7 @@ const statsModal = ref({
   totalEventos: 0,
   totalMorbilidades: 0,
   totalResultados: 0,
+  totalVacunaciones: 0,
   totalCalidadAgua: 0,
   totalPacientesAtendidos: 0,
   nuevos: 0,
@@ -356,6 +372,9 @@ const statsModal = ref({
   numeroAtenciones: null,
   totalResultadosRegistrados: 0,
   totalResultadosCompletos: 0,
+  totalNuevosSerologia: 0,
+  nuevosConSerologia: 0,
+  nuevosSinSerologia: 0,
   puedeNotificarClinica: false,
   inicial: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
   final: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
@@ -399,11 +418,22 @@ const resultadosClinicosOk = computed(() => {
   return total > 0 && total === regs
 })
 
+const serologiaNuevosOk = computed(() => {
+  const total = Number(statsModal.value.totalNuevosSerologia || 0)
+  if (total <= 0) return true
+  return Number(statsModal.value.nuevosSinSerologia || 0) === 0
+})
+
 const mensajeBloqueoNotificacion = computed(() => {
   if (!esPerfilClinicaUsuario.value || statsModal.value.puedeNotificarClinica) return ''
   if (!tieneNumeroAtenciones.value) {
     return MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES
   }
+  const msgSerologia = mensajeBloqueoSerologiaNuevos(
+    statsModal.value.totalNuevosSerologia,
+    statsModal.value.nuevosConSerologia,
+  )
+  if (msgSerologia) return msgSerologia
   return mensajeBloqueoNotificacionClinica(
     statsModal.value.totalPacientesAtendidos,
     statsModal.value.totalResultadosRegistrados,
@@ -713,6 +743,7 @@ async function cargarStatsNotificacion() {
       totalEventos: 0,
       totalMorbilidades: 0,
       totalResultados: 0,
+      totalVacunaciones: 0,
       totalCalidadAgua: 0,
       totalPacientesAtendidos: 0,
       nuevos: 0,
@@ -722,6 +753,9 @@ async function cargarStatsNotificacion() {
       numeroAtenciones: null,
       totalResultadosRegistrados: 0,
       totalResultadosCompletos: 0,
+      totalNuevosSerologia: 0,
+      nuevosConSerologia: 0,
+      nuevosSinSerologia: 0,
       puedeNotificarClinica: false,
       inicial: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
       final: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },

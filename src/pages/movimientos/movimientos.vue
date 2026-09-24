@@ -2750,19 +2750,17 @@ const captarPaciente = async () => {
         await fetchMovimientos();
 
         if (tipoAtencion === 'NUEVO') {
-            const irSerologia = await Swal.fire({
+            await Swal.fire({
                 icon: 'info',
-                title: 'Registrar serología',
+                title: 'Registrar serología (obligatorio)',
                 html: 'El paciente es <strong>NUEVO</strong> y debe tener serología registrada '
                     + '(VHB, Anti-HBc, VHC y VIH). Si no cuenta con resultado, registre <strong>Desconocido</strong>.',
-                showCancelButton: true,
-                confirmButtonText: 'Ir a Vacunación / Serología',
-                cancelButtonText: 'Más tarde',
+                confirmButtonText: 'Ir a Serología / Vacunación',
                 confirmButtonColor: '#008f9c',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
             });
-            if (irSerologia.isConfirmed) {
-                await router.push({ name: 'Vacunacion' });
-            }
+            await router.push({ name: 'Vacunacion' });
         }
     } catch (error) {
         console.error('Error al captar paciente:', error);

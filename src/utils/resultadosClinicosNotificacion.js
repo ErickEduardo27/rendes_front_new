@@ -68,6 +68,62 @@ export function mensajeBloqueoNotificacionClinica(totalPacientes, totalRegistros
   );
 }
 
+/** Serología mínima (VHB, Anti-HBc, VHC, VIH) para paciente NUEVO; Desconocido cuenta como completo. */
+export function esSerologiaMinimaCompleta(registro) {
+  if (!registro || typeof registro !== 'object') return false;
+  const campos = [registro.vhb, registro.antiHbc, registro.vhc, registro.vih];
+  return campos.every((v) => v != null && String(v).trim() !== '');
+}
+
+export function idsAtencionConSerologiaCompleta(rows) {
+  const set = new Set();
+  for (const r of listaDesdeResponse(rows)) {
+    if (!esSerologiaMinimaCompleta(r)) continue;
+    const id = r.id_paciente_atencion ?? r.datosPacienteAtencion?.id_paciente_atencion;
+    if (id != null && id !== '') set.add(String(id));
+  }
+  return set;
+}
+
+/**
+ * Atenciones NUEVO del periodo vs serología completa (mínimo Desconocido en los 4 marcadores).
+ */
+export function contarNuevosSerologia(listaAtenciones, idsConSerologia) {
+  const idsSerologia = idsConSerologia instanceof Set ? idsConSerologia : new Set();
+  const vistos = new Set();
+  let total = 0;
+  let con = 0;
+  for (const a of Array.isArray(listaAtenciones) ? listaAtenciones : []) {
+    const tipo = String(a?.tipo_atencion || '').trim().toUpperCase();
+    const estado = String(a?.estado || '').trim().toUpperCase();
+    if (tipo !== 'NUEVO' && estado !== 'NUEVO') continue;
+    const id = a?.id_paciente_atencion;
+    if (id == null || id === '') continue;
+    const key = String(id);
+    if (vistos.has(key)) continue;
+    vistos.add(key);
+    total += 1;
+    if (idsSerologia.has(key)) con += 1;
+  }
+  return {
+    totalNuevosSerologia: total,
+    nuevosConSerologia: con,
+    nuevosSinSerologia: Math.max(0, total - con),
+  };
+}
+
+export function mensajeBloqueoSerologiaNuevos(totalNuevos, conSerologia) {
+  const total = Number(totalNuevos || 0);
+  const con = Number(conSerologia || 0);
+  if (total <= 0 || total === con) return '';
+  const sin = Math.max(0, total - con);
+  return (
+    `No puede notificar: hay ${sin} paciente(s) NUEVO sin serología completa ` +
+    `(VHB, Anti-HBc, VHC y VIH). Debe registrarlos aunque sea como Desconocido ` +
+    `(${con}/${total} con serología).`
+  );
+}
+
 export function tieneNumeroAtencionesRegistrado(numeroAtenciones) {
   if (numeroAtenciones == null || numeroAtenciones === '') return false;
   const n = Number(numeroAtenciones);

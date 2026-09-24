@@ -492,6 +492,7 @@
 
 <script setup>
 import { reactive, computed, watch, ref, onMounted, nextTick, inject } from 'vue';
+import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 
@@ -506,6 +507,7 @@ import { elegirAtencionEditable, esPacienteEgresadoEnListado } from '@/composabl
 import { tipoCondicionPorFechaYPeriodo, esNombreIpressHospital } from '@/utils/condicionIngresoPorFecha';
 import FechaInput from '@/components/FechaInput.vue';
 
+const router = useRouter();
 const periodoSeleccionado = ref(null);
 const clinicaSeleccionada = ref('');
 const idClinicaSeleccionada = ref(null);
@@ -2564,6 +2566,20 @@ async function finalizarCaptacionPaciente({ idPaciente, idPeriodo, idIpress }) {
     plain: true,
   });
   emit('guardado');
+
+  if (String(estadoPaciente).toUpperCase() === 'NUEVO') {
+    await Swal.fire({
+      icon: 'info',
+      title: 'Registrar serología (obligatorio)',
+      html: 'El paciente es <strong>NUEVO</strong> y debe tener serología registrada '
+        + '(VHB, Anti-HBc, VHC y VIH). Si no cuenta con resultado, registre <strong>Desconocido</strong>.',
+      confirmButtonText: 'Ir a Serología / Vacunación',
+      confirmButtonColor: '#008f9c',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    });
+    await router.push({ name: 'Vacunacion' });
+  }
 }
 
 async function resolverEtiologiaPorDefectoSimplificado() {

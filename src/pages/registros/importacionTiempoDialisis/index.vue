@@ -254,7 +254,7 @@
             <p>Mes en Excel: <strong>{{ preview.resumen.mes_consulta_excel || '—' }}</strong></p>
             <p>IPRESS en Excel: <strong>{{ preview.resumen.ipress_excel || '—' }}</strong></p>
             <p>Pacientes detectados: <strong>{{ preview.resumen.total_pacientes }}</strong></p>
-            <p>Atenciones ejecutadas (pie de Excel): <strong>{{ preview.resumen.atenciones_ejecutadas ?? '—' }}</strong></p>
+            <!-- <p>Atenciones ejecutadas (pie de Excel): <strong>{{ preview.resumen.atenciones_ejecutadas ?? '—' }}</strong></p> -->
             <p>
               Atenciones totales:
               <strong>{{ atencionesTotalesResumen(preview.resumen) }}</strong>
