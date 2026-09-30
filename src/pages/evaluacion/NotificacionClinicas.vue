@@ -70,6 +70,7 @@
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Fecha / hora notif.</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Usuario notif.</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Conformidad</th>
+                    <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase min-w-[220px]">Obs.</th>
                     <th class="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Acción</th>
                   </tr>
                 </thead>
@@ -98,6 +99,24 @@
                       <template v-if="row.conformidad_en">
                         <span class="block">{{ formatoFecha(row.conformidad_en) }}</span>
                         <span v-if="row.conformidad_usuario_nombre" class="block text-xs text-slate-500 mt-0.5">{{ row.conformidad_usuario_nombre }}</span>
+                      </template>
+                      <span v-else class="text-slate-400">—</span>
+                    </td>
+                    <td class="px-4 py-3 text-sm max-w-[320px]">
+                      <template v-if="row.observacion_mensaje">
+                        <span
+                          class="block whitespace-pre-line line-clamp-3"
+                          :class="row.observacion_atendida ? 'text-slate-500' : 'text-amber-900'"
+                          :title="row.observacion_mensaje"
+                        >{{ row.observacion_mensaje }}</span>
+                        <span class="block text-xs text-slate-500 mt-0.5">
+                          {{ formatoFecha(row.observacion_en) }}
+                          <template v-if="row.observacion_usuario_nombre"> · {{ row.observacion_usuario_nombre }}</template>
+                        </span>
+                        <span
+                          class="inline-block mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                          :class="row.observacion_atendida ? 'bg-slate-100 text-slate-600' : 'bg-amber-100 text-amber-800'"
+                        >{{ row.observacion_atendida ? 'Clínica volvió a notificar' : 'Pendiente de corrección' }}</span>
                       </template>
                       <span v-else class="text-slate-400">—</span>
                     </td>

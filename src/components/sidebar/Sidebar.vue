@@ -33,7 +33,7 @@
               { label: 'Inicio de TRR', to: '/inicio-trr' },
               { label: 'Acceso Vascular', to: '/acceso-vascular' },
               { label: 'Eventos Infecciosos', to: '/eventos-infecciosos' },
-              { label: 'Morbilidad Hospitalaria', to: '/morbilidad-hospitalaria' },
+              { label: 'Morbimortalidad', to: '/morbilidad-hospitalaria' },
               { label: 'Resultados Clínicos y tratamiento', to: '/resultados-clinicos' },
               { label: 'Serología y Vacunación', to: '/vacunacion' },
               { label: 'Calidad de agua y LD', to: '/calidad-agua' }
@@ -42,6 +42,7 @@
 
         <SidebarItem v-if="['Admin','Clinicas','Hospitales'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
         <SidebarItem v-if="['Admin','Clinicas','Hospitales'].includes(perfil)" :icon="ChartBarIcon" label="Tasa BRC" to="/tasa-brc"/>
+        <SidebarItem v-if="['Clinicas','Hospitales'].includes(perfil)" :icon="ChartBarIcon" label="Reporte" to="/reporte-supervisor"/>
         <SidebarItem
             v-if="['Admin','Clinicas','Hospitales'].includes(perfil)"
             :icon="ArrowUpTrayIcon"

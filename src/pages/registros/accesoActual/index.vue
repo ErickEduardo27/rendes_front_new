@@ -59,14 +59,6 @@
         >
           Cambios del periodo
         </button>
-        <!-- <button
-          type="button"
-          class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
-          :class="vistaActiva === 'todos' ? 'bg-white text-cyan-600 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
-          @click="vistaActiva = 'todos'"
-        >
-          Todos los pacientes
-        </button> -->
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -648,8 +640,8 @@
                     <td class="px-3 py-2.5 text-slate-500 tabular-nums">{{ indiceHistorialPaciente(idx) }}</td>
                     <td class="px-3 py-2.5 text-slate-700">{{ r.tipo_acceso || r.tipo_acceso_actual || '—' }}</td>
                     <td class="px-3 py-2.5 text-slate-700">{{ r.localizacion_acceso || r.localizacion_acceso_actual || '—' }}</td>
-                    <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ fechaCreacionAccesoColumna(r) || '—' }}</td>
-                    <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ textoCanulacionRegistro(r) }}</td>
+                    <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ fechaHistorialGuiones(fechaCreacionAccesoColumna(r)) }}</td>
+                    <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ fechaHistorialGuiones(textoCanulacionRegistro(r)) }}</td>
                     <td class="px-3 py-2.5 text-slate-700">{{ r.motivo_cambio || '—' }}</td>
                     <td class="px-3 py-2.5">
                       <div class="flex flex-col gap-1">
@@ -806,11 +798,12 @@ import { useRoute, useRouter } from 'vue-router';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { atencionesParaListadoRegistros, esPacienteEgresadoEnListado, fechaEgresoAtencionISO } from '@/composables/useAtencionesRegistro';
-import { fechaCelda } from '@/utils/fechaFormat';
+import { fechaCelda, parseFechaAISO } from '@/utils/fechaFormat';
 import { prepararPayloadUnidadesActuales, tipoAccesoDesdeDb } from '@/utils/unidadesActualesPayload';
 import Form2Hemodialisis from '@/components/forms/typesForm2/Form2Hemodialisis.vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import {
+  mensajeIncompatibilidadAccesoModalidad,
   claseFilaAccesoAntiguo,
   esAccesoVascularAntiguo,
   esTipoAccesoFistula,
@@ -1075,6 +1068,13 @@ function textoCanulacionRegistro(row) {
   const tipo = row?.tipo_acceso || row?.tipo_acceso_actual || '';
   if (!esTipoAccesoFistula(tipo)) return '—';
   return row?.fecha_inicio_canulacion || '—';
+}
+
+function fechaHistorialGuiones(valor) {
+  const iso = parseFechaAISO(valor);
+  if (!iso) return valor || '—';
+  const [y, m, d] = iso.split('-');
+  return `${d}-${m}-${y}`;
 }
 
 /** Fecha para ordenar historial: canulación si existe; si no, creación. */
@@ -2210,11 +2210,85 @@ async function fetchPeriodos() {
   }
 }
 
-watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
-  fetchRegistros();
+const MODALIDAD_TEXTO = { 1: 'Hemodiálisis', 2: 'Diálisis Peritoneal' };
+let claveAlertaIncompatibilidadMostrada = '';
+
+function escaparHtml(texto) {
+  return String(texto ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+const pacientesAccesoIncompatible = computed(() => {
+  const idModalidad = modalidadGlobal.value;
+  return todosPacientesLista.value
+    .map((r) => ({ ...r, tipo_acceso_etiqueta: textoTipoAcceso(r.tipo_acceso) }))
+    .filter((r) => {
+      if (r.es_egresado) return false;
+      const tipo = r.tipo_acceso_etiqueta;
+      if (!tipo || /^NO HABIDO$/i.test(tipo)) return false;
+      return Boolean(mensajeIncompatibilidadAccesoModalidad(tipo, idModalidad));
+    });
+});
+
+let alertaIncompatibilidadAbierta = false;
+
+/**
+ * Misma alerta «Incompatibilidad acceso / modalidad» del formulario de acceso,
+ * aplicada a todos los pacientes de la tabla.
+ * @param {{ forzar?: boolean }} opts forzar = mostrar aunque ya se haya visto para este filtro.
+ */
+async function alertarAccesosIncompatiblesConModalidad({ forzar = false } = {}) {
+  if (alertaIncompatibilidadAbierta || cargando.value) return;
+  const clave = `${periodoGlobal.value}|${clinicaGlobal.value}|${modalidadGlobal.value}`;
+  if (!forzar && clave === claveAlertaIncompatibilidadMostrada) return;
+  const lista = pacientesAccesoIncompatible.value;
+  if (!lista.length) return;
+  claveAlertaIncompatibilidadMostrada = clave;
+  const modalidad = MODALIDAD_TEXTO[Number(modalidadGlobal.value)] || 'la modalidad seleccionada';
+  const filas = lista
+    .slice(0, 15)
+    .map((r) => (
+      `<li style="margin-bottom:4px"><strong>${escaparHtml(r.paciente)}</strong> (DNI ${escaparHtml(r.documento)}): `
+      + `${escaparHtml(mensajeIncompatibilidadAccesoModalidad(r.tipo_acceso_etiqueta, modalidadGlobal.value))}</li>`
+    ))
+    .join('');
+  const resto = lista.length > 15 ? `<p style="margin-top:6px">… y ${lista.length - 15} más.</p>` : '';
+  alertaIncompatibilidadAbierta = true;
+  try {
+    await ElMessageBox.alert(
+      `<p>${lista.length} paciente(s) con acceso vascular que no corresponde a <strong>${modalidad}</strong>:</p>`
+        + `<ul style="margin:8px 0 0 18px;list-style:disc;max-height:50vh;overflow:auto">${filas}</ul>${resto}`,
+      'Incompatibilidad acceso / modalidad',
+      {
+        type: 'warning',
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#0e7490',
+      },
+    );
+  } catch {
+    /* cerrado */
+  } finally {
+    alertaIncompatibilidadAbierta = false;
+  }
+}
+
+watch([periodoGlobal, clinicaGlobal, modalidadGlobal], async () => {
   fetchEstadoFormulario();
   fetchEstadoConformidad();
+  await fetchRegistros();
+  alertarAccesosIncompatiblesConModalidad();
 }, { deep: true });
+
+watch(vistaActiva, () => {
+  alertarAccesosIncompatiblesConModalidad({ forzar: true });
+});
+
+// Cuando termina la carga (entrada a la página o cambio de filtros), avisar si hay incompatibles.
+watch(cargando, (estaCargando) => {
+  if (!estaCargando) alertarAccesosIncompatiblesConModalidad();
+});
 
 watch(
   () => [route.query.abrirFormulario, route.query.idPacienteAtencion, route.query.idPaciente],
@@ -2233,6 +2307,7 @@ onMounted(async () => {
   fetchPeriodos();
   await Promise.all([fetchRegistros(), fetchEstadoFormulario(), fetchEstadoConformidad()]);
   await procesarQueryCaptacionAccesoVascular();
+  alertarAccesosIncompatiblesConModalidad();
   window.addEventListener('notificacion-revision:actualizar', onRevisionEstadoEvent);
   window.addEventListener('notificaciones:actualizar', onRevisionEstadoEvent);
 });

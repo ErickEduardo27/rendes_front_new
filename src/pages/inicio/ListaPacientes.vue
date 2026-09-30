@@ -502,7 +502,7 @@ async function cargarEstadoConformidad() {
       conformidad_en: conformidadEn,
       conformidad_usuario_nombre: conformidadUsuario,
     };
-    numeroAtencionesPeriodo.value = trr?.numero_atenciones ?? null;
+    numeroAtencionesPeriodo.value = trr?.numero_atenciones_supervisor ?? trr?.numero_atenciones ?? null;
   } catch {
     estadoConformidad.value = {
       ya_dio_conformidad: false,

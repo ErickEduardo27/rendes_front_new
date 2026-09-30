@@ -3,7 +3,7 @@
     <div class="p-6 space-y-6 bg-gray-50 min-h-screen">
         
         <div class="border-l-4 border-cyan-600 pl-3 my-6">
-            <h2 class="text-xl font-bold text-gray-800">Morbimorbilidad</h2>
+            <h2 class="text-xl font-bold text-gray-800">Morbimortalidad</h2>
         </div>
 
         <div class="flex flex-col lg:flex-row gap-6 items-start">

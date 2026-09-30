@@ -33,13 +33,13 @@
 
     <div class="flex flex-wrap gap-3 text-[11px] text-slate-600">
       <span class="inline-flex items-center gap-1.5">
-        <span class="w-3.5 h-3.5 rounded-sm bg-emerald-500 border border-emerald-600" /> VALIDO
+        <span class="w-3.5 h-3.5 rounded-sm bg-emerald-500 border border-emerald-600" /> Validado
       </span>
       <span class="inline-flex items-center gap-1.5">
-        <span class="w-3.5 h-3.5 rounded-sm bg-amber-400 border border-amber-500" /> OBSERVADO
+        <span class="w-3.5 h-3.5 rounded-sm bg-amber-400 border border-amber-500" /> Observado
       </span>
       <span class="inline-flex items-center gap-1.5">
-        <span class="w-3.5 h-3.5 rounded-sm bg-sky-400 border border-sky-500" /> ENVIADO
+        <span class="w-3.5 h-3.5 rounded-sm bg-sky-400 border border-sky-500" /> Enviado
       </span>
       <span class="inline-flex items-center gap-1.5">
         <span class="w-3.5 h-3.5 rounded-sm bg-rose-500 border border-rose-600" /> NR
@@ -104,7 +104,7 @@
                     :title="tituloCelda(c, m)"
                   >
                     <span v-if="estadoMes(c, m.clave)" class="font-bold tracking-wide">
-                      {{ estadoMes(c, m.clave) }}
+                      {{ etiquetaEstado(estadoMes(c, m.clave)) }}
                     </span>
                   </td>
                 </tr>
@@ -218,6 +218,16 @@ const gruposClinicas = computed(() => {
 
 function estadoMes(c, clave) {
   return String(c?.meses?.[clave]?.estado || '').toUpperCase();
+}
+
+const ETIQUETAS_ESTADO = {
+  VALIDO: 'Validado',
+  OBSERVADO: 'Observado',
+  ENVIADO: 'Enviado',
+};
+
+function etiquetaEstado(estado) {
+  return ETIQUETAS_ESTADO[estado] || estado;
 }
 
 function porcentajeMes(cov, clave) {

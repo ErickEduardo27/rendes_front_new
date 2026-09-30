@@ -104,7 +104,7 @@ const routes = [
         path: 'reporte-supervisor',
         name: 'ReporteSupervisor',
         component: () => import('@/pages/reporte/ReporteSupervisor.vue'),
-        meta: { requiresAuth: true, requiresEvaluador: true },
+        meta: { requiresAuth: true, requiresReporte: true },
       },
       {
         path: 'notificaciones',
@@ -179,6 +179,13 @@ function perfilEsEvaluador(user) {
   return ['supervisor', 'admin'].includes(String(p).trim().toLowerCase())
 }
 
+function perfilPuedeVerReporte(user) {
+  const p = String(user?.datosPerfil?.perfil || (typeof localStorage !== 'undefined' ? localStorage.getItem('perfil') : '') || '')
+    .trim()
+    .toLowerCase()
+  return ['supervisor', 'admin', 'clinicas', 'hospitales'].includes(p)
+}
+
 function perfilEsAnalista(user) {
   const p = user?.datosPerfil?.perfil || (typeof localStorage !== 'undefined' ? localStorage.getItem('perfil') : '') || ''
   return String(p).trim().toLowerCase().includes('analista')
@@ -198,6 +205,10 @@ router.beforeEach((to, from, next) => {
   }
 
   if (to.meta.requiresEvaluador && !perfilEsEvaluador(authStore.user)) {
+    return next({ name: 'Inicio' })
+  }
+
+  if (to.meta.requiresReporte && !perfilPuedeVerReporte(authStore.user)) {
     return next({ name: 'Inicio' })
   }
 

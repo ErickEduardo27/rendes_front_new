@@ -200,3 +200,27 @@ export async function obtenerAtencionesTotalesImportacion(getAllIpress, idPeriod
   const n = Number(total);
   return Number.isFinite(n) ? n : null;
 }
+
+/**
+ * N° de atenciones vigente: el corregido por el supervisor si existe;
+ * si no, el de la importación HD.
+ * @returns {Promise<{ numero: number|null, corregidoPorSupervisor: boolean }>}
+ */
+export async function obtenerNumeroAtencionesVigente(getAllIpress, idPeriodo, idIpress, idModalidad) {
+  try {
+    const qs = new URLSearchParams({
+      id_periodo: String(idPeriodo),
+      id_ipress: String(idIpress),
+      id_modalidad: String(idModalidad),
+    }).toString();
+    const evaluacion = await getAllIpress(`/consulta_inicio_trr_periodo/?${qs}`);
+    const sup = evaluacion?.numero_atenciones_supervisor;
+    if (sup != null && sup !== '' && Number.isFinite(Number(sup))) {
+      return { numero: Number(sup), corregidoPorSupervisor: true };
+    }
+  } catch (e) {
+    console.warn('N° atenciones (evaluación supervisor):', e);
+  }
+  const numero = await obtenerAtencionesTotalesImportacion(getAllIpress, idPeriodo, idIpress, idModalidad);
+  return { numero, corregidoPorSupervisor: false };
+}

@@ -3,7 +3,7 @@
     <div class="w-full max-w-full mx-auto">
       <div class="mb-6">
         <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-          <span class="w-1.5 h-8 bg-violet-500 rounded-full"></span>
+          <span class="w-1.5 h-8 bg-blue-500 rounded-full"></span>
           Evaluación de registros
         </h1>
         <p class="text-slate-500 mt-1 text-sm">
@@ -13,24 +13,96 @@
           <strong>Editar</strong> guarda correcciones y comentario del supervisor; <strong>Aprobar</strong> marca el registro como revisado favorablemente. Si aprueba todos los registros del módulo, el formulario se cierra solo. <strong>Observar</strong> deja un comentario y habilita únicamente ese registro para que la clínica lo corrija (también puede usarse tras una aprobación si hubo confusión).
         </p>
         <p class="text-xs text-slate-500 mt-1">
-          En los formularios se listan <strong>todos los pacientes en atención</strong> del periodo, clínica y modalidad; si no hay registro en ese módulo, la fila aparece como <strong>SIN REGISTRO</strong> y puede <strong>Registrar</strong> los datos desde aquí.
+          En los formularios se listan <strong>todos los pacientes en atención</strong> del periodo, clínica y modalidad; si no hay registro en ese módulo, la fila aparece como <strong>SIN REGISTRO</strong> y puede crear el registro con <strong>Nuevo</strong>.
         </p>
       </div>
 
       <div
         v-if="filtroListo && notificacionClinica.notificado"
-        class="mb-4 rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm text-sky-950 shadow-sm"
+        class="mb-4 rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-950 shadow-sm"
       >
-        <p class="font-bold text-sky-900 flex items-center gap-2">
-          <span class="inline-block h-2 w-2 rounded-full bg-sky-500 animate-pulse shrink-0" aria-hidden="true"></span>
+        <p class="font-bold text-blue-900 flex items-center gap-2">
+          <span class="inline-block h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" aria-hidden="true"></span>
           La clínica notificó que envía los registros a revisión
         </p>
-        <p class="text-sky-900/90 mt-1.5">
+        <p class="text-blue-900/90 mt-1.5">
           <template v-if="textoFechaNotificacion">Fecha: {{ textoFechaNotificacion }}</template>
           <template v-if="notificacionClinica.usuario_nombre">
             <span v-if="textoFechaNotificacion"> · </span>Notificado por: {{ notificacionClinica.usuario_nombre }}
           </template>
         </p>
+      </div>
+
+      <div
+        v-if="filtroListo"
+        class="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3"
+      >
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">N° de atenciones</span>
+            <template v-if="editandoAtenciones">
+              <input
+                v-model="valorEdicionAtenciones"
+                type="number"
+                min="0"
+                step="1"
+                class="w-28 border border-slate-300 rounded-lg px-2 py-1 text-sm tabular-nums"
+                @keyup.enter="guardarEdicionAtenciones"
+              />
+            </template>
+            <span v-else class="text-lg font-bold text-slate-800 tabular-nums">
+              {{ cargandoAtenciones ? '…' : (numeroAtencionesVigente ?? '—') }}
+            </span>
+            <span
+              class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              :class="claseEstadoAtenciones"
+            >{{ textoEstadoAtenciones }}</span>
+          </div>
+          <div class="text-xs text-slate-500">
+            Planilla HD: <strong class="text-slate-700 tabular-nums">{{ numeroAtencionesPlanilla ?? 'Sin importación' }}</strong>
+            <template v-if="evaluacionAtenciones.numero_atenciones_supervisor != null">
+              · Corregido por supervisor: <strong class="text-blue-700 tabular-nums">{{ evaluacionAtenciones.numero_atenciones_supervisor }}</strong>
+            </template>
+            <template v-if="evaluacionAtenciones.evaluado_por_atenciones_nombre">
+              · {{ evaluacionAtenciones.evaluado_por_atenciones_nombre }}
+              <template v-if="evaluacionAtenciones.fecha_evaluacion_atenciones">
+                ({{ formatFechaHoraDDMMAAAA(evaluacionAtenciones.fecha_evaluacion_atenciones) }})
+              </template>
+            </template>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <template v-if="editandoAtenciones">
+            <button
+              type="button"
+              class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold disabled:opacity-50"
+              :disabled="guardandoAtenciones"
+              @click="guardarEdicionAtenciones"
+            >{{ guardandoAtenciones ? 'Guardando…' : 'Guardar' }}</button>
+            <button
+              type="button"
+              class="text-xs px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+              :disabled="guardandoAtenciones"
+              @click="editandoAtenciones = false"
+            >Cancelar</button>
+          </template>
+          <template v-else>
+            <button
+              type="button"
+              class="text-xs px-3 py-1.5 rounded-lg bg-blue-100 text-blue-900 hover:bg-blue-200 font-semibold disabled:opacity-50"
+              :disabled="cargandoAtenciones || guardandoAtenciones"
+              @click="iniciarEdicionAtenciones"
+            >Editar</button>
+            <button
+              v-if="evaluacionAtenciones.estado_aprobacion_atenciones !== 'APROBADO'"
+              type="button"
+              class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold disabled:opacity-50"
+              :disabled="cargandoAtenciones || guardandoAtenciones || numeroAtencionesVigente == null"
+              :title="numeroAtencionesVigente == null ? 'No hay N° de atenciones para aprobar' : ''"
+              @click="aprobarNumeroAtenciones"
+            >Aprobar</button>
+          </template>
+        </div>
       </div>
 
       <div class="flex flex-wrap gap-1 mb-4 border-b border-slate-200">
@@ -39,7 +111,7 @@
           :key="tab.key"
           type="button"
           class="px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-colors"
-          :class="modulo === tab.key ? 'bg-white text-violet-700 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
+          :class="modulo === tab.key ? 'bg-white text-blue-700 border border-b-0 border-slate-200 -mb-px' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'"
           @click="modulo = tab.key"
         >
           {{ tab.label }}
@@ -68,14 +140,14 @@
         <template v-else-if="esModuloPorPaciente">
         <div
           v-if="mostrarBannerAbrir"
-          class="px-4 py-3 border-b border-amber-100 bg-amber-50/90 flex flex-wrap items-center justify-between gap-3"
+          class="px-4 py-3 border-b border-blue-100 bg-blue-50/80 flex flex-wrap items-center justify-between gap-3"
         >
-          <p class="text-sm text-amber-950">
+          <p class="text-sm text-blue-950">
             El formulario de <strong>{{ etiquetaModuloActual }}</strong> está <strong>cerrado</strong> para este periodo, clínica y modalidad. Las clínicas no pueden registrar hasta que lo abra.
           </p>
           <button
             type="button"
-            class="shrink-0 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+            class="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
             :disabled="abriendoFormulario"
             @click="confirmarAbrirFormulario"
           >
@@ -85,9 +157,9 @@
 
         <div
           v-else-if="puedeCerrarFormulario"
-          class="px-4 py-3 border-b border-emerald-100 bg-emerald-50/80 flex flex-wrap items-center justify-between gap-3"
+          class="px-4 py-3 border-b border-blue-100 bg-blue-50/80 flex flex-wrap items-center justify-between gap-3"
         >
-          <p class="text-sm text-emerald-900">
+          <p class="text-sm text-blue-900">
             <template v-if="sinRegistrosEnModulo">
               No hay registros ingresados en <strong>{{ etiquetaModuloActual }}</strong> para este periodo, clínica y modalidad. Puede cerrar el formulario igualmente.
             </template>
@@ -115,7 +187,7 @@
               <button
                 v-if="pendientesAprobacion.length"
                 type="button"
-                class="text-xs px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold disabled:opacity-50"
+                class="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-semibold disabled:opacity-50"
                 :disabled="aprobandoTodos"
                 @click="aprobarTodosPendientes"
               >
@@ -196,7 +268,7 @@
                     </td>
                     <td class="px-2 py-1.5 text-slate-600 whitespace-nowrap">{{ r.datosEvaluadoPor?.nombre || '—' }}</td>
                     <td class="px-2 py-1.5">
-                      <span v-if="r.supervisor_edito_registro" class="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-800">Sí</span>
+                      <span v-if="r.supervisor_edito_registro" class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-800">Sí</span>
                       <span v-else class="text-slate-400">—</span>
                     </td>
                     <td class="px-2 py-1.5 text-slate-600 max-w-[120px] truncate" :title="r.comentario_evaluacion || ''">{{ comentarioCorto(r.comentario_evaluacion, 40) }}</td>
@@ -204,20 +276,21 @@
                       <div class="flex flex-wrap gap-1">
                         <button
                           type="button"
-                          class="text-[10px] px-2 py-0.5 rounded bg-cyan-100 text-cyan-900 hover:bg-cyan-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                          class="text-[10px] px-2 py-0.5 rounded border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                           title="Crear un nuevo registro para este paciente"
                           @click="abrirModalNuevoRegistro(modulo, r)"
                         >Nuevo</button>
                         <button
+                          v-if="!r.sin_registro_modulo"
                           type="button"
-                          class="text-[10px] px-2 py-0.5 rounded bg-violet-100 text-violet-900 hover:bg-violet-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-                          :title="r.sin_registro_modulo ? 'Registrar datos del paciente en este formulario' : 'Editar registro'"
+                          class="text-[10px] px-2 py-0.5 rounded bg-blue-100 text-blue-900 hover:bg-blue-200 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Editar registro"
                           @click="abrirModalEditar(modulo, r)"
-                        >{{ r.sin_registro_modulo ? 'Registrar' : 'Editar' }}</button>
+                        >Editar</button>
                         <button
                           v-if="mostrarBotonAprobar(r.estado_aprobacion, r)"
                           type="button"
-                          class="text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 hover:bg-emerald-200 font-semibold disabled:opacity-40"
+                          class="text-[10px] px-2 py-0.5 rounded bg-blue-600 text-white hover:bg-blue-700 font-semibold disabled:opacity-40"
                           :disabled="evaluando === claveFila(modulo, idFilaRegistro(r))"
                           :title="r.sin_registro_modulo ? 'Primero debe existir un registro en el módulo' : ''"
                           @click="evaluar(modulo, r, 'APROBADO')"
@@ -225,7 +298,7 @@
                         <button
                           v-if="mostrarBotonObservar(r)"
                           type="button"
-                          class="text-[10px] px-2 py-0.5 rounded bg-amber-100 text-amber-900 hover:bg-amber-200 font-semibold disabled:opacity-40"
+                          class="text-[10px] px-2 py-0.5 rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-semibold disabled:opacity-40"
                           :disabled="evaluando === claveFila(modulo, idFilaRegistro(r))"
                           :title="tituloBotonObservar(r)"
                           @click="observarRegistro(modulo, r)"
@@ -249,7 +322,7 @@
         @click.self="cerrarModalFormulario"
       >
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-200">
-          <div class="bg-violet-600 px-6 py-4 flex justify-between items-center shrink-0">
+          <div class="bg-blue-600 px-6 py-4 flex justify-between items-center shrink-0">
             <h3 class="font-bold text-white">{{ tituloModalFormulario }}</h3>
             <button type="button" class="text-white/80 hover:text-white text-lg leading-none" aria-label="Cerrar" @click="cerrarModalFormulario">✕</button>
           </div>
@@ -344,6 +417,7 @@ import {
 } from '@/utils/accesoVascularValidacion';
 import { atencionesParaListadoRegistros } from '@/composables/useAtencionesRegistro';
 import { formatFechaHoraDDMMAAAA, fechaCelda } from '@/utils/fechaFormat';
+import { obtenerAtencionesTotalesImportacion } from '@/utils/importacionProduccionHdStorage';
 
 const periodoGlobal = inject('periodoGlobal', ref(null));
 const clinicaGlobal = inject('clinicaGlobal', ref(null));
@@ -351,13 +425,13 @@ const modalidadGlobal = inject('modalidadGlobal', ref(null));
 const router = useRouter();
 
 const tabs = [
-  { key: 'pacientes', label: 'Pacientes' },
+  { key: 'pacientes', label: 'Inicio de TRR' },
   { key: 'acceso', label: 'Acceso Vascular' },
   { key: 'eventos', label: 'Eventos Infecciosos' },
-  { key: 'morbilidad', label: 'Morbilidad Hospitalaria' },
-  { key: 'resultados', label: 'Resultados Clínicos' },
-  { key: 'vacunacion', label: 'Vacunación' },
-  { key: 'calidad', label: 'Calidad de agua' },
+  { key: 'morbilidad', label: 'Morbimortalidad' },
+  { key: 'resultados', label: 'Resultados Clínicos y tratamiento' },
+  { key: 'vacunacion', label: 'Serología y Vacunación' },
+  { key: 'calidad', label: 'Calidad de agua y LD' },
   { key: 'movimientos', label: 'Movimientos' },
 ];
 
@@ -421,6 +495,103 @@ function onNotificacionRevisionEvent() {
   fetchNotificacionEnvioRevision();
 }
 
+const EVALUACION_ATENCIONES_VACIA = {
+  numero_atenciones_supervisor: null,
+  estado_aprobacion_atenciones: 'PENDIENTE',
+  evaluado_por_atenciones_nombre: null,
+  fecha_evaluacion_atenciones: null,
+};
+const numeroAtencionesPlanilla = ref(null);
+const evaluacionAtenciones = ref({ ...EVALUACION_ATENCIONES_VACIA });
+const cargandoAtenciones = ref(false);
+const guardandoAtenciones = ref(false);
+const editandoAtenciones = ref(false);
+const valorEdicionAtenciones = ref('');
+
+const numeroAtencionesVigente = computed(() => (
+  evaluacionAtenciones.value.numero_atenciones_supervisor ?? numeroAtencionesPlanilla.value
+));
+
+const textoEstadoAtenciones = computed(() => {
+  const e = evaluacionAtenciones.value.estado_aprobacion_atenciones;
+  if (e === 'APROBADO') return 'APROBADO';
+  if (e === 'EDITADO') return 'EDITADO (pendiente de aprobar)';
+  return 'PENDIENTE';
+});
+
+const claseEstadoAtenciones = computed(() => {
+  const e = evaluacionAtenciones.value.estado_aprobacion_atenciones;
+  if (e === 'APROBADO') return 'bg-emerald-100 text-emerald-800';
+  if (e === 'EDITADO') return 'bg-blue-100 text-blue-800';
+  return 'bg-amber-100 text-amber-800';
+});
+
+async function fetchNumeroAtenciones() {
+  editandoAtenciones.value = false;
+  if (!filtroListo.value) {
+    numeroAtencionesPlanilla.value = null;
+    evaluacionAtenciones.value = { ...EVALUACION_ATENCIONES_VACIA };
+    return;
+  }
+  cargandoAtenciones.value = true;
+  try {
+    const [planilla, evaluacion] = await Promise.all([
+      obtenerAtencionesTotalesImportacion(getAllIpress, periodoGlobal.value, clinicaGlobal.value, modalidadGlobal.value)
+        .catch(() => null),
+      getAllIpress(`/consulta_inicio_trr_periodo/?${buildQs()}`).catch(() => null),
+    ]);
+    numeroAtencionesPlanilla.value = planilla;
+    evaluacionAtenciones.value = { ...EVALUACION_ATENCIONES_VACIA, ...(evaluacion || {}) };
+  } finally {
+    cargandoAtenciones.value = false;
+  }
+}
+
+function iniciarEdicionAtenciones() {
+  valorEdicionAtenciones.value = numeroAtencionesVigente.value ?? '';
+  editandoAtenciones.value = true;
+}
+
+async function enviarEvaluacionAtenciones(accion, numero) {
+  guardandoAtenciones.value = true;
+  try {
+    const res = await postAllIpress('/evaluar_numero_atenciones/', {
+      id_periodo: Number(periodoGlobal.value),
+      id_ipress: Number(clinicaGlobal.value),
+      id_modalidad: Number(modalidadGlobal.value),
+      accion,
+      ...(numero != null ? { numero_atenciones: numero } : {}),
+    });
+    evaluacionAtenciones.value = { ...EVALUACION_ATENCIONES_VACIA, ...(res || {}) };
+    editandoAtenciones.value = false;
+    return true;
+  } catch (e) {
+    console.error(e);
+    ElMessage.error(e?.detail || e?.error || e?.message || 'No se pudo guardar el N° de atenciones.');
+    return false;
+  } finally {
+    guardandoAtenciones.value = false;
+  }
+}
+
+async function guardarEdicionAtenciones() {
+  const n = Number(valorEdicionAtenciones.value);
+  if (valorEdicionAtenciones.value === '' || !Number.isInteger(n) || n < 0) {
+    ElMessage.warning('Ingrese un N° de atenciones entero mayor o igual a cero.');
+    return;
+  }
+  if (await enviarEvaluacionAtenciones('EDITAR', n)) {
+    ElMessage.success('N° de atenciones corregido. Recuerde aprobarlo.');
+  }
+}
+
+async function aprobarNumeroAtenciones() {
+  if (numeroAtencionesVigente.value == null) return;
+  if (await enviarEvaluacionAtenciones('APROBAR', numeroAtencionesVigente.value)) {
+    ElMessage.success('N° de atenciones aprobado.');
+  }
+}
+
 const mostrarModalFormulario = ref(false);
 const moduloFormulario = ref('acceso');
 const registroEdicion = ref(null);
@@ -452,15 +623,9 @@ const clinicaActualTexto = computed(() => {
 });
 
 const tituloModalFormulario = computed(() => {
-  const labels = {
-    acceso: 'Editar acceso vascular',
-    eventos: 'Editar evento infeccioso',
-    morbilidad: 'Editar morbilidad hospitalaria',
-    resultados: 'Editar resultados clínicos',
-    vacunacion: 'Editar vacunación',
-    calidad: 'Editar calidad de agua',
-  };
-  return labels[moduloFormulario.value] || 'Editar registro';
+  const accion = registroEdicion.value ? 'Editar registro' : 'Nuevo registro';
+  const tab = tabs.find((t) => t.key === moduloFormulario.value);
+  return tab ? `${accion} — ${tab.label}` : accion;
 });
 
 function pacienteDesdeRegistro(registro) {
@@ -1242,6 +1407,7 @@ watch([periodoGlobal, clinicaGlobal, modalidadGlobal], () => {
     fetchEstadoFormularioActual();
   }
   fetchNotificacionEnvioRevision();
+  fetchNumeroAtenciones();
 }, { deep: true });
 watch(modulo, () => {
   filtroListadoNombre.value = '';
@@ -1259,6 +1425,7 @@ onMounted(() => {
     fetchEstadoFormularioActual();
   }
   fetchNotificacionEnvioRevision();
+  fetchNumeroAtenciones();
   getAllIpress('/periodos/').then((res) => {
     periodosLista.value = Array.isArray(res) ? res : (res?.results || []);
   }).catch(() => { periodosLista.value = []; });

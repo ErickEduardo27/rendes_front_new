@@ -27,7 +27,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { getAllIpress } from '@/services/ipress/Ipress.service';
-import { obtenerAtencionesTotalesImportacion } from '@/utils/importacionProduccionHdStorage';
+import { obtenerNumeroAtencionesVigente } from '@/utils/importacionProduccionHdStorage';
 
 const props = defineProps({
   periodo: { type: [Number, String], default: null },
@@ -38,6 +38,7 @@ const props = defineProps({
 const cargando = ref(false);
 const atencionesTotales = ref(null);
 const tieneImportacion = ref(false);
+const corregidoSupervisor = ref(false);
 
 const filtroListo = computed(() => (
   props.periodo != null && props.periodo !== ''
@@ -53,6 +54,7 @@ const textoSesiones = computed(() => {
 });
 
 const tituloValor = computed(() => {
+  if (corregidoSupervisor.value) return 'N° de atenciones corregido por el supervisor';
   if (!tieneImportacion.value) {
     return 'Atenciones totales de la importación de tiempo de diálisis (ejecutadas + adicionales)';
   }
@@ -67,18 +69,20 @@ async function cargarSesionesDesdeImportacion() {
   }
   cargando.value = true;
   try {
-    const total = await obtenerAtencionesTotalesImportacion(
+    const { numero, corregidoPorSupervisor } = await obtenerNumeroAtencionesVigente(
       getAllIpress,
       props.periodo,
       props.clinica,
       props.modalidad,
     );
-    atencionesTotales.value = total;
-    tieneImportacion.value = total != null;
+    atencionesTotales.value = numero;
+    tieneImportacion.value = numero != null;
+    corregidoSupervisor.value = corregidoPorSupervisor;
   } catch (e) {
     console.warn('N° Sesiones (importación):', e);
     atencionesTotales.value = null;
     tieneImportacion.value = false;
+    corregidoSupervisor.value = false;
   } finally {
     cargando.value = false;
   }

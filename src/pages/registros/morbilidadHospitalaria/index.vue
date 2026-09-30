@@ -5,9 +5,9 @@
         <div>
           <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <span class="w-1.5 h-8 bg-cyan-500 rounded-full"></span>
-            Morbimorbilidad
+            Morbimortalidad
           </h1>
-          <p class="text-slate-500 mt-1 text-sm">Registros de morbilidad hospitalaria por periodo, IPRESS y modalidad.</p>
+          <p class="text-slate-500 mt-1 text-sm">Registros de morbimortalidad por periodo, IPRESS y modalidad.</p>
           <div class="mt-3 flex items-center gap-2">
             <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado del formulario</span>
             <span
@@ -27,16 +27,6 @@
           </p>
         </div>
         <div class="flex items-center gap-2">
-          <!-- <button
-            type="button"
-            class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
-            @click="abrirModalImportar"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            Importar
-          </button> -->
           <button
             v-if="mostrarBotonNuevo"
             type="button"

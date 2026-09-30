@@ -30,7 +30,7 @@
                     v-else-if="movimientosCerrados"
                     class="mt-2 text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 max-w-2xl"
                 >
-                    Los movimientos de este periodo están <strong>sincerados/cerrados</strong>. No se puede captar, egresar, editar ni eliminar hasta que el supervisor los abra de nuevo.
+                    Los movimientos de este periodo están <strong>aprobados/cerrados</strong>. Nadie puede captar, egresar, editar ni eliminar hasta que el supervisor abra el formulario.
                 </p>
             </div>
             <div class="flex gap-2">
@@ -71,7 +71,7 @@
             class="rounded-xl border border-amber-100 bg-amber-50/90 px-4 py-3 flex flex-wrap items-center justify-between gap-3"
         >
             <p class="text-sm text-amber-950">
-                Los movimientos están <strong>sincerados/cerrados</strong>. No se puede captar, egresar, editar ni eliminar hasta que se abran de nuevo.
+                Los movimientos están <strong>aprobados/cerrados</strong>. Nadie puede captar, egresar, editar ni eliminar hasta que abra el formulario.
             </p>
             <button
                 type="button"
@@ -79,7 +79,7 @@
                 :disabled="abriendoMovimientos"
                 @click="confirmarAbrirMovimientos"
             >
-                {{ abriendoMovimientos ? 'Abriendo…' : 'Abrir movimientos' }}
+                {{ abriendoMovimientos ? 'Abriendo…' : 'Abrir formulario' }}
             </button>
         </div>
         <div
@@ -87,15 +87,15 @@
             class="rounded-xl border border-emerald-100 bg-emerald-50/80 px-4 py-3 flex flex-wrap items-center justify-between gap-3"
         >
             <p class="text-sm text-emerald-900">
-                Puede <strong>sincerar (cerrar)</strong> los movimientos del periodo actual para bloquear captar, egresar y editar.
+                Puede <strong>aprobar y cerrar</strong> los movimientos del periodo actual. Una vez aprobados, nadie podrá captar, egresar, editar ni eliminar hasta que abra el formulario.
             </p>
             <button
                 type="button"
                 class="shrink-0 rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-50"
                 :disabled="cerrandoMovimientos"
-                @click="confirmarSincerarMovimientos"
+                @click="confirmarCerrarMovimientos"
             >
-                {{ cerrandoMovimientos ? 'Sincerando…' : 'Sincerar movimientos' }}
+                {{ cerrandoMovimientos ? 'Aprobando…' : 'Aprobar y cerrar movimientos' }}
             </button>
         </div>
 
@@ -951,7 +951,7 @@
         <!-- Modal: registrar hospitalización (Form4) antes de egresar -->
         <div
             v-if="mostrarModalForm4Hospitalizacion && pacienteParaForm4"
-            class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+            class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4"
         >
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
                 <div class="bg-[#008f9c] px-6 py-4 flex justify-between items-center gap-3 shrink-0">
@@ -1012,7 +1012,7 @@ defineProps({
   modoEvaluacion: { type: Boolean, default: false },
 });
 
-/** Formulario 6 = movimientos (abrir/cerrar / sincerar periodo). */
+/** Formulario 6 = movimientos (aprobar/cerrar y abrir periodo). */
 const NUMERO_FORMULARIO_MOVIMIENTOS = 6;
 
 // Estados globales del sistema (NavBar: periodo, clínica, modalidad)
@@ -1059,7 +1059,7 @@ const tituloBloqueoAcciones = computed(() => {
   }
   if (bloqueadoPorNotificacion.value) return mensajeBloqueoNotificacion;
   if (movimientosCerrados.value) {
-    return 'Los movimientos de este periodo están sincerados/cerrados. No se pueden editar ni eliminar.';
+    return 'Los movimientos de este periodo están aprobados/cerrados. No se pueden editar ni eliminar hasta que el supervisor abra el formulario.';
   }
   return '';
 });
@@ -1135,15 +1135,15 @@ async function fetchEstadoMovimientos() {
   }
 }
 
-async function confirmarSincerarMovimientos() {
+async function confirmarCerrarMovimientos() {
   if (!filtroListo.value) return;
   try {
     await ElMessageBox.confirm(
-      '¿Sincerar (cerrar) los movimientos de este periodo, clínica y modalidad? No se podrá captar, egresar, editar ni eliminar hasta que se abran de nuevo.',
-      'Sincerar movimientos',
+      '¿Aprobar y cerrar los movimientos de este periodo, clínica y modalidad? Nadie podrá captar, egresar, editar ni eliminar hasta que el supervisor abra el formulario.',
+      'Aprobar y cerrar movimientos',
       {
         type: 'warning',
-        confirmButtonText: 'Sí, sincerar',
+        confirmButtonText: 'Sí, aprobar y cerrar',
         cancelButtonText: 'Cancelar',
       },
     );
@@ -1164,11 +1164,11 @@ async function confirmarSincerarMovimientos() {
       estado: 2,
     });
     movimientosAbiertos.value = false;
-    ElMessage.success('Movimientos sincerados. Ya no se pueden editar ni eliminar.');
+    ElMessage.success('Movimientos aprobados y cerrados. Ya no se pueden editar ni eliminar.');
     await fetchEstadoMovimientos();
   } catch (e) {
     console.error(e);
-    ElMessage.error(e?.error || e?.message || 'No se pudo sincerar los movimientos.');
+    ElMessage.error(e?.error || e?.message || 'No se pudo aprobar y cerrar los movimientos.');
   } finally {
     cerrandoMovimientos.value = false;
   }
@@ -1182,8 +1182,8 @@ async function confirmarAbrirMovimientos() {
   }
   try {
     await ElMessageBox.confirm(
-      '¿Abrir de nuevo los movimientos para este periodo, clínica y modalidad? Se podrá volver a editar.',
-      'Abrir movimientos',
+      '¿Abrir el formulario de movimientos para este periodo, clínica y modalidad? Se podrá volver a captar, egresar, editar y eliminar.',
+      'Abrir formulario',
       {
         type: 'info',
         confirmButtonText: 'Sí, abrir',
@@ -1202,7 +1202,7 @@ async function confirmarAbrirMovimientos() {
       id_formulario: NUMERO_FORMULARIO_MOVIMIENTOS,
       estado: 1,
     });
-    ElMessage.success('Movimientos abiertos nuevamente.');
+    ElMessage.success('Formulario de movimientos abierto nuevamente.');
     await fetchEstadoMovimientos();
   } catch (e) {
     console.error(e);
@@ -1222,7 +1222,7 @@ function asegurarAccionesMovimientoPermitidas() {
     return false;
   }
   if (movimientosCerrados.value) {
-    ElMessage.warning('Los movimientos están sincerados/cerrados. No se pueden editar ni eliminar.');
+    ElMessage.warning('Los movimientos están aprobados/cerrados. No se pueden editar ni eliminar hasta que el supervisor abra el formulario.');
     return false;
   }
   return true;
@@ -1743,7 +1743,7 @@ async function eliminarMovimiento(mov) {
         ElMessage.warning(
             periodoConforme.value
                 ? 'El periodo ya tiene conformidad. No se pueden eliminar movimientos.'
-                : 'Los movimientos están sincerados/cerrados. No se pueden eliminar.',
+                : 'Los movimientos están aprobados/cerrados. No se pueden eliminar.',
         );
         return;
     }
@@ -2278,7 +2278,7 @@ const editarMovimiento = async (mov) => {
         ElMessage.warning(
             periodoConforme.value
                 ? 'El periodo ya tiene conformidad. No se pueden editar movimientos.'
-                : 'Los movimientos están sincerados/cerrados. No se pueden editar.',
+                : 'Los movimientos están aprobados/cerrados. No se pueden editar.',
         );
         return;
     }
