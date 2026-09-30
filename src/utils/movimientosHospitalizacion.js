@@ -1,4 +1,4 @@
-import { getAllIpress, postAllIpress, patchAllIpress } from '@/services/ipress/Ipress.service';
+import { getAllIpress, postAllIpress, patchAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
 import { resolverIdPeriodoIpress } from '@/utils/estadisticasRegistrosFormularios';
 
 /** Efectos de la confirmación al registrar hospitalización */
@@ -26,6 +26,10 @@ export const OPCIONES_EFECTO_HOSPITALIZACION = [
   },
 ];
 
+const MARCA_EGRESO_HOSP = 'Generado automáticamente desde morbilidad hospitalaria';
+const MARCA_EGRESO_HOSP_ALT = 'Generado automáticamente desde hospitalización';
+const MARCA_REINGRESO_HOSP = 'Reingreso automático tras hospitalización';
+
 function truncarObservaciones(texto, max = 100) {
   const s = String(texto || '');
   return s.length <= max ? s : `${s.slice(0, max - 3)}...`;
@@ -33,6 +37,58 @@ function truncarObservaciones(texto, max = 100) {
 
 function nowSql() {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function soloFecha(value) {
+  if (value == null || value === '') return '';
+  const s = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return s;
+}
+
+function fechaAtencion(row) {
+  return soloFecha(row?.fecha_atencion || row?.fecha_inicio || row?.fecha_fin);
+}
+
+function obsTexto(row) {
+  return String(row?.observaciones || '');
+}
+
+function esEgresoAutoHospitalizacion(row, idMorbilidad = null) {
+  if (String(row?.tipo_atencion || '').toUpperCase() !== 'EGRESO') return false;
+  const obs = obsTexto(row);
+  if (idMorbilidad != null && idMorbilidad !== '') {
+    if (
+      (obs.includes(`[Hosp#${idMorbilidad}]`) || obs.includes(`#${idMorbilidad}`))
+      && /morbilidad hospitalaria|desde hospitalizaci/i.test(obs)
+    ) {
+      return true;
+    }
+  }
+  return obs.includes(MARCA_EGRESO_HOSP) || obs.includes(MARCA_EGRESO_HOSP_ALT);
+}
+
+function esReingresoAutoHospitalizacion(row, idMorbilidad = null) {
+  if (String(row?.tipo_atencion || '').toUpperCase() !== 'REINGRESO') return false;
+  const obs = obsTexto(row);
+  if (idMorbilidad != null && idMorbilidad !== '') {
+    if (
+      (obs.includes(`[Hosp#${idMorbilidad}]`) || obs.includes(`#${idMorbilidad}`))
+      && /tras hospitalizaci/i.test(obs)
+    ) {
+      return true;
+    }
+  }
+  return obs.includes(MARCA_REINGRESO_HOSP);
+}
+
+function estadoPacienteDesdeTipoAtencion(tipoAtencion) {
+  const t = String(tipoAtencion || '').toUpperCase();
+  if (t === 'NUEVO') return 'NUEVO';
+  if (t === 'REINGRESO') return 'REINGRESO';
+  if (t === 'CONTINUADOR') return 'CONTINUADOR';
+  if (t === 'EGRESO') return 'EGRESADO';
+  return 'ACTIVO';
 }
 
 async function patchPacienteEstado(pacienteId, nuevoEstado) {
@@ -54,6 +110,122 @@ async function actualizarPeriodoIpressPaciente(pacienteId, periodoId, ipressId) 
   }
 }
 
+async function listarAtencionesPaciente(pacienteId) {
+  const res = await getAllIpress(`/pacienteAtencion/?id_paciente=${encodeURIComponent(pacienteId)}`);
+  return Array.isArray(res) ? res : (res?.results || []);
+}
+
+function filtrarPorFechasCandidatas(lista, fechasCandidatas) {
+  const set = new Set(
+    (fechasCandidatas || []).map(soloFecha).filter(Boolean),
+  );
+  if (!set.size) return [];
+  return lista.filter((row) => set.has(fechaAtencion(row)));
+}
+
+/**
+ * Elimina egresos/reingresos generados automáticamente por una hospitalización
+ * y reactiva la atención de origen.
+ */
+export async function revertirMovimientosPorHospitalizacion({
+  pacienteId,
+  idPacienteAtencionOrigen = null,
+  idMorbilidad = null,
+  fechasEgresoCandidatas = [],
+  fechasReingresoCandidatas = [],
+  ipressId = null,
+} = {}) {
+  if (!pacienteId) return { eliminados: 0, restauradaOrigen: false };
+
+  let atenciones = [];
+  try {
+    atenciones = await listarAtencionesPaciente(pacienteId);
+  } catch (e) {
+    console.warn('No se pudieron listar atenciones para revertir hospitalización:', e);
+    return { eliminados: 0, restauradaOrigen: false };
+  }
+
+  const fechasEgreso = [...(fechasEgresoCandidatas || [])];
+  const idOrigenNum = idPacienteAtencionOrigen != null ? Number(idPacienteAtencionOrigen) : null;
+  if (idOrigenNum && !Number.isNaN(idOrigenNum)) {
+    const origenRow = atenciones.find(
+      (a) => Number(a.id_paciente_atencion) === idOrigenNum,
+    );
+    if (origenRow?.fecha_fin) fechasEgreso.push(origenRow.fecha_fin);
+  }
+
+  const mismaIpress = (row) => {
+    if (ipressId == null || ipressId === '') return true;
+    const id = row?.id_ipress ?? row?.datosIpress?.id_ipress;
+    return id == null || String(id) === String(ipressId);
+  };
+
+  let egresos = atenciones.filter(
+    (a) => esEgresoAutoHospitalizacion(a, idMorbilidad) && mismaIpress(a),
+  );
+  let reingresos = atenciones.filter(
+    (a) => esReingresoAutoHospitalizacion(a, idMorbilidad) && mismaIpress(a),
+  );
+
+  const conMarcaId = (row) => idMorbilidad != null
+    && idMorbilidad !== ''
+    && (
+      obsTexto(row).includes(`[Hosp#${idMorbilidad}]`)
+      || obsTexto(row).includes(`#${idMorbilidad}`)
+    );
+
+  const egresosPorId = egresos.filter(conMarcaId);
+  const reingresosPorId = reingresos.filter(conMarcaId);
+  if (egresosPorId.length) {
+    egresos = egresosPorId;
+  } else {
+    egresos = filtrarPorFechasCandidatas(egresos, fechasEgreso);
+  }
+  if (reingresosPorId.length) {
+    reingresos = reingresosPorId;
+  } else {
+    reingresos = filtrarPorFechasCandidatas(reingresos, fechasReingresoCandidatas);
+  }
+
+  const idsAEliminar = [
+    ...reingresos.map((r) => r.id_paciente_atencion),
+    ...egresos.map((r) => r.id_paciente_atencion),
+  ].filter((id) => id != null);
+
+  let eliminados = 0;
+  for (const id of idsAEliminar) {
+    try {
+      await deleteAllIpress(`/pacienteAtencion/${id}/`);
+      eliminados += 1;
+    } catch (e) {
+      console.warn(`No se pudo eliminar atención ${id} generada por hospitalización:`, e);
+    }
+  }
+
+  let restauradaOrigen = false;
+  if (idOrigenNum && !Number.isNaN(idOrigenNum)) {
+    try {
+      const origen = await getAllIpress(`/pacienteAtencion/${idOrigenNum}/`);
+      const estadoOrigen = String(origen?.estado || '').toUpperCase();
+      // Solo reactivar si quitamos movimientos auto o la atención quedó cerrada por el egreso hosp.
+      if (eliminados > 0 || estadoOrigen === 'CERRADO' || estadoOrigen === 'EGRESADO') {
+        const tipoOrigen = origen?.tipo_atencion;
+        await patchAllIpress(`/pacienteAtencion/${idOrigenNum}/`, {
+          estado: 'ACTIVO',
+          fecha_fin: '',
+          ...(tipoOrigen ? { tipo_atencion: tipoOrigen } : {}),
+        });
+        await patchPacienteEstado(pacienteId, estadoPacienteDesdeTipoAtencion(tipoOrigen));
+        restauradaOrigen = true;
+      }
+    } catch (e) {
+      console.warn('No se pudo restaurar la atención de origen tras revertir hospitalización:', e);
+    }
+  }
+
+  return { eliminados, restauradaOrigen };
+}
+
 /**
  * Cierra la atención activa y crea el movimiento de egreso por hospitalización.
  * @returns {{ idAtencionCerrada: number|null }}
@@ -67,6 +239,7 @@ export async function generarEgresoPorHospitalizacion({
   fechaEgreso,
   tipoEgreso = 'Hospitalización',
   observacionesExtra = '',
+  idMorbilidad = null,
 }) {
   if (!idPacienteAtencion || !pacienteId || !periodoId || !fechaEgreso) {
     throw new Error('Faltan datos para generar el egreso por hospitalización.');
@@ -74,10 +247,12 @@ export async function generarEgresoPorHospitalizacion({
 
   const tipo = String(tipoEgreso || 'Hospitalización').trim() || 'Hospitalización';
   const esFallecimiento = /fallec/i.test(tipo);
+  const prefijoId = idMorbilidad != null && idMorbilidad !== '' ? `[Hosp#${idMorbilidad}] ` : '';
+  const marcaBase = esFallecimiento
+    ? `${MARCA_EGRESO_HOSP} (fallecimiento)`
+    : MARCA_EGRESO_HOSP;
   const obsEgreso = truncarObservaciones(
-    observacionesExtra
-      ? `Egreso: ${tipo}. ${observacionesExtra}`
-      : `Egreso: ${tipo}`,
+    `${prefijoId}Egreso: ${tipo}. ${marcaBase}`,
   );
   const now = nowSql();
 
@@ -108,7 +283,11 @@ export async function generarEgresoPorHospitalizacion({
       condicion: 'EGRESADO',
       tipo_egreso: tipo,
       fecha_egreso: fechaEgreso,
-      observaciones: observacionesExtra || 'Generado automáticamente desde hospitalización',
+      observaciones: truncarObservaciones(
+        idMorbilidad != null && idMorbilidad !== ''
+          ? `[Hosp#${idMorbilidad}] ${MARCA_EGRESO_HOSP_ALT}`
+          : MARCA_EGRESO_HOSP_ALT,
+      ),
     });
   } catch (e) {
     console.warn('PacienteRegistro (auditoría egreso hosp.):', e);
@@ -131,6 +310,7 @@ export async function generarReingresoPorHospitalizacion({
   modalidadId,
   fechaReingreso,
   observacionesExtra = '',
+  idMorbilidad = null,
 }) {
   if (!pacienteId || !periodoId || !fechaReingreso) {
     throw new Error('Faltan datos para generar el reingreso por hospitalización.');
@@ -152,6 +332,8 @@ export async function generarReingresoPorHospitalizacion({
     }
   }
 
+  const prefijoId = idMorbilidad != null && idMorbilidad !== '' ? `[Hosp#${idMorbilidad}] ` : '';
+  const marca = `${prefijoId}${MARCA_REINGRESO_HOSP}`;
   const now = nowSql();
   await postAllIpress('/pacienteAtencion/', {
     id_paciente: pacienteId,
@@ -163,8 +345,7 @@ export async function generarReingresoPorHospitalizacion({
     fecha_inicio: fechaReingreso,
     fecha_fin: '',
     estado: 'ACTIVO',
-    observaciones: observacionesExtra
-      || 'Reingreso automático tras hospitalización',
+    observaciones: truncarObservaciones(observacionesExtra || marca),
     created_at: now,
   });
 
@@ -174,6 +355,7 @@ export async function generarReingresoPorHospitalizacion({
 
 /**
  * Aplica el efecto elegido tras guardar la morbilidad hospitalaria.
+ * Si ya existían movimientos auto de esta hospitalización, los revierte antes de regenerar.
  */
 export async function aplicarEfectoMovimientoHospitalizacion({
   efecto,
@@ -181,11 +363,12 @@ export async function aplicarEfectoMovimientoHospitalizacion({
   fechaHospitalizacion,
   fechaAlta,
   fechaFallecimiento,
+  idMorbilidad = null,
+  fechasEgresoPrevias = [],
+  fechasReingresoPrevias = [],
+  revertirPrevios = true,
 }) {
-  const efectoNorm = String(efecto || '').trim();
-  if (!efectoNorm || efectoNorm === EFECTO_HOSP.SIN_EGRESO) {
-    return { movimientosGenerados: false, efecto: EFECTO_HOSP.SIN_EGRESO };
-  }
+  const efectoNorm = String(efecto || '').trim() || EFECTO_HOSP.SIN_EGRESO;
 
   const pacienteId = atencion?.id_paciente ?? atencion?.datosPaciente?.id_paciente;
   const idPacienteAtencion = atencion?.id_paciente_atencion;
@@ -195,6 +378,32 @@ export async function aplicarEfectoMovimientoHospitalizacion({
 
   const esFallecimiento = Boolean(fechaFallecimiento);
   const fechaEgreso = fechaFallecimiento || fechaHospitalizacion;
+
+  if (revertirPrevios && pacienteId) {
+    const fechasEgresoCandidatas = [
+      ...fechasEgresoPrevias,
+      fechaHospitalizacion,
+      fechaFallecimiento,
+      fechaEgreso,
+    ];
+    const fechasReingresoCandidatas = [
+      ...fechasReingresoPrevias,
+      fechaAlta,
+    ];
+    await revertirMovimientosPorHospitalizacion({
+      pacienteId,
+      idPacienteAtencionOrigen: idPacienteAtencion,
+      idMorbilidad,
+      fechasEgresoCandidatas,
+      fechasReingresoCandidatas,
+      ipressId,
+    });
+  }
+
+  if (!efectoNorm || efectoNorm === EFECTO_HOSP.SIN_EGRESO) {
+    return { movimientosGenerados: false, efecto: EFECTO_HOSP.SIN_EGRESO };
+  }
+
   if (!fechaEgreso) {
     throw new Error('No hay fecha de hospitalización (ni de fallecimiento) para el egreso.');
   }
@@ -207,9 +416,7 @@ export async function aplicarEfectoMovimientoHospitalizacion({
     modalidadId,
     fechaEgreso,
     tipoEgreso: esFallecimiento ? 'Fallecimiento' : 'Hospitalización',
-    observacionesExtra: esFallecimiento
-      ? 'Generado automáticamente desde morbilidad hospitalaria (fallecimiento)'
-      : 'Generado automáticamente desde morbilidad hospitalaria',
+    idMorbilidad,
   });
 
   if (efectoNorm === EFECTO_HOSP.EGRESO || esFallecimiento) {
@@ -227,6 +434,7 @@ export async function aplicarEfectoMovimientoHospitalizacion({
       periodoId,
       modalidadId,
       fechaReingreso: fechaAlta,
+      idMorbilidad,
     });
     return { movimientosGenerados: true, efecto: EFECTO_HOSP.EGRESO_Y_REINGRESO };
   }

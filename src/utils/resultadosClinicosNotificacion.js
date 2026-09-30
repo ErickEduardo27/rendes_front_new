@@ -124,6 +124,18 @@ export function mensajeBloqueoSerologiaNuevos(totalNuevos, conSerologia) {
   );
 }
 
+export function tieneCalidadAguaRegistrada(totalCalidadAgua) {
+  return Number(totalCalidadAgua || 0) > 0;
+}
+
+export const MENSAJE_BLOQUEO_SIN_CALIDAD_AGUA =
+  'No puede notificar: debe registrar Calidad de agua y LD para el periodo e IPRESS seleccionados (al menos un registro).';
+
+export function mensajeBloqueoCalidadAgua(totalCalidadAgua) {
+  if (tieneCalidadAguaRegistrada(totalCalidadAgua)) return '';
+  return MENSAJE_BLOQUEO_SIN_CALIDAD_AGUA;
+}
+
 export function tieneNumeroAtencionesRegistrado(numeroAtenciones) {
   if (numeroAtenciones == null || numeroAtenciones === '') return false;
   const n = Number(numeroAtenciones);

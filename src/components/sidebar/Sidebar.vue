@@ -41,6 +41,7 @@
         />
 
         <SidebarItem v-if="['Admin','Clinicas','Hospitales'].includes(perfil)" :icon="ArrowsRightLeftIcon" label="Movimientos" to="/movimientos"/>
+        <SidebarItem v-if="['Admin','Clinicas','Hospitales'].includes(perfil)" :icon="ChartBarIcon" label="Tasa BRC" to="/tasa-brc"/>
         <SidebarItem
             v-if="['Admin','Clinicas','Hospitales'].includes(perfil)"
             :icon="ArrowUpTrayIcon"

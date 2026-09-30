@@ -384,6 +384,7 @@ import {
   esErrorEndpointNoDisponible,
   atencionesTotalesFila,
   atencionesTotalesResumen,
+  compararImportacionVsInicioTrr,
 } from '@/utils/importacionProduccionHdStorage';
 import { formatFechaHoraDDMMAAAA } from '@/utils/fechaFormat';
 
@@ -417,61 +418,6 @@ const importacion = ref({
   importado: false,
   detalle: [],
 });
-
-/** Compara documentos ignorando espacios y caracteres no numéricos. */
-function normalizarDocumento(doc) {
-  return String(doc || '').replace(/\D/g, '');
-}
-
-function pacienteDesdeFilaInicioTrr(row) {
-  const documento = row?.datosPaciente?.documento || row?.documento || '';
-  const nombre = row?.datosPaciente?.paciente || row?.paciente || '—';
-  return {
-    documento: String(documento || '').trim() || '—',
-    clave: normalizarDocumento(documento),
-    nombre: String(nombre || '—').trim() || '—',
-  };
-}
-
-function pacienteDesdeFilaImportacion(row) {
-  const documento = row?.numero_documento || '';
-  const nombre = row?.apellidos_nombres || '—';
-  return {
-    documento: String(documento || '').trim() || '—',
-    clave: normalizarDocumento(documento),
-    nombre: String(nombre || '—').trim() || '—',
-  };
-}
-
-function compararImportacionVsInicioTrr(detalleImportacion, listaInicioTrr) {
-  const mapaImport = new Map();
-  (Array.isArray(detalleImportacion) ? detalleImportacion : []).forEach((row) => {
-    const p = pacienteDesdeFilaImportacion(row);
-    if (!p.clave) return;
-    if (!mapaImport.has(p.clave)) mapaImport.set(p.clave, p);
-  });
-
-  const mapaTrr = new Map();
-  (Array.isArray(listaInicioTrr) ? listaInicioTrr : []).forEach((row) => {
-    const p = pacienteDesdeFilaInicioTrr(row);
-    if (!p.clave) return;
-    if (!mapaTrr.has(p.clave)) mapaTrr.set(p.clave, p);
-  });
-
-  const soloEnImportacion = [];
-  mapaImport.forEach((p, clave) => {
-    if (!mapaTrr.has(clave)) soloEnImportacion.push(p);
-  });
-  soloEnImportacion.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-
-  const soloEnInicioTrr = [];
-  mapaTrr.forEach((p, clave) => {
-    if (!mapaImport.has(clave)) soloEnInicioTrr.push(p);
-  });
-  soloEnInicioTrr.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-
-  return { soloEnImportacion, soloEnInicioTrr };
-}
 
 const filtroListo = computed(() => (
   periodoGlobal.value != null && periodoGlobal.value !== ''

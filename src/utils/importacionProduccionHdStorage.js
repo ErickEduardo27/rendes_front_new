@@ -68,11 +68,93 @@ export function atencionesTotalesResumen(resumen) {
   return detalle.reduce((acc, row) => acc + atencionesTotalesFila(row), 0);
 }
 
+/** Compara documentos ignorando espacios y caracteres no numéricos. */
+export function normalizarDocumentoImportacion(doc) {
+  return String(doc || '').replace(/\D/g, '');
+}
+
+export function pacienteDesdeFilaInicioTrr(row) {
+  const documento = row?.datosPaciente?.documento || row?.documento || '';
+  const nombre = row?.datosPaciente?.paciente || row?.paciente || '—';
+  return {
+    documento: String(documento || '').trim() || '—',
+    clave: normalizarDocumentoImportacion(documento),
+    nombre: String(nombre || '—').trim() || '—',
+  };
+}
+
+export function pacienteDesdeFilaImportacion(row) {
+  const documento = row?.numero_documento || '';
+  const nombre = row?.apellidos_nombres || '—';
+  return {
+    documento: String(documento || '').trim() || '—',
+    clave: normalizarDocumentoImportacion(documento),
+    nombre: String(nombre || '—').trim() || '—',
+  };
+}
+
 /**
- * Obtiene el N° de sesiones (= atenciones totales) desde la importación HD
- * (API o respaldo local). Devuelve null si no hay importación.
+ * Compara pacientes de la planilla importada vs Inicio TRR (por documento).
+ * @returns {{ soloEnImportacion: object[], soloEnInicioTrr: object[], coinciden: boolean, totalImportacion: number, totalInicioTrr: number }}
  */
-export async function obtenerAtencionesTotalesImportacion(getAllIpress, idPeriodo, idIpress, idModalidad) {
+export function compararImportacionVsInicioTrr(detalleImportacion, listaInicioTrr) {
+  const mapaImport = new Map();
+  (Array.isArray(detalleImportacion) ? detalleImportacion : []).forEach((row) => {
+    const p = pacienteDesdeFilaImportacion(row);
+    if (!p.clave) return;
+    if (!mapaImport.has(p.clave)) mapaImport.set(p.clave, p);
+  });
+
+  const mapaTrr = new Map();
+  (Array.isArray(listaInicioTrr) ? listaInicioTrr : []).forEach((row) => {
+    const p = pacienteDesdeFilaInicioTrr(row);
+    if (!p.clave) return;
+    if (!mapaTrr.has(p.clave)) mapaTrr.set(p.clave, p);
+  });
+
+  const soloEnImportacion = [];
+  mapaImport.forEach((p, claveDoc) => {
+    if (!mapaTrr.has(claveDoc)) soloEnImportacion.push(p);
+  });
+  soloEnImportacion.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  const soloEnInicioTrr = [];
+  mapaTrr.forEach((p, claveDoc) => {
+    if (!mapaImport.has(claveDoc)) soloEnInicioTrr.push(p);
+  });
+  soloEnInicioTrr.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  return {
+    soloEnImportacion,
+    soloEnInicioTrr,
+    coinciden: soloEnImportacion.length === 0 && soloEnInicioTrr.length === 0,
+    totalImportacion: mapaImport.size,
+    totalInicioTrr: mapaTrr.size,
+  };
+}
+
+export function mensajeBloqueoPacientesPlanillaVsInicioTrr(comparacion) {
+  if (!comparacion || comparacion.coinciden) return '';
+  const soloImp = Number(comparacion.soloEnImportacion?.length || 0);
+  const soloTrr = Number(comparacion.soloEnInicioTrr?.length || 0);
+  const partes = [];
+  if (soloImp > 0) {
+    partes.push(`${soloImp} en planilla que no están en Inicio TRR`);
+  }
+  if (soloTrr > 0) {
+    partes.push(`${soloTrr} en Inicio TRR que no están en la planilla`);
+  }
+  return (
+    'No puede notificar: los pacientes de la importación de planilla (producción HD) '
+    + `deben coincidir con Inicio TRR (${partes.join('; ')}).`
+  );
+}
+
+/**
+ * Obtiene la importación HD (API o local) con detalle de pacientes.
+ * @returns {Promise<object|null>}
+ */
+export async function obtenerImportacionProduccionHd(getAllIpress, idPeriodo, idIpress, idModalidad) {
   if (
     idPeriodo == null || idPeriodo === ''
     || idIpress == null || idIpress === ''
@@ -92,13 +174,26 @@ export async function obtenerAtencionesTotalesImportacion(getAllIpress, idPeriod
     if (res?.importado) data = res;
   } catch (e) {
     if (!esErrorEndpointNoDisponible(e)) {
-      console.warn('Importación producción HD (sesiones):', e);
+      console.warn('Importación producción HD:', e);
     }
   }
   if (!data) {
     data = leerImportacionLocal(idPeriodo, idIpress, idModalidad);
   }
   if (!data?.importado) return null;
+  return {
+    ...data,
+    detalle: Array.isArray(data.detalle) ? data.detalle : [],
+  };
+}
+
+/**
+ * Obtiene el N° de sesiones (= atenciones totales) desde la importación HD
+ * (API o respaldo local). Devuelve null si no hay importación.
+ */
+export async function obtenerAtencionesTotalesImportacion(getAllIpress, idPeriodo, idIpress, idModalidad) {
+  const data = await obtenerImportacionProduccionHd(getAllIpress, idPeriodo, idIpress, idModalidad);
+  if (!data) return null;
 
   const total = atencionesTotalesResumen(data);
   if (total === '—' || total == null || total === '') return null;

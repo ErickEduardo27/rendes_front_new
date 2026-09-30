@@ -114,6 +114,26 @@
               >
                 Importe el reporte de producción HD (Atenciones totales) para notificar.
               </div>
+              <div class="flex justify-between pt-1 border-t border-slate-200/80">
+                <span>Pacientes planilla vs Inicio TRR</span>
+                <span
+                  class="font-semibold"
+                  :class="pacientesPlanillaOk ? 'text-emerald-700' : 'text-rose-700'"
+                >{{ etiquetaPacientesPlanilla }}</span>
+              </div>
+              <div
+                v-if="esPerfilClinicaUsuario && !pacientesPlanillaOk"
+                class="text-[11px] text-rose-700"
+              >
+                Deben coincidir: planilla {{ statsModal.pacientesPlanillaVsInicioTrr?.totalImportacion ?? 0 }}
+                · Inicio TRR {{ statsModal.pacientesPlanillaVsInicioTrr?.totalInicioTrr ?? 0 }}
+                <span v-if="(statsModal.pacientesPlanillaVsInicioTrr?.soloEnImportacion?.length || 0) > 0">
+                  · solo en planilla: {{ statsModal.pacientesPlanillaVsInicioTrr.soloEnImportacion.length }}
+                </span>
+                <span v-if="(statsModal.pacientesPlanillaVsInicioTrr?.soloEnInicioTrr?.length || 0) > 0">
+                  · solo en Inicio TRR: {{ statsModal.pacientesPlanillaVsInicioTrr.soloEnInicioTrr.length }}
+                </span>
+              </div>
 
               <p class="font-semibold text-slate-500 uppercase tracking-wide text-[10px] pt-1">Pacientes atendidos — condición inicial</p>
               <p class="text-[11px] text-slate-400 -mt-1">Condición con la que el paciente ingresó al mes y clínica.</p>
@@ -167,7 +187,19 @@
                   Pacientes NUEVO deben tener serología (VHB, Anti-HBc, VHC y VIH; puede ser Desconocido):
                   {{ statsModal.nuevosConSerologia ?? 0 }}/{{ statsModal.totalNuevosSerologia ?? 0 }}.
                 </div>
-                <div class="flex justify-between"><span>Calidad de agua</span><span class="font-semibold text-slate-800">{{ statsModal.totalCalidadAgua }}</span></div>
+                <div class="flex justify-between">
+                  <span>Calidad de agua</span>
+                  <span
+                    class="font-semibold"
+                    :class="calidadAguaOk ? 'text-slate-800' : 'text-rose-700'"
+                  >{{ statsModal.totalCalidadAgua }}</span>
+                </div>
+                <div
+                  v-if="esPerfilClinicaUsuario && !calidadAguaOk"
+                  class="text-[11px] text-rose-700"
+                >
+                  Obligatorio: registre Calidad de agua y LD para este periodo e IPRESS antes de notificar.
+                </div>
               </div>
             </div>
             <p
@@ -286,9 +318,11 @@ import { obtenerEstadisticasRegistrosFormularios } from '@/utils/estadisticasReg
 import {
   mensajeBloqueoNotificacionClinica,
   mensajeBloqueoSerologiaNuevos,
+  mensajeBloqueoCalidadAgua,
   tieneNumeroAtencionesRegistrado,
   MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES,
 } from '@/utils/resultadosClinicosNotificacion'
+import { mensajeBloqueoPacientesPlanillaVsInicioTrr } from '@/utils/importacionProduccionHdStorage'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from "@/store/auth";
 import router from "@/router/index";
@@ -375,6 +409,13 @@ const statsModal = ref({
   totalNuevosSerologia: 0,
   nuevosConSerologia: 0,
   nuevosSinSerologia: 0,
+  pacientesPlanillaVsInicioTrr: {
+    coinciden: false,
+    soloEnImportacion: [],
+    soloEnInicioTrr: [],
+    totalImportacion: 0,
+    totalInicioTrr: 0,
+  },
   puedeNotificarClinica: false,
   inicial: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
   final: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
@@ -424,11 +465,26 @@ const serologiaNuevosOk = computed(() => {
   return Number(statsModal.value.nuevosSinSerologia || 0) === 0
 })
 
+const calidadAguaOk = computed(() => Number(statsModal.value.totalCalidadAgua || 0) > 0)
+
+const pacientesPlanillaOk = computed(() => Boolean(statsModal.value.pacientesPlanillaVsInicioTrr?.coinciden))
+
+const etiquetaPacientesPlanilla = computed(() => {
+  const c = statsModal.value.pacientesPlanillaVsInicioTrr
+  if (!c) return 'Sin comparar'
+  if (c.coinciden) return 'Coinciden'
+  return 'No coinciden'
+})
+
 const mensajeBloqueoNotificacion = computed(() => {
   if (!esPerfilClinicaUsuario.value || statsModal.value.puedeNotificarClinica) return ''
   if (!tieneNumeroAtenciones.value) {
     return MENSAJE_BLOQUEO_SIN_NUMERO_ATENCIONES
   }
+  const msgPlanilla = mensajeBloqueoPacientesPlanillaVsInicioTrr(statsModal.value.pacientesPlanillaVsInicioTrr)
+  if (msgPlanilla) return msgPlanilla
+  const msgCalidad = mensajeBloqueoCalidadAgua(statsModal.value.totalCalidadAgua)
+  if (msgCalidad) return msgCalidad
   const msgSerologia = mensajeBloqueoSerologiaNuevos(
     statsModal.value.totalNuevosSerologia,
     statsModal.value.nuevosConSerologia,
@@ -756,6 +812,13 @@ async function cargarStatsNotificacion() {
       totalNuevosSerologia: 0,
       nuevosConSerologia: 0,
       nuevosSinSerologia: 0,
+      pacientesPlanillaVsInicioTrr: {
+        coinciden: false,
+        soloEnImportacion: [],
+        soloEnInicioTrr: [],
+        totalImportacion: 0,
+        totalInicioTrr: 0,
+      },
       puedeNotificarClinica: false,
       inicial: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },
       final: { total: 0, nuevos: 0, reingresos: 0, continuadores: 0, egresados: 0 },

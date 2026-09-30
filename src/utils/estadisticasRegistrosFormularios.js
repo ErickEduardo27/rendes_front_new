@@ -9,7 +9,11 @@ import {
   ultimosResultadosPorAtencion,
 } from '@/utils/resultadosClinicosNotificacion';
 import { contarUnidadesAccesoEnPeriodo, rangoFechasDesdePeriodoTexto } from '@/utils/accesoVascularValidacion';
-import { obtenerAtencionesTotalesImportacion } from '@/utils/importacionProduccionHdStorage';
+import {
+  atencionesTotalesResumen,
+  compararImportacionVsInicioTrr,
+  obtenerImportacionProduccionHd,
+} from '@/utils/importacionProduccionHdStorage';
 
 export function countFromResponse(res) {
   return listaDesdeResponse(res).length;
@@ -188,6 +192,13 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     totalNuevosSerologia: 0,
     nuevosConSerologia: 0,
     nuevosSinSerologia: 0,
+    pacientesPlanillaVsInicioTrr: {
+      coinciden: false,
+      soloEnImportacion: [],
+      soloEnInicioTrr: [],
+      totalImportacion: 0,
+      totalInicioTrr: 0,
+    },
     puedeNotificarClinica: false,
     inicial: vacioConteoAtencion(),
     final: vacioConteoAtencion(),
@@ -196,7 +207,7 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     return { ...vacio };
   }
   try {
-    const [resUnidades, resEventos, resMorb, resResultados, resVacunaciones, resEstadisticasAtencion, numeroAtencionesImportacion, resPeriodos, resAtenciones] = await Promise.all([
+    const [resUnidades, resEventos, resMorb, resResultados, resVacunaciones, resEstadisticasAtencion, importacionHd, resPeriodos, resAtenciones, resInicioTrr] = await Promise.all([
       getAllIpress(`/unidadesActuales/?${new URLSearchParams({
         ...(idIpress != null && idIpress !== '' ? { id_ipress: String(idIpress) } : {}),
         ...(idModalidad != null && idModalidad !== '' ? { id_modalidad: String(idModalidad) } : {}),
@@ -206,9 +217,13 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       getAllIpress(`/resultadosClinicos/?${qs}`),
       getAllIpress(`/vacunaciones/?${qs}`),
       getAllIpress(`/pacienteAtencion/estadisticas/?${qs}`),
-      obtenerAtencionesTotalesImportacion(getAllIpress, idPeriodo, idIpress, idModalidad),
+      obtenerImportacionProduccionHd(getAllIpress, idPeriodo, idIpress, idModalidad),
       getAllIpress('/periodos/'),
       getAllIpress(`/pacienteAtencion/?${qs}`),
+      getAllIpress(`/listado_pacientes_dialisis_por_ipress_periodo/?${qs}`).catch((e) => {
+        console.error('Error al cargar Inicio TRR para comparación con planilla:', e);
+        return [];
+      }),
     ]);
 
     const listaPeriodos = Array.isArray(resPeriodos) ? resPeriodos : (resPeriodos?.results || []);
@@ -234,10 +249,13 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     const continuadores = Number(final.continuadores || 0);
     const egresados = Number(final.egresados || 0);
     const totalPacientesAtendidos = totalPacientesEnAtencionDesdeEstadisticas(final);
-    const numeroAtenciones =
-      numeroAtencionesImportacion != null && numeroAtencionesImportacion !== ''
-        ? Number(numeroAtencionesImportacion)
-        : null;
+    const numeroAtenciones = (() => {
+      if (!importacionHd) return null;
+      const total = atencionesTotalesResumen(importacionHd);
+      if (total === '—' || total == null || total === '') return null;
+      const n = Number(total);
+      return Number.isFinite(n) ? n : null;
+    })();
     const listaResultados = listaDesdeResponse(resResultados);
     const totalResultadosRegistrados = ultimosResultadosPorAtencion(listaResultados).length;
     const totalResultadosCompletos = contarResultadosClinicosCompletos(resResultados);
@@ -246,6 +264,12 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
     const serologiaNuevos = contarNuevosSerologia(
       listaAtenciones,
       idsAtencionConSerologiaCompleta(listaVacunaciones),
+    );
+
+    const listaInicioTrr = Array.isArray(resInicioTrr) ? resInicioTrr : (resInicioTrr?.results || []);
+    const pacientesPlanillaVsInicioTrr = compararImportacionVsInicioTrr(
+      importacionHd?.detalle || [],
+      listaInicioTrr,
     );
 
     let totalCalidadAgua = 0;
@@ -277,11 +301,15 @@ export async function obtenerEstadisticasRegistrosFormularios({ idPeriodo, idIpr
       totalNuevosSerologia: serologiaNuevos.totalNuevosSerologia,
       nuevosConSerologia: serologiaNuevos.nuevosConSerologia,
       nuevosSinSerologia: serologiaNuevos.nuevosSinSerologia,
+      pacientesPlanillaVsInicioTrr,
       puedeNotificarClinica:
         tieneNumeroAtencionesRegistrado(numeroAtenciones)
         && totalPacientesAtendidos > 0
         && totalPacientesAtendidos === totalResultadosRegistrados
-        && serologiaNuevos.nuevosSinSerologia === 0,
+        && serologiaNuevos.nuevosSinSerologia === 0
+        && totalCalidadAgua > 0
+        && !!importacionHd
+        && pacientesPlanillaVsInicioTrr.coinciden,
       inicial,
       final,
     };

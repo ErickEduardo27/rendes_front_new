@@ -486,6 +486,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import * as XLSX from 'xlsx';
 import { getAllIpress, postAllIpress, deleteAllIpress } from '@/services/ipress/Ipress.service';
+import { revertirMovimientosPorHospitalizacion, EFECTO_HOSP } from '@/utils/movimientosHospitalizacion';
 import { atencionesParaListadoRegistros, indexarRegistrosPorAtencionYPaciente, registroParaAtencionActiva, esPacienteEgresadoEnListado, fechaEgresoAtencionISO } from '@/composables/useAtencionesRegistro';
 import { useBloqueoNotificacionRevision } from '@/composables/useBloqueoNotificacionRevision';
 import { puedeEditarRegistroClinica, tituloEdicionRegistroClinica, registroEstaObservado } from '@/utils/edicionRegistroObservado';
@@ -1036,6 +1037,27 @@ async function eliminarRegistro(registro) {
   if (!confirmar) return;
   eliminandoId.value = registro.id_morbilidad_hospitalaria;
   try {
+    const efecto = String(registro.efecto_movimiento_hospitalizacion || '');
+    const generoMovimientos = efecto === EFECTO_HOSP.EGRESO
+      || efecto === EFECTO_HOSP.EGRESO_Y_REINGRESO;
+    if (generoMovimientos) {
+      const paciente = pacienteDesdeRegistro(registro);
+      const pacienteId = paciente?.id_paciente ?? registro?.id_paciente ?? null;
+      const idAtencion = idAtencionDesdeRegistro(registro);
+      if (pacienteId) {
+        await revertirMovimientosPorHospitalizacion({
+          pacienteId,
+          idPacienteAtencionOrigen: idAtencion,
+          idMorbilidad: registro.id_morbilidad_hospitalaria,
+          fechasEgresoCandidatas: [
+            registro.fecha_hospitalizacion,
+            registro.fecha_fallecimiento,
+          ].filter(Boolean),
+          fechasReingresoCandidatas: [registro.fecha_alta_hospitalizacion].filter(Boolean),
+          ipressId: clinicaGlobal.value,
+        });
+      }
+    }
     await deleteAllIpress(`/morbilidadesHospitalarias/${registro.id_morbilidad_hospitalaria}/`);
     ElMessage.success('Registro eliminado correctamente.');
     await fetchRegistros();

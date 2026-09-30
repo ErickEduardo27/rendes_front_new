@@ -137,6 +137,12 @@ const routes = [
         meta: { mostrarNotificarRegistros: true, bloqueadoSupervisor: true },
       },
       {
+        path: 'tasa-brc',
+        name: 'TasaBrc',
+        component: () => import('@/pages/registros/tasaBrc/index.vue'),
+        meta: { bloqueadoSupervisor: true },
+      },
+      {
         path: 'importacion-tiempo-dialisis',
         name: 'ImportacionTiempoDialisis',
         component: () => import('@/pages/registros/importacionTiempoDialisis/index.vue'),

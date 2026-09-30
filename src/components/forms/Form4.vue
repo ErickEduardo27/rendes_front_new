@@ -266,6 +266,11 @@ import {
     aplicarEfectoMovimientoHospitalizacion,
 } from '@/utils/movimientosHospitalizacion';
 
+const fechasMovimientoPrevias = ref({
+    egreso: [],
+    reingreso: [],
+});
+
 async function alertaSwal(texto, { title = 'Atención', icon = 'warning' } = {}) {
     await Swal.fire({
         title,
@@ -393,6 +398,7 @@ function limpiarFormularioNuevo() {
     modoCompletarAlta.value = false;
     idMorbilidadCompletar.value = null;
     efectoMovimientoPrevio.value = '';
+    fechasMovimientoPrevias.value = { egreso: [], reingreso: [] };
     form.value.fIniHos = '';
     form.value.fAltHos = '';
     form.value.desenlace = '';
@@ -446,6 +452,13 @@ function cargarRegistroEdicion(registro) {
     form.value.filtroCodigoCausa = '';
     form.value.filtroDescripcionCausa = '';
     efectoMovimientoPrevio.value = String(registro.efecto_movimiento_hospitalizacion || '');
+    fechasMovimientoPrevias.value = {
+        egreso: [
+            toInputDate(registro.fecha_hospitalizacion),
+            toInputDate(registro.fecha_fallecimiento),
+        ].filter(Boolean),
+        reingreso: [toInputDate(registro.fecha_alta_hospitalizacion)].filter(Boolean),
+    };
 }
 
 const items = ref([
@@ -1672,9 +1685,13 @@ const postForm = async (opts = {}) => {
             }
             await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, patchPayload);
             let errorMovimientos = null;
-            if (efectoMovimiento && !props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+            if (!props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
                 try {
-                    await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento);
+                    await ejecutarMovimientosSiCorresponde(
+                        efectoMovimiento || EFECTO_HOSP.SIN_EGRESO,
+                        esFallecimiento,
+                        idMorbilidadCompletar.value,
+                    );
                 } catch (e) {
                     errorMovimientos = e;
                     console.error(e);
@@ -1720,9 +1737,13 @@ const postForm = async (opts = {}) => {
                     await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadEdicion.value}/`, payload);
                 }
                 let errorMovimientos = null;
-                if (efectoMovimiento && !props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+                if (!props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
                     try {
-                        await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento);
+                        await ejecutarMovimientosSiCorresponde(
+                            efectoMovimiento || efectoMovimientoPrevio.value || EFECTO_HOSP.SIN_EGRESO,
+                            esFallecimiento,
+                            idMorbilidadEdicion.value,
+                        );
                     } catch (e) {
                         errorMovimientos = e;
                         console.error(e);
@@ -1744,11 +1765,14 @@ const postForm = async (opts = {}) => {
                 seleccionados: form.value.seleccionados.map(item => item.codigo).join(',')
             };
         }
-        await postAllIpress(opts.url ?? "/morbilidadesHospitalarias/", payload);
+        const creado = await postAllIpress(opts.url ?? "/morbilidadesHospitalarias/", payload);
+        const idMorbilidadCreada = creado?.id_morbilidad_hospitalaria
+            ?? creado?.data?.id_morbilidad_hospitalaria
+            ?? null;
         let errorMovimientos = null;
         if (efectoMovimiento && !props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
             try {
-                await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento);
+                await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento, idMorbilidadCreada);
             } catch (e) {
                 errorMovimientos = e;
                 console.error(e);
@@ -1786,16 +1810,26 @@ const postForm = async (opts = {}) => {
     }
 };
 
-async function ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento) {
-    if (!efectoMovimiento || efectoMovimiento === EFECTO_HOSP.SIN_EGRESO) return;
+async function ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento, idMorbilidad = null) {
+    const efecto = efectoMovimiento || EFECTO_HOSP.SIN_EGRESO;
+    const esEdicionOCompletar = idMorbilidadEdicion.value != null
+        || modoCompletarAlta.value
+        || idMorbilidadCompletar.value != null;
+    // Alta nueva sin efecto: nada que hacer.
+    if (!esEdicionOCompletar && efecto === EFECTO_HOSP.SIN_EGRESO) return;
     try {
         const atencion = await getAllIpress(`/pacienteAtencion/${Number(idPacienteAtencion)}/`);
         await aplicarEfectoMovimientoHospitalizacion({
-            efecto: efectoMovimiento,
+            efecto,
             atencion,
             fechaHospitalizacion: form.value.fIniHos || null,
             fechaAlta: esFallecimiento ? null : (form.value.fAltHos || null),
             fechaFallecimiento: esFallecimiento ? (form.value.fechaFallecimiento || null) : null,
+            idMorbilidad: idMorbilidad ?? idMorbilidadEdicion.value ?? idMorbilidadCompletar.value,
+            fechasEgresoPrevias: fechasMovimientoPrevias.value.egreso || [],
+            fechasReingresoPrevias: fechasMovimientoPrevias.value.reingreso || [],
+            // Solo revertir al editar/completar (evita borrar egresos de otra hosp. en alta nueva).
+            revertirPrevios: esEdicionOCompletar,
         });
     } catch (e) {
         console.error('Error al generar movimientos por hospitalización:', e);
