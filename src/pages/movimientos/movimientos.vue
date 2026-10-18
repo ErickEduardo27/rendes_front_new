@@ -492,7 +492,7 @@
                     <div v-else-if="pacienteConsultaResultado" class="mt-5 rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 text-sm">
                         <p class="text-xs font-bold uppercase text-emerald-800 mb-2">Paciente encontrado</p>
                         <p class="text-xs text-emerald-900/90 mb-3">
-                            Tiene una atención activa con clínica (IPRESS) asignada en el periodo seleccionado.
+                            Tiene una atención activa con la IPRESS asignada en el periodo seleccionado.
                             Si ya lo egresó, verifique el periodo en la barra superior. Si debe ingresar en otra unidad, primero egresarlo de la clínica actual.
                         </p>
                         <dl class="grid grid-cols-1 gap-1 text-slate-700">
