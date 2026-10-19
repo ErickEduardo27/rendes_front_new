@@ -310,6 +310,8 @@ const props = defineProps({
     modoSupervisor: { type: Boolean, default: false },
     /** Abierto desde egreso en Movimientos: no pedir efecto ni generar movimientos (el egreso lo hace el padre). */
     desdeEgresoMovimiento: { type: Boolean, default: false },
+    /** Abierto al captar para completar la fecha de alta: no pedir efecto ni generar movimientos. */
+    desdeCaptarMovimiento: { type: Boolean, default: false },
     fechaMaximaRegistro: { type: String, default: null },
 })
 
@@ -375,10 +377,15 @@ const requiereDesenlaceYFuentePorAlta = computed(() => (
     && Boolean(String(form.value.fAltHos || '').trim())
 ));
 
+/** No pedir efecto ni generar movimientos: el padre (egreso o captación) se encarga del movimiento. */
+const omitirEfectoMovimiento = computed(() => (
+    props.desdeEgresoMovimiento || props.desdeCaptarMovimiento
+));
+
 /** Pide confirmación de efecto (movimientos) en registro nuevo, completar alta y edición.
- *  No aplica si viene del flujo de egreso (Movimientos), donde el egreso lo genera el padre. */
+ *  No aplica al completar el alta para captar, ni en el egreso (el movimiento lo genera el padre). */
 const debeConfirmarEfectoMovimiento = computed(() => {
-    if (props.desdeEgresoMovimiento) return false;
+    if (omitirEfectoMovimiento.value) return false;
     if (idPacienteAtencion == null || idPacienteAtencion === '') return false;
     return true;
 });
@@ -1599,8 +1606,10 @@ const validarAntesDeGuardar = async () => {
 const solicitarRegistro = async () => {
     if (!(await validarAntesDeGuardar())) return;
     const esFallecimiento = form.value.desenlace === 'Fallecimiento';
+    const tieneAtencion = idPacienteAtencion != null && idPacienteAtencion !== '';
     // Fallecimiento: egreso obligatorio; el paciente no podrá volver a captarse.
-    if (esFallecimiento && debeConfirmarEfectoMovimiento.value) {
+    // También al completar el alta para captar (ahí no se muestra el modal de opciones).
+    if (esFallecimiento && !props.desdeEgresoMovimiento && tieneAtencion) {
         const ok = await Swal.fire({
             icon: 'warning',
             title: 'Egreso por fallecimiento',
@@ -1666,6 +1675,9 @@ const confirmarYRegistrar = async () => {
 const postForm = async (opts = {}) => {
     const efectoMovimiento = opts.efectoMovimiento || null;
     const esFallecimiento = form.value.desenlace === 'Fallecimiento';
+    // Captar + fecha de alta: solo guardar el alta. El egreso por fallecimiento sí genera movimiento.
+    const saltarMovimientos = props.desdeEgresoMovimiento
+        || (props.desdeCaptarMovimiento && !esFallecimiento);
     if (!(await validarAntesDeGuardar())) return;
 
     guardandoFormulario.value = true;
@@ -1685,7 +1697,7 @@ const postForm = async (opts = {}) => {
             }
             await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadCompletar.value}/`, patchPayload);
             let errorMovimientos = null;
-            if (!props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+            if (!saltarMovimientos && idPacienteAtencion != null && idPacienteAtencion !== '') {
                 try {
                     await ejecutarMovimientosSiCorresponde(
                         efectoMovimiento || EFECTO_HOSP.SIN_EGRESO,
@@ -1726,8 +1738,8 @@ const postForm = async (opts = {}) => {
             };
             if (efectoMovimiento) {
                 payload.efecto_movimiento_hospitalizacion = efectoMovimiento;
-            } else if (props.desdeEgresoMovimiento) {
-                // El egreso lo genera Movimientos; no crear movimientos desde Form4
+            } else if (saltarMovimientos) {
+                // El movimiento lo genera Movimientos (egreso o captación); no crearlo desde Form4
                 payload.efecto_movimiento_hospitalizacion = EFECTO_HOSP.SIN_EGRESO;
             }
             if (idMorbilidadEdicion.value != null) {
@@ -1737,7 +1749,7 @@ const postForm = async (opts = {}) => {
                     await patchAllIpress(`/morbilidadesHospitalarias/${idMorbilidadEdicion.value}/`, payload);
                 }
                 let errorMovimientos = null;
-                if (!props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+                if (!saltarMovimientos && idPacienteAtencion != null && idPacienteAtencion !== '') {
                     try {
                         await ejecutarMovimientosSiCorresponde(
                             efectoMovimiento || efectoMovimientoPrevio.value || EFECTO_HOSP.SIN_EGRESO,
@@ -1770,7 +1782,7 @@ const postForm = async (opts = {}) => {
             ?? creado?.data?.id_morbilidad_hospitalaria
             ?? null;
         let errorMovimientos = null;
-        if (efectoMovimiento && !props.desdeEgresoMovimiento && idPacienteAtencion != null && idPacienteAtencion !== '') {
+        if (efectoMovimiento && !saltarMovimientos && idPacienteAtencion != null && idPacienteAtencion !== '') {
             try {
                 await ejecutarMovimientosSiCorresponde(efectoMovimiento, esFallecimiento, idMorbilidadCreada);
             } catch (e) {
@@ -1787,7 +1799,7 @@ const postForm = async (opts = {}) => {
                 );
             }
             emit('guardado', payloadGuardadoEmit(
-                props.desdeEgresoMovimiento
+                saltarMovimientos
                     ? EFECTO_HOSP.SIN_EGRESO
                     : (efectoMovimiento || EFECTO_HOSP.SIN_EGRESO),
             ));

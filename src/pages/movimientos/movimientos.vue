@@ -983,6 +983,7 @@
                         :registro-edicion="registroEdicionForm4"
                         :forzar-completar-alta="!!registroEdicionForm4"
                         :desde-egreso-movimiento="form4DesdeEgreso"
+                        :desde-captar-movimiento="form4DesdeCaptar"
                         @cancelar="onCancelarForm4Hospitalizacion"
                         @guardado="onGuardadoForm4Hospitalizacion"
                     />
@@ -1472,6 +1473,7 @@ const pacienteParaForm4 = ref(null);
 const idPacienteAtencionForm4 = ref(null);
 const registroEdicionForm4 = ref(null);
 const form4DesdeEgreso = ref(true);
+const form4DesdeCaptar = ref(false);
 const form4ModalKey = ref(0);
 const hospitalizacionConfirmadaEgreso = ref(false);
 const hospitalizacionPendienteAlta = ref(null);
@@ -2868,6 +2870,7 @@ async function abrirModalForm4DesdeEgreso(idPacienteAtencion, registroPendiente 
         idPacienteAtencionForm4.value = Number(idPacienteAtencion);
         registroEdicionForm4.value = registroPendiente || null;
         form4DesdeEgreso.value = true;
+        form4DesdeCaptar.value = false;
         form4ModalKey.value += 1;
         mostrarModalForm4Hospitalizacion.value = true;
         if (registroPendiente) {
@@ -2922,6 +2925,7 @@ async function abrirForm4CompletarAltaDesdeCaptar() {
         idPacienteAtencionForm4.value = Number(idAt);
         registroEdicionForm4.value = pendiente;
         form4DesdeEgreso.value = false;
+        form4DesdeCaptar.value = true;
         form4ModalKey.value += 1;
         mostrarModalForm4Hospitalizacion.value = true;
         await Swal.fire({
@@ -2943,6 +2947,7 @@ function onCancelarForm4Hospitalizacion() {
     idPacienteAtencionForm4.value = null;
     registroEdicionForm4.value = null;
     form4DesdeEgreso.value = true;
+    form4DesdeCaptar.value = false;
 }
 
 async function onGuardadoForm4Hospitalizacion(payload = {}) {
